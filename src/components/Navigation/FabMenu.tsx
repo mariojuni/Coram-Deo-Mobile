@@ -1,8 +1,8 @@
-import React, { useRef, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Animated, Easing, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Plus, QrCode, CalendarPlus, HeartHandshake, HandHeart, UserPlus } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { CalendarPlus, HandHeart, HeartHandshake, Plus, QrCode, UserPlus } from 'lucide-react-native';
+import { useRef, useState } from 'react';
+import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface FabMenuProps {
   isStaff: boolean;
@@ -69,7 +69,7 @@ export default function FabMenu({ isStaff }: FabMenuProps) {
   // Build menu items
   const menuItems = [
     { icon: <QrCode size={20} color="#FF6596" />, route: '/scanner' },
-    { icon: <HeartHandshake size={20} color="#FF6596" />, route: '/(tabs)/prayer' },
+    { icon: <HeartHandshake size={20} color="#FF6596" />, route: '/(tabs)/community?section=prayer-wall' },
     { icon: <HandHeart size={20} color="#FF6596" />, route: '/giving' },
   ];
 

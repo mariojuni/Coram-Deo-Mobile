@@ -1,18 +1,17 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Modal } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Crown, Users, Calendar, CalendarDays, HeartHandshake, HandHeart, Grid, CheckCircle2, HelpCircle, XCircle, Check, X, MapPin, Clock } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { collection, doc, limit, onSnapshot, orderBy, query, runTransaction } from 'firebase/firestore';
+import { Calendar, CalendarDays, Check, CheckCircle2, Clock, Crown, Grid, HandHeart, HeartHandshake, HelpCircle, MapPin, Users, XCircle } from 'lucide-react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import AppModal from '../../components/ui/AppModal';
+import { db } from '../../firebase';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useMemberStore } from '../../store/useMemberStore';
-import { useScheduleStore, getUpcomingSchedules, getUserMinisterialRoles, getUserRsvpStatus, updateRsvp, updateMinisterialDuty, Schedule } from '../../store/useScheduleStore';
-import { db } from '../../firebase';
-import { collection, query, orderBy, limit, onSnapshot, doc, runTransaction } from 'firebase/firestore';
-import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import AppModal from '../../components/ui/AppModal';
+import { getUpcomingSchedules, getUserMinisterialRoles, getUserRsvpStatus, Schedule, updateMinisterialDuty, updateRsvp, useScheduleStore } from '../../store/useScheduleStore';
 
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
   const { userProfile, currentUser } = useAuthStore();
@@ -332,7 +331,7 @@ export default function HomeScreen() {
         {/* ─── Prayer Wall ────────────────────────────────────────────── */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Prayer Wall</Text>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/prayer')}>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/community?section=prayer-wall')}>
             <Text style={styles.seeAll}>See all</Text>
           </TouchableOpacity>
         </View>

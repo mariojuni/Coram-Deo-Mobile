@@ -1,15 +1,12 @@
-import { Tabs } from 'expo-router';
-import { View, TouchableOpacity, StyleSheet, Platform, Dimensions } from 'react-native';
-import { Home, Book, HeartHandshake, Activity, Plus } from 'lucide-react-native';
-import { useAuthStore } from '../../store/useAuthStore';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
+import { Tabs } from 'expo-router';
+import { Activity, Book, Home, Users } from 'lucide-react-native';
+import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FabMenu from '../../components/Navigation/FabMenu';
+import { useAuthStore } from '../../store/useAuthStore';
 
 function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
 
   return (
@@ -43,7 +40,7 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
             let IconComponent = Home;
             if (route.name === 'index') IconComponent = Home;
             if (route.name === 'bible') IconComponent = Book;
-            if (route.name === 'prayer') IconComponent = HeartHandshake;
+            if (route.name === 'community') IconComponent = Users;
             if (route.name === 'attendance') IconComponent = Activity;
 
             return (
@@ -78,7 +75,8 @@ export default function TabLayout() {
       >
         <Tabs.Screen name="index" options={{ title: 'Home' }} />
         <Tabs.Screen name="bible" options={{ title: 'Bible' }} />
-        <Tabs.Screen name="prayer" options={{ title: 'Prayer' }} />
+        <Tabs.Screen name="community" options={{ title: 'Community' }} />
+        <Tabs.Screen name="prayer" options={{ href: null }} />
         <Tabs.Screen 
           name="attendance" 
           options={{ 
