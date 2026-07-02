@@ -277,10 +277,10 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* ─── Prayer Wall ────────────────────────────────────────────── */}
+        {/* ─── Prayers ─────────────────────────────────────────────────── */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Prayer Wall</Text>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/prayer')}>
+          <Text style={styles.sectionTitle}>Prayers</Text>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/community')}>
             <Text style={styles.seeAll}>See all</Text>
           </TouchableOpacity>
         </View>

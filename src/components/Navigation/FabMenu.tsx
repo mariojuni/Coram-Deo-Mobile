@@ -1,9 +1,9 @@
+import { getFabMenuItems } from '@/features/navigation/presentation/fabMenuItems';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { HandHeart, HeartHandshake, Plus, QrCode } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { getFabMenuItems } from '@/features/navigation/presentation/fabMenuItems';
 
 interface FabMenuProps {
   isStaff: boolean;
@@ -69,7 +69,7 @@ export default function FabMenu({ isStaff }: FabMenuProps) {
 
   const menuItems = [
     { icon: QrCode, key: 'scanner', route: '/scanner' },
-    { icon: HeartHandshake, key: 'prayer', route: '/(tabs)/prayer' },
+    { icon: HeartHandshake, key: 'prayer', route: '/(tabs)/community' },
     { icon: HandHeart, key: 'giving', route: '/giving' },
     ...getFabMenuItems(isStaff),
   ];

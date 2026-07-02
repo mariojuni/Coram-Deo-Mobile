@@ -1,5 +1,5 @@
-import { SermonListScreen } from '@/features/sermons/presentation/screens/SermonListScreen';
+import { Redirect } from 'expo-router';
 
 export default function SermonsTab() {
-  return <SermonListScreen />;
+  return <Redirect href="/(tabs)/community?tab=sermons" />;
 }

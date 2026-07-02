@@ -1,14 +1,14 @@
-import { useEffect, useState, useCallback } from 'react';
-import { View, StyleSheet, FlatList, Text, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
-import { useSermonStore } from '@/store/useSermonStore';
-import { useAuthStore } from '@/store/useAuthStore';
-import { SermonCard } from '../components/SermonCard';
+import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { Colors, Spacing } from '@/constants/theme';
-import { useRouter } from 'expo-router';
-import { Download, Trash2, HardDrive } from 'lucide-react-native';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useSermonStore } from '@/store/useSermonStore';
 import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
+import { Download, HardDrive, Trash2 } from 'lucide-react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import type { Sermon } from '../../domain/sermon.types';
+import { SermonCard } from '../components/SermonCard';
 
 export function DownloadsScreen() {
   const router = useRouter();
@@ -125,7 +125,7 @@ export function DownloadsScreen() {
       </Text>
       <TouchableOpacity
         style={styles.browseButton}
-        onPress={() => router.push('/(tabs)/sermons')}
+        onPress={() => router.push('/(tabs)/community?tab=sermons')}
       >
         <Text style={styles.browseButtonText}>Browse Sermons</Text>
       </TouchableOpacity>
