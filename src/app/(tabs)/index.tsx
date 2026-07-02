@@ -3,7 +3,7 @@ import { VerseOfTheDayCard } from '@/features/home/presentation/components/Verse
 import { useHomeScreenData } from '@/features/home/presentation/hooks/useHomeScreenData';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Calendar, CalendarDays, CheckCircle2, Crown, Grid, HandHeart, HeartHandshake, HelpCircle, Users, XCircle } from 'lucide-react-native';
+import { Calendar, CalendarDays, CheckCircle2, ChevronRight, Clock, Crown, Grid, HandHeart, HeartHandshake, HelpCircle, MapPin, Users, XCircle } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
 import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -279,6 +279,72 @@ export default function HomeScreen() {
             <Text style={styles.emptyText}>No prayer requests yet.</Text>
           </View>
         )}
+
+        {/* ─── Upcoming Events ─────────────────────────────────────────── */}
+        {upcomingEvents.length > 0 && (
+          <View style={styles.upcomingSection}>
+            <View style={styles.sectionHeader}>
+              <View>
+                <Text style={styles.sectionOverline}>WHAT'S NEXT</Text>
+                <Text style={styles.sectionTitle}>Upcoming Events</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.upcomingCountPill}
+                onPress={() => router.push('/(tabs)/community')}
+              >
+                <Text style={styles.upcomingCountText}>{upcomingEvents.length}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {upcomingEvents.slice(0, 3).map((event) => {
+              const d = event.date ? new Date(`${event.date}T00:00:00`) : new Date();
+              const month = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+              const day = d.getDate().toString();
+              const weekday = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+              return (
+                <View key={event.id} style={styles.eventListCard}>
+                  <View style={styles.eventDateBlock}>
+                    <Text style={styles.eventDateMonth}>{month}</Text>
+                    <Text style={styles.eventDateDay}>{day}</Text>
+                    <Text style={styles.eventDateWeekday}>{weekday}</Text>
+                  </View>
+
+                  <View style={styles.eventDivider} />
+
+                  <View style={styles.eventDetailsBlock}>
+                    <Text style={styles.eventTitle} numberOfLines={2}>
+                      {event.event || 'Church Event'}
+                    </Text>
+                    <View style={styles.eventTimePill}>
+                      <Clock size={11} color="#9CA3AF" />
+                      <Text style={styles.eventTimePillText}>
+                        {event.time || '9:00 AM'}{event.endTime ? ` – ${event.endTime}` : ''}
+                      </Text>
+                    </View>
+                    {event.location ? (
+                      <View style={styles.eventLocationRow}>
+                        <MapPin size={11} color="#B0B6C8" />
+                        <Text style={styles.eventLocationText} numberOfLines={1}>
+                          {event.location}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+
+                  <ChevronRight size={14} color="#9CA3AF" />
+                </View>
+              );
+            })}
+
+            <TouchableOpacity
+              style={styles.seeAllEventsBtn}
+              onPress={() => router.push('/(tabs)/community')}
+            >
+              <Text style={styles.seeAllEventsBtnText}>See all events</Text>
+              <ChevronRight size={14} color="#FF6596" />
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
 
     </View>
@@ -346,4 +412,37 @@ const styles = StyleSheet.create({
   prayButtonTextActive: { color: '#fff' },
   emptyCard: { backgroundColor: '#fff', padding: 24, borderRadius: 16, alignItems: 'center' },
   emptyText: { color: '#888', fontSize: 14 },
+
+  // ─── Upcoming Events section ─────────────────────────────────────────────
+  upcomingSection: { marginTop: 8, marginBottom: 16 },
+  sectionOverline: { fontSize: 11, fontWeight: '800', color: '#FF6596', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 2 },
+  upcomingCountPill: { backgroundColor: '#FFF0F5', borderRadius: 999, width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
+  upcomingCountText: { fontSize: 13, fontWeight: '800', color: '#FF6596' },
+  eventListCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  eventDateBlock: { alignItems: 'center', width: 44, gap: 1 },
+  eventDateMonth: { fontSize: 10, fontWeight: '800', color: '#FF6596', textTransform: 'uppercase', letterSpacing: 0.5 },
+  eventDateDay: { fontSize: 26, fontWeight: '900', color: '#1a1a1a', lineHeight: 30, includeFontPadding: false },
+  eventDateWeekday: { fontSize: 9, fontWeight: '700', color: '#9CA3AF', letterSpacing: 0.5 },
+  eventDivider: { width: 1, height: 44, backgroundColor: '#F0F0F5', marginHorizontal: 14 },
+  eventDetailsBlock: { flex: 1, gap: 4 },
+  eventTitle: { fontSize: 15, fontWeight: '700', color: '#1a1a1a', lineHeight: 20 },
+  eventTimePill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#F5F6FA', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, alignSelf: 'flex-start' },
+  eventTimePillText: { fontSize: 11, fontWeight: '600', color: '#9CA3AF' },
+  eventLocationRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  eventLocationText: { fontSize: 12, fontWeight: '400', color: '#B0B6C8', flex: 1 },
+  seeAllEventsBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 12, marginTop: 4 },
+  seeAllEventsBtnText: { fontSize: 13, fontWeight: '700', color: '#FF6596' },
 });
