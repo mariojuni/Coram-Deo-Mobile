@@ -1,7 +1,7 @@
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { Award, Bell, QrCode, Users } from 'lucide-react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AttendanceTab from '../../components/Staff/AttendanceTab';
@@ -16,6 +16,7 @@ export default function AttendanceScreen() {
   const members = useMemberStore((state) => state.members);
   const userProfile = useAuthStore((state) => state.userProfile);
   const schedules = useScheduleStore((state) => state.schedules);
+  const initializeSchedulesListener = useScheduleStore((state) => state.initializeSchedulesListener);
   const isStaff = userProfile?.role?.toLowerCase() === 'staff';
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('reports');
@@ -25,6 +26,13 @@ export default function AttendanceScreen() {
     members.length
   );
   const unDismissedNotifications = getUndismissedNotificationCount(schedules);
+
+  // Keep the real-time schedule listener alive for the entire Staff tab session,
+  // regardless of which sub-tab (Attendance / Events / Reports) is active.
+  useEffect(() => {
+    const unsubscribe = initializeSchedulesListener();
+    return () => unsubscribe();
+  }, [initializeSchedulesListener]);
 
   const insets = useSafeAreaInsets();
 

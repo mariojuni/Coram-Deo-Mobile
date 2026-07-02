@@ -1,7 +1,11 @@
 export interface Duty {
+  roleId?: string;
   role: string;
   userId: string;
   status: string;
+  assignedBy?: string;
+  assignedAt?: unknown;
+  updatedAt?: unknown;
 }
 
 export interface Rsvp {
@@ -20,4 +24,3 @@ export interface Schedule {
   rsvps: Rsvp[];
   createdAt?: unknown;
 }
-

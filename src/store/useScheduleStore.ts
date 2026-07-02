@@ -2,8 +2,8 @@ import { create } from 'zustand';
 import { scheduleRepository } from '../features/schedule/data/schedule.repository';
 import {
   getMinisterialTeam,
-  getUndismissedNotificationCount,
   getUndismissedDutyNotificationsForAdmin,
+  getUndismissedNotificationCount,
   getUpcomingMinisterialDuties,
   getUpcomingSchedules,
   getUserMinisterialRoles,
@@ -51,14 +51,8 @@ export const useScheduleStore = create<ScheduleStore>((set) => ({
 
 export type { Duty, Rsvp, Schedule } from '../features/schedule/domain/schedule.types';
 export {
-  parseTimeTo24h,
-  getUpcomingSchedules,
-  getUpcomingMinisterialDuties,
-  getUserMinisterialRoles,
-  getUserRsvpStatus,
-  getMinisterialTeam,
-  getUndismissedNotificationCount,
-  getUndismissedDutyNotificationsForAdmin,
+  getMinisterialTeam, getUndismissedDutyNotificationsForAdmin, getUndismissedNotificationCount, getUpcomingMinisterialDuties, getUpcomingSchedules, getUserMinisterialRoles,
+  getUserRsvpStatus, parseTimeTo24h
 };
 
 export async function updateRsvp(eventId: string, userId: string, status: string): Promise<void> {
@@ -67,10 +61,18 @@ export async function updateRsvp(eventId: string, userId: string, status: string
   await scheduleRepository.updateRsvp(eventId, userId, normalizedStatus);
 }
 
-export async function updateMinisterialDuty(eventId: string, userId: string, action: 'accept' | 'cancel'): Promise<void> {
-  await scheduleRepository.updateMinisterialDuty(eventId, userId, action);
+export async function updateMinisterialDuty(eventId: string, userId: string, action: 'accept' | 'cancel', roleId?: string): Promise<void> {
+  await scheduleRepository.updateMinisterialDuty(eventId, userId, action, roleId);
 }
 
 export async function dismissNotification(eventId: string, userId: string, currentStatus: string): Promise<void> {
   await scheduleRepository.dismissNotification(eventId, userId, currentStatus);
+}
+
+export async function saveAssignments(
+  eventId: string,
+  assignments: { roleId: string; roleLabel: string; userId: string }[],
+  adminUserId: string
+): Promise<void> {
+  await scheduleRepository.saveAssignments(eventId, assignments, adminUserId);
 }

@@ -1,12 +1,11 @@
+import { MinistryDutyCard } from '@/features/home/presentation/components/MinistryDutyCard';
 import { VerseOfTheDayCard } from '@/features/home/presentation/components/VerseOfTheDayCard';
 import { useHomeScreenData } from '@/features/home/presentation/hooks/useHomeScreenData';
-import type { Schedule } from '@/features/schedule/domain/schedule.types';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Calendar, CalendarDays, Check, CheckCircle2, Clock, Crown, Grid, HandHeart, HeartHandshake, HelpCircle, MapPin, Users, XCircle } from 'lucide-react-native';
+import { Calendar, CalendarDays, CheckCircle2, Crown, Grid, HandHeart, HeartHandshake, HelpCircle, Users, XCircle } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
 import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import AppModal from '../../components/ui/AppModal';
 
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,49 +14,48 @@ export default function HomeScreen() {
   const router = useRouter();
   const {
     currentUser,
-    displayName,
     latestPrayer,
     myUpcomingDuties,
     upcomingEvents,
-    getUserMinisterialRoles,
     getUserRsvpStatus,
     handleMinisterialDuty,
     handlePray,
     handleRsvp,
     formatPrayerTimeAgo,
+    displayName,
   } = useHomeScreenData();
 
   const [activeSlide, setActiveSlide] = useState(0);
-  const [activeDutySlide, setActiveDutySlide] = useState(0);
-  const [selectedDutyEvent, setSelectedDutyEvent] = useState<Schedule | null>(null);
-
+  const [savingEventId, setSavingEventId] = useState<string | null>(null);
   const screenWidth = Dimensions.get('window').width;
   const cardWidth = screenWidth - 48;
   const currentUserId = currentUser?.uid ?? '';
-  const dutyCards = useMemo(
-    () =>
-      myUpcomingDuties
-        .map((event) => {
-          if (!currentUserId) return null;
-          const dutyRole = getUserMinisterialRoles(event, currentUserId);
-          if (!dutyRole) return null;
 
-          const userDuty = event.duties?.find(
-            (d) => d.userId === currentUserId && d.role?.toLowerCase() !== 'attendee'
-          );
-          return {
-            accepted: userDuty?.status === 'accepted' || userDuty?.status === 'accepted_dismissed',
-            event,
-            eventDate: new Date(`${event.date}T00:00:00`).toLocaleDateString('en-US', {
-              weekday: 'short',
-              month: 'short',
-              day: 'numeric',
-            }),
-            dutyRole,
-          };
-        })
-        .filter((item): item is NonNullable<typeof item> => item !== null),
-    [currentUserId, getUserMinisterialRoles, myUpcomingDuties]
+  // US-01 / US-06 — flatten one card per duty, sort pending → accepted → declined
+  const sortedDutyItems = useMemo(() => {
+    const items = myUpcomingDuties.flatMap((schedule) =>
+      (schedule.duties ?? [])
+        .filter((d) => d.userId === currentUserId && d.role?.toLowerCase() !== 'attendee')
+        .map((duty) => ({ duty, schedule }))
+    );
+
+    const order = (status: string) => {
+      if (status === 'pending') return 0;
+      if (status === 'accepted' || status === 'accepted_dismissed') return 1;
+      return 2; // declined / declined_dismissed
+    };
+
+    return items.sort((a, b) => {
+      const statusDiff = order(a.duty.status) - order(b.duty.status);
+      if (statusDiff !== 0) return statusDiff;
+      return a.schedule.date.localeCompare(b.schedule.date);
+    });
+  }, [currentUserId, myUpcomingDuties]);
+
+  // US-07 — pending count for section header pill
+  const pendingCount = useMemo(
+    () => sortedDutyItems.filter((i) => i.duty.status === 'pending').length,
+    [sortedDutyItems]
   );
   const heroCards = useMemo(
     () =>
@@ -66,15 +64,6 @@ export default function HomeScreen() {
         rsvpStatus: currentUserId ? getUserRsvpStatus(event, currentUserId) : null,
       })),
     [currentUserId, getUserRsvpStatus, upcomingEvents]
-  );
-  const handleDutyScroll = useCallback(
-    (offsetX: number) => {
-      const slide = Math.round(offsetX / cardWidth);
-      if (slide !== activeDutySlide && slide >= 0) {
-        setActiveDutySlide(slide);
-      }
-    },
-    [activeDutySlide, cardWidth]
   );
   const handleHeroScrollEnd = useCallback(
     (offsetX: number) => {
@@ -104,68 +93,6 @@ export default function HomeScreen() {
       </View>
 
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: Math.max(insets.top, 24) + 104 }]} showsVerticalScrollIndicator={false}>
-        {/* ─── Ministerial Duty Section ─────────────────────────────────── */}
-        {dutyCards.length > 0 && (
-          <View>
-            <ScrollView
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              style={{ marginBottom: 16 }}
-              contentContainerStyle={styles.dutyCarouselContent}
-              scrollEventThrottle={16}
-              onScroll={(e) => handleDutyScroll(e.nativeEvent.contentOffset.x)}
-            >
-              {dutyCards.map(({ accepted, dutyRole, event, eventDate }) => {
-                return (
-                  <View key={`duty-${event.id}`} style={{ width: cardWidth }}>
-                    <TouchableOpacity activeOpacity={0.8} onPress={() => setSelectedDutyEvent(event)}>
-                      <View style={styles.mergedDutyCard}>
-                        {/* Top Row: Badge + Date */}
-                        <View style={styles.mergedDutyHeader}>
-                          <View style={styles.mergedDutyTag}>
-                            <Crown size={12} color="#FF6596" />
-                            <Text style={styles.mergedDutyTagText}>MINISTERIAL UPDATE</Text>
-                          </View>
-                          <View style={styles.mergedDutyDateBadge}>
-                            <Text style={styles.mergedDutyDateText}>{eventDate}</Text>
-                          </View>
-                        </View>
-
-                        {/* Message Body */}
-                        <Text style={styles.mergedDutyMessage} numberOfLines={3}>
-                          Thank you for your dedicated ministry, {displayName}. You are scheduled for <Text style={styles.mergedDutyRoleText}>{dutyRole}</Text> on {event.event || 'this Sunday'}.
-                        </Text>
-
-                        {/* Action Row */}
-                        <View style={styles.mergedDutyActionRow}>
-                          {accepted ? (
-                            <View style={styles.mergedConfirmedPill}>
-                              <Check size={10} color="#16A34A" />
-                              <Text style={styles.mergedConfirmedText}>Accepted</Text>
-                            </View>
-                          ) : (
-                            <Text style={styles.tapToRespondText}>Tap to respond ➔</Text>
-                          )}
-                        </View>
-                      </View>
-                    </TouchableOpacity>
-                  </View>
-                );
-              })}
-            </ScrollView>
-
-            {/* Duty Pagination Dots */}
-            {dutyCards.length > 1 && (
-              <View style={styles.paginationRow}>
-                {dutyCards.map((_, i) => (
-                  <View key={i} style={[styles.paginationDot, activeDutySlide === i && styles.paginationDotActive]} />
-                ))}
-              </View>
-            )}
-          </View>
-        )}
-
         {/* ─── Verse of the Day ───────────────────────────────────────── */}
         <VerseOfTheDayCard />
 
@@ -277,6 +204,51 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* ─── My Ministries (US-01/06/07/09) ───────────────────────── */}
+        {sortedDutyItems.length > 0 && (
+          <View style={styles.ministriesSection}>
+            {/* Section header (US-07) */}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Serving This Week</Text>
+              {pendingCount > 0 ? (
+                <View style={styles.pendingPill}>
+                  <Text style={styles.pendingPillText}>{pendingCount} pending</Text>
+                </View>
+              ) : (
+                <Text style={styles.allConfirmedText}>All confirmed ✓</Text>
+              )}
+            </View>
+
+            {/* Duty cards (US-09: hidden when empty, handled by outer condition) */}
+            {sortedDutyItems.map(({ duty, schedule }) => (
+              <MinistryDutyCard
+                key={`${schedule.id}-${duty.roleId ?? duty.role}`}
+                duty={duty}
+                schedule={schedule}
+                saving={savingEventId === `${schedule.id}-${duty.roleId ?? duty.role}`}
+                onConfirm={async () => {
+                  const key = `${schedule.id}-${duty.roleId ?? duty.role}`;
+                  setSavingEventId(key);
+                  try {
+                    await handleMinisterialDuty(schedule.id, 'accept', duty.roleId ?? duty.role);
+                  } finally {
+                    setSavingEventId(null);
+                  }
+                }}
+                onDecline={async () => {
+                  const key = `${schedule.id}-${duty.roleId ?? duty.role}`;
+                  setSavingEventId(key);
+                  try {
+                    await handleMinisterialDuty(schedule.id, 'cancel', duty.roleId ?? duty.role);
+                  } finally {
+                    setSavingEventId(null);
+                  }
+                }}
+              />
+            ))}
+          </View>
+        )}
+
         {/* ─── Prayers ─────────────────────────────────────────────────── */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Prayers</Text>
@@ -309,72 +281,6 @@ export default function HomeScreen() {
         )}
       </ScrollView>
 
-      {/* Ministerial Duty Details Modal */}
-      {selectedDutyEvent && currentUser && (
-        <AppModal
-          isOpen={!!selectedDutyEvent}
-          onClose={() => setSelectedDutyEvent(null)}
-          title="Ministerial Duty"
-          headerLeft={<Crown size={22} color="#FF6596" />}
-          headerTitleAlign="center"
-          containerStyle={{ paddingHorizontal: 24, paddingBottom: 32 }}
-        >
-          <Text style={styles.dutyModalEventName}>{selectedDutyEvent.event || 'Sunday Worship Service'}</Text>
-
-          <Text style={{ fontSize: 14, color: '#4B5563', textAlign: 'center', marginBottom: 20, paddingHorizontal: 10 }}>
-            You have been scheduled for the role of <Text style={{ fontWeight: 'bold', color: '#FF6596' }}>{getUserMinisterialRoles(selectedDutyEvent, currentUser.uid)}</Text>. Please accept or decline the duty below so we can notify the staff.
-          </Text>
-
-          <View style={styles.dutyModalDetails}>
-            <View style={styles.dutyModalRow}>
-              <Calendar size={16} color="#666" />
-              <Text style={styles.dutyModalRowText}>
-                {new Date(`${selectedDutyEvent.date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-              </Text>
-            </View>
-            <View style={styles.dutyModalRow}>
-              <Clock size={16} color="#666" />
-              <Text style={styles.dutyModalRowText}>{selectedDutyEvent.time || '9:00 AM'}</Text>
-            </View>
-            <View style={styles.dutyModalRow}>
-              <MapPin size={16} color="#666" />
-              <Text style={styles.dutyModalRowText}>{selectedDutyEvent.location || 'Main Sanctuary'}</Text>
-            </View>
-          </View>
-
-          <View style={styles.dutyModalActions}>
-            <TouchableOpacity
-              style={styles.dutyModalDeclineBtn}
-              activeOpacity={0.7}
-              onPress={() => {
-                handleMinisterialDuty(selectedDutyEvent.id, 'cancel');
-                setSelectedDutyEvent(null);
-              }}
-            >
-              <Text style={styles.dutyModalDeclineText}>Decline</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.dutyModalAcceptBtnWrapper}
-              activeOpacity={0.8}
-              onPress={() => {
-                handleMinisterialDuty(selectedDutyEvent.id, 'accept');
-                setSelectedDutyEvent(null);
-              }}
-            >
-              <LinearGradient
-                colors={['#FF6596', '#FF8DA1']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.dutyModalAcceptGradient}
-              >
-                <Check size={18} color="#fff" strokeWidth={3} />
-                <Text style={styles.dutyModalAcceptText}>Accept Duty</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
-        </AppModal>
-      )}
     </View>
   );
 }
@@ -401,186 +307,12 @@ const styles = StyleSheet.create({
   title: { fontSize: 28, fontWeight: 'bold', color: '#1a1a1a' },
   avatar: { width: 48, height: 48, borderRadius: 24 },
   scrollContent: { padding: 24, paddingTop: 12, paddingBottom: 100 },
-  dutyCarouselContent: {},
-  mergedDutyCard: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: '#FF6596',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  mergedDutyHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  mergedDutyTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFE8F0',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    gap: 4,
-  },
-  mergedDutyTagText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#FF6596',
-    letterSpacing: 0.5,
-  },
-  mergedDutyDateBadge: {
-    backgroundColor: '#FFF0F5',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  mergedDutyDateText: {
-    color: '#FF6596',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  mergedDutyMessage: {
-    fontSize: 13,
-    color: '#555',
-    lineHeight: 18,
-    marginBottom: 10,
-  },
-  mergedDutyRoleText: {
-    color: '#FF6596',
-    fontWeight: '800',
-  },
-  mergedDutyActionRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-  },
-  mergedDeclineBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: '#FEE2E2',
-    gap: 4,
-  },
-  mergedDeclineText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#EF4444',
-  },
-  mergedAcceptBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: '#4ADE80',
-    gap: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  mergedAcceptText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  mergedConfirmedPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#DCFCE7',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  mergedConfirmedText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#16A34A'
-  },
-  tapToRespondText: {
-    fontSize: 11,
-    color: '#FF6596',
-    fontWeight: '700',
-    paddingVertical: 6,
-  },
-  dutyModalEventName: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  dutyModalDetails: {
-    gap: 12,
-    marginBottom: 24,
-    backgroundColor: '#F9FAFB',
-    padding: 16,
-    borderRadius: 16,
-  },
-  dutyModalRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  dutyModalRowText: {
-    fontSize: 15,
-    color: '#4B5563',
-    fontWeight: '500',
-  },
-  dutyModalActions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-  },
-  dutyModalDeclineBtn: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 16,
-    backgroundColor: '#FFF0F5',
-  },
-  dutyModalDeclineText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FF6596',
-  },
-  dutyModalAcceptBtnWrapper: {
-    flex: 1.5,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  dutyModalAcceptGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 16,
-    gap: 8,
-  },
-  dutyModalAcceptText: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#fff',
-  },
+  // ─── My Ministries section ───────────────────────────────────────────────
+  ministriesSection: { marginBottom: 32 },
+  pendingPill: { backgroundColor: '#FFFBEB', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  pendingPillText: { fontSize: 12, fontWeight: '700', color: '#F59E0B' },
+  allConfirmedText: { fontSize: 12, fontWeight: '700', color: '#22C55E' },
+  // ────────────────────────────────────────────────────────────────────────
   rsvpActiveBtn: { backgroundColor: '#fff' },
   rsvpActiveText: { color: '#FF6596' },
   heroCard: { padding: 24, borderRadius: 24, marginBottom: 0, overflow: 'hidden' },

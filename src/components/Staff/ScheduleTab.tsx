@@ -1,9 +1,10 @@
-import { CalendarPlus, Clock, MapPin } from 'lucide-react-native';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { CalendarPlus, Clock, MapPin, Pencil } from 'lucide-react-native';
+import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useMemberStore } from '../../store/useMemberStore';
 import { getMinisterialTeam, type Schedule, useScheduleStore } from '../../store/useScheduleStore';
 import AddScheduleModal from './AddScheduleModal';
+import AssignMinistriesModal from './AssignMinistriesModal';
 
 type TeamMemberCard = {
   avatar: string;
@@ -21,16 +22,11 @@ type ScheduleCardItem = {
 
 export default function ScheduleTab() {
   const schedules = useScheduleStore((state) => state.schedules);
-  const initializeSchedulesListener = useScheduleStore((state) => state.initializeSchedulesListener);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [eventToEdit, setEventToEdit] = useState<Schedule | null>(null);
+  const [assignSchedule, setAssignSchedule] = useState<Schedule | null>(null);
   const members = useMemberStore((state) => state.members);
   const memberById = useMemo(() => new Map(members.map((member) => [member.id, member])), [members]);
-
-  useEffect(() => {
-    const unsubscribe = initializeSchedulesListener();
-    return () => unsubscribe();
-  }, [initializeSchedulesListener]);
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -75,10 +71,12 @@ export default function ScheduleTab() {
       <TouchableOpacity
         style={[styles.card, item.team.length === 0 && styles.cardWithoutTeam]}
         activeOpacity={0.7}
-        onPress={() => {
+        onPress={() => setAssignSchedule(item.schedule)}
+        onLongPress={() => {
           setEventToEdit(item.schedule);
           setIsAddModalOpen(true);
         }}
+        delayLongPress={400}
       >
         <View style={styles.cardContent}>
           <View style={styles.dateBlock}>
@@ -91,6 +89,16 @@ export default function ScheduleTab() {
               <Text style={styles.eventTitle} numberOfLines={1}>
                 {item.schedule.event}
               </Text>
+              <TouchableOpacity
+                style={styles.editBtn}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                onPress={() => {
+                  setEventToEdit(item.schedule);
+                  setIsAddModalOpen(true);
+                }}
+              >
+                <Pencil size={14} color="#aaa" />
+              </TouchableOpacity>
             </View>
 
             <View style={[styles.roleRow, item.team.length === 0 && styles.roleRowWithoutTeam]}>
@@ -126,6 +134,7 @@ export default function ScheduleTab() {
                     </View>
                   ))}
                 </View>
+                <Text style={styles.tapHint}>Tap to assign →</Text>
               </View>
             )}
           </View>
@@ -172,15 +181,22 @@ export default function ScheduleTab() {
         />
       )}
 
-      <AddScheduleModal 
+      <AddScheduleModal
         key={eventToEdit?.id ?? `new-${isAddModalOpen ? 'open' : 'closed'}`}
-        isOpen={isAddModalOpen} 
+        isOpen={isAddModalOpen}
         onClose={() => {
           setIsAddModalOpen(false);
           setEventToEdit(null);
-        }} 
+        }}
         eventToEdit={eventToEdit}
       />
+
+      {assignSchedule && (
+        <AssignMinistriesModal
+          schedule={assignSchedule}
+          onClose={() => setAssignSchedule(null)}
+        />
+      )}
     </View>
   );
 }
@@ -216,5 +232,7 @@ const styles = StyleSheet.create({
   teamAvatars: { flexDirection: 'row', paddingRight: 10, minHeight: 32 },
   avatarWrapper: { position: 'relative' },
   stackedAvatar: { marginLeft: -12 },
-  teamAvatar: { width: 32, height: 32, borderRadius: 16, borderWidth: 2, borderColor: '#fff' }
+  teamAvatar: { width: 32, height: 32, borderRadius: 16, borderWidth: 2, borderColor: '#fff' },
+  tapHint: { fontSize: 11, color: '#FF6596', fontWeight: '600' },
+  editBtn: { padding: 4, marginLeft: 4 },
 });

@@ -62,9 +62,9 @@ export function useHomeScreenData() {
     }
   };
 
-  const handleMinisterialDuty = async (eventId: string, action: 'accept' | 'cancel') => {
+  const handleMinisterialDuty = async (eventId: string, action: 'accept' | 'cancel', roleId?: string) => {
     if (!currentUser?.uid) return;
-    await updateMinisterialDuty(eventId, currentUser.uid, action);
+    await updateMinisterialDuty(eventId, currentUser.uid, action, roleId);
   };
 
   return {
