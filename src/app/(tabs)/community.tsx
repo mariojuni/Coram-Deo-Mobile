@@ -5,6 +5,7 @@ import {
   CalendarDays,
   CheckCircle,
   CheckCircle2,
+  ChevronRight,
   Clock,
   Heart,
   HeartHandshake,
@@ -12,10 +13,9 @@ import {
   MapPin,
   PlayCircle,
   Search,
-  Sparkles,
   Users,
   X,
-  XCircle,
+  XCircle
 } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -121,7 +121,7 @@ function PrayersTab({ searchQuery }: SubScreenProps) {
       >
         <View style={prayerStyles.heroTopRow}>
           <View style={prayerStyles.heroBadge}>
-            <Sparkles size={12} color="#FF6596" />
+            <Heart size={12} color="#FF6596" />
             <Text style={prayerStyles.heroBadgeText}>Care circle</Text>
           </View>
           <View style={prayerStyles.heroCountPill}>
@@ -226,7 +226,7 @@ function EventsTab({ searchQuery }: SubScreenProps) {
   const [selectedEvent, setSelectedEvent] = useState<Schedule | null>(null);
   const [activeTodaySlide, setActiveTodaySlide] = useState(0);
   const screenWidth = Dimensions.get('window').width;
-  const heroCardHorizontalMargin = 20;
+  const heroCardHorizontalMargin = 0;
 
   useEffect(() => {
     const unsubscribe = initializeSchedulesListener();
@@ -342,52 +342,61 @@ function EventsTab({ searchQuery }: SubScreenProps) {
               return (
                 <TouchableOpacity
                   key={todayEvent.id}
-                  activeOpacity={0.9}
+                  activeOpacity={0.92}
                   onPress={() => setSelectedEvent(todayEvent)}
                   style={[eventsStyles.heroSlide, { width: screenWidth }]}
                 >
                   <LinearGradient
-                    colors={['#3568E8', '#4D8BFF', '#79A4FF']}
+                    colors={['#FF6596', '#B66DFF']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                     style={[eventsStyles.heroCard, { marginHorizontal: heroCardHorizontalMargin }]}
                   >
-                    <View style={eventsStyles.heroShell}>
-                      <View style={eventsStyles.heroDateBlock}>
-                        <Text style={eventsStyles.heroDateMonth}>{dateParts.month}</Text>
-                        <Text style={eventsStyles.heroDateDay}>{dateParts.day}</Text>
-                      </View>
+                    {/* Soft orb accents */}
+                    <View style={eventsStyles.heroOrb1} pointerEvents="none" />
+                    <View style={eventsStyles.heroOrb2} pointerEvents="none" />
 
-                      <View style={eventsStyles.heroMainBlock}>
-                        <View style={eventsStyles.heroTopRow}>
-                          <View style={eventsStyles.livePill}>
-                            <Text style={eventsStyles.livePillText}>TODAY</Text>
-                          </View>
-                          <Text style={eventsStyles.heroDate}>{formatEventDate(todayEvent)}</Text>
-                        </View>
-
-                        <Text style={eventsStyles.heroTitle}>{todayEvent.event || 'Church Event'}</Text>
-
-                        <View style={eventsStyles.heroMetaRow}>
-                          <Clock size={12} color="rgba(255,255,255,0.8)" />
-                          <Text style={eventsStyles.heroMeta}>
-                            {todayEvent.time || '9:00 AM'}{todayEvent.endTime ? ` – ${todayEvent.endTime}` : ''}
-                          </Text>
-                        </View>
-
-                        <View style={eventsStyles.heroMetaRow}>
-                          <MapPin size={12} color="rgba(255,255,255,0.8)" />
-                          <Text style={eventsStyles.heroMeta}>{todayEvent.location || 'Main Sanctuary'}</Text>
-                        </View>
+                    {/* TODAY badge */}
+                    <View>
+                      <View style={eventsStyles.livePill}>
+                        <CalendarDays size={10} color="#FFFFFF" />
+                        <Text style={eventsStyles.livePillText}>TODAY</Text>
                       </View>
                     </View>
 
+                    {/* Date stamp + event name */}
+                    <View>
+                      <Text style={eventsStyles.heroDateLabel}>
+                        {dateParts.weekday}, {dateParts.month} {dateParts.day}
+                      </Text>
+                      <Text style={eventsStyles.heroTitle} numberOfLines={2}>
+                        {todayEvent.event || 'Church Event'}
+                      </Text>
+                    </View>
+
+                    {/* Time + location */}
+                    <View style={eventsStyles.heroMetaStack}>
+                      <View style={eventsStyles.heroMetaRow}>
+                        <Clock size={12} color="rgba(255,255,255,0.75)" />
+                        <Text style={eventsStyles.heroMeta}>
+                          {todayEvent.time || '9:00 AM'}{todayEvent.endTime ? ` – ${todayEvent.endTime}` : ''}
+                        </Text>
+                      </View>
+                      <View style={eventsStyles.heroMetaRow}>
+                        <MapPin size={12} color="rgba(255,255,255,0.75)" />
+                        <Text style={eventsStyles.heroMeta} numberOfLines={1}>
+                          {todayEvent.location || 'Main Sanctuary'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* RSVP row */}
                     <View style={eventsStyles.heroActionRow}>
                       <TouchableOpacity
                         style={[eventsStyles.rsvpBtn, rsvpStatus === 'going' && eventsStyles.rsvpBtnActive]}
                         onPress={() => handleRsvp(todayEvent.id, 'going')}
                       >
-                        <CheckCircle2 size={14} color={rsvpStatus === 'going' ? '#1D4ED8' : '#FFFFFF'} />
+                        <CheckCircle2 size={14} color={rsvpStatus === 'going' ? '#FF6596' : '#FFFFFF'} />
                         <Text style={[eventsStyles.rsvpText, rsvpStatus === 'going' && eventsStyles.rsvpTextActive]}>Going</Text>
                       </TouchableOpacity>
 
@@ -395,18 +404,19 @@ function EventsTab({ searchQuery }: SubScreenProps) {
                         style={[eventsStyles.rsvpBtn, rsvpStatus === 'maybe' && eventsStyles.rsvpBtnActive]}
                         onPress={() => handleRsvp(todayEvent.id, 'maybe')}
                       >
-                        <HelpCircle size={14} color={rsvpStatus === 'maybe' ? '#1D4ED8' : '#FFFFFF'} />
-                        <Text style={[eventsStyles.rsvpText, rsvpStatus === 'maybe' && eventsStyles.rsvpTextActive]}>Maybe</Text>
+                        <HelpCircle size={14} color={rsvpStatus === 'maybe' ? '#F59E0B' : '#FFFFFF'} />
+                        <Text style={[eventsStyles.rsvpText, rsvpStatus === 'maybe' && { color: '#F59E0B' }]}>Maybe</Text>
                       </TouchableOpacity>
 
                       <TouchableOpacity
                         style={[eventsStyles.rsvpBtn, rsvpStatus === 'not_going' && eventsStyles.rsvpBtnActive]}
                         onPress={() => handleRsvp(todayEvent.id, 'not_going')}
                       >
-                        <XCircle size={14} color={rsvpStatus === 'not_going' ? '#1D4ED8' : '#FFFFFF'} />
-                        <Text style={[eventsStyles.rsvpText, rsvpStatus === 'not_going' && eventsStyles.rsvpTextActive]}>Not Going</Text>
+                        <XCircle size={14} color={rsvpStatus === 'not_going' ? '#EF4444' : '#FFFFFF'} />
+                        <Text style={[eventsStyles.rsvpText, rsvpStatus === 'not_going' && { color: '#EF4444' }]}>Not Going</Text>
                       </TouchableOpacity>
                     </View>
+
                   </LinearGradient>
                 </TouchableOpacity>
               );
@@ -425,47 +435,73 @@ function EventsTab({ searchQuery }: SubScreenProps) {
           )}
         </View>
       ) : (
-        <View style={placeholder.wrap}>
-          <Text style={placeholder.title}>No events today</Text>
-          <Text style={placeholder.subtitle}>Check upcoming events below.</Text>
+        <View style={eventsStyles.emptyTodayCard}>
+          <View style={eventsStyles.emptyTodayIconRing}>
+            <CalendarDays size={26} color="#FF6596" />
+          </View>
+          <Text style={eventsStyles.emptyTodayTitle}>All clear for today</Text>
+          <Text style={eventsStyles.emptyTodaySubtitle}>
+            No events scheduled today.{'\n'}Check what's coming up below ↓
+          </Text>
         </View>
       )}
 
       <View style={eventsStyles.sectionHeadRow}>
-        <Text style={eventsStyles.listHeading}>Upcoming Events</Text>
-        <Text style={eventsStyles.listCount}>{upcomingList.length}</Text>
+        <View>
+          <Text style={eventsStyles.listHeadingOverline}>WHAT'S NEXT</Text>
+          <Text style={eventsStyles.listHeading}>Upcoming Events</Text>
+        </View>
+        <View style={eventsStyles.listCountBadge}>
+          <Text style={eventsStyles.listCount}>{upcomingList.length}</Text>
+        </View>
       </View>
 
       {upcomingList.length === 0 ? (
-        <View style={placeholder.wrap}>
-          <Text style={placeholder.title}>No events found</Text>
-          <Text style={placeholder.subtitle}>Try another search term.</Text>
+        <View style={eventsStyles.emptyTodayCard}>
+          <View style={eventsStyles.emptyTodayIconRing}>
+            <CalendarDays size={26} color="#FF6596" />
+          </View>
+          <Text style={eventsStyles.emptyTodayTitle}>Nothing found</Text>
+          <Text style={eventsStyles.emptyTodaySubtitle}>Try a different search term.</Text>
         </View>
       ) : (
         upcomingList.map((event) => (
-          <TouchableOpacity key={event.id} style={eventsStyles.listCard} activeOpacity={0.86} onPress={() => setSelectedEvent(event)}>
-            <View style={eventsStyles.listCardContent}>
+          <TouchableOpacity key={event.id} activeOpacity={0.82} onPress={() => setSelectedEvent(event)}>
+            <View style={eventsStyles.listCard}>
               <View style={eventsStyles.listDateBlock}>
                 <Text style={eventsStyles.listDateMonth}>{getEventDateParts(event).month}</Text>
-                <Text style={eventsStyles.listDateDay}>{getEventDateParts(event).day}</Text>
+                <Text style={eventsStyles.listDateDay}>
+                  {getEventDateParts(event).day}
+                </Text>
+                <Text style={eventsStyles.listDateWeekday}>
+                  {getEventDateParts(event).weekday.slice(0, 3).toUpperCase()}
+                </Text>
               </View>
 
-              <View style={eventsStyles.listDetailsBlock}>
-                <Text style={eventsStyles.listEventTitle}>{event.event || 'Church Event'}</Text>
+              <View style={eventsStyles.listDivider} />
 
-                <View style={eventsStyles.listMetaRow}>
-                  <Text style={eventsStyles.weekdayText}>{getEventDateParts(event).weekday}</Text>
-                  <Text style={eventsStyles.listDot}>•</Text>
-                  <Clock size={12} color="#7B8094" />
-                  <Text style={eventsStyles.listMetaText}>
+              <View style={eventsStyles.listDetailsBlock}>
+                <Text style={eventsStyles.listEventTitle} numberOfLines={2}>
+                  {event.event || 'Church Event'}
+                </Text>
+
+                <View style={eventsStyles.listTimePill}>
+                  <Clock size={11} color="#9CA3AF" />
+                  <Text style={eventsStyles.listTimePillText}>
                     {event.time || '9:00 AM'}{event.endTime ? ` – ${event.endTime}` : ''}
                   </Text>
                 </View>
 
                 <View style={eventsStyles.locationRow}>
-                  <MapPin size={13} color="#7B8094" />
-                  <Text style={eventsStyles.listMetaText}>{event.location || 'Main Sanctuary'}</Text>
+                  <MapPin size={11} color="#B0B6C8" />
+                  <Text style={eventsStyles.listLocationText} numberOfLines={1}>
+                    {event.location || 'Main Sanctuary'}
+                  </Text>
                 </View>
+              </View>
+
+              <View style={eventsStyles.listChevronWrap}>
+                <ChevronRight size={14} color="#9CA3AF" />
               </View>
             </View>
           </TouchableOpacity>
@@ -1204,14 +1240,13 @@ const eventsStyles = StyleSheet.create({
     color: '#7B8094',
   },
   heroCard: {
-    borderRadius: 18,
-    minHeight: 160,
-    padding: 16,
-    gap: 10,
-    justifyContent: 'space-between',
-    shadowColor: '#355DB5',
-    shadowOpacity: 0.22,
-    shadowRadius: 16,
+    borderRadius: 24,
+    padding: 20,
+    gap: 14,
+    overflow: 'hidden',
+    shadowColor: '#B66DFF',
+    shadowOpacity: 0.28,
+    shadowRadius: 20,
     shadowOffset: { width: 0, height: 8 },
     elevation: 6,
   },
@@ -1220,104 +1255,199 @@ const eventsStyles = StyleSheet.create({
   },
   heroCarouselContent: {
     paddingHorizontal: 0,
+    paddingVertical: 12,
   },
   heroSlide: {
     justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  heroOrb1: {
+    position: 'absolute',
+    top: -50,
+    right: -50,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+  },
+  heroOrb2: {
+    position: 'absolute',
+    bottom: -40,
+    left: -30,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(255,255,255,0.07)',
   },
   heroShell: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
   },
   heroDateBlock: {
-    width: 60,
-    height: 72,
-    borderRadius: 12,
+    width: 62,
     backgroundColor: 'rgba(255,255,255,0.18)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
+    paddingVertical: 12,
+    gap: 1,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.20)',
   },
   heroDateMonth: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(255,255,255,0.85)',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  heroDateDay: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    lineHeight: 32,
+    includeFontPadding: false,
+  },
+  heroDateWeekday: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.7)',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
-  heroDateDay: {
-    marginTop: 2,
-    fontSize: 26,
-    lineHeight: 30,
-    fontWeight: '900',
-    color: '#FFFFFF',
-  },
   heroMainBlock: {
     flex: 1,
+    gap: 6,
   },
   heroTopRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   livePill: {
-    backgroundColor: 'rgba(255,255,255,0.24)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(255,255,255,0.22)',
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.30)',
+    alignSelf: 'flex-start',
   },
   livePillText: {
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '900',
     color: '#FFFFFF',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
   },
   heroDate: {
     fontSize: 12,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.75)',
+  },
+  heroDateLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.75)',
+    marginBottom: 4,
   },
   heroTitle: {
-    marginTop: 2,
-    marginBottom: 4,
-    fontSize: 17,
+    fontSize: 22,
     fontWeight: '900',
     color: '#FFFFFF',
-    letterSpacing: -0.3,
+    letterSpacing: -0.5,
+    lineHeight: 28,
+  },
+  heroMetaStack: {
+    gap: 6,
   },
   heroMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    marginTop: 3,
+    gap: 7,
   },
-  heroMeta: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.88)',
-    letterSpacing: 0.1,
-  },
-  heroActionRow: {
-    marginTop: 2,
-    flexDirection: 'row',
-    gap: 8,
-  },
-  rsvpBtn: {
+  heroMetaPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(255,255,255,0.14)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.24)',
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.18)',
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+  },
+  heroMetaPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  heroTimeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+  },
+  heroTimeBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  heroLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  heroMeta: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.85)',
+    flex: 1,
+  },
+  heroActionRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.18)',
+  },
+  rsvpBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 999,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
   },
   rsvpBtnActive: {
     backgroundColor: '#FFFFFF',
     borderColor: '#FFFFFF',
+  },
+  rsvpBtnGoing: {
+    backgroundColor: '#22C55E',
+    borderColor: '#22C55E',
+  },
+  rsvpBtnMaybe: {
+    backgroundColor: '#F59E0B',
+    borderColor: '#F59E0B',
+  },
+  rsvpBtnNo: {
+    backgroundColor: '#EF4444',
+    borderColor: '#EF4444',
   },
   rsvpText: {
     fontSize: 11,
@@ -1325,98 +1455,241 @@ const eventsStyles = StyleSheet.create({
     color: '#FFFFFF',
   },
   rsvpTextActive: {
-    color: '#1D4ED8',
+    color: '#FF6596',
   },
-  listHeading: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: '#1F2937',
-    letterSpacing: -0.2,
-  },
-  listCount: {
-    minWidth: 24,
-    textAlign: 'center',
-    backgroundColor: '#EEF4FF',
-    color: '#3357A5',
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  listCard: {
+  rsvpTextGoing: { color: '#FFFFFF' },
+  rsvpTextGoing2: { color: '#FFFFFF' },
+  rsvpTextMaybe: { color: '#FFFFFF' },
+  rsvpTextMaybe2: { color: '#FFFFFF' },
+  rsvpTextNo: { color: '#FFFFFF' },
+  rsvpTextNo2: { color: '#FFFFFF' },
+  heroStampRow: { flexDirection: 'row' },
+  heroStampBlock: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
+  heroStampDay: { fontSize: 72, fontWeight: '900', color: '#FFFFFF', lineHeight: 72, letterSpacing: -4, includeFontPadding: false },
+  heroStampMeta: { paddingBottom: 8, gap: 2 },
+  heroStampMonth: { fontSize: 13, fontWeight: '800', color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', letterSpacing: 1.5 },
+  heroStampWeekday: { fontSize: 12, fontWeight: '500', color: 'rgba(255,255,255,0.65)', letterSpacing: 0.2 },
+  heroWatermark: { position: 'absolute', right: 12, top: -12, fontSize: 120, fontWeight: '900', color: 'rgba(255,255,255,0.06)', letterSpacing: -4 },
+  // ── Empty today state ──
+  emptyTodayCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.02)',
-    padding: 14,
+    borderColor: '#EEF0F7',
+    paddingVertical: 36,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    gap: 8,
     shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 15,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 4,
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
-  listCardContent: {
-    flexDirection: 'row',
-  },
-  listDateBlock: {
-    width: 58,
+  emptyTodayIconRing: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: '#FFE8F0',
+    borderWidth: 1,
+    borderColor: '#FFCEDD',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRightWidth: 1,
-    borderRightColor: '#EEF0F6',
-    paddingRight: 12,
-    marginRight: 12,
+    marginBottom: 6,
+  },
+  emptyTodayTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1a1a1a',
+    letterSpacing: -0.2,
+  },
+  emptyTodaySubtitle: {
+    fontSize: 13,
+    color: '#888',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  // ── Section heading ──
+  sectionHeadLeft: {
+    gap: 1,
+  },
+  sectionOverline: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FF6596',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  listHeadingOverline: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FF6596',
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  listHeading: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1a1a1a',
+  },
+  listCountBadge: {
+    backgroundColor: '#FFE8F0',
+    borderRadius: 999,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  listCount: {
+    color: '#FF6596',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  // ── Event cards ──
+  listCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#F5F6FA',
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  listCardStrip: {
+    width: 4,
+    backgroundColor: '#FF6596',
+  },
+  listCardContent: {
+    flex: 1,
+    flexDirection: 'row',
+    padding: 14,
+  },
+  listDateBlock: {
+    width: 68,
+    minHeight: 88,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    gap: 2,
+  },
+  listDivider: {
+    width: 1,
+    backgroundColor: '#F0F0F5',
+    marginVertical: 14,
   },
   listDateMonth: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
     color: '#FF6596',
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    letterSpacing: 1.2,
   },
   listDateDay: {
-    marginTop: 2,
-    fontSize: 24,
-    lineHeight: 28,
+    fontSize: 30,
     fontWeight: '900',
-    color: '#1A1A1A',
+    color: '#1a1a1a',
+    lineHeight: 34,
+    includeFontPadding: false,
+  },
+  listDateWeekday: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#B0B6C8',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
   listDetailsBlock: {
     flex: 1,
-    paddingLeft: 2,
+    paddingHorizontal: 14,
+    paddingVertical: 16,
+    justifyContent: 'center',
+    gap: 6,
   },
   listEventTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '800',
-    color: '#111827',
-    marginBottom: 4,
+    color: '#1a1a1a',
+    lineHeight: 18,
   },
-  weekdayText: {
-    fontSize: 12,
+  listTimePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#F5F6FA',
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    alignSelf: 'flex-start',
+  },
+  listTimePillText: {
+    fontSize: 11,
     fontWeight: '600',
-    color: '#7B8094',
+    color: '#9CA3AF',
   },
   listMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginBottom: 4,
+  },
+  listMetaPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#EEF4FF',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  listMetaText: {
+    fontSize: 12,
+    color: '#888',
+    fontWeight: '500',
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 5,
   },
-  listMetaText: {
+  listLocationText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: '#9CA3AF',
+    fontWeight: '500',
+    flex: 1,
+  },
+  weekdayText: {
+    fontSize: 12,
     fontWeight: '600',
+    color: '#888',
   },
   listDot: {
-    color: '#9AA2B1',
+    color: '#D1D5DB',
     fontSize: 12,
-    marginHorizontal: 2,
+    marginHorizontal: 1,
+  },
+  listChevronWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 999,
+    backgroundColor: '#F5F6FA',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginRight: 14,
+  },
+  listCardChevronWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 999,
+    backgroundColor: '#FFE8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   carouselDotsRow: {
     marginTop: 8,
