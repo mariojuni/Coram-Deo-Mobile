@@ -67,6 +67,17 @@ const ICON_COMPONENTS: Record<string, any> = {
   Users, Shield, Mic, Monitor, BookOpen, Guitar, Drum, Piano, GraduationCap, Music, Heart, Star, Settings
 };
 
+const ICON_COLORS: Record<string, string> = {
+  '#E0E7FF': '#818CF8', // Indigo
+  '#E8F0FF': '#4D8BFF', // Blue
+  '#F3F4F6': '#6B7280', // Gray
+  '#FFE8F0': '#FF6596', // Pink
+  '#FEF3C7': '#F59E0B', // Amber
+  '#FEE2E2': '#EF4444', // Red
+  '#D1FAE5': '#10B981', // Emerald
+  '#F3EEFF': '#8B6FE8', // Purple
+};
+
 function normalizeRole(name: string) {
   return name.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
@@ -443,11 +454,12 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
                 const customDetails = ministry.roleDetails?.[roleName];
                 const iconBg = customDetails?.color || ROLE_ICON_BG[normRole] || '#f3f4f6';
                 const iconName = customDetails?.icon;
+                const iconColor = ICON_COLORS[iconBg] || '#6B7280';
                 
                 let iconNode: React.ReactNode = null;
                 if (iconName && ICON_COMPONENTS[iconName]) {
                   const Comp = ICON_COMPONENTS[iconName];
-                  iconNode = <Comp size={18} color="#6B7280" />;
+                  iconNode = <Comp size={18} color={iconColor} />;
                 } else {
                   iconNode = ROLE_ICONS[normRole] ?? <Users size={18} color="#999" />;
                 }
