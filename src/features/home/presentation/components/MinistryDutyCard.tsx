@@ -19,12 +19,19 @@ import {
   Drum,
   GraduationCap,
   Guitar,
+  Hand,
+  HandCoins,
   MapPin,
   Mic,
   Monitor,
   Piano,
   Users,
   X,
+  Shield,
+  Music,
+  Heart,
+  Star,
+  Settings,
 } from 'lucide-react-native';
 import { useState } from 'react';
 import {
@@ -35,11 +42,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { PrayingHands } from '../../../../components/ui/icons/PrayingHands';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { useMinistryStore } from '../../../../store/useMinistryStore';
 import type { Schedule } from '../../../../features/schedule/domain/schedule.types';
 import type { MinistryAssignment } from '../../../../features/ministry/domain/ministry.types';
 
@@ -47,7 +56,7 @@ import type { MinistryAssignment } from '../../../../features/ministry/domain/mi
 // Each role has a distinct color, icon, and background used throughout the card.
 
 const ROLE_COLOR: Record<string, string> = {
-  openingprayer:        '#8B6FE8',
+  openingprayer:        '#818CF8',
   tithesofferingprayer: '#4D8BFF',
   techaudio:            '#6B7280',
   tech:                 '#6B7280',
@@ -69,7 +78,7 @@ const ROLE_COLOR: Record<string, string> = {
 };
 
 const ROLE_ICON_BG: Record<string, string> = {
-  openingprayer:        '#F3EEFF',
+  openingprayer:        '#E0E7FF',
   tithesofferingprayer: '#E8F0FF',
   techaudio:            '#F3F4F6',
   tech:                 '#F3F4F6',
@@ -94,8 +103,8 @@ const ROLE_ICON_BG: Record<string, string> = {
 };
 
 const ROLE_ICONS: Record<string, React.ReactNode> = {
-  openingprayer:        <Users size={20} color="#8B6FE8" />,
-  tithesofferingprayer: <BookOpen size={20} color="#4D8BFF" />,
+  openingprayer:        <PrayingHands size={20} color="#818CF8" />,
+  tithesofferingprayer: <HandCoins size={20} color="#4D8BFF" />,
   techaudio:            <Monitor size={20} color="#6B7280" />,
   tech:                 <Monitor size={20} color="#6B7280" />,
   audio:                <Monitor size={20} color="#6B7280" />,
@@ -116,6 +125,10 @@ const ROLE_ICONS: Record<string, React.ReactNode> = {
   kids:                 <GraduationCap size={20} color="#F59E0B" />,
   youth:                <GraduationCap size={20} color="#4D8BFF" />,
   adults:               <GraduationCap size={20} color="#10B981" />,
+};
+
+const ICON_COMPONENTS: Record<string, any> = {
+  Users, Shield, Mic, Monitor, BookOpen, Guitar, Drum, Piano, GraduationCap, Music, Heart, Star, Settings, Hand, HandCoins, PrayingHands
 };
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -140,13 +153,25 @@ export function MinistryDutyCard({
   onDecline,
   saving,
 }: MinistryDutyCardProps) {
-  // Resolve role identity
   const roleName = assignment.roleName;
   const roleId = roleName.toLowerCase().replace(/[^a-z0-9]/g, '');
   const roleLabel = roleName;
-  const icon      = ROLE_ICONS[roleId];
-  const iconBg    = ROLE_ICON_BG[roleId] ?? '#F3F4F6';
-  const color     = ROLE_COLOR[roleId] ?? '#FF6596';
+
+  const ministries = useMinistryStore(s => s.ministries);
+  const ministry = ministries.find(m => m.id === assignment.ministryId);
+
+  const customDetails = ministry?.roleDetails?.[roleName];
+  const iconBg    = customDetails?.color || ROLE_ICON_BG[roleId] || '#F3F4F6';
+  const color     = ROLE_COLOR[roleId] || '#6B7280';
+  const iconName  = customDetails?.icon;
+  
+  let iconNode: React.ReactNode = null;
+  if (iconName && ICON_COMPONENTS[iconName]) {
+    const Comp = ICON_COMPONENTS[iconName];
+    iconNode = <Comp size={20} color="#6B7280" />;
+  } else {
+    iconNode = ROLE_ICONS[roleId] ?? <Users size={20} color="#999" />;
+  }
 
   // Duty status flags
   const isPending  = assignment.status === 'Pending';
@@ -205,7 +230,7 @@ export function MinistryDutyCard({
           style={cs.header}
         >
           <View style={[cs.iconBox, { backgroundColor: iconBg }]}>
-            {icon ?? <Users size={20} color="#999" />}
+            {iconNode}
           </View>
 
           <View style={cs.headerInfo}>

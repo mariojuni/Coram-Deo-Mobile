@@ -5,11 +5,12 @@
  */
 import {
   BookOpen, Check, ChevronDown, ChevronUp, Clock, Copy, Drum, GraduationCap,
-  Guitar, MapPin, Mic, Monitor, Piano, Search, Users, X
+  Guitar, Hand, HandCoins, MapPin, Mic, Monitor, Piano, Search, Users, X, Shield, Music, Heart, Star, Settings
 } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, FlatList, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { PrayingHands } from '../ui/icons/PrayingHands';
 import { ministryRepository } from '../../features/ministry/data/ministry.repository';
 import type { Schedule } from '../../features/schedule/domain/schedule.types';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -25,8 +26,8 @@ type AssignmentsMap = Record<string, string>;
 
 // ─── Role Icon Map (Fallback Logic) ──────────────────────────────────────────
 const ROLE_ICONS: Record<string, React.ReactNode> = {
-  openingprayer: <Users size={18} color="#8B6FE8" />,
-  tithesofferingprayer: <BookOpen size={18} color="#4D8BFF" />,
+  openingprayer: <PrayingHands size={18} color="#818CF8" />,
+  tithesofferingprayer: <HandCoins size={18} color="#4D8BFF" />,
   techaudio: <Monitor size={18} color="#6B7280" />,
   tech: <Monitor size={18} color="#6B7280" />,
   audio: <Monitor size={18} color="#6B7280" />,
@@ -44,7 +45,7 @@ const ROLE_ICONS: Record<string, React.ReactNode> = {
 };
 
 const ROLE_ICON_BG: Record<string, string> = {
-  openingprayer: '#F3EEFF',
+  openingprayer: '#E0E7FF',
   tithesofferingprayer: '#E8F0FF',
   techaudio: '#F3F4F6',
   tech: '#F3F4F6',
@@ -60,6 +61,10 @@ const ROLE_ICON_BG: Record<string, string> = {
   kids: '#FEF3C7',
   youth: '#E8F0FF',
   adults: '#D1FAE5',
+};
+
+const ICON_COMPONENTS: Record<string, any> = {
+  Users, Shield, Mic, Monitor, BookOpen, Guitar, Drum, Piano, GraduationCap, Music, Heart, Star, Settings
 };
 
 function normalizeRole(name: string) {
@@ -434,8 +439,18 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
                 const isAssigned = !!assignedUserId;
 
                 const normRole = normalizeRole(roleName);
-                const icon = ROLE_ICONS[normRole];
-                const iconBg = ROLE_ICON_BG[normRole] ?? '#f3f4f6';
+                
+                const customDetails = ministry.roleDetails?.[roleName];
+                const iconBg = customDetails?.color || ROLE_ICON_BG[normRole] || '#f3f4f6';
+                const iconName = customDetails?.icon;
+                
+                let iconNode: React.ReactNode = null;
+                if (iconName && ICON_COMPONENTS[iconName]) {
+                  const Comp = ICON_COMPONENTS[iconName];
+                  iconNode = <Comp size={18} color="#6B7280" />;
+                } else {
+                  iconNode = ROLE_ICONS[normRole] ?? <Users size={18} color="#999" />;
+                }
 
                 const liveDuty = eventAssignments.find(a => getAssignmentKey(a.ministryId, a.roleName) === assignKey);
 
@@ -463,7 +478,7 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
                 return (
                   <View key={roleName} style={[ms.roleRow, idx > 0 && ms.roleRowBorder]}>
                     <View style={[ms.roleIconBox, { backgroundColor: iconBg }]}>
-                      {icon ?? <Users size={18} color="#999" />}
+                      {iconNode}
                     </View>
 
                     <View style={{ flex: 1 }}>

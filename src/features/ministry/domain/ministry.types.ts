@@ -9,6 +9,7 @@ export interface Ministry {
   id: string;
   name: string;
   roles: string[];
+  roleDetails?: Record<string, { icon: string; color: string }>;
   members?: MinistryMember[];
   churchId: string;
   status: string;
