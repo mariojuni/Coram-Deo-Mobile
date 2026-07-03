@@ -1,10 +1,12 @@
 import { CalendarPlus, Clock, MapPin, Pencil } from 'lucide-react-native';
-import { useCallback, useMemo, useState } from 'react';
+import { useEffect, useCallback, useMemo, useState } from 'react';
 import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useMemberStore } from '../../store/useMemberStore';
+import { useMinistryStore } from '../../store/useMinistryStore';
 import { getMinisterialTeam, type Schedule, useScheduleStore } from '../../store/useScheduleStore';
 import AddScheduleModal from './AddScheduleModal';
 import AssignMinistriesModal from './AssignMinistriesModal';
+import { useAuthStore } from '../../store/useAuthStore';
 
 type TeamMemberCard = {
   avatar: string;
@@ -22,6 +24,8 @@ type ScheduleCardItem = {
 
 export default function ScheduleTab() {
   const schedules = useScheduleStore((state) => state.schedules);
+  const { assignments, initializeAssignmentsListener } = useMinistryStore();
+  const userProfile = useAuthStore((s) => s.userProfile);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [eventToEdit, setEventToEdit] = useState<Schedule | null>(null);
   const [assignSchedule, setAssignSchedule] = useState<Schedule | null>(null);
@@ -37,17 +41,23 @@ export default function ScheduleTab() {
     };
   };
 
+  useEffect(() => {
+    const churchId = userProfile?.churchId || 'YmEc6C69Xz4DKRQaQZBV';
+    const unsubscribe = initializeAssignmentsListener(churchId as string);
+    return () => unsubscribe();
+  }, [initializeAssignmentsListener, userProfile?.churchId]);
+
   const scheduleItems = useMemo<ScheduleCardItem[]>(
     () =>
       schedules.map((schedule) => {
         const { month, day, weekday } = formatDate(schedule.date);
-        const team = getMinisterialTeam(schedule)
-          .map((duty) => {
-            const member = memberById.get(duty.userId);
+        const team = getMinisterialTeam(schedule.id, assignments)
+          .map((assignment) => {
+            const member = memberById.get(assignment.memberId);
             if (!member) return null;
             return {
-              id: duty.userId,
-              role: duty.role,
+              id: assignment.memberId,
+              role: assignment.roleName,
               avatar:
                 member.avatar ||
                 `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name || 'User')}&background=f0f0f0&color=999`,
@@ -63,7 +73,7 @@ export default function ScheduleTab() {
           weekday,
         };
       }),
-    [memberById, schedules]
+    [memberById, schedules, assignments]
   );
 
   const renderScheduleItem = useCallback(
@@ -87,7 +97,7 @@ export default function ScheduleTab() {
           <View style={styles.detailsBlock}>
             <View style={styles.titleRow}>
               <Text style={styles.eventTitle} numberOfLines={1}>
-                {item.schedule.event}
+                {item.schedule.title}
               </Text>
               <TouchableOpacity
                 style={styles.editBtn}

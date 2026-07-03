@@ -25,20 +25,12 @@ export function useScheduleFeed() {
     await scheduleRepository.updateRsvp(eventId, userId, status);
   }, []);
 
-  const updateMinisterialDuty = useCallback(async (eventId: string, userId: string, action: 'accept' | 'cancel') => {
-    await scheduleRepository.updateMinisterialDuty(eventId, userId, action);
-  }, []);
 
-  const dismissNotification = useCallback(async (eventId: string, userId: string, currentStatus: string) => {
-    await scheduleRepository.dismissNotification(eventId, userId, currentStatus);
-  }, []);
 
   return {
     schedules,
     schedulesLoading,
     updateRsvp,
-    updateMinisterialDuty,
-    dismissNotification,
   };
 }
 

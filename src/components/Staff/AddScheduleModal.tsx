@@ -47,7 +47,7 @@ export default function AddScheduleModal({ isOpen, onClose, eventToEdit }: AddSc
     return d;
   })();
 
-  const [event, setEvent] = useState(eventToEdit?.event ?? 'Sunday Worship Service');
+  const [title, setTitle] = useState(eventToEdit?.title ?? 'Sunday Worship Service');
   const [date, setDate] = useState(initDate);
   const [startTime, setStartTime] = useState(
     eventToEdit?.time ? parseTime(eventToEdit.time) : new Date(new Date().setHours(9, 0, 0, 0))
@@ -62,7 +62,7 @@ export default function AddScheduleModal({ isOpen, onClose, eventToEdit }: AddSc
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
-    if (!event.trim()) {
+    if (!title.trim()) {
       Alert.alert('Missing Info', 'Please provide an event title.');
       return;
     }
@@ -73,16 +73,16 @@ export default function AddScheduleModal({ isOpen, onClose, eventToEdit }: AddSc
     setSaving(true);
     try {
       const payload = {
-        event: event.trim(),
+        title: title.trim(),
         date: fmtDateDB(date),
         time: fmtTime(startTime),
         endTime: fmtTime(endTime),
         location: location.trim(),
       };
       if (eventToEdit) {
-        await updateDoc(doc(db, 'schedules', eventToEdit.id), payload);
+        await updateDoc(doc(db, 'events', eventToEdit.id), payload);
       } else {
-        await addDoc(collection(db, 'schedules'), { ...payload, duties: [], createdAt: serverTimestamp() });
+        await addDoc(collection(db, 'events'), { ...payload, duties: [], createdAt: serverTimestamp() });
       }
       onClose();
     } catch (e) {
@@ -112,8 +112,8 @@ export default function AddScheduleModal({ isOpen, onClose, eventToEdit }: AddSc
           <Text style={s.label}>Event Title</Text>
           <TextInput
             style={s.input}
-            value={event}
-            onChangeText={setEvent}
+            value={title}
+            onChangeText={setTitle}
             placeholder="e.g. Sunday Worship Service"
             placeholderTextColor="#aaa"
           />

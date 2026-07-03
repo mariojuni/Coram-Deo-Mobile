@@ -1,13 +1,14 @@
 import { getUndismissedDutyNotificationsForAdmin } from '@/features/schedule/domain/schedule.selectors';
 import { useMemberStore } from '@/store/useMemberStore';
-import { dismissNotification, useScheduleStore } from '@/store/useScheduleStore';
+import { useMinistryStore } from '@/store/useMinistryStore';
+import { ministryRepository } from '@/features/ministry/data/ministry.repository';
 import { useMemo } from 'react';
 
 export type StaffNotificationViewModel = {
   action: 'accepted' | 'declined';
   date: string;
   dateObj: Date;
-  event: string;
+  title: string;
   id: string;
   role: string;
   scheduleId: string;
@@ -16,11 +17,11 @@ export type StaffNotificationViewModel = {
 };
 
 export function useStaffNotifications() {
-  const schedules = useScheduleStore((state) => state.schedules);
+  const { assignments } = useMinistryStore();
   const members = useMemberStore((state) => state.members);
 
   const notifications = useMemo<StaffNotificationViewModel[]>(() => {
-    const items = getUndismissedDutyNotificationsForAdmin(schedules);
+    const items = getUndismissedDutyNotificationsForAdmin(assignments);
     return items
       .map((item) => {
         const member = members.find((m) => m.id === item.userId);
@@ -33,12 +34,17 @@ export function useStaffNotifications() {
           action: item.action,
           role: item.role,
           date: item.date,
-          event: item.event,
+          title: item.title,
           dateObj: item.dateObj,
         };
       })
       .filter((value): value is StaffNotificationViewModel => value !== null);
-  }, [members, schedules]);
+  }, [members, assignments]);
+
+  const dismissNotification = async (eventId: string, userId: string, currentStatus: string, assignmentId?: string) => {
+    if (!assignmentId) return;
+    await ministryRepository.updateAssignment(assignmentId, { isAcknowledged: true });
+  };
 
   return { dismissNotification, notifications };
 }

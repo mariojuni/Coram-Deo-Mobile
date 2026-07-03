@@ -256,7 +256,7 @@ function EventsTab({ searchQuery }: SubScreenProps) {
     if (!query) return schedules;
 
     return schedules.filter((event) => {
-      const haystack = `${event.event} ${event.location} ${event.time}`.toLowerCase();
+      const haystack = `${event.title} ${event.location} ${event.time}`.toLowerCase();
       return haystack.includes(query);
     });
   }, [searchQuery, schedules]);
@@ -370,7 +370,7 @@ function EventsTab({ searchQuery }: SubScreenProps) {
                         {dateParts.weekday}, {dateParts.month} {dateParts.day}
                       </Text>
                       <Text style={eventsStyles.heroTitle} numberOfLines={2}>
-                        {todayEvent.event || 'Church Event'}
+                        {todayEvent.title || 'Church Event'}
                       </Text>
                     </View>
 
@@ -482,7 +482,7 @@ function EventsTab({ searchQuery }: SubScreenProps) {
 
               <View style={eventsStyles.listDetailsBlock}>
                 <Text style={eventsStyles.listEventTitle} numberOfLines={2}>
-                  {event.event || 'Church Event'}
+                  {event.title || 'Church Event'}
                 </Text>
 
                 <View style={eventsStyles.listTimePill}>
@@ -517,7 +517,7 @@ function EventsTab({ searchQuery }: SubScreenProps) {
           headerTitleAlign="center"
           containerStyle={eventsStyles.modalContainer}
         >
-          <Text style={eventsStyles.modalEventName}>{selectedEvent.event || 'Church Event'}</Text>
+          <Text style={eventsStyles.modalEventName}>{selectedEvent.title || 'Church Event'}</Text>
 
           <View style={eventsStyles.modalInfoCard}>
             <View style={eventsStyles.modalInfoRow}>

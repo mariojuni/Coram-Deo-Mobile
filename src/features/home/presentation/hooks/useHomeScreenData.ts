@@ -3,13 +3,14 @@ import { formatPrayerTimeAgo } from '@/features/prayer/domain/prayer.selectors';
 import type { Prayer } from '@/features/prayer/domain/prayer.types';
 import { getUpcomingMinisterialDuties, getUpcomingSchedules } from '@/features/schedule/domain/schedule.selectors';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useMinistryStore } from '@/store/useMinistryStore';
 import {
   getUserMinisterialRoles,
   getUserRsvpStatus,
-  updateMinisterialDuty,
   updateRsvp,
   useScheduleStore,
 } from '@/store/useScheduleStore';
+import { ministryRepository } from '@/features/ministry/data/ministry.repository';
 import { useEffect, useMemo, useState } from 'react';
 
 export function useHomeScreenData() {
@@ -17,12 +18,20 @@ export function useHomeScreenData() {
   const userProfile = useAuthStore((state) => state.userProfile);
   const schedules = useScheduleStore((state) => state.schedules);
   const initializeSchedulesListener = useScheduleStore((state) => state.initializeSchedulesListener);
+  const { assignments, initializeAssignmentsListener, fetchMinistries } = useMinistryStore();
   const [latestPrayer, setLatestPrayer] = useState<Prayer | null>(null);
 
   useEffect(() => {
     const unsubscribe = initializeSchedulesListener();
     return () => unsubscribe();
   }, [initializeSchedulesListener]);
+
+  useEffect(() => {
+    const churchId = userProfile?.churchId || 'YmEc6C69Xz4DKRQaQZBV';
+    fetchMinistries(churchId as string);
+    const unsubscribe = initializeAssignmentsListener(churchId as string);
+    return () => unsubscribe();
+  }, [fetchMinistries, initializeAssignmentsListener, userProfile?.churchId]);
 
   useEffect(() => {
     const unsubscribe = prayerRepository.subscribeToLatestPrayer(
@@ -38,8 +47,8 @@ export function useHomeScreenData() {
 
   const myUpcomingDuties = useMemo(() => {
     if (!currentUser) return [];
-    return getUpcomingMinisterialDuties(schedules, currentUser.uid);
-  }, [currentUser, schedules]);
+    return getUpcomingMinisterialDuties(schedules, assignments, currentUser.uid);
+  }, [currentUser, schedules, assignments]);
 
   const rawDisplayName = userProfile?.name || currentUser?.displayName || 'Guest';
   const displayName = rawDisplayName.split(' ')[0];
@@ -62,9 +71,11 @@ export function useHomeScreenData() {
     }
   };
 
-  const handleMinisterialDuty = async (eventId: string, action: 'accept' | 'cancel', roleId?: string) => {
+  // We change this to update the ministry assignment status directly
+  const handleMinisterialDuty = async (assignmentId: string, action: 'accept' | 'cancel') => {
     if (!currentUser?.uid) return;
-    await updateMinisterialDuty(eventId, currentUser.uid, action, roleId);
+    const newStatus = action === 'accept' ? 'Confirmed' : 'Declined';
+    await ministryRepository.updateAssignment(assignmentId, { status: newStatus });
   };
 
   return {
@@ -79,5 +90,6 @@ export function useHomeScreenData() {
     handlePray,
     handleRsvp,
     formatPrayerTimeAgo,
+    assignments, // Export assignments to use in home screen
   };
 }

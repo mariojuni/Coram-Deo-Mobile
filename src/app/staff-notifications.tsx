@@ -9,13 +9,13 @@ export default function StaffNotificationsScreen() {
   const router = useRouter();
   const { dismissNotification, notifications } = useStaffNotifications();
 
-  const handleDismiss = (scheduleId: string, userId: string, status: 'accepted' | 'declined') => {
-    dismissNotification(scheduleId, userId, status);
+  const handleDismiss = (scheduleId: string, userId: string, status: 'accepted' | 'declined', assignmentId: string) => {
+    dismissNotification(scheduleId, userId, status, assignmentId);
   };
 
   const handleDismissAll = () => {
     notifications.forEach((notification) => {
-      dismissNotification(notification.scheduleId, notification.userId, notification.action);
+      dismissNotification(notification.scheduleId, notification.userId, notification.action, notification.id);
     });
   };
 
@@ -81,7 +81,7 @@ export default function StaffNotificationsScreen() {
                 </View>
                 
                 <Text style={styles.messageText}>
-                  <Text style={styles.boldText}>{notif.userName}</Text> has {isAccepted ? 'accepted' : 'declined'} the role of <Text style={styles.boldText}>{notif.role}</Text> for the {notif.event}.
+                  <Text style={styles.boldText}>{notif.userName}</Text> has {isAccepted ? 'accepted' : 'declined'} the role of <Text style={styles.boldText}>{notif.role}</Text> for the {notif.title}.
                 </Text>
 
                 <View style={styles.actionRow}>
@@ -89,7 +89,7 @@ export default function StaffNotificationsScreen() {
                     style={styles.dismissBtn} 
                     onPress={(e) => {
                       e.stopPropagation();
-                      handleDismiss(notif.scheduleId, notif.userId, notif.action);
+                      handleDismiss(notif.scheduleId, notif.userId, notif.action, notif.id);
                     }}
                   >
                     <X size={14} color="#6B7280" />

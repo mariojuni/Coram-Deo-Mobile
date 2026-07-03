@@ -60,19 +60,3 @@ export async function updateRsvp(eventId: string, userId: string, status: string
     status === 'going' || status === 'maybe' || status === 'not_going' ? status : 'maybe';
   await scheduleRepository.updateRsvp(eventId, userId, normalizedStatus);
 }
-
-export async function updateMinisterialDuty(eventId: string, userId: string, action: 'accept' | 'cancel', roleId?: string): Promise<void> {
-  await scheduleRepository.updateMinisterialDuty(eventId, userId, action, roleId);
-}
-
-export async function dismissNotification(eventId: string, userId: string, currentStatus: string): Promise<void> {
-  await scheduleRepository.dismissNotification(eventId, userId, currentStatus);
-}
-
-export async function saveAssignments(
-  eventId: string,
-  assignments: { roleId: string; roleLabel: string; userId: string }[],
-  adminUserId: string
-): Promise<void> {
-  await scheduleRepository.saveAssignments(eventId, assignments, adminUserId);
-}

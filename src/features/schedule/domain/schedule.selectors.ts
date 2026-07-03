@@ -1,4 +1,5 @@
-import type { Duty, Schedule } from './schedule.types';
+import type { Schedule } from './schedule.types';
+import type { MinistryAssignment } from '../../ministry/domain/ministry.types';
 
 /**
  * Parses a time string like "09:00 AM" into 24h "HH:mm" format.
@@ -48,60 +49,42 @@ export function getUpcomingSchedules(schedules: Schedule[], maxCount = 5): Sched
 }
 
 /**
- * Extracts the current user's ministerial duty roles from a schedule.
- * Filters out legacy "Attendee" entries that may exist in old data.
- * Returns null if the user has no ministerial duties.
+ * Extracts the current user's ministerial duty roles from assignments for a schedule.
  */
-export function getUserMinisterialRoles(schedule: Schedule, userId: string): string | null {
-  if (!schedule.duties || !Array.isArray(schedule.duties)) return null;
-
-  const myDuties = schedule.duties.filter(
-    (duty) =>
-      duty.userId === userId &&
-      duty.role.toLowerCase() !== 'attendee' &&
-      duty.status !== 'declined' &&
-      duty.status !== 'declined_dismissed'
+export function getUserMinisterialRoles(scheduleId: string, assignments: MinistryAssignment[], userId: string): string | null {
+  const myDuties = assignments.filter(
+    (a) =>
+      a.eventId === scheduleId &&
+      a.memberId === userId
   );
 
   if (myDuties.length === 0) return null;
-  return myDuties.map((duty) => duty.role).join(', ');
+  return myDuties.map((a) => a.roleName).join(', ');
 }
 
 /**
  * Gets the current user's RSVP status for a schedule.
- * Checks the `rsvps` array first (new structure), then falls back to
- * looking in `duties` for legacy "Attendee" entries.
+ * Checks the `rsvps` array.
  */
 export function getUserRsvpStatus(schedule: Schedule, userId: string): string | null {
   if (schedule.rsvps && Array.isArray(schedule.rsvps)) {
     const myRsvp = schedule.rsvps.find((rsvp) => rsvp.userId === userId);
     if (myRsvp) return myRsvp.status;
   }
-
-  if (schedule.duties && Array.isArray(schedule.duties)) {
-    const attendeeDuty = schedule.duties.find(
-      (duty) => duty.userId === userId && duty.role.toLowerCase() === 'attendee'
-    );
-    if (attendeeDuty) return attendeeDuty.status;
-  }
-
   return null;
 }
 
 /**
- * Returns deduplicated ministerial team members (unique by userId).
- * Excludes legacy "Attendee" entries.
+ * Returns deduplicated ministerial team members (unique by memberId) for a schedule.
  */
-export function getMinisterialTeam(schedule: Schedule): Duty[] {
-  if (!schedule.duties || !Array.isArray(schedule.duties)) return [];
-
+export function getMinisterialTeam(scheduleId: string, assignments: MinistryAssignment[]): MinistryAssignment[] {
   const seen = new Set<string>();
-  return schedule.duties.filter((duty) => {
-    if (!duty.userId) return false;
-    if (duty.role.toLowerCase() === 'attendee') return false;
-    if (duty.status === 'declined' || duty.status === 'declined_dismissed') return false;
-    if (seen.has(duty.userId)) return false;
-    seen.add(duty.userId);
+  return assignments.filter((a) => {
+    if (a.eventId !== scheduleId) return false;
+    if (!a.memberId) return false;
+    if (a.status === 'Declined') return false;
+    if (seen.has(a.memberId)) return false;
+    seen.add(a.memberId);
     return true;
   });
 }
@@ -110,14 +93,14 @@ export function getMinisterialTeam(schedule: Schedule): Duty[] {
  * Returns upcoming schedules where the user has active ministerial duties,
  * ordered by date and time.
  */
-export function getUpcomingMinisterialDuties(schedules: Schedule[], userId: string): Schedule[] {
+export function getUpcomingMinisterialDuties(schedules: Schedule[], assignments: MinistryAssignment[], userId: string): Schedule[] {
   const now = new Date();
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
   return schedules
     .filter((schedule) => {
       if (schedule.date < todayStr) return false;
-      return getUserMinisterialRoles(schedule, userId) !== null;
+      return getUserMinisterialRoles(schedule.id, assignments, userId) !== null;
     })
     .sort((a, b) => {
       if (a.date !== b.date) return a.date.localeCompare(b.date);
@@ -125,44 +108,43 @@ export function getUpcomingMinisterialDuties(schedules: Schedule[], userId: stri
     });
 }
 
-export function getUndismissedNotificationCount(schedules: Schedule[]): number {
-  return schedules
-    .flatMap((schedule) => schedule.duties || [])
-    .filter((duty) => duty.status === 'accepted' || duty.status === 'declined').length;
+export function getUndismissedNotificationCount(assignments: MinistryAssignment[]): number {
+  return assignments.filter((a) => !a.isAcknowledged && (a.status === 'Confirmed' || a.status === 'Declined')).length;
 }
 
 export type StaffDutyNotification = {
   action: 'accepted' | 'declined';
   date: string;
   dateObj: Date;
-  event: string;
+  title: string;
   notificationId: string;
   role: string;
   scheduleId: string;
   userId: string;
+  assignmentId: string;
 };
 
-export function getUndismissedDutyNotificationsForAdmin(schedules: Schedule[]): StaffDutyNotification[] {
-  return schedules
-    .flatMap((schedule) => {
-      if (!schedule.duties) return [];
-
-      return schedule.duties
-        .filter((duty) => duty.status === 'accepted' || duty.status === 'declined')
-        .map<StaffDutyNotification>((duty) => ({
-          action: duty.status === 'accepted' ? 'accepted' : 'declined',
-          date: new Date(`${schedule.date}T00:00:00`).toLocaleDateString('en-US', {
-            weekday: 'short',
-            month: 'short',
-            day: 'numeric',
-          }),
-          dateObj: new Date(`${schedule.date}T00:00:00`),
-          event: schedule.event || 'Sunday Worship Service',
-          notificationId: `${schedule.id}-${duty.userId}-${duty.status}`,
-          role: duty.role,
-          scheduleId: schedule.id,
-          userId: duty.userId,
-        }));
+export function getUndismissedDutyNotificationsForAdmin(assignments: MinistryAssignment[]): StaffDutyNotification[] {
+  return assignments
+    .filter((a) => !a.isAcknowledged && (a.status === 'Confirmed' || a.status === 'Declined'))
+    .map<StaffDutyNotification>((a) => {
+      const isAccepted = a.status === 'Confirmed';
+      const eventDateStr = a.eventDate || new Date().toISOString().split('T')[0];
+      return {
+        action: isAccepted ? 'accepted' : 'declined',
+        date: new Date(`${eventDateStr}T00:00:00`).toLocaleDateString('en-US', {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+        }),
+        dateObj: new Date(`${eventDateStr}T00:00:00`),
+        title: a.eventName || 'Sunday Worship Service',
+        notificationId: a.id,
+        role: a.roleName,
+        scheduleId: a.eventId,
+        userId: a.memberId,
+        assignmentId: a.id,
+      };
     })
     .sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
 }

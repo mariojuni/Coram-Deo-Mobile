@@ -40,8 +40,8 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { MINISTRY_ROLES, resolveRoleId } from '../../../../features/schedule/domain/ministryRoles';
-import type { Duty, Schedule } from '../../../../features/schedule/domain/schedule.types';
+import type { Schedule } from '../../../../features/schedule/domain/schedule.types';
+import type { MinistryAssignment } from '../../../../features/ministry/domain/ministry.types';
 
 // ─── Role identity maps ───────────────────────────────────────────────────────
 // Each role has a distinct color, icon, and background used throughout the card.
@@ -100,7 +100,7 @@ const ROLE_ICONS: Record<string, React.ReactNode> = {
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 export interface MinistryDutyCardProps {
-  duty: Duty;
+  assignment: MinistryAssignment;
   schedule: Schedule;
   /** Called when the user confirms their attendance. */
   onConfirm: () => Promise<void>;
@@ -113,23 +113,24 @@ export interface MinistryDutyCardProps {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function MinistryDutyCard({
-  duty,
+  assignment,
   schedule,
   onConfirm,
   onDecline,
   saving,
 }: MinistryDutyCardProps) {
   // Resolve role identity
-  const roleId    = duty.roleId ?? resolveRoleId(duty.role) ?? '';
-  const roleLabel = MINISTRY_ROLES.find((r) => r.id === roleId)?.label ?? duty.role;
+  const roleName = assignment.roleName;
+  const roleId = roleName.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const roleLabel = roleName;
   const icon      = ROLE_ICONS[roleId];
   const iconBg    = ROLE_ICON_BG[roleId] ?? '#F3F4F6';
   const color     = ROLE_COLOR[roleId] ?? '#FF6596';
 
   // Duty status flags
-  const isPending  = duty.status === 'pending';
-  const isAccepted = duty.status === 'accepted' || duty.status === 'accepted_dismissed';
-  const isDeclined = duty.status === 'declined' || duty.status === 'declined_dismissed';
+  const isPending  = assignment.status === 'Pending';
+  const isAccepted = assignment.status === 'Confirmed';
+  const isDeclined = assignment.status === 'Declined';
 
   // Status display values
   const statusLabel = isPending ? 'Awaiting Response' : isAccepted ? 'Confirmed' : 'Declined';
@@ -163,7 +164,7 @@ export function MinistryDutyCard({
   const handleDeclinePress = () => {
     Alert.alert(
       'Decline Duty',
-      `Decline "${roleLabel}" for ${schedule.event}?`,
+      `Decline "${roleLabel}" for ${schedule.title}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Decline', style: 'destructive', onPress: onDecline },
@@ -206,7 +207,7 @@ export function MinistryDutyCard({
 
       {/* ── Body: event name + date · time · location ── */}
       <View style={cs.body}>
-        <Text style={cs.eventName} numberOfLines={1}>{schedule.event}</Text>
+        <Text style={cs.eventName} numberOfLines={1}>{schedule.title}</Text>
         <View style={cs.metaRow}>
           <CalendarDays size={11} color="#9CA3AF" />
           <Text style={cs.metaText}>{formattedDate}</Text>

@@ -23,6 +23,7 @@ export default function HomeScreen() {
     handleRsvp,
     formatPrayerTimeAgo,
     displayName,
+    assignments,
   } = useHomeScreenData();
 
   const [activeSlide, setActiveSlide] = useState(0);
@@ -34,27 +35,27 @@ export default function HomeScreen() {
   // US-01 / US-06 — flatten one card per duty, sort pending → accepted → declined
   const sortedDutyItems = useMemo(() => {
     const items = myUpcomingDuties.flatMap((schedule) =>
-      (schedule.duties ?? [])
-        .filter((d) => d.userId === currentUserId && d.role?.toLowerCase() !== 'attendee')
-        .map((duty) => ({ duty, schedule }))
+      assignments
+        .filter((a) => a.eventId === schedule.id && a.memberId === currentUserId)
+        .map((assignment) => ({ assignment, schedule }))
     );
 
     const order = (status: string) => {
-      if (status === 'pending') return 0;
-      if (status === 'accepted' || status === 'accepted_dismissed') return 1;
-      return 2; // declined / declined_dismissed
+      if (status === 'Pending') return 0;
+      if (status === 'Confirmed') return 1;
+      return 2; // Declined
     };
 
     return items.sort((a, b) => {
-      const statusDiff = order(a.duty.status) - order(b.duty.status);
+      const statusDiff = order(a.assignment.status) - order(b.assignment.status);
       if (statusDiff !== 0) return statusDiff;
       return a.schedule.date.localeCompare(b.schedule.date);
     });
-  }, [currentUserId, myUpcomingDuties]);
+  }, [currentUserId, myUpcomingDuties, assignments]);
 
   // US-07 — pending count for section header pill
   const pendingCount = useMemo(
-    () => sortedDutyItems.filter((i) => i.duty.status === 'pending').length,
+    () => sortedDutyItems.filter((i) => i.assignment.status === 'Pending').length,
     [sortedDutyItems]
   );
   const heroCards = useMemo(
@@ -123,7 +124,7 @@ export default function HomeScreen() {
                         <Text style={styles.heroTitle}>
                           {new Date(`${event.date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
                         </Text>
-                        <Text style={styles.heroEventName}>{event.event || 'Sunday Worship Service'}</Text>
+                        <Text style={styles.heroEventName}>{event.title || 'Sunday Worship Service'}</Text>
                         <Text style={styles.heroEventDetails}>
                           {event.time || '9:00 AM'} • {event.location || 'Main Sanctuary'}
                         </Text>
@@ -220,26 +221,24 @@ export default function HomeScreen() {
             </View>
 
             {/* Duty cards (US-09: hidden when empty, handled by outer condition) */}
-            {sortedDutyItems.map(({ duty, schedule }) => (
+            {sortedDutyItems.map(({ assignment, schedule }) => (
               <MinistryDutyCard
-                key={`${schedule.id}-${duty.roleId ?? duty.role}`}
-                duty={duty}
+                key={assignment.id}
+                assignment={assignment}
                 schedule={schedule}
-                saving={savingEventId === `${schedule.id}-${duty.roleId ?? duty.role}`}
+                saving={savingEventId === assignment.id}
                 onConfirm={async () => {
-                  const key = `${schedule.id}-${duty.roleId ?? duty.role}`;
-                  setSavingEventId(key);
+                  setSavingEventId(assignment.id);
                   try {
-                    await handleMinisterialDuty(schedule.id, 'accept', duty.roleId ?? duty.role);
+                    await handleMinisterialDuty(assignment.id, 'accept');
                   } finally {
                     setSavingEventId(null);
                   }
                 }}
                 onDecline={async () => {
-                  const key = `${schedule.id}-${duty.roleId ?? duty.role}`;
-                  setSavingEventId(key);
+                  setSavingEventId(assignment.id);
                   try {
-                    await handleMinisterialDuty(schedule.id, 'cancel', duty.roleId ?? duty.role);
+                    await handleMinisterialDuty(assignment.id, 'cancel');
                   } finally {
                     setSavingEventId(null);
                   }
@@ -313,7 +312,7 @@ export default function HomeScreen() {
 
                   <View style={styles.eventDetailsBlock}>
                     <Text style={styles.eventTitle} numberOfLines={2}>
-                      {event.event || 'Church Event'}
+                      {event.title || 'Church Event'}
                     </Text>
                     <View style={styles.eventTimePill}>
                       <Clock size={11} color="#9CA3AF" />

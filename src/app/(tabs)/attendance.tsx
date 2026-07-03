@@ -10,6 +10,7 @@ import { getAttendanceStats, getTodayStr } from '../../features/attendance/domai
 import { useAttendanceByDate } from '../../features/attendance/presentation/hooks/useAttendanceByDate';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useMemberStore } from '../../store/useMemberStore';
+import { useMinistryStore } from '../../store/useMinistryStore';
 import { getUndismissedNotificationCount, useScheduleStore } from '../../store/useScheduleStore';
 
 export default function AttendanceScreen() {
@@ -17,7 +18,7 @@ export default function AttendanceScreen() {
   const userProfile = useAuthStore((state) => state.userProfile);
   const schedules = useScheduleStore((state) => state.schedules);
   const initializeSchedulesListener = useScheduleStore((state) => state.initializeSchedulesListener);
-  const isStaff = userProfile?.role?.toLowerCase() === 'staff';
+  const isStaff = ['super_admin', 'church_admin', 'ministry_leader'].includes(userProfile?.role?.toLowerCase() || '');
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('reports');
   const { checkins: todayCheckins } = useAttendanceByDate(getTodayStr());
@@ -25,7 +26,8 @@ export default function AttendanceScreen() {
     todayCheckins,
     members.length
   );
-  const unDismissedNotifications = getUndismissedNotificationCount(schedules);
+  const { assignments } = useMinistryStore();
+  const unDismissedNotifications = getUndismissedNotificationCount(assignments);
 
   // Keep the real-time schedule listener alive for the entire Staff tab session,
   // regardless of which sub-tab (Attendance / Events / Reports) is active.

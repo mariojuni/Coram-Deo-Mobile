@@ -15,7 +15,7 @@ export interface Rsvp {
 
 export interface Schedule {
   id: string;
-  event: string;
+  title: string;
   date: string;
   time: string;
   endTime?: string;

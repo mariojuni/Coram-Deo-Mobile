@@ -47,7 +47,7 @@ function toSchedule(docId: string, data: Record<string, unknown>): Schedule {
 
   return {
     id: docId,
-    event: typeof data.event === 'string' ? data.event : '',
+    title: typeof data.title === 'string' ? data.title : '',
     date: typeof data.date === 'string' ? data.date : docId,
     time: typeof data.time === 'string' ? data.time : '',
     endTime: typeof data.endTime === 'string' ? data.endTime : '',
@@ -60,7 +60,7 @@ function toSchedule(docId: string, data: Record<string, unknown>): Schedule {
 
 export const scheduleRepository = {
   subscribeToSchedules(onData: SchedulesListener, onError: ErrorListener): () => void {
-    const scheduleQuery = query(collection(db, 'schedules'), orderBy('date', 'asc'));
+    const scheduleQuery = query(collection(db, 'events'), orderBy('date', 'asc'));
 
     return onSnapshot(
       scheduleQuery,
@@ -73,7 +73,7 @@ export const scheduleRepository = {
   },
 
   async updateRsvp(eventId: string, userId: string, status: Rsvp['status']): Promise<void> {
-    const scheduleDocRef = doc(db, 'schedules', eventId);
+    const scheduleDocRef = doc(db, 'events', eventId);
 
     await runTransaction(db, async (transaction) => {
       const snapshot = await transaction.get(scheduleDocRef);
@@ -97,144 +97,10 @@ export const scheduleRepository = {
     });
   },
 
-  async updateMinisterialDuty(eventId: string, userId: string, action: 'accept' | 'cancel', roleId?: string): Promise<void> {
-    const scheduleDocRef = doc(db, 'schedules', eventId);
 
-    await runTransaction(db, async (transaction) => {
-      const snapshot = await transaction.get(scheduleDocRef);
-      if (!snapshot.exists()) {
-        throw new Error(`Schedule with id "${eventId}" was not found`);
-      }
 
-      const data = snapshot.data();
-      const rawDuties: Record<string, unknown>[] = Array.isArray(data.duties)
-        ? (data.duties as unknown[]).filter(
-            (d): d is Record<string, unknown> => !!d && typeof d === 'object'
-          )
-        : [];
-
-      const newStatus = action === 'accept' ? 'accepted' : 'declined';
-      const updatedDuties = rawDuties.map((duty) => {
-        if (duty.userId !== userId) return duty;
-        if (duty.role?.toString().toLowerCase() === 'attendee') return duty;
-        // If a specific roleId is provided, only update that exact duty
-        if (roleId) {
-          const dutyRoleId = duty.roleId ?? resolveRoleId(String(duty.role ?? ''));
-          if (dutyRoleId !== roleId) return duty;
-        }
-        return { ...duty, status: newStatus, updatedAt: new Date().toISOString() };
-      });
-
-      transaction.update(scheduleDocRef, { duties: updatedDuties });
-    });
-  },
-
-  async dismissNotification(eventId: string, userId: string, currentStatus: string): Promise<void> {
-    const scheduleDocRef = doc(db, 'schedules', eventId);
-
-    await runTransaction(db, async (transaction) => {
-      const snapshot = await transaction.get(scheduleDocRef);
-      if (!snapshot.exists()) {
-        throw new Error(`Schedule with id "${eventId}" was not found`);
-      }
-
-      const data = snapshot.data();
-      const rawDuties: Record<string, unknown>[] = Array.isArray(data.duties)
-        ? (data.duties as unknown[]).filter(
-            (d): d is Record<string, unknown> => !!d && typeof d === 'object'
-          )
-        : [];
-
-      const updatedDuties = rawDuties.map((duty) => {
-        if (duty.userId !== userId) return duty;
-        if (currentStatus === 'accepted' && duty.status === 'accepted') {
-          return { ...duty, status: 'accepted_dismissed' };
-        }
-        if (currentStatus === 'declined' && duty.status === 'declined') {
-          return { ...duty, status: 'declined_dismissed' };
-        }
-        return duty;
-      });
-
-      transaction.update(scheduleDocRef, { duties: updatedDuties });
-    });
-  },
-
-  /**
-   * Persist ministry assignments for an event.
-   * Preserves existing accepted/declined status when the same member keeps the same role.
-   * Resets status to 'pending' only when a role is newly assigned or reassigned to a different member.
-   */
-  async saveAssignments(
-    eventId: string,
-    assignments: { roleId: string; roleLabel: string; userId: string }[],
-    adminUserId: string
-  ): Promise<void> {
-    const scheduleDocRef = doc(db, 'schedules', eventId);
-    // serverTimestamp() cannot be used inside array elements in Firestore,
-    // so we use a plain ISO string for per-duty timestamps.
-    const now = new Date().toISOString();
-
-    await runTransaction(db, async (transaction) => {
-      const snapshot = await transaction.get(scheduleDocRef);
-      if (!snapshot.exists()) {
-        throw new Error(`Schedule with id "${eventId}" was not found`);
-      }
-
-      const data = snapshot.data();
-      // Use raw Firestore objects to avoid spreading `undefined` values that Firestore rejects.
-      const rawDuties: Record<string, unknown>[] = Array.isArray(data.duties)
-        ? (data.duties as unknown[]).filter((d): d is Record<string, unknown> => !!d && typeof d === 'object')
-        : [];
-
-      // Keep legacy attendee entries (RSVP-style duties) untouched
-      const attendeeDuties = rawDuties.filter(
-        (d) => typeof d.role === 'string' && d.role.toLowerCase() === 'attendee'
-      );
-
-      // For matching existing duties, use raw objects too so we preserve all original fields
-      const existingMinistryDuties = rawDuties.filter(
-        (d) => typeof d.role === 'string' && d.role.toLowerCase() !== 'attendee'
-      );
-
-      const newDuties = assignments.map(({ roleId, roleLabel, userId }) => {
-        // Find an existing duty for the exact same role + same user to preserve their response status
-        const existing = existingMinistryDuties.find((d) => {
-          const resolvedId = typeof d.roleId === 'string' ? d.roleId : resolveRoleId(String(d.role ?? ''));
-          return resolvedId === roleId && d.userId === userId;
-        });
-
-        if (existing) {
-          // Re-use the raw Firestore object (no undefined fields) and update mutable fields
-          return {
-            ...existing,
-            role: roleLabel,
-            roleId,
-            assignedBy: adminUserId,
-            updatedAt: now,
-          };
-        }
-
-        return {
-          roleId,
-          role: roleLabel,
-          userId,
-          status: 'pending',
-          assignedBy: adminUserId,
-          assignedAt: now,
-          updatedAt: now,
-        };
-      });
-
-      transaction.update(scheduleDocRef, {
-        duties: [...attendeeDuties, ...newDuties],
-        updatedAt: serverTimestamp(),
-      });
-    });
-  },
-
-  async createSchedule(data: Pick<Schedule, 'event' | 'date' | 'time' | 'endTime' | 'location'>): Promise<string> {
-    const ref = await addDoc(collection(db, 'schedules'), {
+  async createSchedule(data: Pick<Schedule, 'title' | 'date' | 'time' | 'endTime' | 'location'>): Promise<string> {
+    const ref = await addDoc(collection(db, 'events'), {
       ...data,
       duties: [],
       rsvps: [],
@@ -243,11 +109,11 @@ export const scheduleRepository = {
     return ref.id;
   },
 
-  async updateSchedule(id: string, data: Partial<Pick<Schedule, 'event' | 'date' | 'time' | 'endTime' | 'location'>>): Promise<void> {
-    await updateDoc(doc(db, 'schedules', id), { ...data, updatedAt: serverTimestamp() });
+  async updateSchedule(id: string, data: Partial<Pick<Schedule, 'title' | 'date' | 'time' | 'endTime' | 'location'>>): Promise<void> {
+    await updateDoc(doc(db, 'events', id), { ...data, updatedAt: serverTimestamp() });
   },
 
   async deleteSchedule(id: string): Promise<void> {
-    await deleteDoc(doc(db, 'schedules', id));
+    await deleteDoc(doc(db, 'events', id));
   },
 };

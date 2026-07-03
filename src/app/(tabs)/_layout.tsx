@@ -71,7 +71,7 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
 
 export default function TabLayout() {
   const { userProfile } = useAuthStore();
-  const isStaff = userProfile?.role?.toLowerCase() === 'staff';
+  const isStaff = ['super_admin', 'church_admin', 'ministry_leader'].includes(userProfile?.role?.toLowerCase() || '');
 
   return (
     <View style={{ flex: 1 }}>
