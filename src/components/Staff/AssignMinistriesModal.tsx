@@ -10,13 +10,12 @@ import {
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, FlatList, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ministryRepository } from '../../features/ministry/data/ministry.repository';
 import type { Schedule } from '../../features/schedule/domain/schedule.types';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useMemberStore } from '../../store/useMemberStore';
-import { useScheduleStore } from '../../store/useScheduleStore';
 import { useMinistryStore } from '../../store/useMinistryStore';
-import { ministryRepository } from '../../features/ministry/data/ministry.repository';
-import type { MinistryAssignment } from '../../features/ministry/domain/ministry.types';
+import { useScheduleStore } from '../../store/useScheduleStore';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type FilterTab = 'all' | 'unassigned' | 'assigned';
@@ -29,6 +28,8 @@ const ROLE_ICONS: Record<string, React.ReactNode> = {
   openingprayer: <Users size={18} color="#8B6FE8" />,
   tithesofferingprayer: <BookOpen size={18} color="#4D8BFF" />,
   techaudio: <Monitor size={18} color="#6B7280" />,
+  tech: <Monitor size={18} color="#6B7280" />,
+  audio: <Monitor size={18} color="#6B7280" />,
   presider: <Users size={18} color="#FF6596" />,
   scripturereading: <BookOpen size={18} color="#F59E0B" />,
   preacher: <Mic size={18} color="#FF6596" />,
@@ -37,15 +38,17 @@ const ROLE_ICONS: Record<string, React.ReactNode> = {
   drummer: <Drum size={18} color="#EF4444" />,
   piano: <Piano size={18} color="#10B981" />,
   electricguitar: <Guitar size={18} color="#F59E0B" />,
-  sundayschoolkids: <GraduationCap size={18} color="#F59E0B" />,
-  sundayschoolyouth: <GraduationCap size={18} color="#4D8BFF" />,
-  sundayschooladults: <GraduationCap size={18} color="#10B981" />,
+  kids: <GraduationCap size={18} color="#F59E0B" />,
+  youth: <GraduationCap size={18} color="#4D8BFF" />,
+  adults: <GraduationCap size={18} color="#10B981" />,
 };
 
 const ROLE_ICON_BG: Record<string, string> = {
   openingprayer: '#F3EEFF',
   tithesofferingprayer: '#E8F0FF',
   techaudio: '#F3F4F6',
+  tech: '#F3F4F6',
+  audio: '#F3F4F6',
   presider: '#FFE8F0',
   scripturereading: '#FEF3C7',
   preacher: '#FFE8F0',
@@ -54,9 +57,9 @@ const ROLE_ICON_BG: Record<string, string> = {
   drummer: '#FEE2E2',
   piano: '#D1FAE5',
   electricguitar: '#FEF3C7',
-  sundayschoolkids: '#FEF3C7',
-  sundayschoolyouth: '#E8F0FF',
-  sundayschooladults: '#D1FAE5',
+  kids: '#FEF3C7',
+  youth: '#E8F0FF',
+  adults: '#D1FAE5',
 };
 
 function normalizeRole(name: string) {
@@ -97,7 +100,7 @@ function MemberPickerSheet({ roleLabel, ministry, currentUserId, onSelect, onClo
         avatar: m.avatar || globalMember?.avatar
       };
     }) || [];
-    
+
     if (!q) return sourceMembers;
     return sourceMembers.filter((m) => (m.name ?? '').toLowerCase().includes(q) || (m.role ?? '').toLowerCase().includes(q));
   }, [ministry, query, allMembers]);
@@ -209,7 +212,7 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
   const currentUser = useAuthStore((s) => s.currentUser);
   const userProfile = useAuthStore((s) => s.userProfile);
   const schedules = useScheduleStore((s) => s.schedules);
-  
+
   const ministries = useMinistryStore(s => s.ministries);
   const fetchMinistries = useMinistryStore(s => s.fetchMinistries);
   const assignmentsList = useMinistryStore(s => s.assignments);
@@ -230,7 +233,7 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
   const [assignments, setAssignments] = useState<AssignmentsMap>({});
   const [filterTab, setFilterTab] = useState<FilterTab>('all');
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
-  const [selectingRoleKey, setSelectingRoleKey] = useState<{ministryId: string, roleName: string} | null>(null);
+  const [selectingRoleKey, setSelectingRoleKey] = useState<{ ministryId: string, roleName: string } | null>(null);
   const [showPicker, setShowPicker] = useState(false);
 
   // Initialize assignments map from store data and default ministry roles
@@ -281,7 +284,7 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
     if (!selectingRoleKey) return;
     const { ministryId, roleName } = selectingRoleKey;
     const key = getAssignmentKey(ministryId, roleName);
-    
+
     // Optimistic UI update
     setAssignments((prev) => {
       const next = { ...prev };
@@ -289,7 +292,7 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
       else next[key] = userId;
       return next;
     });
-    
+
     setShowPicker(false);
     setSelectingRoleKey(null);
 
@@ -403,7 +406,7 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
             if (filterTab === 'unassigned') return !assignments[key];
             return true;
           });
-          
+
           if (visibleRoles.length === 0) return null;
 
           const groupAssigned = (ministry.roles || []).filter((r) => !!assignments[getAssignmentKey(ministry.id, r)]).length;
@@ -429,7 +432,7 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
                 const assignedUserId = assignments[assignKey];
                 const assignedMember = assignedUserId ? memberById.get(assignedUserId) : null;
                 const isAssigned = !!assignedUserId;
-                
+
                 const normRole = normalizeRole(roleName);
                 const icon = ROLE_ICONS[normRole];
                 const iconBg = ROLE_ICON_BG[normRole] ?? '#f3f4f6';
@@ -443,18 +446,18 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
                   ? liveDuty.status === 'Confirmed'
                     ? 'Confirmed'
                     : liveDuty.status === 'Declined'
-                    ? 'Declined'
-                    : 'Awaiting Response'
+                      ? 'Declined'
+                      : 'Awaiting Response'
                   : assignedUserId
-                  ? null // Show nothing for defaults until they are saved
-                  : null;
+                    ? null // Show nothing for defaults until they are saved
+                    : null;
 
                 const statusColor = liveDuty
                   ? liveDuty.status === 'Confirmed'
                     ? '#22C55E'
                     : liveDuty.status === 'Declined'
-                    ? '#EF4444'
-                    : '#F59E0B'
+                      ? '#EF4444'
+                      : '#F59E0B'
                   : '#666'; // Gray for unsaved defaults
 
                 return (
