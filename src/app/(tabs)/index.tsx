@@ -1,6 +1,7 @@
 import { MinistryDutyCard } from '@/features/home/presentation/components/MinistryDutyCard';
 import { VerseOfTheDayCard } from '@/features/home/presentation/components/VerseOfTheDayCard';
 import { useHomeScreenData } from '@/features/home/presentation/hooks/useHomeScreenData';
+import { usePrayerFeed } from '@/features/prayer/presentation/hooks/usePrayerFeed';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Calendar, CalendarDays, CheckCircle2, ChevronRight, Clock, Crown, Grid, HandHeart, HeartHandshake, HelpCircle, MapPin, Users, XCircle } from 'lucide-react-native';
@@ -25,6 +26,8 @@ export default function HomeScreen() {
     displayName,
     assignments,
   } = useHomeScreenData();
+  const { prayers } = usePrayerFeed();
+  const prayerCount = prayers.length;
 
   const [activeSlide, setActiveSlide] = useState(0);
   const [savingEventId, setSavingEventId] = useState<string | null>(null);
@@ -249,28 +252,63 @@ export default function HomeScreen() {
         )}
 
         {/* ─── Prayers ─────────────────────────────────────────────────── */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Prayers</Text>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/community')}>
-            <Text style={styles.seeAll}>See all</Text>
-          </TouchableOpacity>
-        </View>
-
         {latestPrayer ? (
-          <View style={[styles.prayerCard, latestPrayer.answered && { borderLeftColor: '#4ADE80' }]}>
-            <View style={styles.prayerTop}>
-              <Text style={styles.prayerName}>{latestPrayer.name}</Text>
-              <Text style={styles.prayerTime}>{formatPrayerTimeAgo(latestPrayer.createdAt)}</Text>
+          <View style={styles.upcomingSection}>
+            <View style={styles.sectionHeader}>
+              <View>
+                <Text style={styles.sectionOverline}>COMMUNITY SUPPORT</Text>
+                <Text style={styles.sectionTitle}>Prayer Requests</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.upcomingCountPill}
+                onPress={() => router.push('/(tabs)/prayer')}
+              >
+                <Text style={styles.upcomingCountText}>{prayerCount}</Text>
+              </TouchableOpacity>
             </View>
-            <Text style={styles.prayerText}>{latestPrayer.request}</Text>
+
+            <View style={styles.prayerCardOuter}>
+              <View style={styles.prayerCardInner}>
+                <LinearGradient
+                  colors={['#FF9EBC', '#D49DFF']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 0, y: 1 }}
+                  style={styles.prayerGradientBorder}
+                />
+                <View style={styles.prayerRow}>
+                  <View style={styles.prayerContent}>
+                    <View style={styles.prayerTop}>
+                      <Text style={styles.prayerName}>{latestPrayer.name}</Text>
+                      <Text style={styles.prayerTime}>{formatPrayerTimeAgo(latestPrayer.createdAt)}</Text>
+                    </View>
+                    <Text style={styles.prayerText}>{latestPrayer.request}</Text>
+                    
+                    <View style={styles.prayerBottomRow}>
+                      <TouchableOpacity
+                        style={styles.prayIconButton}
+                        onPress={() => handlePray(latestPrayer.id)}
+                        activeOpacity={0.7}
+                      >
+                        <HeartHandshake 
+                          size={18} 
+                          color={latestPrayer.likedBy?.includes(currentUserId) ? '#FF6596' : '#9CA3AF'} 
+                        />
+                        <Text style={[styles.prayIconCount, latestPrayer.likedBy?.includes(currentUserId) && { color: '#FF6596' }]}>
+                          {latestPrayer.likes || 0}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            </View>
+
             <TouchableOpacity
-              style={[styles.prayButton, latestPrayer.likedBy?.includes(currentUserId) && styles.prayButtonActive]}
-              onPress={() => handlePray(latestPrayer.id)}
+              style={styles.seeAllEventsBtn}
+              onPress={() => router.push('/(tabs)/prayer')}
             >
-              <HeartHandshake size={14} color={latestPrayer.likedBy?.includes(currentUserId) ? '#fff' : '#007AFF'} />
-              <Text style={[styles.prayButtonText, latestPrayer.likedBy?.includes(currentUserId) && styles.prayButtonTextActive]}>
-                {latestPrayer.likedBy?.includes(currentUserId) ? 'Prayed' : 'Pray'} ({latestPrayer.likes || 0})
-              </Text>
+              <Text style={styles.seeAllEventsBtnText}>See all prayers</Text>
+              <ChevronRight size={14} color="#FF6596" />
             </TouchableOpacity>
           </View>
         ) : (
@@ -400,15 +438,20 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1a1a1a' },
   seeAll: { fontSize: 14, color: '#FF6596', fontWeight: '600' },
-  prayerCard: { backgroundColor: '#fff', padding: 16, borderRadius: 16, borderLeftWidth: 4, borderLeftColor: '#FF6596', marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 },
-  prayerTop: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  prayerName: { fontSize: 14, fontWeight: 'bold', color: '#1a1a1a' },
-  prayerTime: { fontSize: 12, color: '#888' },
-  prayerText: { fontSize: 14, color: '#444', marginBottom: 12, lineHeight: 20 },
-  prayButton: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, backgroundColor: '#FFE8F0', gap: 6 },
-  prayButtonActive: { backgroundColor: '#FF6596' },
-  prayButtonText: { fontSize: 12, fontWeight: '600', color: '#FF6596' },
-  prayButtonTextActive: { color: '#fff' },
+  prayerCardOuter: { marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  prayerCardInner: { backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden' },
+  prayerGradientBorder: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 3 },
+  prayerRow: { flexDirection: 'row', padding: 12, paddingLeft: 16 },
+  prayerAvatar: { display: 'none' },
+  prayerAvatarText: { display: 'none' },
+  prayerContent: { flex: 1, paddingTop: 1 },
+  prayerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  prayerName: { fontSize: 14, fontWeight: '700', color: '#111827', letterSpacing: -0.2 },
+  prayerTime: { fontSize: 11, color: '#6B7280', fontWeight: '500' },
+  prayerText: { fontSize: 14, color: '#4B5563', lineHeight: 20 },
+  prayerBottomRow: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginTop: 4 },
+  prayIconButton: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 6, marginRight: -6 },
+  prayIconCount: { fontSize: 12, fontWeight: '600', color: '#6B7280' },
   emptyCard: { backgroundColor: '#fff', padding: 24, borderRadius: 16, alignItems: 'center' },
   emptyText: { color: '#888', fontSize: 14 },
 

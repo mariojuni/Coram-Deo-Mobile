@@ -1,7 +1,8 @@
 import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
@@ -24,6 +25,13 @@ export default function RootLayout() {
   const initializeServicesListener = useMemberStore((state) => state.initializeServicesListener);
   const segments = useSegments();
   const router = useRouter();
+  const [hasSeenWalkthrough, setHasSeenWalkthrough] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    AsyncStorage.getItem('hasSeenWalkthrough').then((value) => {
+      setHasSeenWalkthrough(value === 'true');
+    });
+  }, []);
 
   useEffect(() => {
     initializeAuthListener();
@@ -57,17 +65,18 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (loaded && initialized) {
+    if (loaded && initialized && hasSeenWalkthrough !== null) {
       SplashScreen.hideAsync();
     }
-  }, [loaded, initialized]);
+  }, [loaded, initialized, hasSeenWalkthrough]);
 
 
   useEffect(() => {
-    if (!initialized) return;
+    if (!initialized || hasSeenWalkthrough === null) return;
 
     const inAuthGroup = segments[0] === '(auth)';
     const inPendingScreen = segments[0] === 'pending-access';
+    const inWalkthrough = segments[0] === 'walkthrough';
     const isSuperAdmin = userProfile?.role === 'super_admin' || userProfile?.role === 'admin';
     const isPending = !isSuperAdmin && (userProfile?.status === 'pendingChurchLink' || (!userProfile?.churchId && currentUser));
     const isDisabled = userProfile?.status === 'disabled';
@@ -80,19 +89,22 @@ export default function RootLayout() {
       return;
     }
 
-    if (!currentUser && !inAuthGroup) {
-      // Redirect to login
-      router.replace('/(auth)/login');
+    if (!currentUser) {
+      if (!hasSeenWalkthrough && !inWalkthrough && !inAuthGroup) {
+        router.replace('/walkthrough');
+      } else if (hasSeenWalkthrough && !inAuthGroup && !inWalkthrough) {
+        router.replace('/(auth)/login');
+      }
     } else if (currentUser && isPending && !inPendingScreen) {
       // Redirect to pending screen
       router.replace('/pending-access');
-    } else if (currentUser && !isPending && !isDisabled && (inAuthGroup || inPendingScreen)) {
+    } else if (currentUser && !isPending && !isDisabled && (inAuthGroup || inPendingScreen || inWalkthrough)) {
       // Redirect to main app
       router.replace('/(tabs)');
     }
-  }, [currentUser, userProfile, initialized, segments, router]);
+  }, [currentUser, userProfile, initialized, hasSeenWalkthrough, segments, router]);
 
-  if (!loaded || !initialized) {
+  if (!loaded || !initialized || hasSeenWalkthrough === null) {
     return null;
   }
 
@@ -102,6 +114,7 @@ export default function RootLayout() {
         <AudioProvider>
           <Stack>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="walkthrough" options={{ headerShown: false }} />
             <Stack.Screen name="(auth)" options={{ headerShown: false }} />
             <Stack.Screen name="scanner" options={{ presentation: 'modal', headerShown: false }} />
             <Stack.Screen name="my-qr" options={{ presentation: 'modal', headerShown: false }} />

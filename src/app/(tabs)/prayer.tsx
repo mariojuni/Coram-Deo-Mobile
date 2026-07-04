@@ -1,18 +1,19 @@
 import { BlurView } from 'expo-blur';
-import { CheckCircle, Heart, Search, X } from 'lucide-react-native';
+import { HeartHandshake, Search, X } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { formatPrayerTimeAgo, getFilteredPrayers } from '../../features/prayer/domain/prayer.selectors';
 import type { Prayer, PrayerFilter } from '../../features/prayer/domain/prayer.types';
 import { usePrayerFeed } from '../../features/prayer/presentation/hooks/usePrayerFeed';
 import { useAuthStore } from '../../store/useAuthStore';
 
-const PRAYER_FILTERS: PrayerFilter[] = ['Recent', 'My Requests', 'Answered'];
+const PRAYER_FILTERS: PrayerFilter[] = ['Recent', 'My Requests'];
 
 export default function PrayerScreen() {
   const currentUser = useAuthStore((state) => state.currentUser);
-  const { prayers, loading, togglePrayerLike, togglePrayerAnswered } = usePrayerFeed();
+  const { prayers, loading, togglePrayerLike } = usePrayerFeed();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<PrayerFilter>('Recent');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -26,16 +27,8 @@ export default function PrayerScreen() {
     }
   };
 
-  const handleToggleAnswered = async (id: string, currentVal: boolean) => {
-    try {
-      await togglePrayerAnswered(id, currentVal);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
   const filteredRequests = useMemo(
-    () => getFilteredPrayers(prayers, search, filter, currentUser?.uid),
+    () => getFilteredPrayers(prayers, search, filter, currentUser?.uid).filter(req => req),
     [prayers, search, filter, currentUser?.uid]
   );
 
@@ -103,40 +96,40 @@ export default function PrayerScreen() {
           filteredRequests.map((req: Prayer) => {
             const isLiked = currentUser ? req.likedBy.includes(currentUser.uid) : false;
             return (
-              <View key={req.id} style={[styles.card, req.answered && styles.cardAnswered]}>
-                <View style={styles.cardHeader}>
-                  <View style={styles.cardHeaderLeft}>
-                    <Text style={styles.cardName}>{req.name}</Text>
-                    {req.answered && (
-                      <View style={styles.answeredBadge}>
-                        <CheckCircle size={10} color="#4ADE80" />
-                        <Text style={styles.answeredText}>Answered</Text>
+              <View key={req.id} style={styles.prayerCardOuter}>
+                <View style={styles.prayerCardInner}>
+                  <LinearGradient
+                    colors={['#FF9EBC', '#D49DFF']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 0, y: 1 }}
+                    style={styles.prayerGradientBorder}
+                  />
+                  <View style={styles.prayerRow}>
+
+                    <View style={styles.prayerContent}>
+                      <View style={styles.prayerTop}>
+                        <Text style={styles.prayerName}>{req.name}</Text>
+                        <Text style={styles.prayerTime}>{formatPrayerTimeAgo(req.createdAt)}</Text>
                       </View>
-                    )}
+                      <Text style={styles.prayerText}>{req.request}</Text>
+                      
+                      <View style={styles.prayerBottomRow}>
+                        <TouchableOpacity
+                          style={styles.prayIconButton}
+                          onPress={() => handlePray(req.id)}
+                          activeOpacity={0.7}
+                        >
+                          <HeartHandshake 
+                            size={18} 
+                            color={isLiked ? '#FF6596' : '#9CA3AF'} 
+                          />
+                          <Text style={[styles.prayIconCount, isLiked && { color: '#FF6596' }]}>
+                            {req.likes || 0}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
                   </View>
-                  <Text style={styles.cardTime}>{formatPrayerTimeAgo(req.createdAt)}</Text>
-                </View>
-
-                <Text style={styles.cardRequest}>{req.request}</Text>
-
-                <View style={styles.cardFooter}>
-                  <TouchableOpacity 
-                    style={[styles.prayButton, isLiked && styles.prayButtonActive]}
-                    onPress={() => handlePray(req.id)}
-                  >
-                    <Heart size={14} color={isLiked ? '#fff' : '#FF6596'} fill={isLiked ? '#fff' : 'transparent'} />
-                    <Text style={[styles.prayButtonText, isLiked && styles.prayButtonTextActive]}>
-                      {isLiked ? 'Prayed' : 'Pray'} ({req.likes || 0})
-                    </Text>
-                  </TouchableOpacity>
-
-                  {req.userId === currentUser?.uid && (
-                    <TouchableOpacity onPress={() => handleToggleAnswered(req.id, req.answered)}>
-                      <Text style={[styles.toggleText, req.answered && styles.toggleTextActive]}>
-                        {req.answered ? 'Mark Active' : 'Mark Answered'}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
                 </View>
               </View>
             );
@@ -173,20 +166,18 @@ const styles = StyleSheet.create({
   listContent: { padding: 24, paddingTop: 12, paddingBottom: 100, gap: 16 },
   emptyContainer: { alignItems: 'center', padding: 40 },
   emptyText: { color: '#888', fontSize: 14 },
-  card: { backgroundColor: '#fff', padding: 16, borderRadius: 16, shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 8, elevation: 1 },
-  cardAnswered: { borderLeftWidth: 4, borderLeftColor: '#4ADE80' },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  cardName: { fontSize: 16, fontWeight: 'bold', color: '#1a1a1a' },
-  answeredBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(74, 222, 128, 0.15)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, gap: 4 },
-  answeredText: { fontSize: 10, fontWeight: 'bold', color: '#4ADE80' },
-  cardTime: { fontSize: 12, color: '#888' },
-  cardRequest: { fontSize: 14, color: '#444', lineHeight: 20, marginBottom: 16 },
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  prayButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFE8F0', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, gap: 6 },
-  prayButtonActive: { backgroundColor: '#FF6596' },
-  prayButtonText: { fontSize: 12, fontWeight: 'bold', color: '#FF6596' },
-  prayButtonTextActive: { color: '#fff' },
-  toggleText: { fontSize: 12, fontWeight: 'bold', color: '#4ADE80' },
-  toggleTextActive: { color: '#888' },
+  prayerCardOuter: { marginBottom: 0, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  prayerCardInner: { backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden' },
+  prayerGradientBorder: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 3 },
+  prayerRow: { flexDirection: 'row', padding: 12, paddingLeft: 16 },
+  prayerAvatar: { display: 'none' },
+  prayerAvatarText: { display: 'none' },
+  prayerContent: { flex: 1, paddingTop: 1 },
+  prayerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  prayerName: { fontSize: 14, fontWeight: '700', color: '#111827', letterSpacing: -0.2 },
+  prayerTime: { fontSize: 11, color: '#6B7280', fontWeight: '500' },
+  prayerText: { fontSize: 14, color: '#4B5563', lineHeight: 20 },
+  prayerBottomRow: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginTop: 4 },
+  prayIconButton: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 6, marginRight: -6 },
+  prayIconCount: { fontSize: 12, fontWeight: '600', color: '#6B7280' },
 });

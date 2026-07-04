@@ -1,4 +1,5 @@
 import {
+    addDoc,
     collection,
     doc,
     limit,
@@ -17,8 +18,8 @@ type ErrorListener = (error: Error) => void;
 function toPrayerModel(data: Record<string, unknown>, id: string): Prayer {
   return {
     id,
-    name: typeof data.name === 'string' ? data.name : '',
-    request: typeof data.request === 'string' ? data.request : '',
+    name: typeof data.requesterName === 'string' ? data.requesterName : (typeof data.name === 'string' ? data.name : ''),
+    request: typeof data.requestText === 'string' ? data.requestText : (typeof data.request === 'string' ? data.request : ''),
     userId: typeof data.userId === 'string' ? data.userId : '',
     answered: Boolean(data.answered),
     likes: typeof data.likes === 'number' ? data.likes : 0,
@@ -28,8 +29,8 @@ function toPrayerModel(data: Record<string, unknown>, id: string): Prayer {
 }
 
 export const prayerRepository = {
-  subscribeToPrayers(onData: PrayersListener, onError: ErrorListener): () => void {
-    const prayerQuery = query(collection(db, 'prayers'), orderBy('createdAt', 'desc'));
+  subscribeToPrayers(churchId: string, onData: PrayersListener, onError: ErrorListener): () => void {
+    const prayerQuery = query(collection(db, `churches/${churchId}/prayer_requests`), orderBy('createdAt', 'desc'));
 
     return onSnapshot(
       prayerQuery,
@@ -44,10 +45,11 @@ export const prayerRepository = {
   },
 
   subscribeToLatestPrayer(
+    churchId: string,
     onData: (prayer: Prayer | null) => void,
     onError: ErrorListener
   ): () => void {
-    const latestPrayerQuery = query(collection(db, 'prayers'), orderBy('createdAt', 'desc'), limit(1));
+    const latestPrayerQuery = query(collection(db, `churches/${churchId}/prayer_requests`), orderBy('createdAt', 'desc'), limit(1));
 
     return onSnapshot(
       latestPrayerQuery,
@@ -65,8 +67,8 @@ export const prayerRepository = {
     );
   },
 
-  async togglePrayerLike(prayerId: string, userId: string): Promise<void> {
-    const prayerDocRef = doc(db, 'prayers', prayerId);
+  async togglePrayerLike(churchId: string, prayerId: string, userId: string): Promise<void> {
+    const prayerDocRef = doc(db, `churches/${churchId}/prayer_requests`, prayerId);
 
     await runTransaction(db, async (transaction) => {
       const snapshot = await transaction.get(prayerDocRef);
@@ -86,8 +88,21 @@ export const prayerRepository = {
     });
   },
 
-  async togglePrayerAnswered(prayerId: string, currentValue: boolean): Promise<void> {
-    const prayerDocRef = doc(db, 'prayers', prayerId);
+  async togglePrayerAnswered(churchId: string, prayerId: string, currentValue: boolean): Promise<void> {
+    const prayerDocRef = doc(db, `churches/${churchId}/prayer_requests`, prayerId);
     await updateDoc(prayerDocRef, { answered: !currentValue });
+  },
+
+  async addPrayer(churchId: string, payload: { requestText: string; requesterName: string; userId: string; createdAt?: string }): Promise<string> {
+    const docRef = await addDoc(collection(db, `churches/${churchId}/prayer_requests`), {
+      requestText: payload.requestText,
+      requesterName: payload.requesterName,
+      userId: payload.userId,
+      likes: 0,
+      likedBy: [],
+      answered: false,
+      createdAt: payload.createdAt || new Date().toISOString(),
+    });
+    return docRef.id;
   },
 };

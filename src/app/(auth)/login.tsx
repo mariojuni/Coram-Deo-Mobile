@@ -49,7 +49,7 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <AuthGeometricHeader />
+      {/* <AuthGeometricHeader /> */}
       <SafeAreaView style={{ flex: 1 }}>
         <KeyboardAvoidingView 
           style={{ flex: 1 }} 

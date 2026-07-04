@@ -35,14 +35,18 @@ export function useHomeScreenData() {
   }, [fetchMinistries, initializeAssignmentsListener, userProfile?.churchId]);
 
   useEffect(() => {
+    const churchId = userProfile?.churchId;
+    if (!churchId) return;
+
     const unsubscribe = prayerRepository.subscribeToLatestPrayer(
+      churchId,
       (prayer) => setLatestPrayer(prayer),
       (error) => {
         console.error('Error loading latest prayer:', error);
       }
     );
     return () => unsubscribe();
-  }, []);
+  }, [userProfile?.churchId]);
 
   const upcomingEvents = useMemo(() => getUpcomingSchedules(schedules), [schedules]);
 
@@ -64,9 +68,10 @@ export function useHomeScreenData() {
   };
 
   const handlePray = async (id: string) => {
-    if (!currentUser?.uid) return;
+    const churchId = userProfile?.churchId;
+    if (!currentUser?.uid || !churchId) return;
     try {
-      await prayerRepository.togglePrayerLike(id, currentUser.uid);
+      await prayerRepository.togglePrayerLike(churchId, id, currentUser.uid);
     } catch (error) {
       console.error(error);
     }
