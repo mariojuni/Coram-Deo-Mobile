@@ -1,4 +1,4 @@
-import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import type { Member, Service } from '../domain/member.types';
 
@@ -14,8 +14,8 @@ function mapDocWithId<T extends Record<string, unknown>>(docData: Record<string,
 }
 
 export const memberRepository = {
-  subscribeToMembers(onData: MembersListener, onError: ErrorListener): () => void {
-    const membersQuery = query(collection(db, 'users'), orderBy('name', 'asc'));
+  subscribeToMembers(churchId: string, onData: MembersListener, onError: ErrorListener): () => void {
+    const membersQuery = query(collection(db, 'users'), where('churchId', '==', churchId));
     return onSnapshot(
       membersQuery,
       (snapshot) => {
@@ -28,8 +28,8 @@ export const memberRepository = {
     );
   },
 
-  subscribeToServices(onData: ServicesListener, onError: ErrorListener): () => void {
-    const servicesQuery = query(collection(db, 'services'), orderBy('date', 'asc'));
+  subscribeToServices(churchId: string, onData: ServicesListener, onError: ErrorListener): () => void {
+    const servicesQuery = query(collection(db, 'services'), where('churchId', '==', churchId));
     return onSnapshot(
       servicesQuery,
       (snapshot) => {

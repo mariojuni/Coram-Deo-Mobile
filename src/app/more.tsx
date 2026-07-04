@@ -7,7 +7,7 @@ export default function MoreScreen() {
   const router = useRouter();
   const userProfile = useAuthStore((state) => state.userProfile);
   
-  const displayName = userProfile?.displayName || 'User';
+  const displayName = userProfile?.fullName || 'User';
   const displayRole = userProfile?.role || 'Member';
 
   return (

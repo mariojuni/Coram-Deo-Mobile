@@ -1,14 +1,14 @@
 import type { User } from 'firebase/auth';
 import { create } from 'zustand';
-import { authRepository } from '../features/auth/data/auth.repository';
-import type { AuthCredentialResult, UserProfile } from '../features/auth/domain/auth.types';
+import { authRepository, RegistrationPayload } from '../features/auth/data/auth.repository';
+import type { AuthCredentialResult, UserAccount } from '../features/auth/domain/auth.types';
 
 interface AuthState {
   currentUser: User | null;
-  userProfile: UserProfile | null;
+  userProfile: UserAccount | null;
   loading: boolean;
   initialized: boolean;
-  signup: (email: string, password: string) => Promise<AuthCredentialResult>;
+  signup: (payload: RegistrationPayload) => Promise<AuthCredentialResult>;
   login: (email: string, password: string) => Promise<AuthCredentialResult>;
   loginWithGoogle: () => Promise<AuthCredentialResult>;
   logout: () => Promise<void>;
@@ -20,7 +20,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   userProfile: null,
   loading: true,
   initialized: false,
-  signup: (email, password) => authRepository.signup(email, password),
+  signup: (payload) => authRepository.signup(payload),
   login: (email, password) => authRepository.login(email, password),
   loginWithGoogle: async () => {
     try {

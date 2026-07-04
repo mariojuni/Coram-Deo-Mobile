@@ -42,8 +42,9 @@ export default function ScheduleTab() {
   };
 
   useEffect(() => {
-    const churchId = userProfile?.churchId || 'YmEc6C69Xz4DKRQaQZBV';
-    const unsubscribe = initializeAssignmentsListener(churchId as string);
+    const churchId = userProfile?.churchId;
+    if (!churchId) return;
+    const unsubscribe = initializeAssignmentsListener(churchId);
     return () => unsubscribe();
   }, [initializeAssignmentsListener, userProfile?.churchId]);
 

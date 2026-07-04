@@ -238,10 +238,12 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
   );
 
   useEffect(() => {
-    if (ministries.length === 0) {
-      const churchId = (userProfile?.churchId as string) || 'YmEc6C69Xz4DKRQaQZBV';
-      fetchMinistries(churchId);
-    }
+    const fetch = async () => {
+      const churchId = userProfile?.churchId as string | undefined;
+      if (!churchId) return;
+      try { fetchMinistries(churchId); } catch(e) {}
+    };
+    if (ministries.length === 0) fetch();
   }, [ministries.length, userProfile?.churchId, fetchMinistries]);
 
   const isStaff = ['super_admin', 'church_admin', 'ministry_leader'].includes((userProfile?.role ?? '').toLowerCase());

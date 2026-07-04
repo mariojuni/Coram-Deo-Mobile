@@ -7,8 +7,8 @@ interface MemberStore {
   services: Service[];
   membersLoading: boolean;
   servicesLoading: boolean;
-  initializeMembersListener: () => void;
-  initializeServicesListener: () => void;
+  initializeMembersListener: (churchId?: string | null) => void;
+  initializeServicesListener: (churchId?: string | null) => void;
 }
 
 export const useMemberStore = create<MemberStore>((set) => ({
@@ -16,9 +16,12 @@ export const useMemberStore = create<MemberStore>((set) => ({
   services: [],
   membersLoading: true,
   servicesLoading: true,
-  
-  initializeMembersListener: () => {
-    memberRepository.subscribeToMembers(
+  initializeMembersListener: (churchId?: string | null) => {
+    if (!churchId) {
+      set({ members: [], membersLoading: false });
+      return;
+    }
+    memberRepository.subscribeToMembers(churchId,
       (members) => {
         set({ members, membersLoading: false });
       },
@@ -29,8 +32,12 @@ export const useMemberStore = create<MemberStore>((set) => ({
     );
   },
 
-  initializeServicesListener: () => {
-    memberRepository.subscribeToServices(
+  initializeServicesListener: (churchId?: string | null) => {
+    if (!churchId) {
+      set({ services: [], servicesLoading: false });
+      return;
+    }
+    memberRepository.subscribeToServices(churchId,
       (services) => {
         set({ services, servicesLoading: false });
       },

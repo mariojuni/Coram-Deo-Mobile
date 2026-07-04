@@ -583,11 +583,6 @@ function SermonsTab({ searchQuery }: SubScreenProps) {
 function MembersTab({ searchQuery }: SubScreenProps) {
   const members = useMemberStore((state) => state.members);
   const membersLoading = useMemberStore((state) => state.membersLoading);
-  const initializeMembersListener = useMemberStore((state) => state.initializeMembersListener);
-
-  useEffect(() => {
-    initializeMembersListener();
-  }, [initializeMembersListener]);
 
   const filteredMembers = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();

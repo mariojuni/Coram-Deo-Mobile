@@ -4,7 +4,9 @@ import { AlertCircle, Lock, Mail } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../../store/useAuthStore';
+import { AuthGeometricHeader } from '../../components/ui/AuthGeometricHeader';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -46,33 +48,36 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
-        style={{ flex: 1 }} 
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-          <View style={styles.authCard}>
+    <View style={styles.container}>
+      <AuthGeometricHeader />
+      <SafeAreaView style={{ flex: 1 }}>
+        <KeyboardAvoidingView 
+          style={{ flex: 1 }} 
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+            
+            <View style={styles.spacer} />
+
             <View style={styles.authHeader}>
               <Text style={styles.title}>Welcome Back</Text>
-              <Text style={styles.subtitle}>Sign in to your Church App account</Text>
+              <Text style={styles.subtitle}>Please enter your information below to sign in.</Text>
             </View>
 
             {!!errorMsg && (
-              <View style={styles.errorContainer}>
-                <AlertCircle size={16} color="#EF4444" />
-                <Text style={styles.errorText}>{errorMsg}</Text>
-              </View>
+                <View style={styles.errorContainer}>
+                  <AlertCircle size={16} color="#EF4444" />
+                  <Text style={styles.errorText}>{errorMsg}</Text>
+                </View>
             )}
 
             <View style={styles.formGroup}>
-              <Text style={styles.inputLabel}>Email</Text>
               <View style={styles.inputWrapper}>
                 <Mail size={18} color="#888" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Enter your email"
-                  placeholderTextColor="#aaa"
+                  placeholder="Email"
+                  placeholderTextColor="#888"
                   value={email}
                   onChangeText={setEmail}
                   autoCapitalize="none"
@@ -82,13 +87,12 @@ export default function LoginScreen() {
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.inputLabel}>Password</Text>
               <View style={styles.inputWrapper}>
                 <Lock size={18} color="#888" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Enter your password"
-                  placeholderTextColor="#aaa"
+                  placeholder="Password"
+                  placeholderTextColor="#888"
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry
@@ -96,76 +100,60 @@ export default function LoginScreen() {
               </View>
             </View>
 
-            <TouchableOpacity 
-              style={styles.primaryButton} 
-              onPress={handleLogin}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.primaryButtonText}>Log In</Text>
-              )}
+            <TouchableOpacity onPress={handleLogin} disabled={isLoading} activeOpacity={0.8} style={{ marginTop: 8 }}>
+              <LinearGradient colors={['#FF6596', '#B66DFF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.primaryButton}>
+                {isLoading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.primaryButtonText}>Sign In</Text>
+                )}
+              </LinearGradient>
             </TouchableOpacity>
 
             <View style={styles.dividerContainer}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OR</Text>
+              <Text style={styles.dividerText}>or sign in with</Text>
               <View style={styles.dividerLine} />
             </View>
 
-            <TouchableOpacity 
-              style={styles.googleButton} 
-              onPress={handleGoogleLogin}
-              disabled={isLoading}
-            >
-              <Image 
-                source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg' }} 
-                style={styles.googleIcon} 
-                contentFit="contain"
-              />
-              <Text style={styles.googleButtonText}>Sign in with Google</Text>
-            </TouchableOpacity>
+            <View style={styles.socialButtonsRow}>
+              <TouchableOpacity style={styles.socialIconBtn} onPress={handleGoogleLogin} disabled={isLoading} activeOpacity={0.8}>
+                <Image source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png' }} style={styles.socialIcon} contentFit="contain" />
+              </TouchableOpacity>
+            </View>
 
             <View style={styles.footer}>
               <Text style={styles.footerText}>Don&apos;t have an account? </Text>
-              <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
-                <Text style={styles.footerLink}>Sign up</Text>
+              <TouchableOpacity onPress={() => router.push('/(auth)/register')} activeOpacity={0.8}>
+                <Text style={styles.footerLink}>Register</Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF5F8',
+    backgroundColor: '#ffffff',
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
-    padding: 24,
+    paddingHorizontal: 32,
+    paddingBottom: 40,
   },
-  authCard: {
-    backgroundColor: '#fff',
-    borderRadius: 24,
-    padding: 32,
-    shadowColor: '#FF6596',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.1,
-    shadowRadius: 24,
-    elevation: 8,
+  spacer: {
+    height: 180,
   },
   authHeader: {
-    alignItems: 'center',
     marginBottom: 32,
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: '900',
     color: '#1a1a1a',
     marginBottom: 8,
@@ -175,6 +163,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#666',
     fontWeight: '500',
+    lineHeight: 22,
   },
   errorContainer: {
     flexDirection: 'row',
@@ -183,8 +172,6 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 12,
     marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#FEE2E2',
     gap: 8,
   },
   errorText: {
@@ -194,22 +181,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   formGroup: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#444',
-    marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    marginBottom: 16,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8F9FB',
-    borderWidth: 1.5,
-    borderColor: '#E1E4E8',
+    backgroundColor: '#F3F4F6',
     borderRadius: 16,
     paddingHorizontal: 16,
   },
@@ -218,23 +195,21 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    height: 54,
+    height: 56,
     fontSize: 15,
     fontWeight: '600',
     color: '#1a1a1a',
   },
   primaryButton: {
-    backgroundColor: '#FF6596',
     height: 56,
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 8,
-    shadowColor: '#FF6596',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowColor: '#B66DFF',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
     shadowRadius: 12,
-    elevation: 4,
+    elevation: 6,
   },
   primaryButtonText: {
     color: '#fff',
@@ -244,53 +219,51 @@ const styles = StyleSheet.create({
   dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 28,
+    marginVertical: 32,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#E1E4E8',
+    backgroundColor: '#F3F4F6',
   },
   dividerText: {
-    paddingHorizontal: 16,
+    marginHorizontal: 16,
+    color: '#9CA3AF',
     fontSize: 13,
-    fontWeight: '700',
-    color: '#888',
+    fontWeight: '600',
   },
-  googleButton: {
+  socialButtonsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
-    height: 56,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: '#E1E4E8',
-    marginBottom: 24,
+    gap: 20,
+    marginBottom: 40,
   },
-  googleIcon: {
-    width: 20,
-    height: 20,
-    marginRight: 12,
+  socialIconBtn: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  googleButtonText: {
-    color: '#1a1a1a',
-    fontSize: 15,
-    fontWeight: '700',
+  socialIcon: {
+    width: 24,
+    height: 24,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 'auto',
   },
   footerText: {
+    color: '#6B7280',
     fontSize: 14,
-    color: '#666',
     fontWeight: '500',
   },
   footerLink: {
+    color: '#B66DFF',
     fontSize: 14,
-    color: '#FF6596',
     fontWeight: '800',
   },
 });

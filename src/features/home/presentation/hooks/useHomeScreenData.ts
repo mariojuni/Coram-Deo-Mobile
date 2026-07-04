@@ -27,9 +27,10 @@ export function useHomeScreenData() {
   }, [initializeSchedulesListener]);
 
   useEffect(() => {
-    const churchId = userProfile?.churchId || 'YmEc6C69Xz4DKRQaQZBV';
-    fetchMinistries(churchId as string);
-    const unsubscribe = initializeAssignmentsListener(churchId as string);
+    const churchId = userProfile?.churchId;
+    if (!churchId) return;
+    fetchMinistries(churchId);
+    const unsubscribe = initializeAssignmentsListener(churchId);
     return () => unsubscribe();
   }, [fetchMinistries, initializeAssignmentsListener, userProfile?.churchId]);
 
@@ -50,7 +51,7 @@ export function useHomeScreenData() {
     return getUpcomingMinisterialDuties(schedules, assignments, currentUser.uid);
   }, [currentUser, schedules, assignments]);
 
-  const rawDisplayName = userProfile?.name || currentUser?.displayName || 'Guest';
+  const rawDisplayName = userProfile?.fullName || currentUser?.displayName || 'Guest';
   const displayName = rawDisplayName.split(' ')[0];
 
   const handleRsvp = async (eventId: string, status: string) => {

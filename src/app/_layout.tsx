@@ -27,9 +27,18 @@ export default function RootLayout() {
 
   useEffect(() => {
     initializeAuthListener();
-    initializeMembersListener();
-    initializeServicesListener();
+  }, [initializeAuthListener]);
 
+  const userProfile = useAuthStore((state) => state.userProfile);
+
+  useEffect(() => {
+    if (initialized) {
+      initializeMembersListener(userProfile?.churchId);
+      initializeServicesListener(userProfile?.churchId);
+    }
+  }, [initialized, userProfile?.churchId, initializeMembersListener, initializeServicesListener]);
+
+  useEffect(() => {
     // On fresh install, trigger background download of default Bible (NASB2020: 2692)
     const initOfflineBible = async () => {
       try {
@@ -45,7 +54,7 @@ export default function RootLayout() {
       }
     };
     initOfflineBible();
-  }, [initializeAuthListener, initializeMembersListener, initializeServicesListener]);
+  }, []);
 
   useEffect(() => {
     if (loaded && initialized) {
@@ -53,19 +62,35 @@ export default function RootLayout() {
     }
   }, [loaded, initialized]);
 
+
   useEffect(() => {
     if (!initialized) return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    const inPendingScreen = segments[0] === 'pending-access';
+    const isSuperAdmin = userProfile?.role === 'super_admin' || userProfile?.role === 'admin';
+    const isPending = !isSuperAdmin && (userProfile?.status === 'pendingChurchLink' || (!userProfile?.churchId && currentUser));
+    const isDisabled = userProfile?.status === 'disabled';
+
+    if (currentUser && isDisabled) {
+      useAuthStore.getState().logout();
+      import('react-native').then(({ Alert }) => {
+        Alert.alert('Account Disabled', 'Your account has been disabled. Please contact your church admin.');
+      });
+      return;
+    }
 
     if (!currentUser && !inAuthGroup) {
       // Redirect to login
       router.replace('/(auth)/login');
-    } else if (currentUser && inAuthGroup) {
+    } else if (currentUser && isPending && !inPendingScreen) {
+      // Redirect to pending screen
+      router.replace('/pending-access');
+    } else if (currentUser && !isPending && !isDisabled && (inAuthGroup || inPendingScreen)) {
       // Redirect to main app
       router.replace('/(tabs)');
     }
-  }, [currentUser, initialized, segments, router]);
+  }, [currentUser, userProfile, initialized, segments, router]);
 
   if (!loaded || !initialized) {
     return null;

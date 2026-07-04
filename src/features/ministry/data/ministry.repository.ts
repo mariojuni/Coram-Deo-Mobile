@@ -5,8 +5,8 @@ import type { Ministry, MinistryAssignment } from '../domain/ministry.types';
 export const ministryRepository = {
   async getMinistries(churchId: string): Promise<Ministry[]> {
     console.log('Fetching ministries for churchId:', churchId);
-    const ids = Array.from(new Set([churchId, 'YmEc6C69Xz4DKRQaQZBV']));
-    const q = query(collection(db, 'ministries'), where('churchId', 'in', ids));
+    if (!churchId) return [];
+    const q = query(collection(db, 'ministries'), where('churchId', '==', churchId));
     const snap = await getDocs(q);
     const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Ministry));
     console.log('Fetched raw ministries:', docs);

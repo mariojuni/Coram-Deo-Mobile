@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
-import { Save, X } from 'lucide-react-native';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Save, X, LogOut } from 'lucide-react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../store/useAuthStore';
 
@@ -8,12 +8,31 @@ export default function MyQRScreen() {
   const router = useRouter();
   const userProfile = useAuthStore((state) => state.userProfile);
   const currentUser = useAuthStore((state) => state.currentUser);
+  const logout = useAuthStore((state) => state.logout);
   
   const qrId = userProfile?.id || currentUser?.uid || 'unknown';
-  const qrName = userProfile?.name || currentUser?.displayName || 'Member';
+  const qrName = userProfile?.fullName || currentUser?.displayName || 'Member';
   const qrRole = userProfile?.role || 'Member';
 
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${qrId}`;
+
+  const handleLogout = async () => {
+    Alert.alert('Log Out', 'Are you sure you want to log out?', [
+      { text: 'Cancel', style: 'cancel' },
+      { 
+        text: 'Log Out', 
+        style: 'destructive', 
+        onPress: async () => {
+          try {
+            await logout();
+            router.replace('/(auth)/login');
+          } catch (error) {
+            console.error('Logout failed:', error);
+          }
+        }
+      }
+    ]);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -44,6 +63,11 @@ export default function MyQRScreen() {
           <Text style={styles.doneBtnText}>Done</Text>
         </TouchableOpacity>
       </View>
+
+      <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+        <LogOut size={16} color="#EF4444" />
+        <Text style={styles.logoutBtnText}>Log Out</Text>
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -58,9 +82,11 @@ const styles = StyleSheet.create({
   qrImage: { width: 200, height: 200 },
   name: { fontSize: 22, fontWeight: 'bold', color: '#1a1a1a', marginBottom: 8 },
   role: { fontSize: 14, fontWeight: 'bold', color: '#007AFF', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 32 },
-  buttonContainer: { flexDirection: 'row', width: '100%', gap: 12 },
+  buttonContainer: { flexDirection: 'row', width: '100%', gap: 12, marginBottom: 16 },
   saveBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 16, borderRadius: 16, backgroundColor: '#E3F2FD', gap: 8 },
   saveBtnText: { color: '#007AFF', fontWeight: 'bold' },
   doneBtn: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 16, borderRadius: 16, backgroundColor: '#007AFF' },
-  doneBtnText: { color: '#fff', fontWeight: 'bold' }
+  doneBtnText: { color: '#fff', fontWeight: 'bold' },
+  logoutBtn: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 16, borderRadius: 16, backgroundColor: '#FEE2E2', gap: 8 },
+  logoutBtnText: { color: '#EF4444', fontWeight: 'bold' }
 });
