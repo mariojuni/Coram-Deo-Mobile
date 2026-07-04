@@ -594,10 +594,67 @@ function MembersTab({ searchQuery }: SubScreenProps) {
     if (!query) return members;
 
     return members.filter((member) => {
-      const haystack = `${member.name || ''} ${member.role || ''}`.toLowerCase();
+      const haystack = `${member.name || ''} ${member.firstName || ''} ${member.lastName || ''} ${member.role || ''}`.toLowerCase();
       return haystack.includes(query);
     });
   }, [members, searchQuery]);
+
+  const toTitleCase = (str: string) => {
+    if (!str) return '';
+    return str.split(/[\s-]+/).map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+    ).join(' ');
+  };
+
+  const formatMemberName = (member: any) => {
+    let displayName = member.name || '';
+    if (member.firstName || member.lastName) {
+        const f = toTitleCase(member.firstName);
+        const l = toTitleCase(member.lastName);
+        const m = member.middleName ? member.middleName.charAt(0).toUpperCase() + '.' : '';
+        displayName = [f, m, l].filter(Boolean).join(' ');
+    } else if (member.name) {
+        const parts = member.name.split(' ').filter(Boolean);
+        if (parts.length > 2) {
+            const f = toTitleCase(parts[0]);
+            const l = toTitleCase(parts[parts.length - 1]);
+            const m = parts[1].charAt(0).toUpperCase() + '.';
+            displayName = `${f} ${m} ${l}`;
+        } else {
+            displayName = toTitleCase(member.name);
+        }
+    }
+    return displayName || 'Unnamed Member';
+  };
+
+  const formatBirthday = (dateStr: string) => {
+    if (!dateStr) return '';
+    
+    let date: Date | null = null;
+    
+    // Check if it matches YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss
+    const ymd = dateStr.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (ymd) {
+      const [, y, m, d] = ymd;
+      date = new Date(Number(y), Number(m) - 1, Number(d));
+    } else {
+      // Check for MM/DD/YYYY
+      const mdy = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if (mdy) {
+        const [, m, d, y] = mdy;
+        date = new Date(Number(y), Number(m) - 1, Number(d));
+      } else {
+        date = new Date(dateStr);
+      }
+    }
+    
+    if (date && !isNaN(date.getTime())) {
+      const formatted = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      return formatted;
+    }
+    
+    return dateStr;
+  };
 
   return (
     <View style={membersStyles.wrap}>
@@ -617,14 +674,14 @@ function MembersTab({ searchQuery }: SubScreenProps) {
               source={{
                 uri:
                   member.avatar ||
-                  `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name || 'Member')}&background=f0f0f0&color=999`,
+                  `https://ui-avatars.com/api/?name=${encodeURIComponent(formatMemberName(member))}&background=f0f0f0&color=999`,
               }}
               style={membersStyles.avatar}
             />
 
             <View style={membersStyles.details}>
-              <Text style={membersStyles.name}>{member.name || 'Unnamed Member'}</Text>
-              <Text style={membersStyles.meta}>{member.role || 'Member'}</Text>
+              <Text style={membersStyles.name}>{formatMemberName(member)}</Text>
+              <Text style={membersStyles.meta}>{formatBirthday(member.birthday)}</Text>
             </View>
 
             <View style={[membersStyles.statusPill, member.status === 'inactive' && membersStyles.statusPillInactive]}>

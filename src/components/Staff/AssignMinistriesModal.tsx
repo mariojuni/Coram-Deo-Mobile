@@ -590,7 +590,7 @@ const ms = StyleSheet.create({
   statusDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
   statusDotAssigned: { backgroundColor: '#22C55E' },
   statusDotEmpty: { backgroundColor: '#F59E0B', borderWidth: 1.5, borderColor: '#F59E0B' },
-  assignBtn: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: '#F59E0B', borderStyle: 'dashed', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, minWidth: 110 },
+  assignBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#F59E0B', borderStyle: 'dashed', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, minWidth: 110 },
   assignBtnFilled: { borderColor: 'transparent', backgroundColor: '#F0FDF4', borderStyle: 'solid' },
   assignedMemberRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   assignedAvatar: { width: 22, height: 22, borderRadius: 11 },
