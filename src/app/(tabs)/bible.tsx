@@ -10,12 +10,10 @@ import {
 } from '@/features/bible/presentation/hooks/useBibleTopNav';
 import { db } from '../../firebase';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useBibleVersionStore } from '../../store/useBibleVersionStore';
 import { fetchBibleIndex, getSavedVersions, getUserPreferences, saveUserPreferences } from '../../utils/bibleApi';
-
 import BibleReader from '../../components/Bible/BibleReader';
-
 import BooksModal from '../../components/Bible/BooksModal';
-
 import TopNavBar from '../../components/Navigation/TopNavBar';
 
 type BiblePreferencesWithHighlights = BiblePreferences & {
@@ -35,13 +33,12 @@ const DEFAULT_PREFERENCES: BiblePreferencesWithHighlights = {
 
 export default function BibleScreen() {
   const userProfile = useAuthStore((state) => state.userProfile);
+  const setTranslation = useBibleVersionStore((state) => state.setTranslation);
   const [preferences, setPreferences] = useState<BiblePreferencesWithHighlights | null>(null);
   const [savedVersions, setSavedVersions] = useState<BibleVersion[]>([]);
   const [books, setBooks] = useState<BibleBook[]>([]);
-
   const [isBooksModalOpen, setIsBooksModalOpen] = useState(false);
   const router = useRouter();
-
 
   // Load initial preferences and versions
   useFocusEffect(
@@ -59,14 +56,9 @@ export default function BibleScreen() {
   // Fetch books index when translation changes
   useEffect(() => {
     if (!preferences?.activeTranslation) return;
-    
     const loadBooks = async () => {
       const data = (await fetchBibleIndex(preferences.activeTranslation)) as BibleIndexResponse | null;
-      if (data && data.books) {
-        setBooks(data.books);
-      } else {
-        setBooks([]);
-      }
+      setBooks(data?.books ?? []);
     };
     loadBooks();
   }, [preferences?.activeTranslation]);
@@ -74,7 +66,6 @@ export default function BibleScreen() {
   // Sync highlights from Firebase
   useEffect(() => {
     if (!userProfile?.uid) return;
-    
     const fetchUserHighlights = async () => {
       try {
         const docRef = doc(db, 'users', userProfile.uid, 'bible', 'preferences');
@@ -90,7 +81,7 @@ export default function BibleScreen() {
           }));
         }
       } catch (error) {
-        console.error("Error fetching Bible highlights from Firebase:", error);
+        console.error('Error fetching Bible highlights from Firebase:', error);
       }
     };
     fetchUserHighlights();
@@ -100,12 +91,17 @@ export default function BibleScreen() {
     setPreferences((previous) => {
       const newPrefs = { ...(previous || DEFAULT_PREFERENCES), ...updates };
       saveUserPreferences(newPrefs);
-      
+
+      // Broadcast translation change to global store so all features stay in sync
+      if (updates.activeTranslation !== undefined) {
+        setTranslation(updates.activeTranslation);
+      }
+
       // Sync highlights to Firestore
       if (updates.highlights && userProfile?.uid) {
         const docRef = doc(db, 'users', userProfile.uid, 'bible', 'preferences');
         setDoc(docRef, { highlights: updates.highlights }, { merge: true })
-          .catch(err => console.error("Error saving Bible highlights to Firebase:", err));
+          .catch(err => console.error('Error saving Bible highlights to Firebase:', err));
       }
       return newPrefs;
     });
@@ -118,22 +114,20 @@ export default function BibleScreen() {
 
   return (
     <View style={styles.container}>
-      <BibleReader 
+      <BibleReader
         preferences={preferences}
         updatePreferences={handleUpdatePreferences}
         books={books}
       />
 
-      <TopNavBar 
+      <TopNavBar
         leftText={leftText}
         onLeftPress={() => setIsBooksModalOpen(true)}
         rightText={rightText}
         onRightPress={() => router.push('/version-manager')}
       />
 
-
-
-      <BooksModal 
+      <BooksModal
         isOpen={isBooksModalOpen}
         onClose={() => setIsBooksModalOpen(false)}
         books={books}
@@ -147,5 +141,5 @@ export default function BibleScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAFA' }
+  container: { flex: 1, backgroundColor: '#FAFAFA' },
 });

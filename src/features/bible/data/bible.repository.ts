@@ -164,6 +164,12 @@ const parseHTMLToJSON = (html: string, passageId: string) => {
 
 const sessionCache = new Map<string, any>();
 
+/** Synchronous cache lookup — returns data if already fetched this session, else null. */
+export const getChapterFromCache = (translationId: string | number, passageId: string) => {
+  const cacheKey = `chapter-${translationId}-${passageId}`;
+  return sessionCache.has(cacheKey) ? sessionCache.get(cacheKey) : null;
+};
+
 export const fetchBibleIndex = async (translationId: string | number) => {
   const cacheKey = `index-${translationId}`;
   if (sessionCache.has(cacheKey)) {

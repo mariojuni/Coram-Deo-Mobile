@@ -1,3 +1,4 @@
+import { useBibleVersionStore } from '@/store/useBibleVersionStore';
 import { fetchVerseOfTheDay, getUserPreferences, saveUserPreferences } from '@/utils/bibleApi';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -7,16 +8,30 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
+const decodeHtmlEntities = (text: string) => {
+  return text
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(dec))
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'");
+};
+
 const stripHtml = (html: string) => {
   if (!html) return '';
-  return html
-    .replace(/<[^>]+>/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+  return decodeHtmlEntities(
+    html
+      .replace(/<[^>]+>/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+  );
 };
 
 export function VerseOfTheDayCard() {
   const router = useRouter();
+  const activeTranslation = useBibleVersionStore((s) => s.activeTranslation);
+  const isVersionLoaded = useBibleVersionStore((s) => s.isLoaded);
   const [verseText, setVerseText] = useState('');
   const [reference, setReference] = useState('');
   const [passageId, setPassageId] = useState('');
@@ -26,16 +41,16 @@ export function VerseOfTheDayCard() {
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
-      transform: [{ scale: scale.value }],
+      transform: [{ scale: scale.get() }],
     };
   });
 
   const handlePressIn = () => {
-    scale.value = withTiming(0.97, { duration: 150 });
+    scale.set(withTiming(0.97, { duration: 150 }));
   };
 
   const handlePressOut = () => {
-    scale.value = withTiming(1, { duration: 150 });
+    scale.set(withTiming(1, { duration: 150 }));
   };
 
   const handlePress = async () => {
@@ -63,9 +78,15 @@ export function VerseOfTheDayCard() {
   };
 
   useEffect(() => {
+    // Wait until the version store has loaded before fetching
+    if (!isVersionLoaded) return;
+
     async function loadVerse() {
+      setLoading(true);
       try {
-        const votd = await fetchVerseOfTheDay();
+        // Use the globally selected translation; fall back to default NIV (111)
+        const translationId = activeTranslation ? String(activeTranslation) : '111';
+        const votd = await fetchVerseOfTheDay(translationId);
         if (votd) {
           setVerseText(stripHtml(votd.html));
           setReference(votd.reference);
@@ -78,7 +99,7 @@ export function VerseOfTheDayCard() {
       }
     }
     loadVerse();
-  }, []);
+  }, [activeTranslation, isVersionLoaded]);
 
   if (loading) {
     return (
@@ -118,7 +139,7 @@ export function VerseOfTheDayCard() {
             </View>
 
             <Text style={styles.verseText} numberOfLines={4}>
-              "{verseText}"
+              &quot;{verseText}&quot;
             </Text>
 
             <View style={styles.bottomRow}>

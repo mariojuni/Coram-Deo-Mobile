@@ -50,12 +50,6 @@ export function AudioPlayerScreen() {
     }
   }, [id]);
 
-  useEffect(() => {
-    if (currentSermon?.audioUrl && !sound) {
-      loadAudio();
-    }
-  }, [currentSermon]);
-
   const loadAudio = async () => {
     if (!currentSermon?.audioUrl) return;
 
@@ -68,6 +62,12 @@ export function AudioPlayerScreen() {
       setIsBuffering(false);
     }
   };
+
+  useEffect(() => {
+    if (currentSermon?.audioUrl && !sound) {
+      loadAudio();
+    }
+  }, [currentSermon]);
 
   const handlePlayPause = async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

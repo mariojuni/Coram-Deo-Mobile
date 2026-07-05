@@ -431,14 +431,14 @@ function EventsTab({ searchQuery }: SubScreenProps) {
           </View>
           <Text style={eventsStyles.emptyTodayTitle}>All clear for today</Text>
           <Text style={eventsStyles.emptyTodaySubtitle}>
-            No events scheduled today.{'\n'}Check what's coming up below ↓
+            No events scheduled today.{'\n'}Check what&apos;s coming up below ↓
           </Text>
         </View>
       )}
 
       <View style={eventsStyles.sectionHeadRow}>
         <View>
-          <Text style={eventsStyles.listHeadingOverline}>WHAT'S NEXT</Text>
+          <Text style={eventsStyles.listHeadingOverline}>WHAT&apos;S NEXT</Text>
           <Text style={eventsStyles.listHeading}>Upcoming Events</Text>
         </View>
         <View style={eventsStyles.listCountBadge}>
@@ -744,7 +744,10 @@ export default function CommunityScreen() {
   useEffect(() => {
     const paramIndex = getTabIndexFromParam(params.tab);
     if (paramIndex !== null && paramIndex !== activeTab) {
-      handleTabPress(paramIndex);
+      const frame = requestAnimationFrame(() => {
+        handleTabPress(paramIndex);
+      });
+      return () => cancelAnimationFrame(frame);
     }
   }, [params.tab]);
   const ActiveScreen = SUB_SCREENS[activeTab];
@@ -1749,4 +1752,3 @@ const eventsStyles = StyleSheet.create({
     color: '#1D4ED8',
   },
 });
-

@@ -1,8 +1,10 @@
+import { ministryRepository } from '@/features/ministry/data/ministry.repository';
 import { prayerRepository } from '@/features/prayer/data/prayer.repository';
 import { formatPrayerTimeAgo } from '@/features/prayer/domain/prayer.selectors';
 import type { Prayer } from '@/features/prayer/domain/prayer.types';
 import { getUpcomingMinisterialDuties, getUpcomingSchedules } from '@/features/schedule/domain/schedule.selectors';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useBiblePlanStore } from '@/store/useBiblePlanStore';
 import { useMinistryStore } from '@/store/useMinistryStore';
 import {
   getUserMinisterialRoles,
@@ -10,8 +12,8 @@ import {
   updateRsvp,
   useScheduleStore,
 } from '@/store/useScheduleStore';
-import { ministryRepository } from '@/features/ministry/data/ministry.repository';
-import { useEffect, useMemo, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 export function useHomeScreenData() {
   const currentUser = useAuthStore((state) => state.currentUser);
@@ -20,6 +22,9 @@ export function useHomeScreenData() {
   const initializeSchedulesListener = useScheduleStore((state) => state.initializeSchedulesListener);
   const { assignments, initializeAssignmentsListener, fetchMinistries } = useMinistryStore();
   const [latestPrayer, setLatestPrayer] = useState<Prayer | null>(null);
+
+  const initializePlansListener = useBiblePlanStore((s) => s.initializePlansListener);
+  const initializeUserBiblePlansListener = useBiblePlanStore((s) => s.initializeUserBiblePlansListener);
 
   useEffect(() => {
     const unsubscribe = initializeSchedulesListener();
@@ -47,6 +52,24 @@ export function useHomeScreenData() {
     );
     return () => unsubscribe();
   }, [userProfile?.churchId]);
+
+  // Initialize bible plan listeners so BiblePlanProgressCard has data on home screen.
+  // Use useFocusEffect so listeners are re-initialized when returning from plan detail
+  // (which kills the module-level subscriptions in its own cleanup).
+  useFocusEffect(
+    useCallback(() => {
+      const churchId = userProfile?.churchId;
+      const userId = currentUser?.uid;
+      if (!churchId || !userId) return;
+
+      const unsubPlans = initializePlansListener(churchId);
+      const unsubUserPlans = initializeUserBiblePlansListener(userId, churchId);
+      return () => {
+        unsubPlans();
+        unsubUserPlans();
+      };
+    }, [userProfile?.churchId, currentUser?.uid, initializePlansListener, initializeUserBiblePlansListener])
+  );
 
   const upcomingEvents = useMemo(() => getUpcomingSchedules(schedules), [schedules]);
 

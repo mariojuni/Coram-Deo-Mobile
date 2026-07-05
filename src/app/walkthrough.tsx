@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, FlatList, TouchableOpacity, Text, SafeAreaView, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -56,13 +56,13 @@ export default function WalkthroughScreen() {
     }
   };
 
-  const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
+  const onViewableItemsChanged = useCallback(({ viewableItems }: any) => {
     if (viewableItems[0]) {
       setCurrentIndex(viewableItems[0].index);
     }
-  }).current;
+  }, []);
 
-  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 }).current;
+  const viewabilityConfig = useMemo(() => ({ itemVisiblePercentThreshold: 50 }), []);
 
   const isLastSlide = currentIndex === SLIDES.length - 1;
 

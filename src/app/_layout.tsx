@@ -1,15 +1,16 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
+import { AudioProvider } from '../features/sermons/presentation/context/AudioContext';
 import '../global.css';
 import { useAuthStore } from '../store/useAuthStore';
+import { useBibleVersionStore } from '../store/useBibleVersionStore';
 import { useMemberStore } from '../store/useMemberStore';
-import { AudioProvider } from '../features/sermons/presentation/context/AudioContext';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -23,6 +24,7 @@ export default function RootLayout() {
   const initializeAuthListener = useAuthStore((state) => state.initializeAuthListener);
   const initializeMembersListener = useMemberStore((state) => state.initializeMembersListener);
   const initializeServicesListener = useMemberStore((state) => state.initializeServicesListener);
+  const loadTranslation = useBibleVersionStore((state) => state.loadTranslation);
   const segments = useSegments();
   const router = useRouter();
   const [hasSeenWalkthrough, setHasSeenWalkthrough] = useState<boolean | null>(null);
@@ -36,6 +38,11 @@ export default function RootLayout() {
   useEffect(() => {
     initializeAuthListener();
   }, [initializeAuthListener]);
+
+  // Load active Bible translation once on app start — global source of truth
+  useEffect(() => {
+    loadTranslation();
+  }, [loadTranslation]);
 
   const userProfile = useAuthStore((state) => state.userProfile);
 
@@ -123,6 +130,7 @@ export default function RootLayout() {
             <Stack.Screen name="version-manager" options={{ presentation: 'modal', headerShown: false }} />
             <Stack.Screen name="audio-player" options={{ presentation: 'modal', headerShown: false }} />
             <Stack.Screen name="sermon-detail" options={{ headerShown: false }} />
+            <Stack.Screen name="bible-plans" options={{ headerShown: false }} />
             <Stack.Screen name="+not-found" />
           </Stack>
         </AudioProvider>

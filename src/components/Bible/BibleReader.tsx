@@ -1,12 +1,15 @@
 import { useBibleReader } from '@/features/bible/presentation/hooks/useBibleReader';
 import { ChevronLeft, ChevronRight, Copy, X } from 'lucide-react-native';
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface BibleReaderProps {
   preferences: any;
   updatePreferences: (updates: any) => void;
   books: any[];
+  hideChapterNav?: boolean;
+  /** If set, after the chapter loads the reader will scroll to this verse number */
+  scrollToVerse?: string;
 }
 
 interface Verse {
@@ -36,8 +39,10 @@ const sanitizeVerseText = (text: string): string => {
     .trim();
 };
 
-export default function BibleReader({ preferences, updatePreferences, books }: BibleReaderProps) {
+export default function BibleReader({ preferences, updatePreferences, books, hideChapterNav = false, scrollToVerse }: BibleReaderProps) {
   const scrollRef = useRef<ScrollView>(null);
+  // Map verseNumber → y-offset captured by onLayout on each verse View
+  const verseYPositions = useRef<Record<string, number>>({});
   const {
     chapterData,
     highlightColors,
@@ -51,6 +56,24 @@ export default function BibleReader({ preferences, updatePreferences, books }: B
     toggleVerse,
   } = useBibleReader(preferences, books, updatePreferences);
   const selectedVerseSet = useMemo(() => new Set(selectedVerses), [selectedVerses]);
+
+  // Reset captured positions when chapter changes
+  useEffect(() => {
+    verseYPositions.current = {};
+  }, [preferences.activeBook, preferences.activeChapter]);
+
+  // Scroll to target verse after chapter finishes loading
+  useEffect(() => {
+    if (loading || !scrollToVerse || chapterData.length === 0) return;
+    // Give layout a tick to settle before scrolling
+    const timer = setTimeout(() => {
+      const y = verseYPositions.current[scrollToVerse];
+      if (y !== undefined) {
+        scrollRef.current?.scrollTo({ y: Math.max(0, y - 80), animated: true });
+      }
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [loading, scrollToVerse, chapterData]);
 
   const onNextChapter = () => {
     handleNextChapter();
@@ -78,27 +101,20 @@ export default function BibleReader({ preferences, updatePreferences, books }: B
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* Original paragraph-style verse rendering — onLayout captures y per verse */}
         <Text style={styles.chapterContent}>
           {chapterData.map((verse: Verse) => {
             const isSelected = selectedVerseSet.has(verse.verseNumber);
             const highlightColorValue = verseBackgroundColor(verse.verseNumber);
             const sanitizedContent = sanitizeVerseText(verse.content);
-            
-            // Debug logging for Genesis 2:23
-            if (verse.verseNumber === '23' && preferences.activeBook === 'GEN' && preferences.activeChapter === '2') {
-              console.log('Genesis 2:23 DEBUG:', {
-                raw: verse.content,
-                sanitized: sanitizedContent,
-                rawLength: verse.content?.length,
-                sanitizedLength: sanitizedContent.length,
-                rawBytes: JSON.stringify(verse.content),
-              });
-            }
-            
+
             return (
               <Text
                 key={verse.id}
                 onPress={() => toggleVerse(verse.verseNumber)}
+                onLayout={(e) => {
+                  verseYPositions.current[verse.verseNumber] = e.nativeEvent.layout.y;
+                }}
                 style={[
                   styles.verseWrap,
                   { backgroundColor: highlightColorValue },
@@ -114,7 +130,7 @@ export default function BibleReader({ preferences, updatePreferences, books }: B
       </ScrollView>
       
       {/* Navigation Arrows overlay */}
-      {selectedVerses.length === 0 && (
+      {selectedVerses.length === 0 && !hideChapterNav && (
         <View style={styles.navOverlay} pointerEvents="box-none">
           <TouchableOpacity style={styles.navBtn} onPress={onPrevChapter}>
             <ChevronLeft size={20} color="#FF6596" />

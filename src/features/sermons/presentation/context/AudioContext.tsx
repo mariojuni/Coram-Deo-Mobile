@@ -103,7 +103,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   };
 
   const setRate = (rate: number) => {
-    player.playbackRate = rate;
+    player.setPlaybackRate(rate);
   };
 
   const value: AudioContextType = {

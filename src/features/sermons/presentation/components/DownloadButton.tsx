@@ -29,13 +29,6 @@ export function DownloadButton({ sermon, variant = 'default' }: DownloadButtonPr
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
 
-  useEffect(() => {
-    if (currentUser) {
-      loadDownloadedSermons(currentUser.uid);
-      checkDownloadStatus();
-    }
-  }, [currentUser, sermon.id]);
-
   const checkDownloadStatus = async () => {
     if (!currentUser) return;
     setIsChecking(true);
@@ -43,6 +36,13 @@ export function DownloadButton({ sermon, variant = 'default' }: DownloadButtonPr
     setIsDownloaded(downloaded);
     setIsChecking(false);
   };
+
+  useEffect(() => {
+    if (currentUser) {
+      loadDownloadedSermons(currentUser.uid);
+      checkDownloadStatus();
+    }
+  }, [currentUser, sermon.id]);
 
   const downloadProgress = downloads.get(sermon.id);
   const isDownloading = downloadProgress?.isDownloading || false;

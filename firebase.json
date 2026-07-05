@@ -1,5 +1,8 @@
 {
   "auth": {
     "providers": {}
+  },
+  "firestore": {
+    "indexes": "firestore.indexes.json"
   }
 }

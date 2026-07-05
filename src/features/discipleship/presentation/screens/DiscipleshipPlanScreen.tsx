@@ -131,7 +131,7 @@ export function DiscipleshipPlanScreen({ planId }: Props) {
 
               <View style={styles.sectionHeadRow}>
                 <View>
-                  <Text style={styles.listHeadingOverline}>WHAT'S NEXT</Text>
+                  <Text style={styles.listHeadingOverline}>WHAT&apos;S NEXT</Text>
                   <Text style={styles.listHeading}>Weekly Lessons</Text>
                 </View>
                 <View style={styles.listCountBadge}>

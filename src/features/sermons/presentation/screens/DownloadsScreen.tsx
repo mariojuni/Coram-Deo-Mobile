@@ -49,7 +49,10 @@ export function DownloadsScreen() {
 
   useEffect(() => {
     if (currentUser) {
-      loadDownloads();
+      const timeout = setTimeout(() => {
+        void loadDownloads();
+      }, 0);
+      return () => clearTimeout(timeout);
     }
   }, [currentUser, loadDownloads]);
 

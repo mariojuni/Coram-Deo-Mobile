@@ -29,7 +29,7 @@ export default function PendingAccessScreen() {
             Your account has been created, but you are not yet linked to a church.
           </Text>
           <Text style={styles.instructions}>
-            Please contact your church admin to activate full access to the app's features.
+            Please contact your church admin to activate full access to the app&apos;s features.
           </Text>
           
           <TouchableOpacity onPress={handleLogout} activeOpacity={0.8}>

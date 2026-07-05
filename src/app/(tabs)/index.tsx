@@ -1,10 +1,11 @@
 import { MinistryDutyCard } from '@/features/home/presentation/components/MinistryDutyCard';
 import { VerseOfTheDayCard } from '@/features/home/presentation/components/VerseOfTheDayCard';
+import { BiblePlanProgressCard } from '@/features/home/presentation/components/BiblePlanProgressCard';
 import { useHomeScreenData } from '@/features/home/presentation/hooks/useHomeScreenData';
 import { usePrayerFeed } from '@/features/prayer/presentation/hooks/usePrayerFeed';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Calendar, CalendarDays, CheckCircle2, ChevronRight, Clock, Crown, Grid, HandHeart, HeartHandshake, HelpCircle, MapPin, Users, XCircle, BookOpenCheck } from 'lucide-react-native';
+import { BookOpenCheck, CalendarDays, CheckCircle2, ChevronRight, Clock, Crown, Grid, HandHeart, HeartHandshake, HelpCircle, MapPin, Users, XCircle } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
 import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -99,6 +100,9 @@ export default function HomeScreen() {
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: Math.max(insets.top, 24) + 104 }]} showsVerticalScrollIndicator={false}>
         {/* ─── Verse of the Day ───────────────────────────────────────── */}
         <VerseOfTheDayCard />
+
+        {/* ─── Bible Plan Progress ─────────────────────────────────────── */}
+        <BiblePlanProgressCard />
 
         {/* ─── Hero Carousel ──────────────────────────────────────────── */}
         {heroCards.length > 0 ? (
@@ -322,7 +326,7 @@ export default function HomeScreen() {
           <View style={styles.upcomingSection}>
             <View style={styles.sectionHeader}>
               <View>
-                <Text style={styles.sectionOverline}>WHAT'S NEXT</Text>
+                <Text style={styles.sectionOverline}>WHAT&apos;S NEXT</Text>
                 <Text style={styles.sectionTitle}>Upcoming Events</Text>
               </View>
               <TouchableOpacity

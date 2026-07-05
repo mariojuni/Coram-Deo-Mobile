@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { BarChart2, ChevronLeft, ChevronRight, MessageCircle, Settings, Users } from 'lucide-react-native';
+import { BarChart2, BookOpen, ChevronLeft, ChevronRight, ListChecks, MessageCircle, Settings, Users } from 'lucide-react-native';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuthStore } from '../store/useAuthStore';
 
@@ -9,6 +9,7 @@ export default function MoreScreen() {
   
   const displayName = userProfile?.fullName || 'User';
   const displayRole = userProfile?.role || 'Member';
+  const hasChurchId = Boolean(userProfile?.churchId);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -39,6 +40,32 @@ export default function MoreScreen() {
             <Text style={styles.menuText}>Ministries</Text>
             <ChevronRight size={20} color="#ccc" />
           </TouchableOpacity>
+
+          {hasChurchId && (
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push('/bible-plans' as any)}
+            >
+              <View style={[styles.menuIcon, { backgroundColor: '#FFF0F5' }]}>
+                <BookOpen size={20} color="#FF6596" />
+              </View>
+              <Text style={styles.menuText}>Bible Plans</Text>
+              <ChevronRight size={20} color="#ccc" />
+            </TouchableOpacity>
+          )}
+
+          {hasChurchId && (
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push('/bible-plans' as any)}
+            >
+              <View style={[styles.menuIcon, { backgroundColor: '#F0FDF4' }]}>
+                <ListChecks size={20} color="#22C55E" />
+              </View>
+              <Text style={styles.menuText}>My Bible Progress</Text>
+              <ChevronRight size={20} color="#ccc" />
+            </TouchableOpacity>
+          )}
           
           <TouchableOpacity style={styles.menuItem}>
             <View style={[styles.menuIcon, { backgroundColor: '#F3E5F5' }]}>

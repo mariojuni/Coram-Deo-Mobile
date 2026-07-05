@@ -23,7 +23,10 @@ export function NoteEditor({ note, sermonId, userId, timestamp, onSave, onClose 
 
   useEffect(() => {
     if (note) {
-      setContent(note.content);
+      const frame = requestAnimationFrame(() => {
+        setContent(note.content);
+      });
+      return () => cancelAnimationFrame(frame);
     }
   }, [note]);
 

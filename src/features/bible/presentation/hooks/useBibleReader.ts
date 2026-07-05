@@ -1,4 +1,4 @@
-import { fetchChapterData } from '@/features/bible/data/bible.repository';
+import { fetchChapterData, getChapterFromCache } from '@/features/bible/data/bible.repository';
 import * as Clipboard from 'expo-clipboard';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert } from 'react-native';
@@ -50,6 +50,14 @@ export function useBibleReader(
 
   useEffect(() => {
     const loadChapter = async () => {
+      // If already cached, apply immediately with no loading flash
+      const cached = getChapterFromCache(String(activeTranslation), passageId);
+      if (cached) {
+        setChapterData(cached);
+        setLoading(false);
+        setSelectedVerses([]);
+        return;
+      }
       setLoading(true);
       setSelectedVerses([]);
       const data = await fetchChapterData(String(activeTranslation), passageId);

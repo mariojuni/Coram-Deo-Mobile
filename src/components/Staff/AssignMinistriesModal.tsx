@@ -253,29 +253,32 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [selectingRoleKey, setSelectingRoleKey] = useState<{ ministryId: string, roleName: string } | null>(null);
   const [showPicker, setShowPicker] = useState(false);
-
-  // Initialize assignments map from store data and default ministry roles
-  useEffect(() => {
+  const initialAssignments = useMemo(() => {
     const initialMap: AssignmentsMap = {};
 
-    // 1. Populate defaults from ministries
     ministries.forEach(ministry => {
       ministry.members?.forEach(m => {
         if (m.role) {
           const key = getAssignmentKey(ministry.id, m.role);
-          // Only populate if not already explicitly assigned (but eventAssignments will override below)
           initialMap[key] = m.memberId;
         }
       });
     });
 
-    // 2. Override with actual saved assignments from Firebase
     eventAssignments.forEach(a => {
       initialMap[getAssignmentKey(a.ministryId, a.roleName)] = a.memberId;
     });
 
-    setAssignments(initialMap);
+    return initialMap;
   }, [eventAssignments, ministries]);
+
+  // Initialize assignments map from store data and default ministry roles
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      setAssignments(initialAssignments);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [initialAssignments]);
 
   const totalRoles = useMemo(() => ministries.reduce((acc, min) => acc + (min.roles?.length || 0), 0), [ministries]);
   const assignedCount = useMemo(() => Object.keys(assignments).length, [assignments]);
@@ -298,7 +301,7 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
     setShowPicker(true);
   }, [isStaff]);
 
-  const handleSelect = useCallback(async (userId: string | null) => {
+  const handleSelect = async (userId: string | null) => {
     if (!selectingRoleKey) return;
     const { ministryId, roleName } = selectingRoleKey;
     const key = getAssignmentKey(ministryId, roleName);
@@ -352,7 +355,7 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
       console.error('Failed to update assignment', e);
       Alert.alert('Update Failed', 'Could not update the assignment. Please try again.');
     }
-  }, [selectingRoleKey, eventAssignments, userProfile?.churchId, memberById, ministries, liveSchedule]);
+  };
 
   // Use previous week's assignments as template (This requires fetching previous assignments, but for now we skip this or show a note)
   const handleUseTemplate = useCallback(() => {

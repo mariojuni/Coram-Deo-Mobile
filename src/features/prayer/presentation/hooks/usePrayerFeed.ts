@@ -11,10 +11,7 @@ export function usePrayerFeed() {
   const churchId = userProfile?.churchId;
 
   useEffect(() => {
-    if (!churchId) {
-      setLoading(false);
-      return;
-    }
+    if (!churchId) return;
 
     const unsubscribe = prayerRepository.subscribeToPrayers(
       churchId,
@@ -43,9 +40,8 @@ export function usePrayerFeed() {
 
   return {
     prayers,
-    loading,
+    loading: churchId ? loading : false,
     togglePrayerLike,
     togglePrayerAnswered,
   };
 }
-

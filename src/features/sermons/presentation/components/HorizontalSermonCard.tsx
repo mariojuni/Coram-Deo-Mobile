@@ -17,16 +17,16 @@ export function HorizontalSermonCard({ sermon, onPress }: HorizontalSermonCardPr
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
-      transform: [{ scale: scale.value }]
+      transform: [{ scale: scale.get() }]
     };
   });
 
   const handlePressIn = () => {
-    scale.value = withTiming(0.95, { duration: 150 });
+    scale.set(withTiming(0.95, { duration: 150 }));
   };
 
   const handlePressOut = () => {
-    scale.value = withTiming(1, { duration: 150 });
+    scale.set(withTiming(1, { duration: 150 }));
   };
 
   const handlePress = () => {
