@@ -4,7 +4,7 @@ import { useUserBiblePlans } from '@/features/biblePlan/presentation/hooks/useUs
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { BookOpen, ChevronLeft, ChevronRight } from 'lucide-react-native';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -194,6 +194,7 @@ export default function BiblePlansScreen() {
   const router = useRouter();
   const { plans, loading, hasChurchId } = useBiblePlans();
   const { getUserBiblePlanForPlan } = useUserBiblePlans();
+  const [activeTab, setActiveTab] = useState<'my' | 'explore'>('explore');
 
   const myPlans = useMemo(
     () =>
@@ -232,6 +233,27 @@ export default function BiblePlansScreen() {
         </View>
         <View style={styles.heroGlowLarge} />
         <View style={styles.heroGlowSmall} />
+
+        {/* Tab switcher inside hero */}
+        <View style={styles.tabBar}>
+          <Pressable
+            style={[styles.tab, activeTab === 'my' && styles.tabActive]}
+            onPress={() => setActiveTab('my')}
+          >
+            <Text style={[styles.tabText, activeTab === 'my' && styles.tabTextActive]}>
+              My Plans
+              {myPlans.length > 0 ? ` (${myPlans.length})` : ''}
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.tab, activeTab === 'explore' && styles.tabActive]}
+            onPress={() => setActiveTab('explore')}
+          >
+            <Text style={[styles.tabText, activeTab === 'explore' && styles.tabTextActive]}>
+              Explore
+            </Text>
+          </Pressable>
+        </View>
       </LinearGradient>
 
       <View style={styles.body}>
@@ -241,49 +263,51 @@ export default function BiblePlansScreen() {
           </View>
         ) : !hasChurchId ? (
           <View style={styles.centerState}>{renderEmptyState('Not Available', 'Bible Plans require a linked church account.')}</View>
+        ) : activeTab === 'my' ? (
+          myPlans.length === 0 ? (
+            <View style={styles.centerState}>
+              {renderEmptyState('No Active Plans', 'Start a plan from the Explore tab to track your progress here.')}
+            </View>
+          ) : (
+            <ScrollView
+              contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(insets.bottom, 24) + 20 }]}
+              showsVerticalScrollIndicator={false}
+            >
+              {myPlans.map(({ plan, userPlan }) => (
+                <MyPlanCard
+                  key={plan.id}
+                  plan={plan}
+                  progressPercentage={userPlan?.progressPercentage}
+                  currentDayNumber={userPlan?.currentDayNumber}
+                  totalDays={userPlan?.totalDays}
+                  onPress={() => router.push(`/bible-plans/${plan.id}` as any)}
+                />
+              ))}
+            </ScrollView>
+          )
         ) : plans.length === 0 ? (
           <View style={styles.centerState}>
-            {renderEmptyState('No Plans Yet', 'Your church hasn’t published any Bible plans yet. Check back soon.')}
+            {renderEmptyState('No Plans Yet', "Your church hasn't published any Bible plans yet. Check back soon.")}
           </View>
         ) : (
           <ScrollView
             contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(insets.bottom, 24) + 20 }]}
             showsVerticalScrollIndicator={false}
           >
-            {myPlans.length > 0 ? (
-              <View style={styles.sectionBlock}>
-                <SectionHeader title="My Plans" subtitle="Pick up right where you left off." />
-                {myPlans.map(({ plan, userPlan }) => (
-                  <MyPlanCard
-                    key={plan.id}
-                    plan={plan}
-                    progressPercentage={userPlan?.progressPercentage}
-                    currentDayNumber={userPlan?.currentDayNumber}
-                    totalDays={userPlan?.totalDays}
-                    onPress={() => router.push(`/bible-plans/${plan.id}` as any)}
-                  />
-                ))}
-              </View>
-            ) : null}
-
-            <View style={styles.sectionBlock}>
-              <SectionHeader title="Explore Plans" subtitle="Find a plan that fits this season of your walk." />
-              {plans.map((plan) => {
-                const userPlan = getUserBiblePlanForPlan?.(plan.id);
-
-                return (
-                  <ExplorePlanCard
-                    key={plan.id}
-                    plan={plan}
-                    isStarted={Boolean(userPlan)}
-                    progressPercentage={userPlan?.progressPercentage}
-                    currentDayNumber={userPlan?.currentDayNumber}
-                    totalDays={userPlan?.totalDays}
-                    onPress={() => router.push(`/bible-plans/${plan.id}` as any)}
-                  />
-                );
-              })}
-            </View>
+            {plans.map((plan) => {
+              const userPlan = getUserBiblePlanForPlan?.(plan.id);
+              return (
+                <ExplorePlanCard
+                  key={plan.id}
+                  plan={plan}
+                  isStarted={Boolean(userPlan)}
+                  progressPercentage={userPlan?.progressPercentage}
+                  currentDayNumber={userPlan?.currentDayNumber}
+                  totalDays={userPlan?.totalDays}
+                  onPress={() => router.push(`/bible-plans/${plan.id}` as any)}
+                />
+              );
+            })}
           </ScrollView>
         )}
       </View>
@@ -298,11 +322,42 @@ const styles = StyleSheet.create({
   },
   hero: {
     paddingHorizontal: 20,
-    paddingBottom: 32,
+    paddingBottom: 16,
     overflow: 'hidden',
   },
   heroContent: {
-    minHeight: 188,
+    minHeight: 156,
+  },
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 30,
+    padding: 4,
+    marginTop: 16,
+    marginBottom: 4,
+    alignSelf: 'flex-start',
+  },
+  tab: {
+    paddingVertical: 8,
+    paddingHorizontal: 22,
+    borderRadius: 26,
+  },
+  tabActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.75)',
+  },
+  tabTextActive: {
+    color: PRIMARY,
+    fontWeight: '700',
   },
   backButton: {
     width: 42,
