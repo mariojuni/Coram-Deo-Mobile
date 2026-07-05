@@ -83,19 +83,19 @@ export function BiblePlanProgressCard() {
       >
         <View style={styles.card}>
           <LinearGradient
-            colors={['#F9A8C9', '#D8B4FE']}
+            colors={['#FF6596', '#B66DFF']}
             start={{ x: 0, y: 0 }}
             end={{ x: 0, y: 1 }}
             style={styles.stripe}
           />
           <View style={styles.iconWrap}>
             <LinearGradient
-              colors={['#FBC8DD', '#E9D5FF']}
+              colors={['#FF6596', '#B66DFF']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.iconGradient}
             >
-              <BookOpen size={18} color="#C084FC" strokeWidth={2} />
+              <BookOpen size={18} color="#fff" strokeWidth={2} />
             </LinearGradient>
           </View>
           <View style={styles.content}>
