@@ -7,13 +7,14 @@ import { BookOpen, ChevronRight, Sparkles } from 'lucide-react-native';
 import { useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+// Pick the most recently read active plan
 function pickActivePlan(plans: UserBiblePlan[]): UserBiblePlan | null {
   const active = plans.filter((p) => p.status === 'active');
   if (active.length === 0) return null;
   return active.sort((a, b) => {
     const aTime = a.lastReadAt ? new Date(a.lastReadAt as string).getTime() : 0;
     const bTime = b.lastReadAt ? new Date(b.lastReadAt as string).getTime() : 0;
-    return aTime - bTime;
+    return bTime - aTime; // most recently read first
   })[0];
 }
 
