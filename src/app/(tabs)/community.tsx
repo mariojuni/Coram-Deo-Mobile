@@ -1,6 +1,6 @@
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams } from 'expo-router';
+import { useGlobalSearchParams } from 'expo-router';
 import {
   CalendarDays,
   CheckCircle,
@@ -612,7 +612,7 @@ function MembersTab({ searchQuery }: SubScreenProps) {
     return displayName || 'Unnamed Member';
   };
 
-  const formatBirthday = (dateStr: string) => {
+  const formatBirthday = (dateStr?: string) => {
     if (!dateStr) return '';
     
     let date: Date | null = null;
@@ -691,7 +691,7 @@ const SUB_SCREENS = [
 // ─── Main Community screen ────────────────────────────────────────────────────
 
 export default function CommunityScreen() {
-  const params = useLocalSearchParams<{ tab?: string | string[] }>();
+  const params = useGlobalSearchParams<{ tab?: string | string[] }>();
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<TabIndex>(() => getTabIndexFromParam(params.tab) ?? 0);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -741,6 +741,12 @@ export default function CommunityScreen() {
     setActiveTab(index);
   };
 
+  useEffect(() => {
+    const paramIndex = getTabIndexFromParam(params.tab);
+    if (paramIndex !== null && paramIndex !== activeTab) {
+      handleTabPress(paramIndex);
+    }
+  }, [params.tab]);
   const ActiveScreen = SUB_SCREENS[activeTab];
   const activeTabKey = TABS[activeTab].key;
   const activeSearchQuery = searchByTab[activeTabKey];

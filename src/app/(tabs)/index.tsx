@@ -4,7 +4,7 @@ import { useHomeScreenData } from '@/features/home/presentation/hooks/useHomeScr
 import { usePrayerFeed } from '@/features/prayer/presentation/hooks/usePrayerFeed';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Calendar, CalendarDays, CheckCircle2, ChevronRight, Clock, Crown, Grid, HandHeart, HeartHandshake, HelpCircle, MapPin, Users, XCircle } from 'lucide-react-native';
+import { Calendar, CalendarDays, CheckCircle2, ChevronRight, Clock, Crown, Grid, HandHeart, HeartHandshake, HelpCircle, MapPin, Users, XCircle, BookOpenCheck } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
 import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -188,13 +188,13 @@ export default function HomeScreen() {
             </View>
             <Text style={styles.gridLabel}>Members</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.gridItem}>
+          <TouchableOpacity style={styles.gridItem} onPress={() => router.push('/discipleship' as any)}>
             <View style={styles.iconWrapper}>
-              <Calendar color="#8B6FE8" size={24} />
+              <BookOpenCheck color="#8B6FE8" size={24} />
             </View>
-            <Text style={styles.gridLabel}>Events</Text>
+            <Text style={styles.gridLabel}>Disciple</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.gridItem} onPress={() => router.push('/giving')}>
+          <TouchableOpacity style={styles.gridItem} onPress={() => router.push('/giving' as any)}>
             <View style={styles.iconWrapper}>
               <HandHeart color="#4ADE80" size={24} />
             </View>
@@ -261,7 +261,7 @@ export default function HomeScreen() {
               </View>
               <TouchableOpacity
                 style={styles.upcomingCountPill}
-                onPress={() => router.push('/(tabs)/prayer')}
+                onPress={() => router.push({ pathname: '/(tabs)/community', params: { tab: 'prayers' } })}
               >
                 <Text style={styles.upcomingCountText}>{prayerCount}</Text>
               </TouchableOpacity>
@@ -305,7 +305,7 @@ export default function HomeScreen() {
 
             <TouchableOpacity
               style={styles.seeAllEventsBtn}
-              onPress={() => router.push('/(tabs)/prayer')}
+              onPress={() => router.push({ pathname: '/(tabs)/community', params: { tab: 'prayers' } })}
             >
               <Text style={styles.seeAllEventsBtnText}>See all prayers</Text>
               <ChevronRight size={14} color="#FF6596" />
@@ -327,7 +327,7 @@ export default function HomeScreen() {
               </View>
               <TouchableOpacity
                 style={styles.upcomingCountPill}
-                onPress={() => router.push('/(tabs)/community')}
+                onPress={() => router.push({ pathname: '/(tabs)/community', params: { tab: 'events' } })}
               >
                 <Text style={styles.upcomingCountText}>{upcomingEvents.length}</Text>
               </TouchableOpacity>
@@ -375,7 +375,7 @@ export default function HomeScreen() {
 
             <TouchableOpacity
               style={styles.seeAllEventsBtn}
-              onPress={() => router.push('/(tabs)/community')}
+              onPress={() => router.push({ pathname: '/(tabs)/community', params: { tab: 'events' } })}
             >
               <Text style={styles.seeAllEventsBtnText}>See all events</Text>
               <ChevronRight size={14} color="#FF6596" />
