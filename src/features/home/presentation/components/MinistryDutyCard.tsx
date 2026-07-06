@@ -10,47 +10,47 @@
  */
 import { LinearGradient } from 'expo-linear-gradient';
 import {
-  BookOpen,
-  CalendarDays,
-  Check,
-  ChevronDown,
-  ChevronUp,
-  Clock,
-  Drum,
-  GraduationCap,
-  Guitar,
-  Hand,
-  HandCoins,
-  MapPin,
-  Mic,
-  Monitor,
-  Piano,
-  Users,
-  X,
-  Shield,
-  Music,
-  Heart,
-  Star,
-  Settings,
+    BookOpen,
+    CalendarDays,
+    Check,
+    ChevronDown,
+    ChevronUp,
+    Clock,
+    Drum,
+    GraduationCap,
+    Guitar,
+    Hand,
+    HandCoins,
+    Heart,
+    MapPin,
+    Mic,
+    Monitor,
+    Music,
+    Piano,
+    Settings,
+    Shield,
+    Star,
+    Users,
+    X,
 } from 'lucide-react-native';
 import { useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-import { PrayingHands } from '../../../../components/ui/icons/PrayingHands';
 import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
+    useAnimatedStyle,
+    useSharedValue,
+    withTiming,
 } from 'react-native-reanimated';
-import { useMinistryStore } from '../../../../store/useMinistryStore';
-import type { Schedule } from '../../../../features/schedule/domain/schedule.types';
+import { PrayingHands } from '../../../../components/ui/icons/PrayingHands';
 import type { MinistryAssignment } from '../../../../features/ministry/domain/ministry.types';
+import type { Schedule } from '../../../../features/schedule/domain/schedule.types';
+import { useMinistryStore } from '../../../../store/useMinistryStore';
 
 // ─── Role identity maps ───────────────────────────────────────────────────────
 // Each role has a distinct color, icon, and background used throughout the card.
@@ -219,7 +219,7 @@ export function MinistryDutyCard({
   };
 
   return (
-    <View style={[cs.card, { shadowColor: color }, isDeclined && cs.cardDeclined]}>
+    <View style={[cs.card, isDeclined && cs.cardDeclined]}>
 
       {/* ── Header: tinted gradient with role icon, title, status, chevron ── */}
       <TouchableOpacity onPress={toggle} activeOpacity={isPending ? 0.8 : 1}>
@@ -321,9 +321,10 @@ const cs = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     marginBottom: 12,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
     elevation: 3,
     overflow: 'hidden',
   },

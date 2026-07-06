@@ -1,11 +1,11 @@
+import { BiblePlanProgressCard } from '@/features/home/presentation/components/BiblePlanProgressCard';
 import { MinistryDutyCard } from '@/features/home/presentation/components/MinistryDutyCard';
 import { VerseOfTheDayCard } from '@/features/home/presentation/components/VerseOfTheDayCard';
-import { BiblePlanProgressCard } from '@/features/home/presentation/components/BiblePlanProgressCard';
 import { useHomeScreenData } from '@/features/home/presentation/hooks/useHomeScreenData';
 import { usePrayerFeed } from '@/features/prayer/presentation/hooks/usePrayerFeed';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { BookOpenCheck, CalendarDays, CheckCircle2, ChevronRight, Clock, Crown, Grid, HandHeart, HeartHandshake, HelpCircle, MapPin, Users, XCircle } from 'lucide-react-native';
+import { CalendarDays, CheckCircle2, ChevronRight, Clock, HeartHandshake, HelpCircle, MapPin, XCircle } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
 import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -19,6 +19,8 @@ export default function HomeScreen() {
     latestPrayer,
     myUpcomingDuties,
     upcomingEvents,
+    todaysEvents,
+    upcomingList,
     getUserRsvpStatus,
     handleMinisterialDuty,
     handlePray,
@@ -64,11 +66,11 @@ export default function HomeScreen() {
   );
   const heroCards = useMemo(
     () =>
-      upcomingEvents.map((event) => ({
+      todaysEvents.map((event) => ({
         event,
         rsvpStatus: currentUserId ? getUserRsvpStatus(event, currentUserId) : null,
       })),
-    [currentUserId, getUserRsvpStatus, upcomingEvents]
+    [currentUserId, getUserRsvpStatus, todaysEvents]
   );
   const handleHeroScrollEnd = useCallback(
     (offsetX: number) => {
@@ -104,112 +106,137 @@ export default function HomeScreen() {
         {/* ─── Bible Plan Progress ─────────────────────────────────────── */}
         <BiblePlanProgressCard />
 
-        {/* ─── Hero Carousel ──────────────────────────────────────────── */}
-        {heroCards.length > 0 ? (
-          <View>
-            <ScrollView
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              onMomentumScrollEnd={(e) => handleHeroScrollEnd(e.nativeEvent.contentOffset.x)}
-              style={styles.heroScroll}
-            >
-              {heroCards.map(({ event, rsvpStatus }) => {
-                return (
-                  <View key={`hero-${event.id}`} style={{ width: cardWidth }}>
-                    <TouchableOpacity activeOpacity={0.9}>
-                      <LinearGradient
-                        colors={['#FF6596', '#B66DFF']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.heroCard}
-                      >
-                        <View style={styles.liveBadge}>
-                          <Text style={styles.liveText}>UPCOMING</Text>
-                          <CalendarDays size={12} color="#fff" />
-                        </View>
-                        <Text style={styles.heroTitle}>
-                          {new Date(`${event.date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-                        </Text>
-                        <Text style={styles.heroEventName}>{event.title || 'Sunday Worship Service'}</Text>
-                        <Text style={styles.heroEventDetails}>
-                          {event.time || '9:00 AM'} • {event.location || 'Main Sanctuary'}
-                        </Text>
-                        <View style={styles.heroRsvpRow}>
-                          <TouchableOpacity style={[styles.heroRsvpBtn, rsvpStatus === 'going' && styles.rsvpActiveBtn]} onPress={() => handleRsvp(event.id, 'going')}>
-                            <CheckCircle2 size={16} color={rsvpStatus === 'going' ? '#FF6596' : '#fff'} />
-                            <Text style={[styles.heroRsvpText, rsvpStatus === 'going' && styles.rsvpActiveText]}>Going</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity style={[styles.heroRsvpBtn, rsvpStatus === 'maybe' && styles.rsvpActiveBtn]} onPress={() => handleRsvp(event.id, 'maybe')}>
-                            <HelpCircle size={16} color={rsvpStatus === 'maybe' ? '#F59E0B' : '#fff'} />
-                            <Text style={[styles.heroRsvpText, rsvpStatus === 'maybe' && { color: '#F59E0B' }]}>Maybe</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity style={[styles.heroRsvpBtn, rsvpStatus === 'not_going' && styles.rsvpActiveBtn]} onPress={() => handleRsvp(event.id, 'not_going')}>
-                            <XCircle size={16} color={rsvpStatus === 'not_going' ? '#EF4444' : '#fff'} />
-                            <Text style={[styles.heroRsvpText, rsvpStatus === 'not_going' && { color: '#EF4444' }]}>Not Going</Text>
-                          </TouchableOpacity>
-                        </View>
-                      </LinearGradient>
-                    </TouchableOpacity>
-                  </View>
-                );
-              })}
-            </ScrollView>
+        {/* ─── Quick Actions (hidden for now) ─────────────────────────── */}
+        {/* TODO: unhide when ready
+        <View style={styles.quickActionsSection}>
+          ...
+        </View>
+        */}
 
-            {heroCards.length > 1 && (
-              <View style={styles.paginationRow}>
-                {heroCards.map((_, index) => (
-                  <View
-                    key={`dot-${index}`}
-                    style={[styles.paginationDot, activeSlide === index && styles.paginationDotActive]}
-                  />
-                ))}
-              </View>
-            )}
+        {/* ─── Today Cards Carousel ───────────────────────────────────── */}
+        <View style={styles.todayCarouselWrap}>
+          {/* Section label */}
+          <View style={styles.todayLabelRow}>
+            <View style={styles.todayDot} />
+            <Text style={styles.todayLabelText}>TODAY</Text>
           </View>
-        ) : (
-          <TouchableOpacity activeOpacity={0.9}>
-            <LinearGradient
-              colors={['#FF6596', '#B66DFF']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.heroCard}
-            >
-              <View style={styles.liveBadge}>
-                <Text style={styles.liveText}>LIVE SERVICE</Text>
-                <Crown size={12} color="#fff" />
-              </View>
-              <Text style={styles.heroTitle}>Sunday 9:00 AM{'\n'}Worship & Sermon</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        )}
 
-        {/* ─── Action Grid ────────────────────────────────────────────── */}
-        <View style={styles.grid}>
-          <TouchableOpacity style={styles.gridItem}>
-            <View style={styles.iconWrapper}>
-              <Users color="#4D8BFF" size={24} />
+          {heroCards.length > 0 ? (
+            <>
+              <ScrollView
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                onMomentumScrollEnd={(e) => handleHeroScrollEnd(e.nativeEvent.contentOffset.x)}
+              >
+                {heroCards.map(({ event, rsvpStatus }) => {
+                  const d = new Date(`${event.date}T00:00:00`);
+                  const month = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+                  const day = d.getDate();
+
+                  return (
+                    <View key={`hero-${event.id}`} style={{ width: cardWidth }}>
+                      <View style={styles.todayCard}>
+                        {/* Left — gradient calendar tile */}
+                        <LinearGradient
+                          colors={['#FF6596', '#B66DFF']}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={styles.todayDateTile}
+                        >
+                          <Text style={styles.todayTileMonth}>{month}</Text>
+                          <Text style={styles.todayTileDay}>{day}</Text>
+                          <CalendarDays size={12} color="rgba(255,255,255,0.7)" />
+                        </LinearGradient>
+
+                        {/* Right — event info */}
+                        <View style={styles.todayCardContent}>
+                          <Text style={styles.todayEventTitle} numberOfLines={2}>
+                            {event.title || 'Church Event'}
+                          </Text>
+
+                          <View style={styles.todayMetaRow}>
+                            <Clock size={11} color="#9CA3AF" />
+                            <Text style={styles.todayMetaText}>
+                              {event.time || '9:00 AM'}{event.endTime ? ` – ${event.endTime}` : ''}
+                            </Text>
+                            {event.location ? (
+                              <>
+                                <Text style={styles.todayMetaDot}>·</Text>
+                                <MapPin size={11} color="#9CA3AF" />
+                                <Text style={styles.todayMetaText} numberOfLines={1}>{event.location}</Text>
+                              </>
+                            ) : null}
+                          </View>
+
+                          {/* Compact RSVP pills */}
+                          <View style={styles.todayRsvpRow}>
+                            <TouchableOpacity
+                              style={[styles.todayRsvpPill, rsvpStatus === 'going' && styles.todayRsvpPillActive]}
+                              onPress={() => handleRsvp(event.id, 'going')}
+                            >
+                              <CheckCircle2 size={12} color={rsvpStatus === 'going' ? '#FF6596' : '#9CA3AF'} />
+                              <Text style={[styles.todayRsvpPillText, rsvpStatus === 'going' && styles.todayRsvpPillTextActive]}>Going</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={[styles.todayRsvpPill, rsvpStatus === 'maybe' && styles.todayRsvpPillMaybe]}
+                              onPress={() => handleRsvp(event.id, 'maybe')}
+                            >
+                              <HelpCircle size={12} color={rsvpStatus === 'maybe' ? '#F59E0B' : '#9CA3AF'} />
+                              <Text style={[styles.todayRsvpPillText, rsvpStatus === 'maybe' && { color: '#F59E0B' }]}>Maybe</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={[styles.todayRsvpPill, rsvpStatus === 'not_going' && styles.todayRsvpPillDecline]}
+                              onPress={() => handleRsvp(event.id, 'not_going')}
+                            >
+                              <XCircle size={12} color={rsvpStatus === 'not_going' ? '#EF4444' : '#9CA3AF'} />
+                              <Text style={[styles.todayRsvpPillText, rsvpStatus === 'not_going' && { color: '#EF4444' }]}>No</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })}
+              </ScrollView>
+
+              {heroCards.length > 1 && (
+                <View style={styles.paginationRow}>
+                  {heroCards.map((_, index) => (
+                    <View
+                      key={`dot-${index}`}
+                      style={[styles.paginationDot, activeSlide === index && styles.paginationDotActive]}
+                    />
+                  ))}
+                </View>
+              )}
+            </>
+          ) : (
+            /* ── Empty state ── */
+            <View style={styles.todayEmptyCard}>
+              <LinearGradient
+                colors={['#FFF0F5', '#F5F0FF']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.todayEmptyGradient}
+              >
+                <View style={styles.todayEmptyIconRing}>
+                  <CalendarDays size={22} color="#FF6596" strokeWidth={2} />
+                </View>
+                <View style={styles.todayEmptyText}>
+                  <Text style={styles.todayEmptyTitle}>All clear today</Text>
+                  <Text style={styles.todayEmptySubtitle}>No events scheduled — enjoy your day!</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.todayEmptyAction}
+                  onPress={() => router.push({ pathname: '/(tabs)/community', params: { tab: 'events' } })}
+                >
+                  <Text style={styles.todayEmptyActionText}>See upcoming</Text>
+                  <ChevronRight size={13} color="#FF6596" strokeWidth={2.5} />
+                </TouchableOpacity>
+              </LinearGradient>
             </View>
-            <Text style={styles.gridLabel}>Members</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.gridItem} onPress={() => router.push('/discipleship' as any)}>
-            <View style={styles.iconWrapper}>
-              <BookOpenCheck color="#8B6FE8" size={24} />
-            </View>
-            <Text style={styles.gridLabel}>Disciple</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.gridItem} onPress={() => router.push('/giving' as any)}>
-            <View style={styles.iconWrapper}>
-              <HandHeart color="#4ADE80" size={24} />
-            </View>
-            <Text style={styles.gridLabel}>Giving</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.gridItem} onPress={() => router.push('/more')}>
-            <View style={styles.iconWrapper}>
-              <Grid color="#FF6596" size={24} />
-            </View>
-            <Text style={styles.gridLabel}>More</Text>
-          </TouchableOpacity>
+          )}
         </View>
 
         {/* ─── My Ministries (US-01/06/07/09) ───────────────────────── */}
@@ -217,7 +244,10 @@ export default function HomeScreen() {
           <View style={styles.ministriesSection}>
             {/* Section header (US-07) */}
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Serving This Week</Text>
+              <View>
+                <Text style={styles.sectionOverline}>MY SCHEDULE</Text>
+                <Text style={styles.sectionTitle}>Serving This Week</Text>
+              </View>
               {pendingCount > 0 ? (
                 <View style={styles.pendingPill}>
                   <Text style={styles.pendingPillText}>{pendingCount} pending</Text>
@@ -322,7 +352,7 @@ export default function HomeScreen() {
         )}
 
         {/* ─── Upcoming Events ─────────────────────────────────────────── */}
-        {upcomingEvents.length > 0 && (
+        {upcomingList.length > 0 && (
           <View style={styles.upcomingSection}>
             <View style={styles.sectionHeader}>
               <View>
@@ -333,11 +363,11 @@ export default function HomeScreen() {
                 style={styles.upcomingCountPill}
                 onPress={() => router.push({ pathname: '/(tabs)/community', params: { tab: 'events' } })}
               >
-                <Text style={styles.upcomingCountText}>{upcomingEvents.length}</Text>
+                <Text style={styles.upcomingCountText}>{upcomingList.length}</Text>
               </TouchableOpacity>
             </View>
 
-            {upcomingEvents.slice(0, 3).map((event) => {
+            {upcomingList.slice(0, 3).map((event) => {
               const d = event.date ? new Date(`${event.date}T00:00:00`) : new Date();
               const month = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
               const day = d.getDate().toString();
@@ -422,27 +452,119 @@ const styles = StyleSheet.create({
   // ────────────────────────────────────────────────────────────────────────
   rsvpActiveBtn: { backgroundColor: '#fff' },
   rsvpActiveText: { color: '#FF6596' },
-  heroCard: { padding: 24, borderRadius: 24, marginBottom: 0, overflow: 'hidden' },
+
+  // ─── Today Cards Carousel ────────────────────────────────────────────────
+  todayCarouselWrap: { marginTop: 0, marginBottom: 16 },
+  todayLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },
+  todayDot: { width: 7, height: 7, borderRadius: 99, backgroundColor: '#FF6596' },
+  todayLabelText: { fontSize: 11, fontWeight: '800', color: '#FF6596', letterSpacing: 1.2, textTransform: 'uppercase' },
+
+  todayCard: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  todayDateTile: {
+    width: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    gap: 2,
+  },
+  todayTileMonth: { fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.85)', letterSpacing: 1 },
+  todayTileDay: { fontSize: 28, fontWeight: '900', color: '#fff', lineHeight: 32, includeFontPadding: false },
+
+  todayCardContent: { flex: 1, paddingHorizontal: 14, paddingVertical: 12, gap: 6 },
+  todayEventTitle: { fontSize: 15, fontWeight: '700', color: '#1a1a1a', lineHeight: 20 },
+
+  todayMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' },
+  todayMetaText: { fontSize: 11, color: '#9CA3AF', fontWeight: '500', flexShrink: 1 },
+  todayMetaDot: { fontSize: 11, color: '#D1D5DB', fontWeight: '700' },
+
+  todayRsvpRow: { flexDirection: 'row', gap: 6 },
+  todayRsvpPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#F5F6FA', borderRadius: 999,
+    paddingHorizontal: 10, paddingVertical: 5,
+  },
+  todayRsvpPillActive: { backgroundColor: '#FFF0F5', borderWidth: 1, borderColor: '#FECDD3' },
+  todayRsvpPillMaybe: { backgroundColor: '#FFFBEB', borderWidth: 1, borderColor: '#FDE68A' },
+  todayRsvpPillDecline: { backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA' },
+  todayRsvpPillText: { fontSize: 11, fontWeight: '700', color: '#9CA3AF' },
+  todayRsvpPillTextActive: { color: '#FF6596' },
+
+  // ─── Today empty state ───────────────────────────────────────────────────
+  todayEmptyCard: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  todayEmptyGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    gap: 12,
+  },
+  todayEmptyIconRing: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,101,150,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  todayEmptyText: { flex: 1 },
+  todayEmptyTitle: { fontSize: 14, fontWeight: '700', color: '#1a1a1a', marginBottom: 2 },
+  todayEmptySubtitle: { fontSize: 12, color: '#9CA3AF', lineHeight: 16 },
+  todayEmptyAction: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  todayEmptyActionText: { fontSize: 12, fontWeight: '700', color: '#FF6596' },
+
   heroScroll: { marginBottom: 16 },
-  paginationRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, marginBottom: 24 },
+  paginationRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 10, marginBottom: 4 },
   paginationDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#D1D5DB' },
   paginationDotActive: { width: 20, backgroundColor: '#FF6596' },
-  liveBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.2)', alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, marginBottom: 16, gap: 4 },
-  liveText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
-  heroTitle: { color: '#fff', fontSize: 32, fontWeight: 'bold', marginBottom: 4 },
-  heroEventName: { color: '#fff', fontSize: 18, fontWeight: '600', marginBottom: 4 },
-  heroEventDetails: { color: 'rgba(255,255,255,0.9)', fontSize: 14 },
-  heroRsvpRow: { flexDirection: 'row', gap: 8, marginTop: 16 },
-  heroRsvpBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, gap: 4 },
-  heroRsvpText: { fontSize: 12, fontWeight: '700', color: '#fff' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 32 },
-  gridItem: { width: '22%', alignItems: 'center' },
-  iconWrapper: { width: 56, height: 56, borderRadius: 20, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', marginBottom: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 },
-  gridLabel: { fontSize: 12, fontWeight: '500', color: '#1a1a1a' },
+  // ─── Quick Actions ────────────────────────────────────────────────────────
+  quickActionsSection: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24, gap: 10 },
+  quickActionsRow: { flexDirection: 'row', gap: 10 },
+  qaCard: { flex: 1, alignItems: 'center', gap: 8 },
+  qaIconBox: {
+    width: 58, height: 58, borderRadius: 20,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.07, shadowRadius: 10, elevation: 3,
+  },
+  qaLabel: { fontSize: 12, fontWeight: '700', color: '#374151', letterSpacing: 0.1 },
+  qaSubLabel: { fontSize: 11, fontWeight: '500', color: '#9CA3AF' },
+  qaOrb: { position: 'absolute', width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(77,139,255,0.1)', bottom: -24, right: -16 },
+  qaIconRing: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  qaTextWrap: { flex: 1 },
+
+  // legacy — kept for any residual refs
+  grid: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 },
+  gridItem: { alignItems: 'center', gap: 7 },
+  iconWrapper: {
+    width: 60, height: 60, borderRadius: 22,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07, shadowRadius: 8, elevation: 2,
+  },
+  gridLabel: { fontSize: 11, fontWeight: '700', color: '#4B5563', letterSpacing: 0.1 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1a1a1a' },
   seeAll: { fontSize: 14, color: '#FF6596', fontWeight: '600' },
-  prayerCardOuter: { marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  prayerCardOuter: { marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 3 },
   prayerCardInner: { backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden' },
   prayerGradientBorder: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 3 },
   prayerRow: { flexDirection: 'row', padding: 12, paddingLeft: 16 },
@@ -473,10 +595,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 10,
     shadowColor: '#000',
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.06,
     shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
   eventDateBlock: { alignItems: 'center', width: 44, gap: 1 },
   eventDateMonth: { fontSize: 10, fontWeight: '800', color: '#FF6596', textTransform: 'uppercase', letterSpacing: 0.5 },

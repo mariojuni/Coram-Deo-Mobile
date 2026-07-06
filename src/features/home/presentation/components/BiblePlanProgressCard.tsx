@@ -40,7 +40,7 @@ export function BiblePlanProgressCard() {
   const activePlan = pickActivePlan(userBiblePlans);
   const planMeta: BiblePlan | undefined = plans.find((p) => p.id === activePlan?.planId);
 
-  if (userBiblePlansLoading) return null;
+  if (userBiblePlansLoading) return <View style={styles.loadingPlaceholder} />;
 
   // ── No active plan ────────────────────────────────────────────────────────
   if (!activePlan) {
@@ -134,6 +134,12 @@ export function BiblePlanProgressCard() {
 }
 
 const styles = StyleSheet.create({
+  // ── Loading placeholder (preserves layout height) ────────────────────────
+  loadingPlaceholder: {
+    height: 72,
+    marginBottom: 20,
+  },
+
   // ── Empty state ──────────────────────────────────────────────────────────
   emptyCard: {
     marginBottom: 20,
@@ -141,7 +147,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     shadowColor: '#FF6596',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 3,
   },
@@ -166,7 +172,7 @@ const styles = StyleSheet.create({
 
   // ── Active plan card ─────────────────────────────────────────────────────
   activeWrapper: {
-    marginBottom: 20,
+    marginBottom: 0,
   },
   card: {
     flexDirection: 'row',
@@ -175,9 +181,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
-    shadowRadius: 12,
+    shadowRadius: 10,
     elevation: 3,
     paddingRight: 14,
   },
@@ -248,7 +254,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
     paddingVertical: 12,
-    marginTop: 4,
+    marginTop: 16,
   },
   seeAllText: {
     fontSize: 13,

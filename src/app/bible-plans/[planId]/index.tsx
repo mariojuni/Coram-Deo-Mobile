@@ -1,6 +1,6 @@
-import { useBiblePlanDetail } from '@/features/biblePlan/presentation/hooks/useBiblePlanDetail';
-import PlanUpdateModal from '@/features/biblePlan/presentation/components/PlanUpdateModal';
 import type { BiblePlanDay } from '@/features/biblePlan/domain/biblePlan.types';
+import PlanUpdateModal from '@/features/biblePlan/presentation/components/PlanUpdateModal';
+import { useBiblePlanDetail } from '@/features/biblePlan/presentation/hooks/useBiblePlanDetail';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useBiblePlanStore } from '@/store/useBiblePlanStore';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -9,14 +9,14 @@ import type { Timestamp } from 'firebase/firestore';
 import { BookOpen, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -181,7 +181,7 @@ export default function BiblePlanDetailScreen() {
       if (index < 0) return;
       chipStripRef.current?.scrollToIndex({
         index,
-        animated: true,
+        animated: false,
         viewPosition: 0.5, // center the item
       });
     },
