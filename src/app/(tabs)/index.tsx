@@ -304,7 +304,7 @@ export default function HomeScreen() {
             <View style={styles.prayerCardOuter}>
               <View style={styles.prayerCardInner}>
                 <LinearGradient
-                  colors={['#FF9EBC', '#D49DFF']}
+                  colors={['#FF6596', '#B66DFF']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 0, y: 1 }}
                   style={styles.prayerGradientBorder}
@@ -445,7 +445,7 @@ const styles = StyleSheet.create({
   avatar: { width: 48, height: 48, borderRadius: 24 },
   scrollContent: { padding: 24, paddingTop: 12, paddingBottom: 100 },
   // ─── My Ministries section ───────────────────────────────────────────────
-  ministriesSection: { marginBottom: 32 },
+  ministriesSection: { marginBottom: 8 },
   pendingPill: { backgroundColor: '#FFFBEB', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   pendingPillText: { fontSize: 12, fontWeight: '700', color: '#F59E0B' },
   allConfirmedText: { fontSize: 12, fontWeight: '700', color: '#22C55E' },
@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
   rsvpActiveText: { color: '#FF6596' },
 
   // ─── Today Cards Carousel ────────────────────────────────────────────────
-  todayCarouselWrap: { marginTop: 0, marginBottom: 16 },
+  todayCarouselWrap: { marginTop: 8, marginBottom: 28 },
   todayLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },
   todayDot: { width: 7, height: 7, borderRadius: 99, backgroundColor: '#FF6596' },
   todayLabelText: { fontSize: 11, fontWeight: '800', color: '#FF6596', letterSpacing: 1.2, textTransform: 'uppercase' },
@@ -565,9 +565,9 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1a1a1a' },
   seeAll: { fontSize: 14, color: '#FF6596', fontWeight: '600' },
   prayerCardOuter: { marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 3 },
-  prayerCardInner: { backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden' },
-  prayerGradientBorder: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 3 },
-  prayerRow: { flexDirection: 'row', padding: 12, paddingLeft: 16 },
+  prayerCardInner: { backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden', flexDirection: 'row' },
+  prayerGradientBorder: { width: 4, alignSelf: 'stretch' },
+  prayerRow: { flex: 1, flexDirection: 'row', padding: 12, paddingLeft: 12 },
   prayerAvatar: { display: 'none' },
   prayerAvatarText: { display: 'none' },
   prayerContent: { flex: 1, paddingTop: 1 },
