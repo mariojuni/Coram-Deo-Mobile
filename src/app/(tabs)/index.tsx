@@ -5,11 +5,12 @@ import { VerseOfTheDayCard } from '@/features/home/presentation/components/Verse
 import { useHomeScreenData } from '@/features/home/presentation/hooks/useHomeScreenData';
 import { usePrayerFeed } from '@/features/prayer/presentation/hooks/usePrayerFeed';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useSermonStore } from '@/store/useSermonStore';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { CalendarDays, CheckCircle2, ChevronRight, Clock, HeartHandshake, HelpCircle, MapPin, XCircle } from 'lucide-react-native';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { CalendarDays, CheckCircle2, ChevronRight, Clock, HeartHandshake, HelpCircle, MapPin, Play, XCircle } from 'lucide-react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -24,7 +25,7 @@ function getTodayLabel() {
   return new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
 }
 
-function BounceCard({ children, style }: { children: any; style?: any }) {
+function BounceCard({ children, style, onPress }: { children: any; style?: any; onPress?: () => void }) {
   const scale = useRef(new Animated.Value(1)).current;
   const lastPress = useRef(0);
   const DEBOUNCE_MS = 400;
@@ -37,7 +38,17 @@ function BounceCard({ children, style }: { children: any; style?: any }) {
   };
   const pressOut = () =>
     Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 15, bounciness: 12 }).start();
-    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 15, bounciness: 12 }).start();
+
+  if (onPress) {
+    return (
+      <DebouncedTouchable activeOpacity={1} onPress={onPress} onPressIn={pressIn} onPressOut={pressOut}>
+        <Animated.View style={[style, { transform: [{ scale }] }]}>
+          {children}
+        </Animated.View>
+      </DebouncedTouchable>
+    );
+  }
+
   return (
     <Animated.View
       style={[style, { transform: [{ scale }] }]}
@@ -74,6 +85,14 @@ export default function HomeScreen() {
   } = useHomeScreenData();
   const { prayers } = usePrayerFeed();
   const prayerCount = prayers.length;
+
+  // Recent sermons
+  const sermons = useSermonStore((s) => s.sermons);
+  const sermonsLoading = useSermonStore((s) => s.loading);
+  const fetchSermons = useSermonStore((s) => s.fetchSermons);
+  useEffect(() => {
+    if (sermons.length === 0 && !sermonsLoading) fetchSermons(true);
+  }, []);
 
   const [activeSlide, setActiveSlide] = useState(0);
   const [savingEventId, setSavingEventId] = useState<string | null>(null);
@@ -291,7 +310,10 @@ export default function HomeScreen() {
 
                   return (
                     <View key={`hero-${event.id}`} style={{ width: cardWidth }}>
-                      <BounceCard style={styles.todayCard}>
+                      <BounceCard
+                        style={styles.todayCard}
+                        onPress={() => router.push({ pathname: '/(tabs)/community', params: { tab: 'events' } })}
+                      >
                         {/* Left — gradient calendar tile */}
                         <LinearGradient
                           colors={['#FF6596', '#B66DFF']}
@@ -506,7 +528,77 @@ export default function HomeScreen() {
             <Text style={styles.emptyText}>No prayer requests yet.</Text>
           </View>
         )}
+        {/* ─── Recent Sermons ──────────────────────────────────────────── */}
+        {sermons.length > 0 && (
+          <View style={styles.upcomingSection}>
+            <View style={styles.sectionHeader}>
+              <View>
+                <Text style={styles.sectionOverline}>WATCH &amp; LISTEN</Text>
+                <Text style={styles.sectionTitle}>Recent Sermons</Text>
+              </View>
+              <DebouncedTouchable
+                style={styles.upcomingCountPill}
+                onPress={() => router.push({ pathname: '/(tabs)/community', params: { tab: 'sermons' } })}
+              >
+                <Text style={styles.upcomingCountText}>{sermons.length}</Text>
+              </DebouncedTouchable>
+            </View>
 
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.sermonRowContent}
+            >
+              {sermons.slice(0, 5).map((sermon) => {
+                const duration = sermon.duration
+                  ? `${Math.floor(sermon.duration / 60)} min`
+                  : null;
+                const isVideo = sermon.type === 'video';
+                return (
+                  <BounceCard
+                    key={sermon.id}
+                    style={styles.sermonCard}
+                    onPress={() => router.push({ pathname: '/sermon-detail', params: { id: sermon.id } })}
+                  >
+                    <Image
+                      source={{ uri: sermon.thumbnailUrl }}
+                      style={styles.sermonThumb}
+                    />
+                    <LinearGradient
+                      colors={['transparent', 'rgba(0,0,0,0.75)']}
+                      style={styles.sermonThumbOverlay}
+                    />
+                    {/* Type badge */}
+                    <View style={[styles.sermonTypeBadge, isVideo ? styles.sermonTypeBadgeVideo : styles.sermonTypeBadgeAudio]}>
+                      <Play size={8} color="#fff" fill="#fff" />
+                      <Text style={styles.sermonTypeBadgeText}>{isVideo ? 'VIDEO' : 'AUDIO'}</Text>
+                    </View>
+                    <View style={styles.sermonCardInfo}>
+                      <Text style={styles.sermonCardTitle} numberOfLines={2}>{sermon.title}</Text>
+                      <Text style={styles.sermonCardSpeaker} numberOfLines={1}>
+                        {typeof sermon.speaker === 'string' ? sermon.speaker : sermon.speaker?.name ?? ''}
+                      </Text>
+                      {duration ? (
+                        <View style={styles.sermonDurationRow}>
+                          <Clock size={9} color="rgba(255,255,255,0.7)" />
+                          <Text style={styles.sermonDurationText}>{duration}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  </BounceCard>
+                );
+              })}
+            </ScrollView>
+
+            <DebouncedTouchable
+              style={styles.seeAllEventsBtn}
+              onPress={() => router.push({ pathname: '/(tabs)/community', params: { tab: 'sermons' } })}
+            >
+              <Text style={styles.seeAllEventsBtnText}>See all sermons</Text>
+              <ChevronRight size={14} color="#FF6596" />
+            </DebouncedTouchable>
+          </View>
+        )}
         {/* ─── Upcoming Events ─────────────────────────────────────────── */}
         {upcomingList.length > 0 && (
           <View style={styles.upcomingSection}>
@@ -800,6 +892,49 @@ const styles = StyleSheet.create({
   prayIconCount: { fontSize: 12, fontWeight: '600', color: '#6B7280' },
   emptyCard: { backgroundColor: '#fff', padding: 24, borderRadius: 16, alignItems: 'center' },
   emptyText: { color: '#888', fontSize: 14 },
+
+  // ─── Recent Sermons ─────────────────────────────────────────────────────
+  sermonRowContent: { paddingRight: 24, gap: 12 },
+  sermonCard: {
+    width: 148,
+    borderRadius: 14,
+    overflow: 'hidden',
+    backgroundColor: '#111',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  sermonThumb: { width: '100%', height: 190, resizeMode: 'cover' },
+  sermonThumbOverlay: {
+    position: 'absolute',
+    left: 0, right: 0, bottom: 0,
+    height: 110,
+  },
+  sermonTypeBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  sermonTypeBadgeVideo: { backgroundColor: 'rgba(255,101,150,0.85)' },
+  sermonTypeBadgeAudio: { backgroundColor: 'rgba(107,70,193,0.85)' },
+  sermonTypeBadgeText: { fontSize: 8, fontWeight: '800', color: '#fff', letterSpacing: 0.5 },
+  sermonCardInfo: {
+    position: 'absolute',
+    bottom: 0, left: 0, right: 0,
+    padding: 10,
+  },
+  sermonCardTitle: { fontSize: 12, fontWeight: '700', color: '#fff', lineHeight: 16, marginBottom: 3 },
+  sermonCardSpeaker: { fontSize: 10, color: 'rgba(255,255,255,0.75)', marginBottom: 4 },
+  sermonDurationRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  sermonDurationText: { fontSize: 9, color: 'rgba(255,255,255,0.65)', fontWeight: '500' },
 
   // ─── Upcoming Events section ─────────────────────────────────────────────
   upcomingSection: { marginTop: 8, marginBottom: 16 },

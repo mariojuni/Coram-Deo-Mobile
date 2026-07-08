@@ -8,8 +8,8 @@
  * - Collapsible action row (Decline / Confirm) for pending duties only
  * - Smooth Reanimated height + opacity collapse animation
  */
-import { LinearGradient } from 'expo-linear-gradient';
 import DebouncedTouchable from '@/components/DebouncedTouchable';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
     BookOpen,
     CalendarDays,
