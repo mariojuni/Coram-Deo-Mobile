@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react-native';
-import { Calendar, ClipboardCheck } from 'lucide-react-native';
+import { Calendar, Users } from 'lucide-react-native';
 
 export type FabMenuItem = {
   icon: LucideIcon;
@@ -13,6 +13,6 @@ export function getFabMenuItems(isStaff: boolean): FabMenuItem[] {
 
   return [
     { key: 'add-schedule', title: 'Add Schedule', route: '/(tabs)/', icon: Calendar },
-    { key: 'attendance', title: 'Attendance', route: '/(tabs)/attendance', icon: ClipboardCheck },
+    { key: 'staff', title: 'Staff', route: '/(tabs)/attendance', icon: Users },
   ];
 }

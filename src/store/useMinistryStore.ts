@@ -7,8 +7,11 @@ interface MinistryStore {
   ministriesLoading: boolean;
   assignments: MinistryAssignment[];
   assignmentsLoading: boolean;
+  memberAssignments: MinistryAssignment[];
+  memberAssignmentsLoading: boolean;
   fetchMinistries: (churchId: string) => Promise<void>;
   initializeAssignmentsListener: (churchId: string) => () => void;
+  initializeMemberAssignmentsListener: (churchId: string, memberId: string) => () => void;
   getAssignmentsForEvent: (eventId: string) => MinistryAssignment[];
   getUserAssignments: (userId: string) => MinistryAssignment[];
 }
@@ -16,11 +19,16 @@ interface MinistryStore {
 let assignmentsUnsubscribe: (() => void) | null = null;
 let assignmentsSubscriberCount = 0;
 
+let memberAssignmentsUnsubscribe: (() => void) | null = null;
+let memberAssignmentsSubscriberCount = 0;
+
 export const useMinistryStore = create<MinistryStore>((set, get) => ({
   ministries: [],
   ministriesLoading: true,
   assignments: [],
   assignmentsLoading: true,
+  memberAssignments: [],
+  memberAssignmentsLoading: false,
 
   fetchMinistries: async (churchId: string) => {
     set({ ministriesLoading: true });
@@ -46,6 +54,31 @@ export const useMinistryStore = create<MinistryStore>((set, get) => ({
       if (assignmentsSubscriberCount === 0 && assignmentsUnsubscribe) {
         assignmentsUnsubscribe();
         assignmentsUnsubscribe = null;
+      }
+    };
+  },
+
+  initializeMemberAssignmentsListener: (churchId: string, memberId: string) => {
+    memberAssignmentsSubscriberCount += 1;
+    if (!memberAssignmentsUnsubscribe) {
+      set({ memberAssignmentsLoading: true });
+      memberAssignmentsUnsubscribe = ministryRepository.subscribeToMemberAssignments(
+        churchId,
+        memberId,
+        (data) => {
+          set({ memberAssignments: data, memberAssignmentsLoading: false });
+        }
+      );
+    }
+
+    return () => {
+      memberAssignmentsSubscriberCount = Math.max(0, memberAssignmentsSubscriberCount - 1);
+      if (memberAssignmentsSubscriberCount === 0 && memberAssignmentsUnsubscribe) {
+        memberAssignmentsUnsubscribe();
+        memberAssignmentsUnsubscribe = null;
+        // Keep loading:false so re-entering the screen doesn't flash a spinner
+        // before the cached Firestore snapshot arrives
+        set({ memberAssignments: [] });
       }
     };
   },

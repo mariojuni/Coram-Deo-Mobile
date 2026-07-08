@@ -2,32 +2,31 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGlobalSearchParams } from 'expo-router';
 import {
-  CalendarDays,
-  CheckCircle,
-  CheckCircle2,
-  ChevronRight,
-  Clock,
-  Heart,
-  HeartHandshake,
-  HelpCircle,
-  MapPin,
-  PlayCircle,
-  Search,
-  Users,
-  X,
-  XCircle
+    CalendarDays,
+    CheckCircle2,
+    ChevronRight,
+    Clock,
+    Heart,
+    HeartHandshake,
+    HelpCircle,
+    MapPin,
+    PlayCircle,
+    Search,
+    Users,
+    X,
+    XCircle
 } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Animated,
-  Dimensions,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Animated,
+    Dimensions,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppModal from '../../components/ui/AppModal';
@@ -39,11 +38,11 @@ import { SermonsExperience } from '../../features/sermons/presentation/component
 import { useAuthStore } from '../../store/useAuthStore';
 import { useMemberStore } from '../../store/useMemberStore';
 import {
-  getUpcomingSchedules,
-  getUserRsvpStatus,
-  parseTimeTo24h,
-  updateRsvp,
-  useScheduleStore,
+    getUpcomingSchedules,
+    getUserRsvpStatus,
+    parseTimeTo24h,
+    updateRsvp,
+    useScheduleStore,
 } from '../../store/useScheduleStore';
 
 // ─── Sub-tab definitions ──────────────────────────────────────────────────────
@@ -712,8 +711,8 @@ export default function CommunityScreen() {
 
   const handleTabLayout = (index: number, x: number, width: number) => {
     tabLayouts.current[index] = { x, width };
-    // Seed the indicator on first layout of the default tab
-    if (index === 0 && !initialised.current) {
+    // Seed the indicator when the active tab's layout is first measured
+    if (index === activeTab && !initialised.current) {
       indicatorX.setValue(x);
       indicatorWidth.setValue(width);
       initialised.current = true;

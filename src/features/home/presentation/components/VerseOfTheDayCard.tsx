@@ -3,7 +3,7 @@ import { fetchVerseOfTheDay, getUserPreferences, saveUserPreferences } from '@/u
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Quote } from 'lucide-react-native';
+import { BookOpen, ChevronRight } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -104,9 +104,14 @@ export function VerseOfTheDayCard() {
   if (loading) {
     return (
       <View style={styles.outerContainer}>
-        <View style={[styles.loadingContainer]}>
-          <ActivityIndicator color="#FF6596" />
-        </View>
+        <LinearGradient
+          colors={['#FF6596', '#B66DFF']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.loadingContainer}
+        >
+          <ActivityIndicator color="rgba(255,255,255,0.8)" />
+        </LinearGradient>
       </View>
     );
   }
@@ -122,28 +127,36 @@ export function VerseOfTheDayCard() {
       >
         <Animated.View style={[styles.cardContainer, animatedStyle]}>
           <LinearGradient
-            colors={['#FFFFFF', '#FFF5F8']} // Very soft, clean white-to-light-pink gradient
+            colors={['#FF6596', '#B66DFF']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.card}
           >
-            {/* Subtle background decorative icon */}
-            <View style={styles.bgIconContainer}>
-              <Quote color="rgba(255,101,150,0.05)" size={120} />
-            </View>
+            {/* Large decorative quote art */}
+            <Text style={styles.decorativeQuote}>{'\u201C'}</Text>
 
+            {/* Top label row */}
             <View style={styles.topRow}>
               <View style={styles.badge}>
+                <BookOpen size={10} color="rgba(255,255,255,0.9)" strokeWidth={2.5} />
                 <Text style={styles.badgeText}>VERSE OF THE DAY</Text>
               </View>
             </View>
 
-            <Text style={styles.verseText} numberOfLines={4}>
-              &quot;{verseText}&quot;
+            {/* Verse text */}
+            <Text style={styles.verseText} numberOfLines={5}>
+              {verseText}
             </Text>
 
+            {/* Bottom row: reference + read prompt */}
             <View style={styles.bottomRow}>
-              <Text style={styles.reference}>{reference}</Text>
+              <View style={styles.referencePill}>
+                <Text style={styles.reference}>{reference}</Text>
+              </View>
+              <View style={styles.readRow}>
+                <Text style={styles.readLabel}>Read chapter</Text>
+                <ChevronRight size={12} color="rgba(255,255,255,0.7)" strokeWidth={2.5} />
+              </View>
             </View>
           </LinearGradient>
         </Animated.View>
@@ -157,69 +170,91 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   loadingContainer: {
-    height: 120,
-    borderRadius: 20,
-    backgroundColor: '#fff',
+    height: 148,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 3,
   },
   cardContainer: {
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 3,
+    borderRadius: 24,
+    shadowColor: '#FF6596',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.28,
+    shadowRadius: 16,
+    elevation: 6,
   },
   card: {
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: 24,
+    paddingHorizontal: 22,
+    paddingTop: 20,
+    paddingBottom: 18,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,101,150,0.1)',
   },
-  bgIconContainer: {
+  decorativeQuote: {
     position: 'absolute',
-    top: -20,
-    right: -20,
-    transform: [{ rotate: '15deg' }],
+    top: -10,
+    right: 16,
+    fontSize: 140,
+    lineHeight: 160,
+    color: 'rgba(255,255,255,0.10)',
+    fontFamily: 'ui-serif',
+    fontWeight: '900',
   },
   topRow: {
     flexDirection: 'row',
-    marginBottom: 12,
+    marginBottom: 14,
   },
   badge: {
-    backgroundColor: '#FFE8F0', // Soft pink tag
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(255,255,255,0.18)',
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingVertical: 5,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
   },
   badgeText: {
-    color: '#FF6596',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    color: 'rgba(255,255,255,0.95)',
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1,
   },
   verseText: {
-    color: '#333333', // Soft dark gray for readability
-    fontSize: 15,
-    lineHeight: 22,
+    color: '#FFFFFF',
+    fontSize: 16,
+    lineHeight: 25,
     fontWeight: '500',
-    fontStyle: 'italic',
-    marginBottom: 12,
+    fontFamily: 'ui-serif',
+    marginBottom: 18,
+    letterSpacing: 0.1,
   },
   bottomRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  referencePill: {
+    backgroundColor: 'rgba(255,255,255,0.20)',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 100,
   },
   reference: {
-    color: '#FF6596', // Brand accent color
+    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  readRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  readLabel: {
+    color: 'rgba(255,255,255,0.70)',
+    fontSize: 12,
+    fontWeight: '500',
   },
 });

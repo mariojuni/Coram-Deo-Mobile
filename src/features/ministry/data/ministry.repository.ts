@@ -1,6 +1,6 @@
 import { addDoc, collection, deleteDoc, doc, getDocs, onSnapshot, query, updateDoc, where } from 'firebase/firestore';
 import { db } from '../../../firebase';
-import type { Ministry, MinistryAssignment } from '../domain/ministry.types';
+import type { Ministry, MinistryApplication, MinistryAssignment } from '../domain/ministry.types';
 
 export const ministryRepository = {
   async getMinistries(churchId: string): Promise<Ministry[]> {
@@ -31,6 +31,22 @@ export const ministryRepository = {
     });
   },
 
+  subscribeToMemberAssignments(
+    churchId: string,
+    memberId: string,
+    onData: (assignments: MinistryAssignment[]) => void
+  ): () => void {
+    const q = query(
+      collection(db, 'ministryAssignments'),
+      where('churchId', '==', churchId),
+      where('memberId', '==', memberId)
+    );
+    return onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as MinistryAssignment));
+      onData(data);
+    });
+  },
+
   subscribeToAllMinistryAssignments(churchId: string, onData: (assignments: MinistryAssignment[]) => void): () => void {
     const q = query(collection(db, 'ministryAssignments'), where('churchId', '==', churchId));
     return onSnapshot(q, (snapshot) => {
@@ -50,5 +66,36 @@ export const ministryRepository = {
 
   async deleteAssignment(id: string): Promise<void> {
     await deleteDoc(doc(db, 'ministryAssignments', id));
-  }
+  },
+
+  // ── Ministry Applications ──────────────────────────────────────────────────
+
+  subscribeToMemberApplications(
+    churchId: string,
+    memberId: string,
+    onData: (applications: MinistryApplication[]) => void
+  ): () => void {
+    const q = query(
+      collection(db, 'ministryApplications'),
+      where('churchId', '==', churchId),
+      where('memberId', '==', memberId)
+    );
+    return onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as MinistryApplication));
+      onData(data);
+    });
+  },
+
+  async submitApplication(data: Omit<MinistryApplication, 'id'>): Promise<string> {
+    const ref = await addDoc(collection(db, 'ministryApplications'), data);
+    return ref.id;
+  },
+
+  async withdrawApplication(id: string): Promise<void> {
+    await updateDoc(doc(db, 'ministryApplications', id), {
+      status: 'withdrawn',
+      withdrawnAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+  },
 };

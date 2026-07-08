@@ -1,6 +1,6 @@
 import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
-import { Activity, Book, Home, Users } from 'lucide-react-native';
+import { Book, Handshake, Home, Users } from 'lucide-react-native';
 import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FabMenu from '../../components/Navigation/FabMenu';
@@ -41,7 +41,7 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
               index: Home,
               bible: Book,
               community: Users,
-              attendance: Activity,
+              serve: Handshake,
             } as const;
             const IconComponent = iconByRoute[route.name as keyof typeof iconByRoute];
 
@@ -84,12 +84,11 @@ export default function TabLayout() {
         <Tabs.Screen name="prayer" options={{ title: 'Prayer', href: null }} />
         <Tabs.Screen name="community" options={{ title: 'Community' }} />
         <Tabs.Screen name="sermons" options={{ title: 'Sermons', href: null }} />
-        <Tabs.Screen 
-          name="attendance" 
-          options={{ 
-            title: 'Staff',
-            href: isStaff ? '/(tabs)/attendance' : null 
-          }} 
+        <Tabs.Screen name="serve" options={{ title: 'Serve' }} />
+        {/* Staff tab — hidden from bottom bar; accessible via FAB sub-menu */}
+        <Tabs.Screen
+          name="attendance"
+          options={{ title: 'Staff', href: null }}
         />
       </Tabs>
     </View>
