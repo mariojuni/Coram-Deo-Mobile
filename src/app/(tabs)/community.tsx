@@ -167,7 +167,7 @@ function PrayersTab({ searchQuery }: SubScreenProps) {
             <View key={req.id} style={prayerStyles.prayerCardOuter}>
               <View style={prayerStyles.prayerCardInner}>
                 <LinearGradient
-                  colors={['#FF9EBC', '#D49DFF']}
+                  colors={['#FF6596', '#B66DFF']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 0, y: 1 }}
                   style={prayerStyles.prayerGradientBorder}
@@ -1118,10 +1118,10 @@ const prayerStyles = StyleSheet.create({
   filterPillTextActive: {
     color: '#FFFFFF',
   },
-  prayerCardOuter: { marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
-  prayerCardInner: { backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden' },
-  prayerGradientBorder: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 3 },
-  prayerRow: { flexDirection: 'row', padding: 12, paddingLeft: 16 },
+  prayerCardOuter: { marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 3 },
+  prayerCardInner: { backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden', flexDirection: 'row' },
+  prayerGradientBorder: { width: 4, alignSelf: 'stretch' },
+  prayerRow: { flex: 1, flexDirection: 'row', padding: 12, paddingLeft: 16 },
   prayerAvatar: { display: 'none' },
   prayerAvatarText: { display: 'none' },
   prayerContent: { flex: 1, paddingTop: 1 },

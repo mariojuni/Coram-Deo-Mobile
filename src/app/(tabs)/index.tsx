@@ -1,19 +1,62 @@
+import DebouncedTouchable from '@/components/DebouncedTouchable';
 import { BiblePlanProgressCard } from '@/features/home/presentation/components/BiblePlanProgressCard';
 import { MinistryDutyCard } from '@/features/home/presentation/components/MinistryDutyCard';
 import { VerseOfTheDayCard } from '@/features/home/presentation/components/VerseOfTheDayCard';
 import { useHomeScreenData } from '@/features/home/presentation/hooks/useHomeScreenData';
 import { usePrayerFeed } from '@/features/prayer/presentation/hooks/usePrayerFeed';
+import { useAuthStore } from '@/store/useAuthStore';
+import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { CalendarDays, CheckCircle2, ChevronRight, Clock, HeartHandshake, HelpCircle, MapPin, XCircle } from 'lucide-react-native';
-import { useCallback, useMemo, useState } from 'react';
-import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-
-import { BlurView } from 'expo-blur';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { Animated, Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+function getTodayLabel() {
+  return new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+}
+
+function BounceCard({ children, style }: { children: any; style?: any }) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const lastPress = useRef(0);
+  const DEBOUNCE_MS = 400;
+
+  const pressIn = () => {
+    const now = Date.now();
+    if (now - lastPress.current < DEBOUNCE_MS) return;
+    lastPress.current = now;
+    Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, speed: 50, bounciness: 0 }).start();
+  };
+  const pressOut = () =>
+    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 15, bounciness: 12 }).start();
+    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 15, bounciness: 12 }).start();
+  return (
+    <Animated.View
+      style={[style, { transform: [{ scale }] }]}
+      onTouchStart={pressIn}
+      onTouchEnd={pressOut}
+      onTouchCancel={pressOut}
+    >
+      {children}
+    </Animated.View>
+  );
+}
+
+const INNER_EXPANDED = 92;
+const INNER_COLLAPSED = 48;
+const COLLAPSE_RANGE = 70;
 
 export default function HomeScreen() {
   const router = useRouter();
+  const userProfile = useAuthStore((s) => s.userProfile);
   const {
     currentUser,
     latestPrayer,
@@ -37,6 +80,51 @@ export default function HomeScreen() {
   const screenWidth = Dimensions.get('window').width;
   const cardWidth = screenWidth - 48;
   const currentUserId = currentUser?.uid ?? '';
+
+  // ── Scroll animation ──────────────────────────────────────────────────────
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  const innerHeight = scrollY.interpolate({
+    inputRange: [0, COLLAPSE_RANGE],
+    outputRange: [INNER_EXPANDED, INNER_COLLAPSED],
+    extrapolate: 'clamp',
+  });
+  const largeOpacity = scrollY.interpolate({
+    inputRange: [0, COLLAPSE_RANGE * 0.6],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+  const largeTranslateY = scrollY.interpolate({
+    inputRange: [0, COLLAPSE_RANGE * 0.6],
+    outputRange: [0, -10],
+    extrapolate: 'clamp',
+  });
+  const compactOpacity = scrollY.interpolate({
+    inputRange: [COLLAPSE_RANGE * 0.5, COLLAPSE_RANGE],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+  const accentLineOpacity = scrollY.interpolate({
+    inputRange: [0, COLLAPSE_RANGE],
+    outputRange: [1, 0.4],
+    extrapolate: 'clamp',
+  });
+  const avatarScale = scrollY.interpolate({
+    inputRange: [0, COLLAPSE_RANGE],
+    outputRange: [1, 0.75],
+    extrapolate: 'clamp',
+  });
+
+  const greeting = getGreeting();
+  const todayLabel = getTodayLabel();
+
+  // Name: fullName from Firestore profile, falling back to Firebase Auth displayName
+  const fullName = userProfile?.fullName || currentUser?.displayName || displayName;
+  const firstName = fullName.split(' ')[0];
+  const initials = (userProfile?.firstName?.charAt(0) ?? firstName.charAt(0)).toUpperCase();
+
+  // Avatar: Firestore photoUrl → Firebase Auth photoURL → initials fallback
+  const photoUrl = userProfile?.photoUrl ?? (currentUser as any)?.photoURL ?? null;
 
   // US-01 / US-06 — flatten one card per duty, sort pending → accepted → declined
   const sortedDutyItems = useMemo(() => {
@@ -84,26 +172,93 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: Math.max(insets.top, 24) }]} pointerEvents="box-none">
-        <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.6)' }]} pointerEvents="none" />
+      {/* ─── Animated Header ──────────────────────────────────────── */}
+      <Animated.View
+        style={[styles.header, { paddingTop: Math.max(insets.top, 24) }]}
+        pointerEvents="box-none"
+      >
+        <BlurView intensity={90} tint="light" style={StyleSheet.absoluteFill} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.75)' }]} pointerEvents="none" />
 
-        <View style={styles.headerContent}>
-          <View>
-            <Text style={styles.greeting}>Hello,</Text>
-            <Text style={styles.title}>{displayName}!</Text>
-          </View>
-          <TouchableOpacity onPress={() => router.push('/my-qr')}>
-            <Image source={{ uri: 'https://i.pravatar.cc/150?img=11' }} style={styles.avatar} />
-          </TouchableOpacity>
-        </View>
-      </View>
+        {/* Gradient accent line at top */}
+        <Animated.View style={[styles.accentLine, { opacity: accentLineOpacity }]}>
+          <LinearGradient
+            colors={['#FF6596', '#B66DFF', '#6DC8FF']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </Animated.View>
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: Math.max(insets.top, 24) + 104 }]} showsVerticalScrollIndicator={false}>
+        <Animated.View style={[styles.headerInner, { height: innerHeight }]}>
+          {/* Compact row (visible when scrolled) */}
+          <Animated.View
+            style={[styles.compactRow, { opacity: compactOpacity }]}
+            pointerEvents="none"
+          >
+            <Text style={styles.compactGreeting} numberOfLines={1}>
+              {greeting}, <Text style={styles.compactName}>{firstName}!</Text>
+            </Text>
+          </Animated.View>
+
+          {/* Expanded content (visible at top) */}
+          <Animated.View
+            style={[
+              styles.expandedContent,
+              { opacity: largeOpacity, transform: [{ translateY: largeTranslateY }] },
+            ]}
+          >
+            <View style={styles.expandedTop}>
+              <View style={styles.datePill}>
+                <View style={styles.dateDot} />
+                <Text style={styles.datePillText}>{todayLabel}</Text>
+              </View>
+            </View>
+            <Text style={styles.expandedGreeting}>{greeting},</Text>
+            <Text style={styles.expandedName}>{firstName}!</Text>
+          </Animated.View>
+
+          {/* Avatar — always visible */}
+          <Animated.View style={[styles.avatarBtn, { transform: [{ scale: avatarScale }] }]}>
+            <DebouncedTouchable
+              onPress={() => router.push('/my-qr')}
+              activeOpacity={0.8}
+            >
+            {photoUrl ? (
+              <Image source={{ uri: photoUrl }} style={styles.avatarImg} />
+            ) : (
+              <LinearGradient
+                colors={['#FF6596', '#B66DFF']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.avatarInitials}
+              >
+                <Text style={styles.avatarInitialsText}>{initials}</Text>
+              </LinearGradient>
+            )}
+            </DebouncedTouchable>
+          </Animated.View>
+        </Animated.View>
+      </Animated.View>
+
+      <Animated.ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: Math.max(insets.top, 24) + INNER_EXPANDED + 8 },
+        ]}
+        showsVerticalScrollIndicator={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
+        scrollEventThrottle={16}
+      >
         {/* ─── Verse of the Day ───────────────────────────────────────── */}
-        <VerseOfTheDayCard />
+        <BounceCard>
+          <VerseOfTheDayCard />
+        </BounceCard>
 
-        {/* ─── Bible Plan Progress ─────────────────────────────────────── */}
+        {/* ─── Bible Plan Progress ───────────────────────────────────────────── */}
         <BiblePlanProgressCard />
 
         {/* ─── Quick Actions (hidden for now) ─────────────────────────── */}
@@ -136,7 +291,7 @@ export default function HomeScreen() {
 
                   return (
                     <View key={`hero-${event.id}`} style={{ width: cardWidth }}>
-                      <View style={styles.todayCard}>
+                      <BounceCard style={styles.todayCard}>
                         {/* Left — gradient calendar tile */}
                         <LinearGradient
                           colors={['#FF6596', '#B66DFF']}
@@ -171,30 +326,30 @@ export default function HomeScreen() {
 
                           {/* Compact RSVP pills */}
                           <View style={styles.todayRsvpRow}>
-                            <TouchableOpacity
+                              <DebouncedTouchable
                               style={[styles.todayRsvpPill, rsvpStatus === 'going' && styles.todayRsvpPillActive]}
                               onPress={() => handleRsvp(event.id, 'going')}
                             >
                               <CheckCircle2 size={12} color={rsvpStatus === 'going' ? '#FF6596' : '#9CA3AF'} />
                               <Text style={[styles.todayRsvpPillText, rsvpStatus === 'going' && styles.todayRsvpPillTextActive]}>Going</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
+                            </DebouncedTouchable>
+                            <DebouncedTouchable
                               style={[styles.todayRsvpPill, rsvpStatus === 'maybe' && styles.todayRsvpPillMaybe]}
                               onPress={() => handleRsvp(event.id, 'maybe')}
                             >
                               <HelpCircle size={12} color={rsvpStatus === 'maybe' ? '#F59E0B' : '#9CA3AF'} />
                               <Text style={[styles.todayRsvpPillText, rsvpStatus === 'maybe' && { color: '#F59E0B' }]}>Maybe</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
+                            </DebouncedTouchable>
+                            <DebouncedTouchable
                               style={[styles.todayRsvpPill, rsvpStatus === 'not_going' && styles.todayRsvpPillDecline]}
                               onPress={() => handleRsvp(event.id, 'not_going')}
                             >
                               <XCircle size={12} color={rsvpStatus === 'not_going' ? '#EF4444' : '#9CA3AF'} />
                               <Text style={[styles.todayRsvpPillText, rsvpStatus === 'not_going' && { color: '#EF4444' }]}>No</Text>
-                            </TouchableOpacity>
+                            </DebouncedTouchable>
                           </View>
                         </View>
-                      </View>
+                      </BounceCard>
                     </View>
                   );
                 })}
@@ -259,28 +414,29 @@ export default function HomeScreen() {
 
             {/* Duty cards (US-09: hidden when empty, handled by outer condition) */}
             {sortedDutyItems.map(({ assignment, schedule }) => (
-              <MinistryDutyCard
-                key={assignment.id}
-                assignment={assignment}
-                schedule={schedule}
-                saving={savingEventId === assignment.id}
-                onConfirm={async () => {
-                  setSavingEventId(assignment.id);
-                  try {
-                    await handleMinisterialDuty(assignment.id, 'accept');
-                  } finally {
-                    setSavingEventId(null);
-                  }
-                }}
-                onDecline={async () => {
-                  setSavingEventId(assignment.id);
-                  try {
-                    await handleMinisterialDuty(assignment.id, 'cancel');
-                  } finally {
-                    setSavingEventId(null);
-                  }
-                }}
-              />
+              <BounceCard key={assignment.id}>
+                <MinistryDutyCard
+                  assignment={assignment}
+                  schedule={schedule}
+                  saving={savingEventId === assignment.id}
+                  onConfirm={async () => {
+                    setSavingEventId(assignment.id);
+                    try {
+                      await handleMinisterialDuty(assignment.id, 'accept');
+                    } finally {
+                      setSavingEventId(null);
+                    }
+                  }}
+                  onDecline={async () => {
+                    setSavingEventId(assignment.id);
+                    try {
+                      await handleMinisterialDuty(assignment.id, 'cancel');
+                    } finally {
+                      setSavingEventId(null);
+                    }
+                  }}
+                />
+              </BounceCard>
             ))}
           </View>
         )}
@@ -293,15 +449,15 @@ export default function HomeScreen() {
                 <Text style={styles.sectionOverline}>COMMUNITY SUPPORT</Text>
                 <Text style={styles.sectionTitle}>Prayer Requests</Text>
               </View>
-              <TouchableOpacity
+              <DebouncedTouchable
                 style={styles.upcomingCountPill}
                 onPress={() => router.push({ pathname: '/(tabs)/community', params: { tab: 'prayers' } })}
               >
                 <Text style={styles.upcomingCountText}>{prayerCount}</Text>
-              </TouchableOpacity>
+              </DebouncedTouchable>
             </View>
 
-            <View style={styles.prayerCardOuter}>
+            <BounceCard style={styles.prayerCardOuter}>
               <View style={styles.prayerCardInner}>
                 <LinearGradient
                   colors={['#FF6596', '#B66DFF']}
@@ -318,7 +474,7 @@ export default function HomeScreen() {
                     <Text style={styles.prayerText}>{latestPrayer.request}</Text>
                     
                     <View style={styles.prayerBottomRow}>
-                      <TouchableOpacity
+                      <DebouncedTouchable
                         style={styles.prayIconButton}
                         onPress={() => handlePray(latestPrayer.id)}
                         activeOpacity={0.7}
@@ -330,20 +486,20 @@ export default function HomeScreen() {
                         <Text style={[styles.prayIconCount, latestPrayer.likedBy?.includes(currentUserId) && { color: '#FF6596' }]}>
                           {latestPrayer.likes || 0}
                         </Text>
-                      </TouchableOpacity>
+                      </DebouncedTouchable>
                     </View>
                   </View>
                 </View>
               </View>
-            </View>
+            </BounceCard>
 
-            <TouchableOpacity
+            <DebouncedTouchable
               style={styles.seeAllEventsBtn}
               onPress={() => router.push({ pathname: '/(tabs)/community', params: { tab: 'prayers' } })}
             >
               <Text style={styles.seeAllEventsBtnText}>See all prayers</Text>
               <ChevronRight size={14} color="#FF6596" />
-            </TouchableOpacity>
+            </DebouncedTouchable>
           </View>
         ) : (
           <View style={styles.emptyCard}>
@@ -359,12 +515,12 @@ export default function HomeScreen() {
                 <Text style={styles.sectionOverline}>WHAT&apos;S NEXT</Text>
                 <Text style={styles.sectionTitle}>Upcoming Events</Text>
               </View>
-              <TouchableOpacity
+              <DebouncedTouchable
                 style={styles.upcomingCountPill}
                 onPress={() => router.push({ pathname: '/(tabs)/community', params: { tab: 'events' } })}
               >
                 <Text style={styles.upcomingCountText}>{upcomingList.length}</Text>
-              </TouchableOpacity>
+              </DebouncedTouchable>
             </View>
 
             {upcomingList.slice(0, 3).map((event) => {
@@ -373,7 +529,7 @@ export default function HomeScreen() {
               const day = d.getDate().toString();
               const weekday = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
               return (
-                <View key={event.id} style={styles.eventListCard}>
+                <BounceCard key={event.id} style={styles.eventListCard}>
                   <View style={styles.eventDateBlock}>
                     <Text style={styles.eventDateMonth}>{month}</Text>
                     <Text style={styles.eventDateDay}>{day}</Text>
@@ -403,20 +559,20 @@ export default function HomeScreen() {
                   </View>
 
                   <ChevronRight size={14} color="#9CA3AF" />
-                </View>
+                </BounceCard>
               );
             })}
 
-            <TouchableOpacity
+            <DebouncedTouchable
               style={styles.seeAllEventsBtn}
               onPress={() => router.push({ pathname: '/(tabs)/community', params: { tab: 'events' } })}
             >
               <Text style={styles.seeAllEventsBtnText}>See all events</Text>
               <ChevronRight size={14} color="#FF6596" />
-            </TouchableOpacity>
+            </DebouncedTouchable>
           </View>
         )}
-      </ScrollView>
+      </Animated.ScrollView>
 
     </View>
   );
@@ -430,19 +586,83 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 100,
+    overflow: 'hidden',
+  },
+  accentLine: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    zIndex: 10,
+  },
+  headerInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    overflow: 'hidden',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,0,0,0.05)',
   },
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+  // Compact (collapsed) state
+  compactRow: {
+    position: 'absolute',
+    left: 20,
+    right: 80,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
   },
-  greeting: { fontSize: 16, color: '#666' },
-  title: { fontSize: 28, fontWeight: 'bold', color: '#1a1a1a' },
-  avatar: { width: 48, height: 48, borderRadius: 24 },
+  compactGreeting: { fontSize: 15, color: '#666', fontWeight: '400' },
+  compactName: { fontSize: 15, fontWeight: '700', color: '#1a1a1a' },
+  // Expanded state
+  expandedContent: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingRight: 8,
+  },
+  expandedTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
+  datePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(255,101,150,0.08)',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+  },
+  dateDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 99,
+    backgroundColor: '#FF6596',
+  },
+  datePillText: { fontSize: 11, fontWeight: '600', color: '#FF6596', letterSpacing: 0.2 },
+  expandedGreeting: { fontSize: 14, color: '#9CA3AF', fontWeight: '400', marginTop: 2 },
+  expandedName: { fontSize: 26, fontWeight: '800', color: '#1a1a1a', letterSpacing: -0.5 },
+  // Avatar
+  avatarBtn: { position: 'absolute', right: 20, top: 0, bottom: 0, justifyContent: 'center' },
+  avatarImg: { width: 46, height: 46, borderRadius: 23 },
+  avatarInitials: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarInitialsText: { fontSize: 18, fontWeight: '700', color: '#fff' },
+  avatarOnlineDot: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#22C55E',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
   scrollContent: { padding: 24, paddingTop: 12, paddingBottom: 100 },
   // ─── My Ministries section ───────────────────────────────────────────────
   ministriesSection: { marginBottom: 8 },

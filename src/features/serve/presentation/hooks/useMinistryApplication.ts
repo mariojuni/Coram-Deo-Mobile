@@ -8,12 +8,14 @@ export type MinistryApplicationStatus = 'none' | ApplicationStatus | 'member';
 
 export function useMinistryApplication(ministryId: string) {
   const userProfile = useAuthStore((s) => s.userProfile);
+  const currentUser = useAuthStore((s) => s.currentUser);
   const ministry = useMinistryStore((s) => s.ministries.find((m) => m.id === ministryId));
   const { myApplications, loading, subscribeToMyApplications } =
     useMinistryApplicationStore();
 
   const churchId = userProfile?.churchId ?? null;
-  const memberId = userProfile?.memberId ?? null;
+  // super_admin accounts may not have memberId set; fall back to auth UID
+  const memberId = userProfile?.memberId ?? currentUser?.uid ?? null;
   const userId = userProfile?.uid ?? null;
 
   useEffect(() => {

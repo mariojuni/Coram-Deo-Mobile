@@ -4,8 +4,8 @@ import { useBiblePlanStore } from '@/store/useBiblePlanStore';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { BookOpen, ChevronRight, Sparkles } from 'lucide-react-native';
-import { useEffect } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 // Pick the most recently read active plan
 function pickActivePlan(plans: UserBiblePlan[]): UserBiblePlan | null {
@@ -27,6 +27,8 @@ export function BiblePlanProgressCard() {
   const initializeUserBiblePlansListener = useBiblePlanStore((s) => s.initializeUserBiblePlansListener);
   const currentUser = useAuthStore((s) => s.currentUser);
   const userProfile = useAuthStore((s) => s.userProfile);
+  const cardScale = useRef(new Animated.Value(1)).current;
+  const lastCardPress = useRef(0);
 
   useEffect(() => {
     const churchId = userProfile?.churchId;
@@ -79,10 +81,21 @@ export function BiblePlanProgressCard() {
   return (
     <View style={styles.activeWrapper}>
       <TouchableOpacity
-        activeOpacity={0.85}
-        onPress={() => router.push(`/bible-plans/${activePlan.planId}`)}
+        activeOpacity={1}
+        onPress={() => {
+          const now = Date.now();
+          if (now - lastCardPress.current < 400) return;
+          lastCardPress.current = now;
+          router.push(`/bible-plans/${activePlan.planId}`);
+        }}
+        onPressIn={() => {
+          if (Date.now() - lastCardPress.current < 400) return;
+          Animated.spring(cardScale, { toValue: 0.97, useNativeDriver: true, speed: 50, bounciness: 0 }).start();
+        }}
+        onPressOut={() =>
+          Animated.spring(cardScale, { toValue: 1, useNativeDriver: true, speed: 15, bounciness: 12 }).start()}
       >
-        <View style={styles.card}>
+        <Animated.View style={[styles.card, { transform: [{ scale: cardScale }] }]}>
           <LinearGradient
             colors={['#FF6596', '#B66DFF']}
             start={{ x: 0, y: 0 }}
@@ -116,7 +129,7 @@ export function BiblePlanProgressCard() {
             <Text style={styles.progressLabel}>{Math.round(progress)}% complete</Text>
           </View>
           <ChevronRight size={16} color="#C0C0C0" strokeWidth={2.5} style={styles.chevron} />
-        </View>
+        </Animated.View>
       </TouchableOpacity>
 
       {hasMorePlans && (

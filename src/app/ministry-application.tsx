@@ -25,6 +25,7 @@ export default function MinistryApplicationScreen() {
   const insets = useSafeAreaInsets();
 
   const userProfile = useAuthStore((s) => s.userProfile);
+  const currentUser = useAuthStore((s) => s.currentUser);
   const ministry = useMinistryStore((s) => s.ministries.find((m) => m.id === ministryId));
   const { submitApplication, myApplications } = useMinistryApplicationStore();
 
@@ -37,7 +38,8 @@ export default function MinistryApplicationScreen() {
   const [submitted, setSubmitted] = useState(false);
 
   const churchId = userProfile?.churchId ?? null;
-  const memberId = userProfile?.memberId ?? null;
+  // super_admin accounts may not have memberId set; fall back to auth UID
+  const memberId = userProfile?.memberId ?? currentUser?.uid ?? null;
   const userId = userProfile?.uid ?? null;
 
   // Guard: check for duplicate pending application
@@ -162,12 +164,13 @@ export default function MinistryApplicationScreen() {
             <Text style={styles.label}>Preferred Role</Text>
             <Text style={styles.hint}>Select one or more roles you'd like to serve in.</Text>
             <View style={styles.rolesWrap}>
-              {ministry.roles.map((role) => {
-                const selected = selectedRoles.includes(role);
+              {ministry.roles.map((role, i) => {
+                const roleLabel = typeof role === 'string' ? role : (role as any)?.name ?? String(role);
+                const selected = selectedRoles.includes(roleLabel);
                 return (
                   <TouchableOpacity
-                    key={role}
-                    onPress={() => toggleRole(role)}
+                    key={roleLabel || i}
+                    onPress={() => toggleRole(roleLabel)}
                     style={[styles.roleChip, selected && styles.roleChipSelected]}
                     activeOpacity={0.75}
                   >
@@ -175,7 +178,7 @@ export default function MinistryApplicationScreen() {
                       <Check size={12} color="#fff" style={{ marginRight: 4 }} />
                     ) : null}
                     <Text style={[styles.roleChipText, selected && styles.roleChipTextSelected]}>
-                      {role}
+                      {roleLabel}
                     </Text>
                   </TouchableOpacity>
                 );

@@ -142,12 +142,15 @@ export default function ServeMinistryDetailScreen() {
         {ministry.roles?.length > 0 ? (
           <View style={styles.card}>
             <Text style={styles.cardLabel}>Ministry Roles</Text>
-            {ministry.roles.map((role) => (
-              <View key={role} style={styles.roleRow}>
-                <View style={styles.roleDot} />
-                <Text style={styles.roleText}>{role}</Text>
-              </View>
-            ))}
+            {ministry.roles.map((role, i) => {
+              const roleLabel = typeof role === 'string' ? role : (role as any)?.name ?? String(role);
+              return (
+                <View key={roleLabel || i} style={styles.roleRow}>
+                  <View style={styles.roleDot} />
+                  <Text style={styles.roleText}>{roleLabel}</Text>
+                </View>
+              );
+            })}
           </View>
         ) : null}
 

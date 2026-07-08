@@ -1,7 +1,8 @@
 import { useBibleReader } from '@/features/bible/presentation/hooks/useBibleReader';
+import { useUIStore } from '@/store/useUIStore';
 import { ChevronLeft, ChevronRight, Copy, X } from 'lucide-react-native';
 import { useEffect, useMemo, useRef } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, NativeScrollEvent, NativeSyntheticEvent, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface BibleReaderProps {
   preferences: any;
@@ -10,6 +11,8 @@ interface BibleReaderProps {
   hideChapterNav?: boolean;
   /** If set, after the chapter loads the reader will scroll to this verse number */
   scrollToVerse?: string;
+  /** If true, hides/shows the tab bar based on scroll direction */
+  controlsTabBar?: boolean;
 }
 
 interface Verse {
@@ -39,10 +42,26 @@ const sanitizeVerseText = (text: string): string => {
     .trim();
 };
 
-export default function BibleReader({ preferences, updatePreferences, books, hideChapterNav = false, scrollToVerse }: BibleReaderProps) {
+export default function BibleReader({ preferences, updatePreferences, books, hideChapterNav = false, scrollToVerse, controlsTabBar = false }: BibleReaderProps) {
   const scrollRef = useRef<ScrollView>(null);
-  // Map verseNumber → y-offset captured by onLayout on each verse View
   const verseYPositions = useRef<Record<string, number>>({});
+  const lastScrollY = useRef(0);
+  const setTabBarVisible = useUIStore((s) => s.setTabBarVisible);
+  const tabBarVisible = useUIStore((s) => s.tabBarVisible);
+
+  // Animate nav arrows bottom: 110 (tab bar visible) ↔ 20 (tab bar hidden)
+  const NAV_BOTTOM_SHOWN = 110;
+  const NAV_BOTTOM_HIDDEN = 20;
+  const navBottom = useRef(new Animated.Value(NAV_BOTTOM_SHOWN)).current;
+
+  useEffect(() => {
+    if (!controlsTabBar) return;
+    Animated.timing(navBottom, {
+      toValue: tabBarVisible ? NAV_BOTTOM_SHOWN : NAV_BOTTOM_HIDDEN,
+      duration: 250,
+      useNativeDriver: false,
+    }).start();
+  }, [tabBarVisible, controlsTabBar]);
   const {
     chapterData,
     highlightColors,
@@ -61,6 +80,24 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
   useEffect(() => {
     verseYPositions.current = {};
   }, [preferences.activeBook, preferences.activeChapter]);
+
+  // Reset tab bar visibility on unmount
+  useEffect(() => {
+    if (!controlsTabBar) return;
+    return () => {
+      setTabBarVisible(true);
+    };
+  }, [controlsTabBar, setTabBarVisible]);
+
+  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (!controlsTabBar) return;
+    const y = e.nativeEvent.contentOffset.y;
+    const delta = y - lastScrollY.current;
+    if (Math.abs(delta) > 6) {
+      setTabBarVisible(delta < 0 || y < 60);
+    }
+    lastScrollY.current = y;
+  };
 
   // Scroll to target verse after chapter finishes loading
   useEffect(() => {
@@ -85,6 +122,52 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
     scrollRef.current?.scrollTo({ y: 0, animated: true });
   };
 
+  // Always-current refs so the PanResponder (created once) calls the latest handlers
+  const onNextChapterRef = useRef(onNextChapter);
+  const onPrevChapterRef = useRef(onPrevChapter);
+  onNextChapterRef.current = onNextChapter;
+  onPrevChapterRef.current = onPrevChapter;
+
+  // ── Swipe gesture ────────────────────────────────────────────────────────
+  const SWIPE_THRESHOLD = 80;
+  const swipeX = useRef(new Animated.Value(0)).current;
+  const swipeLocked = useRef(false);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      // Only claim clearly horizontal swipes
+      onMoveShouldSetPanResponder: (_, g) =>
+        Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy) * 1.8,
+      onPanResponderMove: (_, g) => {
+        swipeX.setValue(g.dx * 0.25); // rubber-band resistance
+      },
+      onPanResponderRelease: (_, g) => {
+        if (swipeLocked.current) {
+          Animated.spring(swipeX, { toValue: 0, useNativeDriver: true }).start();
+          return;
+        }
+        if (g.dx < -SWIPE_THRESHOLD) {
+          swipeLocked.current = true;
+          Animated.timing(swipeX, { toValue: 0, duration: 150, useNativeDriver: true }).start(() => {
+            onNextChapterRef.current();
+            setTimeout(() => { swipeLocked.current = false; }, 400);
+          });
+        } else if (g.dx > SWIPE_THRESHOLD) {
+          swipeLocked.current = true;
+          Animated.timing(swipeX, { toValue: 0, duration: 150, useNativeDriver: true }).start(() => {
+            onPrevChapterRef.current();
+            setTimeout(() => { swipeLocked.current = false; }, 400);
+          });
+        } else {
+          Animated.spring(swipeX, { toValue: 0, useNativeDriver: true, bounciness: 8 }).start();
+        }
+      },
+      onPanResponderTerminate: () => {
+        Animated.spring(swipeX, { toValue: 0, useNativeDriver: true }).start();
+      },
+    })
+  ).current;
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -95,12 +178,18 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        ref={scrollRef}
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+      <Animated.View
+        style={[styles.scrollView, { transform: [{ translateX: swipeX }] }]}
+        {...panResponder.panHandlers}
       >
+        <ScrollView
+          ref={scrollRef}
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+        >
         {/* Original paragraph-style verse rendering — onLayout captures y per verse */}
         <Text style={styles.chapterContent}>
           {chapterData.map((verse: Verse) => {
@@ -127,11 +216,15 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
             );
           })}
         </Text>
-      </ScrollView>
+        </ScrollView>
+      </Animated.View>
       
       {/* Navigation Arrows overlay */}
       {selectedVerses.length === 0 && !hideChapterNav && (
-        <View style={styles.navOverlay} pointerEvents="box-none">
+        <Animated.View
+          style={[styles.navOverlay, controlsTabBar ? { bottom: navBottom } : undefined]}
+          pointerEvents="box-none"
+        >
           <TouchableOpacity style={styles.navBtn} onPress={onPrevChapter}>
             <ChevronLeft size={20} color="#FF6596" />
           </TouchableOpacity>
@@ -139,7 +232,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
           <TouchableOpacity style={styles.navBtn} onPress={onNextChapter}>
             <ChevronRight size={20} color="#FF6596" />
           </TouchableOpacity>
-        </View>
+        </Animated.View>
       )}
 
       {/* Highlighting Toolbar */}

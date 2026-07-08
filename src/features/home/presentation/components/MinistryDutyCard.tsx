@@ -9,6 +9,7 @@
  * - Smooth Reanimated height + opacity collapse animation
  */
 import { LinearGradient } from 'expo-linear-gradient';
+import DebouncedTouchable from '@/components/DebouncedTouchable';
 import {
     BookOpen,
     CalendarDays,
@@ -39,7 +40,6 @@ import {
     Alert,
     StyleSheet,
     Text,
-    TouchableOpacity,
     View,
 } from 'react-native';
 import Animated, {
@@ -222,7 +222,7 @@ export function MinistryDutyCard({
     <View style={[cs.card, isDeclined && cs.cardDeclined]}>
 
       {/* ── Header: tinted gradient with role icon, title, status, chevron ── */}
-      <TouchableOpacity onPress={toggle} activeOpacity={isPending ? 0.8 : 1}>
+      <DebouncedTouchable onPress={toggle} activeOpacity={isPending ? 0.8 : 1}>
         <LinearGradient
           colors={[`${color}18`, `${color}06`] as [string, string]}
           start={{ x: 0, y: 0 }}
@@ -249,7 +249,7 @@ export function MinistryDutyCard({
             </View>
           )}
         </LinearGradient>
-      </TouchableOpacity>
+      </DebouncedTouchable>
 
       {/* ── Body: event name + date · time · location ── */}
       <View style={cs.body}>
@@ -274,7 +274,7 @@ export function MinistryDutyCard({
       {isPending && (
         <Animated.View style={[cs.actionWrap, collapseStyle]}>
           <View style={cs.actionRow}>
-            <TouchableOpacity
+            <DebouncedTouchable
               style={cs.declineBtn}
               onPress={handleDeclinePress}
               disabled={saving}
@@ -282,9 +282,9 @@ export function MinistryDutyCard({
             >
               <X size={13} color="#F87171" strokeWidth={2.5} />
               <Text style={cs.declineBtnText}>Decline</Text>
-            </TouchableOpacity>
+            </DebouncedTouchable>
 
-            <TouchableOpacity
+            <DebouncedTouchable
               style={[cs.confirmBtn, saving && cs.btnDisabled]}
               onPress={onConfirm}
               disabled={saving}
@@ -298,7 +298,7 @@ export function MinistryDutyCard({
                     <Text style={cs.confirmBtnText}>Confirm</Text>
                   </>
                 )}
-            </TouchableOpacity>
+            </DebouncedTouchable>
           </View>
         </Animated.View>
       )}

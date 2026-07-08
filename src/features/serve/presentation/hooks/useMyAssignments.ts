@@ -29,11 +29,14 @@ function parseAssignmentDate(dateStr: string): Date {
 
 export function useMyAssignments() {
   const userProfile = useAuthStore((s) => s.userProfile);
+  const currentUser = useAuthStore((s) => s.currentUser);
   const { memberAssignments, memberAssignmentsLoading, initializeMemberAssignmentsListener } =
     useMinistryStore();
 
   const churchId = userProfile?.churchId ?? null;
-  const memberId = userProfile?.memberId ?? null;
+  // super_admin accounts may not have a memberId set; fall back to the auth UID
+  // which is what the assignment records store as their memberId
+  const memberId = userProfile?.memberId ?? currentUser?.uid ?? null;
 
   useEffect(() => {
     if (!churchId || !memberId) return;

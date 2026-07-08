@@ -1,16 +1,34 @@
 import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
 import { Book, Handshake, Home, Users } from 'lucide-react-native';
-import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FabMenu from '../../components/Navigation/FabMenu';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useUIStore } from '../../store/useUIStore';
 
 function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
   const insets = useSafeAreaInsets();
+  const tabBarVisible = useUIStore((s) => s.tabBarVisible);
+  const slideAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(slideAnim, {
+      toValue: tabBarVisible ? 0 : 120,
+      duration: 250,
+      useNativeDriver: true,
+    }).start();
+  }, [tabBarVisible]);
 
   return (
-    <View style={[styles.navArea, { bottom: Math.max(insets.bottom, 16) }]} pointerEvents="box-none">
+    <Animated.View
+      style={[
+        styles.navArea,
+        { bottom: Math.max(insets.bottom, 16), transform: [{ translateY: slideAnim }] },
+      ]}
+      pointerEvents="box-none"
+    >
       <View style={styles.navContainer}>
         {/* Standard frosted background for both platforms */}
         <BlurView intensity={80} tint="light" style={[StyleSheet.absoluteFill, { borderRadius: 40, overflow: 'hidden' }]} />
@@ -65,7 +83,7 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
           })}
         </View>
         <FabMenu isStaff={isStaff} />
-      </View>
+      </Animated.View>
   );
 }
 

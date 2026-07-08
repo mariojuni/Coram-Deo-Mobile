@@ -1,20 +1,20 @@
+import {
+    useBibleTopNav,
+    type BibleBook,
+    type BiblePreferences,
+    type BibleVersion,
+} from '@/features/bible/presentation/hooks/useBibleTopNav';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import {
-  type BibleBook,
-  type BiblePreferences,
-  useBibleTopNav,
-  type BibleVersion,
-} from '@/features/bible/presentation/hooks/useBibleTopNav';
+import BibleReader from '../../components/Bible/BibleReader';
+import BooksModal from '../../components/Bible/BooksModal';
+import TopNavBar from '../../components/Navigation/TopNavBar';
 import { db } from '../../firebase';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useBibleVersionStore } from '../../store/useBibleVersionStore';
 import { fetchBibleIndex, getSavedVersions, getUserPreferences, saveUserPreferences } from '../../utils/bibleApi';
-import BibleReader from '../../components/Bible/BibleReader';
-import BooksModal from '../../components/Bible/BooksModal';
-import TopNavBar from '../../components/Navigation/TopNavBar';
 
 type BiblePreferencesWithHighlights = BiblePreferences & {
   highlights?: Record<string, Record<string, string>>;
@@ -118,6 +118,7 @@ export default function BibleScreen() {
         preferences={preferences}
         updatePreferences={handleUpdatePreferences}
         books={books}
+        controlsTabBar
       />
 
       <TopNavBar
