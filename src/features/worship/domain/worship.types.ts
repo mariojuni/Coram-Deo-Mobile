@@ -12,10 +12,28 @@ export interface Song {
   timeSignature?: string;
   lyrics?: string;
   chordChart?: string;
+  lyricsWithChords?: string;
+  chordFormat?: 'block' | 'chordpro';
+  defaultCapo?: number;
+  preferredAccidental?: 'sharp' | 'flat';
   copyrightInfo?: string;
   licenseNotes?: string;
   allowPublicLyrics?: boolean;
   status: 'active' | 'archived';
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface SongVersion {
+  id: string;
+  songId: string;
+  title: string;
+  originalKey?: string;
+  defaultDisplayKey?: string;
+  defaultCapo?: number;
+  chordFormat?: 'block' | 'chordpro';
+  lyricsWithChords?: string;
+  preferredAccidental?: 'sharp' | 'flat';
   createdAt?: string;
   updatedAt?: string;
 }
@@ -42,7 +60,10 @@ export interface WorshipSetlistItem {
   songVersionId?: string;
   order: number;
   section?: string;
+  originalKey?: string;
   selectedKey?: string;
+  capo?: number;
+  preferredAccidental?: 'sharp' | 'flat';
   tempoBpm?: number;
   lyricsOverride?: string;
   chordOverride?: string;

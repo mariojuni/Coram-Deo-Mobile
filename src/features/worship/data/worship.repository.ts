@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, limit, orderBy, query, where } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, limit, orderBy, query, where, updateDoc } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import { Song, WorshipSetlist, WorshipSetlistItem } from '../domain/worship.types';
 
@@ -18,6 +18,21 @@ export const worshipRepository = {
       const dateB = b.date ? new Date(b.date).getTime() : 0;
       return dateB - dateA;
     });
+  },
+
+  updateSetlistItem: async (itemId: string, data: Partial<WorshipSetlistItem>): Promise<void> => {
+    const ref = doc(db, 'worshipSetlistItems', itemId);
+    await updateDoc(ref, {
+      ...data,
+      updatedAt: new Date().toISOString()
+    });
+  },
+
+  getSetlistItem: async (itemId: string): Promise<WorshipSetlistItem | null> => {
+    const docRef = doc(db, 'worshipSetlistItems', itemId);
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) return null;
+    return { id: docSnap.id, ...docSnap.data() } as WorshipSetlistItem;
   },
 
   getSong: async (songId: string): Promise<Song | null> => {

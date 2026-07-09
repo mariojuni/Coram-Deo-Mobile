@@ -18,6 +18,7 @@ import {
 } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+    ActivityIndicator,
     Animated,
     Dimensions,
     Image,
@@ -573,8 +574,58 @@ function PublicEventSetlist({ eventId, onCloseModal }: { eventId: string; onClos
   const router = useRouter();
   const userProfile = useAuthStore((s) => s.userProfile);
   const { setlist, items, loading } = useWorshipSetlist(userProfile?.churchId, eventId);
+  const fadeAnim = useRef(new Animated.Value(0.4)).current;
 
-  if (loading || !setlist || items.length === 0) return null;
+  useEffect(() => {
+    if (loading) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(fadeAnim, {
+            toValue: 0.4,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    }
+  }, [loading, fadeAnim]);
+
+  if (loading) {
+    return (
+      <View style={{ marginTop: 20, marginBottom: 10 }}>
+        <Text style={eventsStyles.modalRsvpTitle}>Today's Songs</Text>
+        <View style={{ backgroundColor: '#F9FAFB', borderRadius: 16, padding: 12, marginTop: 8, borderWidth: 1, borderColor: '#F3F4F6' }}>
+          {[1, 2, 3].map((_, index) => (
+            <Animated.View 
+              key={index}
+              style={{
+                flexDirection: 'row', 
+                alignItems: 'center', 
+                paddingVertical: 8, 
+                borderBottomWidth: index < 2 ? 1 : 0, 
+                borderBottomColor: '#E5E7EB',
+                opacity: fadeAnim
+              }}
+            >
+              <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: '#E5E7EB', marginRight: 12 }} />
+              <View style={{ flex: 1, paddingVertical: 2 }}>
+                <View style={{ height: 16, width: '60%', backgroundColor: '#E5E7EB', borderRadius: 4, marginBottom: 4 }} />
+                <View style={{ height: 14, width: '40%', backgroundColor: '#E5E7EB', borderRadius: 4 }} />
+              </View>
+              <View style={{ width: 16, height: 16, backgroundColor: '#E5E7EB', borderRadius: 8 }} />
+            </Animated.View>
+          ))}
+        </View>
+      </View>
+    );
+  }
+
+  if (!setlist || items.length === 0) return null;
 
   const isStaff = ['super_admin', 'church_admin', 'pastor', 'ministry_leader'].includes(userProfile?.role?.toLowerCase() || '');
   
