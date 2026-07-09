@@ -131,6 +131,18 @@ const ICON_COMPONENTS: Record<string, any> = {
   Users, Shield, Mic, Monitor, BookOpen, Guitar, Drum, Piano, GraduationCap, Music, Heart, Star, Settings, Hand, HandCoins, PrayingHands
 };
 
+// Maps icon background tint → icon accent color (mirrors AssignMinistriesModal logic)
+const ICON_COLORS: Record<string, string> = {
+  '#E0E7FF': '#818CF8',
+  '#E8F0FF': '#4D8BFF',
+  '#F3F4F6': '#6B7280',
+  '#FFE8F0': '#FF6596',
+  '#FEF3C7': '#F59E0B',
+  '#FEE2E2': '#EF4444',
+  '#D1FAE5': '#10B981',
+  '#F3EEFF': '#8B6FE8',
+};
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 export interface MinistryDutyCardProps {
@@ -161,14 +173,16 @@ export function MinistryDutyCard({
   const ministry = ministries.find(m => m.id === assignment.ministryId);
 
   const customDetails = ministry?.roleDetails?.[roleName];
-  const iconBg    = customDetails?.color || ROLE_ICON_BG[roleId] || '#F3F4F6';
-  const color     = ROLE_COLOR[roleId] || '#6B7280';
+  // customDetails.color stores the BG tint (e.g. #FFE8F0) — same as AssignMinistriesModal
+  const iconBg = customDetails?.color || ROLE_ICON_BG[roleId] || '#F3F4F6';
+  // Derive accent color from the bg tint via ICON_COLORS map, then fall back to preset
+  const color  = ICON_COLORS[iconBg] || ROLE_COLOR[roleId] || '#6B7280';
   const iconName  = customDetails?.icon;
   
   let iconNode: React.ReactNode = null;
   if (iconName && ICON_COMPONENTS[iconName]) {
     const Comp = ICON_COMPONENTS[iconName];
-    iconNode = <Comp size={20} color="#6B7280" />;
+    iconNode = <Comp size={20} color={color} />;
   } else {
     iconNode = ROLE_ICONS[roleId] ?? <Users size={20} color="#999" />;
   }

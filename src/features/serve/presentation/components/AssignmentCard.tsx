@@ -1,5 +1,7 @@
+import DebouncedTouchable from '@/components/DebouncedTouchable';
 import { PrayingHands } from '@/components/ui/icons/PrayingHands';
 import type { MinistryAssignment } from '@/features/ministry/domain/ministry.types';
+import { useMinistryStore } from '@/store/useMinistryStore';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
     BookOpen,
@@ -23,7 +25,8 @@ import {
     Star,
     Users,
 } from 'lucide-react-native';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useRef } from 'react';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 
 // ─── Role identity ────────────────────────────────────────────────────────────
 
@@ -91,6 +94,23 @@ const ROLE_ICONS: Record<string, React.ReactNode> = {
 const _UNUSED = { BookOpen, Hand, HandCoins, Heart, Star, Settings, Shield, Music, Mic, Monitor, Guitar, Drum, Piano, GraduationCap, Users };
 void _UNUSED;
 
+const ICON_COMPONENTS: Record<string, any> = {
+  Users, Shield, Mic, Monitor, BookOpen, Guitar, Drum, Piano,
+  GraduationCap, Music, Heart, Star, Settings, Hand, HandCoins, PrayingHands,
+};
+
+// Maps icon background tint → icon accent color (mirrors AssignMinistriesModal logic)
+const ICON_COLORS: Record<string, string> = {
+  '#E0E7FF': '#818CF8',
+  '#E8F0FF': '#4D8BFF',
+  '#F3F4F6': '#6B7280',
+  '#FFE8F0': '#FF6596',
+  '#FEF3C7': '#F59E0B',
+  '#FEE2E2': '#EF4444',
+  '#D1FAE5': '#10B981',
+  '#F3EEFF': '#8B6FE8',
+};
+
 export interface AssignmentCardProps {
   assignment: MinistryAssignment;
   onPress: () => void;
@@ -98,9 +118,30 @@ export interface AssignmentCardProps {
 
 export function AssignmentCard({ assignment, onPress }: AssignmentCardProps) {
   const roleId = assignment.roleName.toLowerCase().replace(/[^a-z0-9]/g, '');
-  const iconBg = ROLE_ICON_BG[roleId] || '#F3F4F6';
-  const color = ROLE_COLOR[roleId] || '#6B7280';
-  const iconNode: React.ReactNode = ROLE_ICONS[roleId] ?? <Users size={20} color="#999" />;
+
+  // Look up ministry to get roleDetails — same approach as MinistryDutyCard
+  const ministries = useMinistryStore((s) => s.ministries);
+  const ministry = ministries.find((m) => m.id === assignment.ministryId);
+  const customDetails = ministry?.roleDetails?.[assignment.roleName];
+
+  // customDetails.color is the BG tint; derive accent from ICON_COLORS map
+  const iconBg = customDetails?.color || ROLE_ICON_BG[roleId] || '#F3F4F6';
+  const color  = ICON_COLORS[iconBg] || ROLE_COLOR[roleId] || '#6B7280';
+
+  let iconNode: React.ReactNode;
+  const iconName = customDetails?.icon;
+  if (iconName && ICON_COMPONENTS[iconName]) {
+    const Comp = ICON_COMPONENTS[iconName];
+    iconNode = <Comp size={20} color={color} />;
+  } else {
+    iconNode = ROLE_ICONS[roleId] ?? <Users size={20} color="#999" />;
+  }
+
+  const scale = useRef(new Animated.Value(1)).current;
+  const pressIn = () =>
+    Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, speed: 50, bounciness: 0 }).start();
+  const pressOut = () =>
+    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 15, bounciness: 12 }).start();
 
   const statusNorm = (assignment.status ?? '').toLowerCase();
   const isPending = statusNorm === 'pending';
@@ -152,11 +193,8 @@ export function AssignmentCard({ assignment, onPress }: AssignmentCardProps) {
   })();
 
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.85}
-      style={[cs.card, (isDeclined || isCancelled) && cs.cardMuted]}
-    >
+    <DebouncedTouchable onPress={onPress} activeOpacity={1} onPressIn={pressIn} onPressOut={pressOut}>
+      <Animated.View style={[cs.card, (isDeclined || isCancelled) && cs.cardMuted, { transform: [{ scale }] }]}>
       <LinearGradient
         colors={[`${color}18`, `${color}06`] as [string, string]}
         start={{ x: 0, y: 0 }}
@@ -216,7 +254,8 @@ export function AssignmentCard({ assignment, onPress }: AssignmentCardProps) {
           <Text style={cs.confirmedBannerText}>You confirmed this assignment</Text>
         </View>
       )}
-    </TouchableOpacity>
+      </Animated.View>
+    </DebouncedTouchable>
   );
 }
 
