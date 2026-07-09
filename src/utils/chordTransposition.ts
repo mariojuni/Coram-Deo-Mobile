@@ -32,16 +32,17 @@ export const getStepsBetweenKeys = (originalKey: string, targetKey: string): num
  * Transpose a single chord string (e.g., "D/F#", "Bm7", "C#m", "Eb").
  */
 export const transposeChord = (chord: string, steps: number, preferFlats: boolean = false): string => {
-  // Regex to match the root note and optional bass note.
-  // Matches A-G with optional # or b, then any modifier string, then optionally / followed by A-G with optional # or b.
-  const chordRegex = /^([CDEFGAB][#b]?)(.*?)(\/([CDEFGAB][#b]?))?$/i;
+  // Regex to match optional opening paren, root note, optional bass note, optional closing paren.
+  const chordRegex = /^(\()?([CDEFGAB][#b]?)(.*?)(\/([CDEFGAB][#b]?))?(\))?$/i;
   
   const match = chord.match(chordRegex);
   if (!match) return chord; // Not a recognized chord format
 
-  const root = match[1];
-  const modifier = match[2] || '';
-  const bass = match[4];
+  const openParen = match[1] || '';
+  const root = match[2];
+  const modifier = match[3] || '';
+  const bass = match[5];
+  const closeParen = match[6] || '';
 
   const rootIndex = normalizeNote(root);
   if (rootIndex === -1) return chord;
@@ -58,7 +59,7 @@ export const transposeChord = (chord: string, steps: number, preferFlats: boolea
     }
   }
 
-  return newRoot + modifier + newBass;
+  return openParen + newRoot + modifier + newBass + closeParen;
 };
 
 // Regex to identify if a word is likely a chord
@@ -75,7 +76,7 @@ const isLikelyChord = (word: string, isInline: boolean = false): boolean => {
   }
   
   // We need to allow it to be transposed if it's a valid chord.
-  const regex = /^[CDEFGAB][#b]?(m|min|maj|M|dim|aug|sus|add|\d|b|#|\+|-|\(|\)|6\/9)*(\/[CDEFGAB][#b]?)?$/i;
+  const regex = /^\(?[CDEFGAB][#b]?(m|min|maj|M|dim|aug|sus|add|\d|b|#|\+|-|\(|\)|6\/9)*(\/[CDEFGAB][#b]?)?\)?$/i;
   
   return regex.test(word);
 };
@@ -105,7 +106,7 @@ export const transposeText = (text: string, steps: number, preferFlats: boolean 
     }
 
     // 2. Process block text chord lines
-    if (!line.trim() || line.trim().startsWith('[')) return line;
+    if (!line.trim()) return line;
 
     const words = line.split(/\s+/).filter(w => w.length > 0);
     const chordCount = words.filter(w => isLikelyChord(w)).length;
