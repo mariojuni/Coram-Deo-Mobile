@@ -63,5 +63,30 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isChurchAdmin(resource.data.churchId);
     }
+    // ── Worship Library ──────────────────────────────────────────────────────
+    match /songs/{songId} {
+      allow read: if isSignedIn();
+      allow write: if isChurchAdmin(request.resource.data.churchId) || isChurchAdmin(resource.data.churchId);
+    }
+    
+    match /songVersions/{versionId} {
+      allow read: if isSignedIn();
+      allow write: if isChurchAdmin(request.resource.data.churchId) || isChurchAdmin(resource.data.churchId);
+    }
+
+    match /worshipSetlists/{setlistId} {
+      allow read: if isSignedIn();
+      allow write: if isChurchAdmin(request.resource.data.churchId) || isChurchAdmin(resource.data.churchId);
+      
+      match /worshipSetlistItems/{itemId} {
+        allow read: if isSignedIn();
+        allow write: if isChurchAdmin(request.resource.data.churchId) || isChurchAdmin(resource.data.churchId);
+      }
+    }
+    
+    match /worshipSetlistItems/{itemId} {
+      allow read: if isSignedIn();
+      allow write: if isChurchAdmin(request.resource.data.churchId) || isChurchAdmin(resource.data.churchId);
+    }
   }
 }

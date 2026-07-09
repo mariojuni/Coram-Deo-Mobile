@@ -8,6 +8,7 @@ import AttendanceTab from '../../components/Staff/AttendanceTab';
 import ScheduleTab from '../../components/Staff/ScheduleTab';
 import { getAttendanceStats, getTodayStr } from '../../features/attendance/domain/attendance.selectors';
 import { useAttendanceByDate } from '../../features/attendance/presentation/hooks/useAttendanceByDate';
+import WorshipTab from '../../components/Staff/WorshipTab';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useMemberStore } from '../../store/useMemberStore';
 import { useMinistryStore } from '../../store/useMinistryStore';
@@ -66,7 +67,7 @@ export default function AttendanceScreen() {
 
       <View style={styles.filterContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
-          {['Attendance', 'Events', 'Reports'].map((f) => (
+          {['Attendance', 'Events', 'Reports', 'Worship'].map((f) => (
             <TouchableOpacity 
               key={f} 
               style={[
@@ -132,6 +133,10 @@ export default function AttendanceScreen() {
               members={members} 
               showStaffFeatures={isStaff} 
             />
+          )}
+
+          {activeTab === 'worship' && (
+            <WorshipTab />
           )}
         </ScrollView>
       )}

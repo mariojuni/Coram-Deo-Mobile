@@ -1,6 +1,6 @@
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useGlobalSearchParams } from 'expo-router';
+import { useGlobalSearchParams, useRouter } from 'expo-router';
 import {
     CalendarDays,
     CheckCircle2,
@@ -44,6 +44,7 @@ import {
     updateRsvp,
     useScheduleStore,
 } from '../../store/useScheduleStore';
+import { useWorshipSetlist } from '../../features/worship/presentation/hooks/useWorshipSetlist';
 
 // ─── Sub-tab definitions ──────────────────────────────────────────────────────
 const TABS = [
@@ -523,6 +524,9 @@ function EventsTab({ searchQuery }: SubScreenProps) {
             </View>
           </View>
 
+          {/* Public Worship Setlist */}
+          <PublicEventSetlist eventId={selectedEvent.id} onCloseModal={() => setSelectedEvent(null)} />
+
           <Text style={eventsStyles.modalRsvpTitle}>Your response</Text>
 
           <View style={eventsStyles.modalRsvpRow}>
@@ -561,6 +565,51 @@ function EventsTab({ searchQuery }: SubScreenProps) {
           </View>
         </AppModal>
       )}
+    </View>
+  );
+}
+
+function PublicEventSetlist({ eventId, onCloseModal }: { eventId: string; onCloseModal?: () => void }) {
+  const router = useRouter();
+  const userProfile = useAuthStore((s) => s.userProfile);
+  const { setlist, items, loading } = useWorshipSetlist(userProfile?.churchId, eventId);
+
+  if (loading || !setlist || items.length === 0) return null;
+
+  const isStaff = ['super_admin', 'church_admin', 'pastor', 'ministry_leader'].includes(userProfile?.role?.toLowerCase() || '');
+  
+  if (setlist.status !== 'published' && !isStaff) return null;
+
+  const publicItems = items.filter(i => isStaff || i.song?.allowPublicLyrics);
+
+  if (publicItems.length === 0) return null;
+
+  return (
+    <View style={{ marginTop: 20, marginBottom: 10 }}>
+      <Text style={eventsStyles.modalRsvpTitle}>Today's Songs</Text>
+      <View style={{ backgroundColor: '#F9FAFB', borderRadius: 16, padding: 12, marginTop: 8, borderWidth: 1, borderColor: '#F3F4F6' }}>
+        {publicItems.map((item, index) => (
+          <TouchableOpacity 
+            key={item.id}
+            style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: index < publicItems.length - 1 ? 1 : 0, borderBottomColor: '#E5E7EB' }}
+            onPress={() => {
+              if (onCloseModal) onCloseModal();
+              setTimeout(() => {
+                router.push({ pathname: '/serve-song-lyrics', params: { songId: item.songId, hideChords: 'true' } } as any);
+              }, 100);
+            }}
+          >
+            <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: '#E0E7FF', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+              <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#4F46E5' }}>{index + 1}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: '#1F2937' }}>{item.song?.title}</Text>
+              {item.song?.artist && <Text style={{ fontSize: 12, color: '#6B7280' }}>{item.song.artist}</Text>}
+            </View>
+            <ChevronRight size={16} color="#9CA3AF" />
+          </TouchableOpacity>
+        ))}
+      </View>
     </View>
   );
 }

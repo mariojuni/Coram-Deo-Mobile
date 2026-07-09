@@ -2,6 +2,7 @@ import { ministryRepository } from '@/features/ministry/data/ministry.repository
 import { DeclineModal } from '@/features/serve/presentation/components/DeclineModal';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useMinistryStore } from '@/store/useMinistryStore';
+import { useWorshipSetlist } from '@/features/worship/presentation/hooks/useWorshipSetlist';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
@@ -14,6 +15,8 @@ import {
     MapPin,
     User,
     X,
+    Music,
+    ChevronRight
 } from 'lucide-react-native';
 import { useState } from 'react';
 import {
@@ -39,6 +42,11 @@ export default function ServeAssignmentDetailScreen() {
   const [confirmingSaving, setConfirmingSaving] = useState(false);
   const [declineModalOpen, setDeclineModalOpen] = useState(false);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+
+  const { setlist, loading: setlistLoading } = useWorshipSetlist(
+    userProfile?.churchId,
+    assignment?.eventId
+  );
 
   if (!assignment) {
     return (
@@ -182,6 +190,19 @@ export default function ServeAssignmentDetailScreen() {
           {assignment.eventLocation ? (
             <Row icon={<MapPin size={14} color="#6B7280" />} text={assignment.eventLocation} />
           ) : null}
+          
+          {setlist && (
+            <TouchableOpacity 
+              style={styles.setlistLinkBtn}
+              onPress={() => router.push({ pathname: '/serve-worship-setlist', params: { eventId: assignment.eventId } } as any)}
+            >
+              <View style={styles.setlistLinkContent}>
+                <Music size={16} color="#FF6596" />
+                <Text style={styles.setlistLinkText}>View Worship Setlist</Text>
+              </View>
+              <ChevronRight size={16} color="#9CA3AF" />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* ─── Ministry & Role ─── */}
@@ -350,6 +371,25 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+  },
+  setlistLinkBtn: {
+    marginTop: 8,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  setlistLinkContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  setlistLinkText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FF6596',
   },
   cardDeclined: {
     backgroundColor: '#FEF2F2',
