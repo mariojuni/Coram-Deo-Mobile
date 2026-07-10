@@ -300,6 +300,7 @@ function MyScheduleTab({
   if (!grouped.length) {
     return (
       <Animated.ScrollView 
+        style={{ flex: 1 }}
         contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight + 16 }]}
         onScroll={onScroll}
         scrollEventThrottle={16}
@@ -314,6 +315,7 @@ function MyScheduleTab({
 
   return (
     <Animated.ScrollView
+      style={{ flex: 1 }}
       contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight + 16 }]}
       showsVerticalScrollIndicator={false}
       onScroll={onScroll}
@@ -364,6 +366,7 @@ function AllMinistriesTab({
   if (!ministries.length) {
     return (
       <Animated.ScrollView 
+        style={{ flex: 1 }}
         contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight + 16 }]}
         onScroll={onScroll}
         scrollEventThrottle={16}
@@ -378,6 +381,7 @@ function AllMinistriesTab({
 
   return (
     <Animated.ScrollView
+      style={{ flex: 1 }}
       contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight + 16 }]}
       showsVerticalScrollIndicator={false}
       onScroll={onScroll}
@@ -408,6 +412,7 @@ function CalendarTab({
 }) {
   return (
     <Animated.ScrollView 
+      style={{ flex: 1 }}
       contentContainerStyle={[styles.calendarContainer, { paddingTop: headerHeight + 16 }]}
       onScroll={onScroll}
       scrollEventThrottle={16}
@@ -565,7 +570,7 @@ const styles = StyleSheet.create({
   },
   ministriesCountText: { fontSize: 11, fontWeight: '700', color: '#FF6596' },
 
-  calendarContainer: { flex: 1, paddingHorizontal: 20 },
+  calendarContainer: { paddingHorizontal: 20 },
 
   // No church state
   pendingContainer: {

@@ -52,7 +52,7 @@ export default function GivingFormScreen() {
       let result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        quality: 0.8,
+        quality: 0.1,
       });
 
       if (!result.canceled && result.assets[0]) {
@@ -134,7 +134,7 @@ export default function GivingFormScreen() {
           </View>
           <Text style={styles.successTitle}>Thank You!</Text>
           <Text style={styles.successText}>
-            Your generosity helps us continue our mission. Your giving record is now pending verification.
+            Thank you for your generosity. Your giving submission is now pending verification.
           </Text>
           <TouchableOpacity activeOpacity={0.8} style={styles.doneBtn} onPress={() => router.replace('/my-giving')}>
             <LinearGradient colors={['#FF6596', '#FF8AAB']} style={[StyleSheet.absoluteFill, { borderRadius: 16 }]} />

@@ -1,5 +1,5 @@
 import { db, storage } from '@/firebase';
-import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, orderBy, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, orderBy, getDoc, onSnapshot } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { GivingFund, GivingCampaign, GivingRecord, PaymentMethod } from '../domain/giving.types';
 
@@ -11,34 +11,25 @@ export async function fetchActiveCampaigns(churchId: string): Promise<GivingCamp
       where('status', '==', 'active')
     );
     const snapshot = await getDocs(q);
-    if (snapshot.empty) {
-      return [
-        { 
-          id: 'camp_1', churchId, fundId: 'fund_building', title: 'Building Fund 2026', 
-          description: 'Help us build the new sanctuary', goalAmount: 500000, 
-          raisedAmount: 120500, expenseAmount: 0, campaignType: 'building_project', 
-          status: 'active', startDate: new Date().toISOString(), 
-          coverImageUrl: 'https://images.unsplash.com/photo-1548625361-9c6bc7631da7',
-          allowPublicProgress: true, allowPublicExpenses: false,
-          createdBy: 'admin', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
-        }
-      ] as GivingCampaign[];
-    }
-    return snapshot.docs.map(doc => doc.data() as GivingCampaign);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GivingCampaign));
   } catch (err) {
-    console.warn('Error fetching campaigns, using mock', err);
-    return [
-      { 
-        id: 'camp_1', churchId, fundId: 'fund_building', title: 'Building Fund 2026', 
-        description: 'Help us build the new sanctuary', goalAmount: 500000, 
-        raisedAmount: 120500, expenseAmount: 0, campaignType: 'building_project', 
-        status: 'active', startDate: new Date().toISOString(), 
-        coverImageUrl: 'https://images.unsplash.com/photo-1548625361-9c6bc7631da7',
-        allowPublicProgress: true, allowPublicExpenses: false,
-        createdBy: 'admin', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
-      }
-    ] as GivingCampaign[];
+    console.warn('Error fetching campaigns:', err);
+    return [];
   }
+}
+
+export function subscribeToActiveCampaigns(churchId: string, callback: (campaigns: GivingCampaign[]) => void): () => void {
+  const q = query(
+    collection(db, 'givingCampaigns'),
+    where('churchId', '==', churchId),
+    where('status', '==', 'active')
+  );
+  return onSnapshot(q, (snapshot) => {
+    callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GivingCampaign)));
+  }, (err) => {
+    console.warn('Error subscribing to campaigns:', err);
+    callback([]);
+  });
 }
 
 export async function fetchGivingFunds(churchId: string): Promise<GivingFund[]> {
@@ -56,7 +47,7 @@ export async function fetchGivingFunds(churchId: string): Promise<GivingFund[]> 
     );
     const snapshot = await getDocs(q);
     if (snapshot.empty) return fallback;
-    return snapshot.docs.map(doc => doc.data() as GivingFund);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GivingFund));
   } catch (err) {
     console.warn('Error fetching funds, using mock', err);
     return fallback;
@@ -78,7 +69,7 @@ export async function fetchPaymentMethods(churchId: string): Promise<PaymentMeth
     );
     const snapshot = await getDocs(q);
     if (snapshot.empty) return fallback;
-    return snapshot.docs.map(doc => doc.data() as PaymentMethod);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PaymentMethod));
   } catch (err) {
     console.warn('Error fetching payment methods, using mock', err);
     return fallback;
@@ -93,7 +84,7 @@ export async function fetchMyGivingRecords(userId: string): Promise<GivingRecord
       orderBy('createdAt', 'desc')
     );
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => doc.data() as GivingRecord);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GivingRecord));
   } catch (err) {
     console.warn('Error fetching my giving records (possibly missing index):', err);
     // If index is missing, try fetching without orderBy and sort in memory
@@ -102,7 +93,7 @@ export async function fetchMyGivingRecords(userId: string): Promise<GivingRecord
       where('userId', '==', userId)
     );
     const fallbackSnapshot = await getDocs(fallbackQ);
-    const records = fallbackSnapshot.docs.map(doc => doc.data() as GivingRecord);
+    const records = fallbackSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GivingRecord));
     return records.sort((a, b) => {
       const timeA = a.createdAt ? new Date(a.createdAt).getTime() : Date.now();
       const timeB = b.createdAt ? new Date(b.createdAt).getTime() : Date.now();
@@ -112,13 +103,23 @@ export async function fetchMyGivingRecords(userId: string): Promise<GivingRecord
 }
 
 export async function uploadProofOfPayment(churchId: string, userId: string, fileUri: string): Promise<string> {
-  const response = await fetch(fileUri);
-  const blob = await response.blob();
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.onload = function() {
+      resolve(xhr.response as Blob);
+    };
+    xhr.onerror = function(e) {
+      reject(new TypeError('Network request failed'));
+    };
+    xhr.responseType = 'blob';
+    xhr.open('GET', fileUri, true);
+    xhr.send(null);
+  });
   
   const fileExt = fileUri.split('.').pop() || 'jpg';
   const fileName = `${doc(collection(db, 'dummy')).id}.${fileExt}`;
   
-  const storageRef = ref(storage, `giving/${churchId}/${userId}/proofs/${fileName}`);
+  const storageRef = ref(storage, `receipts/${churchId}/${userId}/proofs/${fileName}`);
   await uploadBytes(storageRef, blob);
   
   return await getDownloadURL(storageRef);
@@ -137,6 +138,11 @@ export async function submitGivingRecord(record: Omit<GivingRecord, 'id' | 'crea
     updatedAt: serverTimestamp(),
   };
 
-  await setDoc(recordRef, fullRecord);
+  // Strip undefined values since Firestore setDoc throws an error on undefined
+  const cleanRecord = Object.fromEntries(
+    Object.entries(fullRecord).filter(([_, v]) => v !== undefined)
+  );
+
+  await setDoc(recordRef, cleanRecord);
   return recordId;
 }

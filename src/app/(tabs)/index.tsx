@@ -287,17 +287,9 @@ export default function HomeScreen() {
         {/* ─── Active Giving Campaigns ─────────────────────────── */}
         {campaigns.length > 0 && (
           <View style={styles.campaignsSection}>
-            <View style={styles.sectionHeader}>
-              <View>
-                <Text style={styles.sectionOverline}>SUPPORT</Text>
-                <Text style={styles.sectionTitle}>Active Campaigns</Text>
-              </View>
-              <DebouncedTouchable
-                style={styles.upcomingCountPill}
-                onPress={() => router.push('/giving')}
-              >
-                <Text style={styles.upcomingCountText}>{campaigns.length}</Text>
-              </DebouncedTouchable>
+            <View style={styles.todayLabelRow}>
+              <View style={styles.todayDot} />
+              <Text style={styles.todayLabelText}>SUPPORT A CAUSE</Text>
             </View>
             {campaigns.map(campaign => (
               <CampaignCard 
@@ -790,7 +782,7 @@ const styles = StyleSheet.create({
   rsvpActiveText: { color: '#FF6596' },
 
   // ─── Today Cards Carousel ────────────────────────────────────────────────
-  todayCarouselWrap: { marginTop: 8, marginBottom: 28 },
+  todayCarouselWrap: { marginTop: 0, marginBottom: 24 },
   todayLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },
   todayDot: { width: 7, height: 7, borderRadius: 99, backgroundColor: '#FF6596' },
   todayLabelText: { fontSize: 11, fontWeight: '800', color: '#FF6596', letterSpacing: 1.2, textTransform: 'uppercase' },
@@ -961,7 +953,7 @@ const styles = StyleSheet.create({
   sermonDurationText: { fontSize: 9, color: 'rgba(255,255,255,0.65)', fontWeight: '500' },
 
   // ─── Upcoming Events section ─────────────────────────────────────────────
-  upcomingSection: { marginTop: 8, marginBottom: 16 },
+  upcomingSection: { marginTop: 0, marginBottom: 8 },
   sectionOverline: { fontSize: 11, fontWeight: '800', color: '#FF6596', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 2 },
   upcomingCountPill: { backgroundColor: '#FFF0F5', borderRadius: 999, width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
   upcomingCountText: { fontSize: 13, fontWeight: '800', color: '#FF6596' },
@@ -990,6 +982,6 @@ const styles = StyleSheet.create({
   eventTimePillText: { fontSize: 11, fontWeight: '600', color: '#9CA3AF' },
   eventLocationRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   eventLocationText: { fontSize: 12, fontWeight: '400', color: '#B0B6C8', flex: 1 },
-  seeAllEventsBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 12, marginTop: 4 },
-  seeAllEventsBtnText: { fontSize: 13, fontWeight: '700', color: '#FF6596' },
+  seeAllEventsBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 8, marginTop: 8 },
+  seeAllEventsBtnText: { fontSize: 12, fontWeight: '700', color: '#FF6596' },
 });

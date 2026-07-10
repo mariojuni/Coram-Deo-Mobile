@@ -4,10 +4,12 @@ import { useRouter } from 'expo-router';
 import { ChevronLeft, CheckCircle2, Clock, XCircle, FileText } from 'lucide-react-native';
 import { useGiving } from '@/features/giving/presentation/hooks/useGiving';
 import { GivingRecord } from '@/features/giving/domain/giving.types';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 
 export default function MyGivingScreen() {
   const router = useRouter();
-  const { myRecords, isLoading, refreshRecords } = useGiving();
+  const { myRecords, funds, campaigns, isLoading, refreshRecords } = useGiving();
 
   useEffect(() => {
     refreshRecords();
@@ -47,14 +49,32 @@ export default function MyGivingScreen() {
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
+  const getFundName = (fundId: string, campaignId?: string) => {
+    if (campaignId) {
+      const campaign = campaigns.find(c => c.id === campaignId);
+      if (campaign) return campaign.title;
+    }
+    const fund = funds.find(f => f.id === fundId);
+    return fund ? fund.name : 'General Fund';
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <ChevronLeft size={24} color="#1a1a1a" />
-          <Text style={styles.headerTitle}>My Giving History</Text>
-        </TouchableOpacity>
-      </View>
+    <View style={styles.container}>
+      <LinearGradient colors={['#FFE8F1', '#F5F2FF', '#FAFAFA']} style={StyleSheet.absoluteFill} />
+      
+      <BlurView intensity={80} tint="light" style={styles.header}>
+        <SafeAreaView>
+          <View style={styles.headerInner}>
+            <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+              <View style={styles.backBtnCircle}>
+                <ChevronLeft size={24} color="#1a1a1a" />
+              </View>
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>My Giving History</Text>
+            <View style={{ width: 40 }} />
+          </View>
+        </SafeAreaView>
+      </BlurView>
 
       {isLoading ? (
         <View style={styles.loadingContainer}>
@@ -62,10 +82,14 @@ export default function MyGivingScreen() {
         </View>
       ) : (
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <View style={{ height: 24 }} />
           {myRecords.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <FileText size={48} color="#D1D5DB" style={{ marginBottom: 16 }} />
-              <Text style={styles.emptyText}>You haven't made any giving records yet.</Text>
+              <View style={styles.emptyIconCircle}>
+                <FileText size={32} color="#FF6596" />
+              </View>
+              <Text style={styles.emptyTitle}>No giving records yet</Text>
+              <Text style={styles.emptyText}>Your giving history will appear here once you make a contribution.</Text>
             </View>
           ) : (
             myRecords.map((record: GivingRecord) => (
@@ -77,7 +101,7 @@ export default function MyGivingScreen() {
                 
                 <View style={styles.amountRow}>
                   <Text style={styles.amountText}>₱{record.amount.toLocaleString()}</Text>
-                  <Text style={styles.fundText}>Fund ID: {record.fundId}</Text>
+                  <Text style={styles.fundText}>{getFundName(record.fundId, record.campaignId)}</Text>
                 </View>
 
                 {record.status === 'rejected' && record.rejectionReason && (
@@ -88,6 +112,7 @@ export default function MyGivingScreen() {
 
                 {record.status === 'approved' && record.receiptUrl && (
                   <TouchableOpacity style={styles.receiptBtn}>
+                    <LinearGradient colors={['#FFF0F5', '#FFE8F1']} style={[StyleSheet.absoluteFill, { borderRadius: 12 }]} />
                     <FileText size={16} color="#FF6596" />
                     <Text style={styles.receiptBtnText}>View Receipt</Text>
                   </TouchableOpacity>
@@ -95,60 +120,94 @@ export default function MyGivingScreen() {
               </View>
             ))
           )}
-          <View style={{ height: 40 }} />
+          <View style={{ height: 100 }} />
         </ScrollView>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAFAFA' },
   header: { 
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.3)',
+  },
+  headerInner: {
     flexDirection: 'row', 
     alignItems: 'center', 
+    justifyContent: 'space-between',
     paddingHorizontal: 16, 
-    paddingVertical: 16,
-    backgroundColor: '#FAFAFA',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6'
+    paddingVertical: 12,
   },
-  backBtn: { flexDirection: 'row', alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#1a1a1a', marginLeft: 8 },
+  backBtn: { padding: 4 },
+  backBtnCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: { fontSize: 22, fontWeight: '800', color: '#1a1a1a', letterSpacing: -0.5 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  content: { flex: 1, padding: 24 },
+  content: { flex: 1, paddingHorizontal: 20 },
   emptyContainer: {
     padding: 32,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 64,
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 101, 150, 0.1)',
+    borderStyle: 'dashed',
+  },
+  emptyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(255, 101, 150, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    marginBottom: 8,
   },
   emptyText: {
-    fontSize: 16,
-    color: '#9CA3AF',
+    fontSize: 14,
+    color: '#6B7280',
     textAlign: 'center',
+    lineHeight: 20,
   },
   recordCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 20,
     padding: 20,
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowColor: '#FF6596',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.8)',
   },
   recordHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   dateText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#6B7280',
-    fontWeight: '500',
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
   statusPill: {
     flexDirection: 'row',
@@ -159,48 +218,53 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   statusText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   amountRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'baseline',
+    alignItems: 'center',
   },
   amountText: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '800',
     color: '#1a1a1a',
+    letterSpacing: -0.5,
   },
   fundText: {
-    fontSize: 14,
-    color: '#9CA3AF',
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#FF6596',
   },
   rejectionBox: {
-    marginTop: 12,
+    marginTop: 16,
     backgroundColor: '#FEF2F2',
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#FECACA',
   },
   rejectionText: {
     fontSize: 13,
     color: '#B91C1C',
+    fontWeight: '500',
   },
   receiptBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 16,
-    paddingVertical: 12,
-    backgroundColor: '#FFF0F5',
-    borderRadius: 8,
+    marginTop: 20,
+    paddingVertical: 14,
+    borderRadius: 12,
     gap: 8,
+    overflow: 'hidden',
   },
   receiptBtnText: {
     color: '#FF6596',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

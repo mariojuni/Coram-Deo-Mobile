@@ -16,7 +16,7 @@ export function CampaignCard({ campaign, onPress }: CampaignCardProps) {
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
       <View style={styles.imageContainer}>
         {campaign.coverImageUrl ? (
-          <Image source={{ uri: campaign.coverImageUrl }} style={styles.coverImage} />
+          <Image source={{ uri: campaign.coverImageUrl }} style={styles.coverImage} resizeMode="cover" />
         ) : (
           <LinearGradient
             colors={['#FF6596', '#B66DFF']}
@@ -68,25 +68,25 @@ export function CampaignCard({ campaign, onPress }: CampaignCardProps) {
 const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderRadius: 20,
     padding: 12,
-    shadowColor: '#000',
+    shadowColor: '#FF6596',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.04,
     shadowRadius: 12,
-    elevation: 4,
+    elevation: 3,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: 'rgba(255, 255, 255, 0.8)',
     alignItems: 'center',
   },
   imageContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 14,
+    width: 60,
+    height: 60,
+    borderRadius: 12,
     overflow: 'hidden',
-    marginRight: 16,
+    marginRight: 14,
   },
   coverImage: {
     width: '100%',
@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   titleContainer: {
     flex: 1,
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   title: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
     color: '#1a1a1a',
   },
@@ -132,9 +132,9 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   description: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#6B7280',
-    marginBottom: 10,
+    marginBottom: 6,
   },
   progressContainer: {
     width: '100%',
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
   progressTextRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   raisedText: {
     fontSize: 13,

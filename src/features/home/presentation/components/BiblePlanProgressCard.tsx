@@ -150,12 +150,12 @@ const styles = StyleSheet.create({
   // ── Loading placeholder (preserves layout height) ────────────────────────
   loadingPlaceholder: {
     height: 72,
-    marginBottom: 20,
+    marginBottom: 8,
   },
 
   // ── Empty state ──────────────────────────────────────────────────────────
   emptyCard: {
-    marginBottom: 20,
+    marginBottom: 8,
     borderRadius: 16,
     overflow: 'hidden',
     shadowColor: '#FF6596',
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
 
   // ── Active plan card ─────────────────────────────────────────────────────
   activeWrapper: {
-    marginBottom: 0,
+    marginBottom: 8,
   },
   card: {
     flexDirection: 'row',
@@ -266,11 +266,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    paddingVertical: 12,
-    marginTop: 16,
+    paddingVertical: 8,
+    marginTop: 8,
   },
   seeAllText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: '#FF6596',
   },

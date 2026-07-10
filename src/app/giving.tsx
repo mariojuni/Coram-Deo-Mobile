@@ -82,28 +82,28 @@ export default function GivingScreen() {
           <View style={styles.quickGiveGrid}>
             <TouchableOpacity activeOpacity={0.8} style={styles.quickGiveCard} onPress={() => handleQuickGive('tithe')}>
               <LinearGradient colors={['#FFF0F5', '#FFE8F1']} style={styles.quickGiveIconWrap}>
-                <Wallet size={24} color="#FF6596" />
+                <Wallet size={20} color="#FF6596" />
               </LinearGradient>
               <Text style={styles.quickGiveText}>Tithe</Text>
             </TouchableOpacity>
             
             <TouchableOpacity activeOpacity={0.8} style={styles.quickGiveCard} onPress={() => handleQuickGive('offering')}>
               <LinearGradient colors={['#F0F5FF', '#E5EDFF']} style={styles.quickGiveIconWrap}>
-                <Heart size={24} color="#4D7FFF" />
+                <Heart size={20} color="#4D7FFF" />
               </LinearGradient>
               <Text style={styles.quickGiveText}>Offering</Text>
             </TouchableOpacity>
             
             <TouchableOpacity activeOpacity={0.8} style={styles.quickGiveCard} onPress={() => handleQuickGive('missions')}>
               <LinearGradient colors={['#F5F0FF', '#EDE4FF']} style={styles.quickGiveIconWrap}>
-                <Globe size={24} color="#8B6FE8" />
+                <Globe size={20} color="#8B6FE8" />
               </LinearGradient>
               <Text style={styles.quickGiveText}>Missions</Text>
             </TouchableOpacity>
             
             <TouchableOpacity activeOpacity={0.8} style={styles.quickGiveCard} onPress={() => handleQuickGive('building')}>
               <LinearGradient colors={['#F0FDF4', '#E1F9E8']} style={styles.quickGiveIconWrap}>
-                <Building2 size={24} color="#22C55E" />
+                <Building2 size={20} color="#22C55E" />
               </LinearGradient>
               <Text style={styles.quickGiveText}>Building</Text>
             </TouchableOpacity>
@@ -155,46 +155,47 @@ const styles = StyleSheet.create({
   content: { flex: 1, paddingHorizontal: 24 },
   
   quickGiveSection: {
-    marginTop: 10,
-    marginBottom: 36,
+    marginTop: 0,
+    marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '800',
     color: '#1a1a1a',
-    marginBottom: 20,
+    marginBottom: 16,
     letterSpacing: -0.5,
   },
   quickGiveGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: 16,
+    gap: 12,
   },
   quickGiveCard: {
-    width: '47%',
+    width: '48%',
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 24,
-    padding: 20,
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     alignItems: 'center',
     shadowColor: '#FF6596',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.04,
-    shadowRadius: 16,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 2,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.8)',
   },
   quickGiveIconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   quickGiveText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: '#1a1a1a',
   },

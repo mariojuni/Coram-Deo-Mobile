@@ -22,13 +22,11 @@ export function useGiving() {
     setIsLoading(true);
     setError(null);
     try {
-      const [fetchedCampaigns, fetchedFunds, fetchedPaymentMethods] = await Promise.all([
-        givingRepo.fetchActiveCampaigns(churchId),
+      const [fetchedFunds, fetchedPaymentMethods] = await Promise.all([
         givingRepo.fetchGivingFunds(churchId),
         givingRepo.fetchPaymentMethods(churchId)
       ]);
       
-      setCampaigns(fetchedCampaigns);
       setFunds(fetchedFunds);
       setPaymentMethods(fetchedPaymentMethods);
       
@@ -46,6 +44,13 @@ export function useGiving() {
   useEffect(() => {
     fetchInitialData();
   }, [fetchInitialData]);
+
+  useEffect(() => {
+    if (!churchId) return;
+    return givingRepo.subscribeToActiveCampaigns(churchId, (newCampaigns) => {
+      setCampaigns(newCampaigns);
+    });
+  }, [churchId]);
 
   const refreshRecords = useCallback(async () => {
     if (!userId) return;
