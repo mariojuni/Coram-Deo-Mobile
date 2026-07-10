@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
-import { ChevronLeft, CheckCircle2, Clock, XCircle, FileText } from 'lucide-react-native';
+import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
+import { ChevronLeft, CheckCircle2, Clock, XCircle, FileText, X } from 'lucide-react-native';
 import { useGiving } from '@/features/giving/presentation/hooks/useGiving';
 import { GivingRecord } from '@/features/giving/domain/giving.types';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -9,6 +9,7 @@ import { BlurView } from 'expo-blur';
 
 export default function MyGivingScreen() {
   const router = useRouter();
+  const { fromSuccess } = useLocalSearchParams();
   const { myRecords, funds, campaigns, isLoading, refreshRecords } = useGiving();
 
   useEffect(() => {
@@ -60,14 +61,28 @@ export default function MyGivingScreen() {
 
   return (
     <View style={styles.container}>
+      <Stack.Screen options={{ headerShown: false }} />
       <LinearGradient colors={['#FFE8F1', '#F5F2FF', '#FAFAFA']} style={StyleSheet.absoluteFill} />
       
       <BlurView intensity={80} tint="light" style={styles.header}>
         <SafeAreaView>
           <View style={styles.headerInner}>
-            <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+            <TouchableOpacity 
+              style={styles.backBtn} 
+              onPress={() => {
+                if (fromSuccess) {
+                  router.dismissAll();
+                } else {
+                  router.back();
+                }
+              }}
+            >
               <View style={styles.backBtnCircle}>
-                <ChevronLeft size={24} color="#1a1a1a" />
+                {fromSuccess ? (
+                  <X size={24} color="#1a1a1a" />
+                ) : (
+                  <ChevronLeft size={24} color="#1a1a1a" />
+                )}
               </View>
             </TouchableOpacity>
             <Text style={styles.headerTitle}>My Giving History</Text>

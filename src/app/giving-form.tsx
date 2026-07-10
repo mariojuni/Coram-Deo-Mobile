@@ -64,6 +64,20 @@ export default function GivingFormScreen() {
     }
   };
 
+  const isDebouncing = useRef(false);
+  const withDebounce = (callback: Function, delay: number = 1000) => {
+    return (...args: any[]) => {
+      if (isDebouncing.current) return;
+      isDebouncing.current = true;
+      callback(...args);
+      setTimeout(() => {
+        isDebouncing.current = false;
+      }, delay);
+    };
+  };
+
+  const handlePickImageDebounced = withDebounce(pickImage);
+
   const handleSubmit = async () => {
     if (!churchId || !userId) {
       Alert.alert('Error', 'Missing church or user information.');
@@ -124,6 +138,8 @@ export default function GivingFormScreen() {
     }
   };
 
+  const handleSubmitDebounced = withDebounce(handleSubmit, 2000);
+
   if (isSuccess) {
     return (
       <View style={styles.successContainer}>
@@ -136,7 +152,7 @@ export default function GivingFormScreen() {
           <Text style={styles.successText}>
             Thank you for your generosity. Your giving submission is now pending verification.
           </Text>
-          <TouchableOpacity activeOpacity={0.8} style={styles.doneBtn} onPress={() => router.replace('/my-giving')}>
+          <TouchableOpacity activeOpacity={0.8} style={styles.doneBtn} onPress={withDebounce(() => router.replace('/my-giving?fromSuccess=true'))}>
             <LinearGradient colors={['#FF6596', '#FF8AAB']} style={[StyleSheet.absoluteFill, { borderRadius: 16 }]} />
             <Text style={styles.doneBtnText}>View My Giving</Text>
           </TouchableOpacity>
@@ -164,7 +180,7 @@ export default function GivingFormScreen() {
           <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
           <View style={[StyleSheet.absoluteFill, { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.5)' }]} />
         </Animated.View>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.backBtn} onPress={withDebounce(() => router.back())}>
           <ChevronLeft size={24} color="#1a1a1a" />
           <Text style={styles.headerTitle}>Make a Gift</Text>
         </TouchableOpacity>
@@ -267,7 +283,7 @@ export default function GivingFormScreen() {
           <Text style={styles.label}>
             Proof of Payment {requiresProof && <Text style={{ color: '#EF4444' }}>*</Text>}
           </Text>
-          <TouchableOpacity activeOpacity={0.8} style={styles.uploadBtn} onPress={pickImage}>
+          <TouchableOpacity activeOpacity={0.8} style={styles.uploadBtn} onPress={handlePickImageDebounced}>
             <LinearGradient colors={['rgba(255,101,150,0.05)', 'rgba(255,101,150,0.02)']} style={[StyleSheet.absoluteFill, { borderRadius: 16 }]} />
             {proofUri ? (
               <CheckCircle2 size={24} color="#FF6596" />
@@ -298,7 +314,7 @@ export default function GivingFormScreen() {
         <TouchableOpacity 
           activeOpacity={0.8}
           style={[styles.submitBtnWrap, (isSubmitting || isCampaignInactive) && styles.submitBtnDisabled]} 
-          onPress={handleSubmit}
+          onPress={handleSubmitDebounced}
           disabled={isSubmitting || isCampaignInactive}
         >
           <LinearGradient colors={isCampaignInactive ? ['#D1D5DB', '#9CA3AF'] : ['#FF6596', '#FF8AAB']} style={[StyleSheet.absoluteFill, { borderRadius: 16 }]} />

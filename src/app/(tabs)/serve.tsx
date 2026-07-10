@@ -53,6 +53,14 @@ export default function ServeScreen() {
     extrapolate: 'clamp',
   });
 
+  const handleScroll = useMemo(
+    () =>
+      Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+        useNativeDriver: true,
+      }),
+    [scrollY]
+  );
+
   const activeTabIndex = TABS.indexOf(activeTab);
 
   const handleTabLayout = (index: number, x: number, width: number) => {
@@ -235,10 +243,7 @@ export default function ServeScreen() {
             router.push({ pathname: '/serve-assignment-detail', params: { id } } as any)
           }
           headerHeight={headerHeight}
-          onScroll={Animated.event(
-            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-            { useNativeDriver: true }
-          )}
+          onScroll={handleScroll}
         />
       )}
       {activeTab === 'All Ministries' && (
@@ -249,10 +254,7 @@ export default function ServeScreen() {
             router.push({ pathname: '/serve-ministry-detail', params: { id } } as any)
           }
           headerHeight={headerHeight}
-          onScroll={Animated.event(
-            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-            { useNativeDriver: true }
-          )}
+          onScroll={handleScroll}
         />
       )}
       {activeTab === 'Calendar' && (
@@ -262,10 +264,7 @@ export default function ServeScreen() {
             router.push({ pathname: '/serve-assignment-detail', params: { id } } as any)
           }
           headerHeight={headerHeight}
-          onScroll={Animated.event(
-            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-            { useNativeDriver: true }
-          )}
+          onScroll={handleScroll}
         />
       )}
     </View>

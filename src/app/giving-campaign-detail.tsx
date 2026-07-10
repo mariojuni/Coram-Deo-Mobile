@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ActivityIndicator, Animated } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
@@ -7,12 +7,44 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+const ShimmerSkeleton = ({ width, height, style, borderRadius = 8 }: any) => {
+  const animValue = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(animValue, { toValue: 1, duration: 1000, useNativeDriver: true }),
+        Animated.timing(animValue, { toValue: 0, duration: 1000, useNativeDriver: true })
+      ])
+    ).start();
+  }, [animValue]);
+
+  const opacity = animValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.3, 0.7],
+  });
+
+  return (
+    <Animated.View style={[{ width, height, backgroundColor: '#E5E7EB', borderRadius, opacity }, style]} />
+  );
+};
+
 export default function GivingCampaignDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { campaigns, isLoading } = useGiving();
   const insets = useSafeAreaInsets();
   const scrollY = useRef(new Animated.Value(0)).current;
+  const isDebouncing = useRef(false);
+  const withDebounce = (callback: Function, delay: number = 1000) => {
+    return (...args: any[]) => {
+      if (isDebouncing.current) return;
+      isDebouncing.current = true;
+      callback(...args);
+      setTimeout(() => {
+        isDebouncing.current = false;
+      }, delay);
+    };
+  };
   
   const campaign = campaigns.find(c => c.id === id);
 
@@ -20,13 +52,23 @@ export default function GivingCampaignDetailScreen() {
     return (
       <View style={styles.container}>
         <Stack.Screen options={{ headerShown: false }} />
-        <LinearGradient colors={['#FFE8F1', '#F9FAFB']} style={StyleSheet.absoluteFill} />
-        <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+        <LinearGradient colors={['#FFE8F1', '#F5F2FF', '#FAFAFA']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0.3 }} style={StyleSheet.absoluteFill} />
+        <View style={[styles.headerFloating, { paddingTop: insets.top + 10, zIndex: 10 }]}>
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
             <ChevronLeft size={24} color="#1a1a1a" />
           </TouchableOpacity>
         </View>
-        <ActivityIndicator size="large" color="#FF6596" style={{ marginTop: 40 }} />
+        <Animated.ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <ShimmerSkeleton width="100%" height={280} borderRadius={0} />
+          <View style={styles.detailsContainer}>
+            <ShimmerSkeleton width={120} height={24} borderRadius={12} style={{ marginBottom: 16 }} />
+            <ShimmerSkeleton width="80%" height={34} style={{ marginBottom: 16 }} />
+            <ShimmerSkeleton width="100%" height={140} borderRadius={24} style={{ marginBottom: 24 }} />
+            <ShimmerSkeleton width="100%" height={20} style={{ marginBottom: 8 }} />
+            <ShimmerSkeleton width="90%" height={20} style={{ marginBottom: 8 }} />
+            <ShimmerSkeleton width="80%" height={20} />
+          </View>
+        </Animated.ScrollView>
       </View>
     );
   }
@@ -57,23 +99,43 @@ export default function GivingCampaignDetailScreen() {
     extrapolate: 'clamp',
   });
 
+  const titleTranslateY = scrollY.interpolate({
+    inputRange: [100, 150],
+    outputRange: [20, 0],
+    extrapolate: 'clamp',
+  });
+
+  const coverScale = scrollY.interpolate({
+    inputRange: [-100, 0, 100],
+    outputRange: [1.2, 1, 1],
+    extrapolate: 'clamp',
+  });
+
+  const coverTranslateY = scrollY.interpolate({
+    inputRange: [-100, 0, 200],
+    outputRange: [-50, 0, 100],
+    extrapolate: 'clamp',
+  });
+
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
       <LinearGradient colors={['#FFE8F1', '#F5F2FF', '#FAFAFA']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0.3 }} style={StyleSheet.absoluteFill} />
       
       {/* Frosted Glass Header */}
-      <View style={[styles.headerFloating, { paddingTop: insets.top + 10 }]}>
+      <View style={[styles.headerFloating, { paddingTop: insets.top + 10, zIndex: 10 }]}>
         <Animated.View style={[StyleSheet.absoluteFill, { opacity: headerOpacity }]}>
           <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
           <View style={[StyleSheet.absoluteFill, { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.3)' }]} />
         </Animated.View>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <ChevronLeft size={24} color="#1a1a1a" />
-        </TouchableOpacity>
-        <Animated.Text style={[styles.headerTitle, { opacity: headerOpacity }]}>
-          {campaign.title}
-        </Animated.Text>
+        <View style={styles.headerContent}>
+          <TouchableOpacity style={styles.backBtn} onPress={withDebounce(() => router.back())}>
+            <ChevronLeft size={24} color="#1a1a1a" />
+          </TouchableOpacity>
+          <Animated.Text style={[styles.headerTitle, { opacity: headerOpacity, transform: [{ translateY: titleTranslateY }] }]}>
+            {campaign.title}
+          </Animated.Text>
+        </View>
       </View>
       
       <Animated.ScrollView 
@@ -82,16 +144,18 @@ export default function GivingCampaignDetailScreen() {
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
         scrollEventThrottle={16}
       >
-        {campaign.coverImageUrl ? (
-          <Image source={{ uri: campaign.coverImageUrl }} style={styles.coverImage} />
-        ) : (
-          <LinearGradient
-            colors={['#FF6596', '#B66DFF']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.coverImagePlaceholder}
-          />
-        )}
+        <Animated.View style={{ transform: [{ scale: coverScale }, { translateY: coverTranslateY }] }}>
+          {campaign.coverImageUrl ? (
+            <Image source={{ uri: campaign.coverImageUrl }} style={styles.coverImage} />
+          ) : (
+            <LinearGradient
+              colors={['#FF6596', '#B66DFF']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.coverImagePlaceholder}
+            />
+          )}
+        </Animated.View>
         
         <View style={styles.detailsContainer}>
           {campaign.phaseLabel && (
@@ -100,7 +164,6 @@ export default function GivingCampaignDetailScreen() {
             </View>
           )}
           <Text style={styles.title}>{campaign.title}</Text>
-          <Text style={styles.description}>{campaign.description}</Text>
           
           <View style={styles.progressSection}>
             <View style={styles.progressRow}>
@@ -129,6 +192,8 @@ export default function GivingCampaignDetailScreen() {
             </View>
           </View>
           
+          <Text style={styles.description}>{campaign.description}</Text>
+          
           {campaign.allowPublicExpenses && campaign.expenseAmount > 0 && (
             <View style={styles.expenseSection}>
               <Text style={styles.expenseTitle}>Project Expenses</Text>
@@ -148,7 +213,7 @@ export default function GivingCampaignDetailScreen() {
         <TouchableOpacity 
           style={styles.giveBtnContainer}
           activeOpacity={0.8}
-          onPress={() => router.push({ pathname: '/giving-form', params: { campaignId: campaign.id, fundType: campaign.fundId } })}
+          onPress={withDebounce(() => router.push({ pathname: '/giving-form', params: { campaignId: campaign.id, fundType: campaign.fundId } }))}
         >
           <LinearGradient
             colors={['#FF6596', '#FF8AAB']}
@@ -177,20 +242,25 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingHorizontal: 16,
     paddingBottom: 16,
     zIndex: 10,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    height: 40,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: '#1a1a1a',
     position: 'absolute',
-    width: '100%',
+    left: 0,
+    right: 0,
     textAlign: 'center',
-    zIndex: -1,
+    zIndex: 1,
     paddingHorizontal: 60,
   },
   backBtn: { 
@@ -251,22 +321,22 @@ const styles = StyleSheet.create({
   },
   progressSection: {
     backgroundColor: '#fff',
-    padding: 24,
-    borderRadius: 24,
+    padding: 16,
+    borderRadius: 16,
     marginBottom: 24,
-    shadowColor: '#FF6596',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
     borderWidth: 1,
-    borderColor: '#FFF0F5',
+    borderColor: '#F3F4F6',
   },
   progressRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    marginBottom: 16,
+    marginBottom: 10,
   },
   progressLabel: {
     fontSize: 14,
@@ -276,20 +346,20 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   progressValue: {
-    fontSize: 22,
-    fontWeight: '900',
+    fontSize: 16,
+    fontWeight: '800',
     color: '#1a1a1a',
   },
   progressBarBg: {
-    height: 12,
+    height: 8,
     backgroundColor: '#F3F4F6',
-    borderRadius: 6,
+    borderRadius: 4,
     overflow: 'hidden',
-    marginBottom: 20,
+    marginBottom: 12,
   },
   progressBarFill: {
     height: '100%',
-    borderRadius: 6,
+    borderRadius: 4,
   },
   progressStatsRow: {
     flexDirection: 'row',
@@ -302,12 +372,12 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   statValueRaised: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '800',
     color: '#FF6596',
   },
   statValueRemaining: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '700',
     color: '#4B5563',
   },

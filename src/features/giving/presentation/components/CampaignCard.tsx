@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import { GivingCampaign } from '../../domain/giving.types';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronRight } from 'lucide-react-native';
+import DebouncedTouchable from '@/components/DebouncedTouchable';
 
 interface CampaignCardProps {
   campaign: GivingCampaign;
@@ -13,7 +14,7 @@ export function CampaignCard({ campaign, onPress }: CampaignCardProps) {
   const progress = Math.min((campaign.raisedAmount / campaign.goalAmount) * 100, 100);
   
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
+    <DebouncedTouchable style={styles.card} onPress={onPress} activeOpacity={0.8}>
       <View style={styles.imageContainer}>
         {campaign.coverImageUrl ? (
           <Image source={{ uri: campaign.coverImageUrl }} style={styles.coverImage} resizeMode="cover" />
@@ -61,7 +62,7 @@ export function CampaignCard({ campaign, onPress }: CampaignCardProps) {
           </View>
         </View>
       </View>
-    </TouchableOpacity>
+    </DebouncedTouchable>
   );
 }
 
@@ -104,7 +105,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 2,
+    marginBottom: 0,
   },
   titleContainer: {
     flex: 1,
@@ -115,7 +116,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#FF6596',
     letterSpacing: 0.5,
-    marginBottom: 2,
+    marginBottom: 0,
   },
   title: {
     fontSize: 15,
@@ -129,12 +130,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF0F5',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 2,
+    marginTop: 0,
   },
   description: {
     fontSize: 12,
     color: '#6B7280',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   progressContainer: {
     width: '100%',
