@@ -217,7 +217,7 @@ export default function BiblePlansScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient colors={GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
-        <View style={[styles.heroContent, { paddingTop: insets.top + 12 }]}>
+        <View style={[styles.heroContent, { paddingTop: Math.max(insets.top, 24) }]}>
           <Pressable style={styles.backButton} onPress={() => router.back()}>
             <ChevronLeft size={22} color="#1F2937" strokeWidth={2.6} />
           </Pressable>

@@ -16,6 +16,7 @@ import {
 } from '@/utils/bibleApi';
 import { parseScriptureReference } from '@/utils/scriptureReferenceParser';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
@@ -318,18 +319,21 @@ export default function BiblePlanDayScreen() {
       />
 
       {/* ─── Back button overlaid top-left */}
-      <View style={[styles.backBtn, { top: insets.top + 10 }]} pointerEvents="box-none">
+      <View style={[styles.backBtn, { top: Math.max(insets.top, 24) }]} pointerEvents="box-none">
         <TouchableOpacity
           style={styles.backCircle}
           onPress={() => router.back()}
           hitSlop={8}
         >
-          <ChevronLeft size={20} color="#1a1a1a" strokeWidth={2.5} />
+          <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
         </TouchableOpacity>
       </View>
 
       {/* ─── Bottom plan context bar */}
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+        <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.65)', borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)' }]} pointerEvents="none" />
+        
         {/* Prev passage */}
         <TouchableOpacity
           style={[styles.navArrow, isFirstPassage && styles.navArrowDisabled]}
@@ -425,23 +429,23 @@ const styles = StyleSheet.create({
   // ─── Back button (absolute, top-left)
   backBtn: {
     position: 'absolute',
-    left: 16,
+    left: 20,
     zIndex: 200,
   },
   backCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.92)',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
     elevation: 4,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
+    borderColor: 'rgba(0,0,0,0.05)',
   },
 
   // ─── Bottom plan context bar
@@ -454,9 +458,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 14,
     paddingHorizontal: 20,
-    backgroundColor: 'rgba(255,255,255,0.97)',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#E0E0E0',
     gap: 12,
   },
   navArrow: {

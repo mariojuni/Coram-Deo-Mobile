@@ -310,21 +310,30 @@ export default function GivingFormScreen() {
         </View>
       </Animated.ScrollView>
 
-      <BlurView intensity={80} tint="light" style={[styles.footer, { paddingBottom: Math.max(insets.bottom + 16, 32) }]}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom + 16, 32) }]}>
+        <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.65)', borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)' }]} pointerEvents="none" />
+
         <TouchableOpacity 
           activeOpacity={0.8}
           style={[styles.submitBtnWrap, (isSubmitting || isCampaignInactive) && styles.submitBtnDisabled]} 
           onPress={handleSubmitDebounced}
           disabled={isSubmitting || isCampaignInactive}
         >
-          <LinearGradient colors={isCampaignInactive ? ['#D1D5DB', '#9CA3AF'] : ['#FF6596', '#FF8AAB']} style={[StyleSheet.absoluteFill, { borderRadius: 16 }]} />
-          {isSubmitting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.submitBtnText}>{isCampaignInactive ? 'Campaign Ended' : 'Submit Giving'}</Text>
-          )}
+          <LinearGradient 
+            colors={isCampaignInactive ? ['#D1D5DB', '#9CA3AF'] : ['#FF6596', '#C084FC']} 
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.submitBtnGradient} 
+          >
+            {isSubmitting ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.submitBtnText}>{isCampaignInactive ? 'Campaign Ended' : 'Submit Giving'}</Text>
+            )}
+          </LinearGradient>
         </TouchableOpacity>
-      </BlurView>
+      </View>
     </View>
   );
 }
@@ -485,28 +494,28 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.5)',
+    paddingHorizontal: 20,
+    paddingTop: 12,
   },
   submitBtnWrap: {
-    paddingVertical: 18,
-    borderRadius: 16,
+    width: '100%',
+    borderRadius: 32,
+    overflow: 'hidden',
+  },
+  submitBtnGradient: {
+    width: '100%',
+    height: 56,
     alignItems: 'center',
-    shadowColor: '#FF6596',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 4,
+    justifyContent: 'center',
   },
   submitBtnDisabled: {
     opacity: 0.6,
   },
   submitBtnText: {
     color: '#fff',
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '800',
+    letterSpacing: 0.3,
   },
 
   successContainer: {

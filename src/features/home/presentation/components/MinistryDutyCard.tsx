@@ -236,7 +236,7 @@ export function MinistryDutyCard({
     <View style={[cs.card, isDeclined && cs.cardDeclined]}>
 
       {/* ── Header: tinted gradient with role icon, title, status, chevron ── */}
-      <DebouncedTouchable onPress={toggle} activeOpacity={isPending ? 0.8 : 1}>
+      <DebouncedTouchable onPress={toggle} activeOpacity={isPending ? 0.8 : 1} disabled={!isPending}>
         <LinearGradient
           colors={[`${color}18`, `${color}06`] as [string, string]}
           start={{ x: 0, y: 0 }}

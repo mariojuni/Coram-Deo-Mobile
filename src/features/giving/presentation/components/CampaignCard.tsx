@@ -20,7 +20,7 @@ export function CampaignCard({ campaign, onPress }: CampaignCardProps) {
           <Image source={{ uri: campaign.coverImageUrl }} style={styles.coverImage} resizeMode="cover" />
         ) : (
           <LinearGradient
-            colors={['#FF6596', '#B66DFF']}
+            colors={['#FF6596', '#FF8AAB']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.coverImagePlaceholder}

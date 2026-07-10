@@ -448,9 +448,11 @@ export default function HomeScreen() {
               )}
             </View>
 
-            {/* Duty cards (US-09: hidden when empty, handled by outer condition) */}
             {sortedDutyItems.map(({ assignment, schedule }) => (
-              <BounceCard key={assignment.id}>
+              <BounceCard 
+                key={assignment.id}
+                onPress={() => router.push('/(tabs)/serve')}
+              >
                 <MinistryDutyCard
                   assignment={assignment}
                   schedule={schedule}

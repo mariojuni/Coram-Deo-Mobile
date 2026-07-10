@@ -131,7 +131,7 @@ export default function TabLayout() {
       <Tabs 
         screenOptions={{ 
           headerShown: false,
-          animation: 'shift', // Adds a smooth sliding transition between tabs
+          freezeOnBlur: false,
         }}
         tabBar={(props) => <CustomTabBar {...props} isStaff={isStaff} />}
       >

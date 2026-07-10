@@ -149,7 +149,7 @@ export default function GivingCampaignDetailScreen() {
             <Image source={{ uri: campaign.coverImageUrl }} style={styles.coverImage} />
           ) : (
             <LinearGradient
-              colors={['#FF6596', '#B66DFF']}
+              colors={['#FF6596', '#FF8AAB']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.coverImagePlaceholder}
@@ -173,7 +173,7 @@ export default function GivingCampaignDetailScreen() {
             
             <View style={styles.progressBarBg}>
               <LinearGradient 
-                colors={['#FF6596', '#B66DFF']} 
+                colors={['#FF6596', '#FF8AAB']} 
                 start={{ x: 0, y: 0 }} 
                 end={{ x: 1, y: 0 }} 
                 style={[styles.progressBarFill, { width: `${progress}%` }]} 
@@ -210,15 +210,17 @@ export default function GivingCampaignDetailScreen() {
       {/* Frosted Glass Footer */}
       <View style={[styles.footer, { paddingBottom: insets.bottom || 24 }]}>
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.65)', borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)' }]} pointerEvents="none" />
+        
         <TouchableOpacity 
           style={styles.giveBtnContainer}
           activeOpacity={0.8}
           onPress={withDebounce(() => router.push({ pathname: '/giving-form', params: { campaignId: campaign.id, fundType: campaign.fundId } }))}
         >
           <LinearGradient
-            colors={['#FF6596', '#FF8AAB']}
+            colors={['#FF6596', '#C084FC']}
             start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+            end={{ x: 1, y: 0 }}
             style={styles.giveBtn}
           >
             <Text style={styles.giveBtnText}>Give to this Project</Text>
@@ -412,28 +414,24 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.4)',
+    paddingHorizontal: 20,
+    paddingTop: 12,
   },
   giveBtnContainer: {
     width: '100%',
-    shadowColor: '#FF6596',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
+    borderRadius: 32,
+    overflow: 'hidden',
   },
   giveBtn: {
     width: '100%',
-    paddingVertical: 18,
-    borderRadius: 16,
+    height: 56,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   giveBtnText: {
     color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.3,
   },
 });

@@ -3,6 +3,7 @@ import PlanUpdateModal from '@/features/biblePlan/presentation/components/PlanUp
 import { useBiblePlanDetail } from '@/features/biblePlan/presentation/hooks/useBiblePlanDetail';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useBiblePlanStore } from '@/store/useBiblePlanStore';
+import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import type { Timestamp } from 'firebase/firestore';
@@ -345,21 +346,25 @@ export default function BiblePlanDetailScreen() {
     <>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <View style={[styles.root, { paddingTop: insets.top }]}>
+      <View style={styles.root}>
 
         {/* ─── Header ─────────────────────────────────────────────────────── */}
-        <View style={styles.header}>
-          <Pressable style={styles.headerCircle} onPress={() => router.back()} hitSlop={8}>
-            <ChevronLeft size={20} color="#1a1a1a" strokeWidth={2.5} />
-          </Pressable>
-          <Text style={styles.headerTitle} numberOfLines={1}>Bible Plan</Text>
-          {isStarted && !isCompleted && userBiblePlan ? (
-            <Pressable style={styles.headerCircle} onPress={handlePlanOptions} hitSlop={8}>
-              <Settings size={20} color="#1a1a1a" strokeWidth={2.5} />
+        <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 24) }]} pointerEvents="box-none">
+          <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
+          <View style={styles.headerContent}>
+            <Pressable style={styles.headerCircle} onPress={() => router.back()} hitSlop={8}>
+              <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
             </Pressable>
-          ) : (
-            <View style={[styles.headerCircle, { backgroundColor: 'transparent' }]} />
-          )}
+            <Text style={styles.headerTitle} numberOfLines={1}>Bible Plan</Text>
+            {isStarted && !isCompleted && userBiblePlan ? (
+              <Pressable style={styles.headerCircle} onPress={handlePlanOptions} hitSlop={8}>
+                <Settings size={20} color="#1a1a1a" strokeWidth={2} />
+              </Pressable>
+            ) : (
+              <View style={[styles.headerCircle, { backgroundColor: 'transparent', borderWidth: 0, elevation: 0 }]} />
+            )}
+          </View>
         </View>
 
         {!plan && plansLoading ? (
@@ -376,7 +381,7 @@ export default function BiblePlanDetailScreen() {
             <ScrollView
               ref={dayScrollRef}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: ctaBottomPad + 88 }}
+              contentContainerStyle={{ paddingBottom: ctaBottomPad + 88, paddingTop: insets.top + 70 }}
             >
 
               {/* ─── Hero card ─────────────────────────────────────────────── */}
@@ -535,6 +540,10 @@ export default function BiblePlanDetailScreen() {
 
             {/* ─── Fixed bottom CTA ──────────────────────────────────────── */}
             <View style={[styles.cta, { paddingBottom: ctaBottomPad }]}>
+              <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+              <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.65)', borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)' }]} pointerEvents="none" />
+              
+              <View style={styles.ctaContent}>
               {isCompleted ? (
                 <View style={styles.ctaDoneRow}>
                   <CheckCircle2 size={18} color="#22C55E" />
@@ -566,6 +575,7 @@ export default function BiblePlanDetailScreen() {
                   </LinearGradient>
                 </Pressable>
               )}
+              </View>
             </View>
           </>
         )}
@@ -590,20 +600,37 @@ const styles = StyleSheet.create({
   loader: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   // ─── Header
-  header: {
+  headerContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.4)',
+    overflow: 'hidden',
+  },
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingBottom: 12,
   },
   headerCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#F2F2F2',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
   },
   headerTitle: {
     flex: 1,
@@ -658,14 +685,14 @@ const styles = StyleSheet.create({
   },
   progressTrack: {
     flex: 1,
-    height: 5,
+    height: 10,
     backgroundColor: '#F0E8F0',
-    borderRadius: 3,
+    borderRadius: 999,
     overflow: 'hidden',
   },
   progressFill: {
-    height: 5,
-    borderRadius: 3,
+    height: 10,
+    borderRadius: 999,
   },
   progressText: {
     fontSize: 12,
@@ -861,11 +888,10 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+  },
+  ctaContent: {
     paddingHorizontal: 20,
     paddingTop: 12,
-    backgroundColor: 'rgba(255,255,255,0.97)',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#EBEBEB',
   },
   ctaBtn: { borderRadius: 32, overflow: 'hidden' },
   ctaGradient: {
