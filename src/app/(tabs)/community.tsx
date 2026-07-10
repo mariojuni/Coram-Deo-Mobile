@@ -1,6 +1,6 @@
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useGlobalSearchParams, useRouter } from 'expo-router';
+import { useGlobalSearchParams, useLocalSearchParams, useRouter } from 'expo-router';
 import {
     CalendarDays,
     CheckCircle2,
@@ -31,6 +31,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppModal from '../../components/ui/AppModal';
+import { EventDetailsModal } from '../../components/Events/EventDetailsModal';
 import { formatPrayerTimeAgo, getFilteredPrayers } from '../../features/prayer/domain/prayer.selectors';
 import type { Prayer, PrayerFilter } from '../../features/prayer/domain/prayer.types';
 import { usePrayerFeed } from '../../features/prayer/presentation/hooks/usePrayerFeed';
@@ -77,7 +78,7 @@ function getTabIndexFromParam(tabParam: string | string[] | undefined): TabIndex
 // ─── Placeholder sub-screen components ───────────────────────────────────────
 
 function PrayerCardItem({ req, currentUser, handlePray, handleAnswered }: { req: Prayer, currentUser: any, handlePray: (id: string) => void, handleAnswered: (id: string, currentValue: boolean) => void }) {
-  const isLiked = currentUser ? req.likedBy.includes(currentUser.uid) : false;
+  const isLiked = currentUser ? (req.likedBy || []).includes(currentUser.uid) : false;
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const lastPress = useRef(0);
 
@@ -262,7 +263,27 @@ function EventsTab({ searchQuery }: SubScreenProps) {
   const schedulesLoading = useScheduleStore((state) => state.schedulesLoading);
   const initializeSchedulesListener = useScheduleStore((state) => state.initializeSchedulesListener);
   const [selectedEvent, setSelectedEvent] = useState<Schedule | null>(null);
+  const { eventId } = useLocalSearchParams();
   const [activeTodaySlide, setActiveTodaySlide] = useState(0);
+
+  const searchableEvents = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return schedules;
+
+    return schedules.filter((event) => {
+      const haystack = `${event.title} ${event.location} ${event.time}`.toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [searchQuery, schedules]);
+
+  useEffect(() => {
+    if (eventId && searchableEvents.length > 0) {
+      const targetEvent = searchableEvents.find((e) => e.id === eventId);
+      if (targetEvent && targetEvent.id !== selectedEvent?.id) {
+        setSelectedEvent(targetEvent);
+      }
+    }
+  }, [eventId, searchableEvents]);
   const screenWidth = Dimensions.get('window').width;
   const heroCardHorizontalMargin = 0;
 
@@ -289,15 +310,7 @@ function EventsTab({ searchQuery }: SubScreenProps) {
     return null;
   };
 
-  const searchableEvents = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    if (!query) return schedules;
 
-    return schedules.filter((event) => {
-      const haystack = `${event.title} ${event.location} ${event.time}`.toLowerCase();
-      return haystack.includes(query);
-    });
-  }, [searchQuery, schedules]);
 
   const upcomingEvents = useMemo(() => getUpcomingSchedules(searchableEvents, 20), [searchableEvents]);
 
@@ -546,78 +559,18 @@ function EventsTab({ searchQuery }: SubScreenProps) {
         ))
       )}
 
-      {selectedEvent && (
-        <AppModal
-          isOpen={!!selectedEvent}
-          onClose={() => setSelectedEvent(null)}
-          title="Event Details"
-          headerLeft={<CalendarDays size={20} color="#4D8BFF" />}
-          headerTitleAlign="center"
-          containerStyle={eventsStyles.modalContainer}
-        >
-          <Text style={eventsStyles.modalEventName}>{selectedEvent.title || 'Church Event'}</Text>
-
-          <View style={eventsStyles.modalInfoCard}>
-            <View style={eventsStyles.modalInfoRow}>
-              <CalendarDays size={15} color="#6B7280" />
-              <Text style={eventsStyles.modalInfoText}>{formatEventDate(selectedEvent)}</Text>
-            </View>
-            <View style={eventsStyles.modalInfoRow}>
-              <Clock size={15} color="#6B7280" />
-              <Text style={eventsStyles.modalInfoText}>{selectedEvent.time || '9:00 AM'}</Text>
-            </View>
-            <View style={eventsStyles.modalInfoRow}>
-              <MapPin size={15} color="#6B7280" />
-              <Text style={eventsStyles.modalInfoText}>{selectedEvent.location || 'Main Sanctuary'}</Text>
-            </View>
-          </View>
-
-          {/* Public Worship Setlist */}
-          <PublicEventSetlist eventId={selectedEvent.id} onCloseModal={() => setSelectedEvent(null)} />
-
-          <Text style={eventsStyles.modalRsvpTitle}>Your response</Text>
-
-          <View style={eventsStyles.modalRsvpRow}>
-            <TouchableOpacity
-              style={[
-                eventsStyles.modalRsvpBtn,
-                currentUser && getUserRsvpStatus(selectedEvent, currentUser.uid) === 'going' && eventsStyles.modalRsvpBtnActive,
-              ]}
-              onPress={() => handleRsvp(selectedEvent.id, 'going')}
-            >
-              <CheckCircle2 size={14} color="#1D4ED8" />
-              <Text style={eventsStyles.modalRsvpBtnText}>Going</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                eventsStyles.modalRsvpBtn,
-                currentUser && getUserRsvpStatus(selectedEvent, currentUser.uid) === 'maybe' && eventsStyles.modalRsvpBtnActive,
-              ]}
-              onPress={() => handleRsvp(selectedEvent.id, 'maybe')}
-            >
-              <HelpCircle size={14} color="#1D4ED8" />
-              <Text style={eventsStyles.modalRsvpBtnText}>Maybe</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                eventsStyles.modalRsvpBtn,
-                currentUser && getUserRsvpStatus(selectedEvent, currentUser.uid) === 'not_going' && eventsStyles.modalRsvpBtnActive,
-              ]}
-              onPress={() => handleRsvp(selectedEvent.id, 'not_going')}
-            >
-              <XCircle size={14} color="#1D4ED8" />
-              <Text style={eventsStyles.modalRsvpBtnText}>Not Going</Text>
-            </TouchableOpacity>
-          </View>
-        </AppModal>
-      )}
+      <EventDetailsModal
+        event={selectedEvent}
+        onClose={() => setSelectedEvent(null)}
+        currentUser={currentUser}
+        getUserRsvpStatus={getUserRsvpStatus}
+        handleRsvp={handleRsvp}
+      />
     </View>
   );
 }
 
-function PublicEventSetlist({ eventId, onCloseModal }: { eventId: string; onCloseModal?: () => void }) {
+export function PublicEventSetlist({ eventId, title = "Event Songs", onCloseModal }: { eventId: string; title?: string; onCloseModal?: () => void }) {
   const router = useRouter();
   const userProfile = useAuthStore((s) => s.userProfile);
   const { setlist, items, loading } = useWorshipSetlist(userProfile?.churchId || undefined, eventId || undefined);
@@ -644,9 +597,9 @@ function PublicEventSetlist({ eventId, onCloseModal }: { eventId: string; onClos
 
   if (loading) {
     return (
-      <View style={{ marginTop: 20, marginBottom: 10 }}>
-        <Text style={eventsStyles.modalRsvpTitle}>Today's Songs</Text>
-        <View style={{ backgroundColor: '#F9FAFB', borderRadius: 16, padding: 12, marginTop: 8, borderWidth: 1, borderColor: '#F3F4F6' }}>
+      <View style={{ marginTop: 0, marginBottom: 10 }}>
+        <Text style={eventsStyles.modalRsvpTitle}>{title}</Text>
+        <View style={{ backgroundColor: '#F9FAFB', borderRadius: 16, padding: 12, marginTop: 8, borderWidth: 1, borderColor: '#F3F4F6', minHeight: 120 }}>
           {[1, 2, 3].map((_, index) => (
             <Animated.View 
               key={index}
@@ -672,19 +625,28 @@ function PublicEventSetlist({ eventId, onCloseModal }: { eventId: string; onClos
     );
   }
 
-  if (!setlist || items.length === 0) return null;
+  const renderEmpty = () => (
+    <View style={{ marginTop: 0, marginBottom: 10 }}>
+      <Text style={eventsStyles.modalRsvpTitle}>{title}</Text>
+      <View style={{ backgroundColor: '#F9FAFB', borderRadius: 16, padding: 12, marginTop: 8, borderWidth: 1, borderColor: '#F3F4F6', minHeight: 120, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ fontSize: 13, color: '#9CA3AF', fontWeight: '500' }}>No songs scheduled</Text>
+      </View>
+    </View>
+  );
+
+  if (!setlist || items.length === 0) return renderEmpty();
 
   const isStaff = ['super_admin', 'church_admin', 'pastor', 'ministry_leader'].includes(userProfile?.role?.toLowerCase() || '');
   
-  if (setlist.status !== 'published' && !isStaff) return null;
+  if (setlist.status !== 'published' && !isStaff) return renderEmpty();
 
   const publicItems = items.filter(i => isStaff || i.song?.allowPublicLyrics);
 
-  if (publicItems.length === 0) return null;
+  if (publicItems.length === 0) return renderEmpty();
 
   return (
-    <View style={{ marginTop: 20, marginBottom: 10 }}>
-      <Text style={eventsStyles.modalRsvpTitle}>Today's Songs</Text>
+    <View style={{ marginTop: 0, marginBottom: 10 }}>
+      <Text style={eventsStyles.modalRsvpTitle}>{title}</Text>
       <View style={{ backgroundColor: '#F9FAFB', borderRadius: 16, padding: 12, marginTop: 8, borderWidth: 1, borderColor: '#F3F4F6' }}>
         {publicItems.map((item, index) => (
           <TouchableOpacity 
@@ -1420,7 +1382,7 @@ const membersStyles = StyleSheet.create({
   },
 });
 
-const eventsStyles = StyleSheet.create({
+export const eventsStyles = StyleSheet.create({
   wrap: {
     paddingHorizontal: 20,
     paddingTop: 18,

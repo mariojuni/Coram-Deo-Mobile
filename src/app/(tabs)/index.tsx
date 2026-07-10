@@ -15,6 +15,8 @@ import { CalendarDays, CheckCircle2, ChevronRight, Clock, HeartHandshake, HelpCi
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { Schedule } from '@/features/schedule/domain/schedule.types';
+import { EventDetailsModal } from '@/components/Events/EventDetailsModal';
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -69,6 +71,8 @@ const COLLAPSE_RANGE = 70;
 
 export default function HomeScreen() {
   const router = useRouter();
+  const [selectedEvent, setSelectedEvent] = useState<Schedule | null>(null);
+
   const userProfile = useAuthStore((s) => s.userProfile);
   const {
     currentUser,
@@ -303,14 +307,14 @@ export default function HomeScreen() {
         )}
 
         {/* ─── Today Cards Carousel ───────────────────────────────────── */}
-        <View style={styles.todayCarouselWrap}>
-          {/* Section label */}
-          <View style={styles.todayLabelRow}>
-            <View style={styles.todayDot} />
-            <Text style={styles.todayLabelText}>TODAY</Text>
-          </View>
+        {heroCards.length > 0 && (
+          <View style={styles.todayCarouselWrap}>
+            {/* Section label */}
+            <View style={styles.todayLabelRow}>
+              <View style={styles.todayDot} />
+              <Text style={styles.todayLabelText}>TODAY</Text>
+            </View>
 
-          {heroCards.length > 0 ? (
             <>
               <ScrollView
                 horizontal
@@ -403,33 +407,8 @@ export default function HomeScreen() {
                 </View>
               )}
             </>
-          ) : (
-            /* ── Empty state ── */
-            <View style={styles.todayEmptyCard}>
-              <LinearGradient
-                colors={['#FFF0F5', '#F5F0FF']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.todayEmptyGradient}
-              >
-                <View style={styles.todayEmptyIconRing}>
-                  <CalendarDays size={22} color="#FF6596" strokeWidth={2} />
-                </View>
-                <View style={styles.todayEmptyText}>
-                  <Text style={styles.todayEmptyTitle}>All clear today</Text>
-                  <Text style={styles.todayEmptySubtitle}>No events scheduled — enjoy your day!</Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.todayEmptyAction}
-                  onPress={() => router.push({ pathname: '/(tabs)/community', params: { tab: 'events' } })}
-                >
-                  <Text style={styles.todayEmptyActionText}>See upcoming</Text>
-                  <ChevronRight size={13} color="#FF6596" strokeWidth={2.5} />
-                </TouchableOpacity>
-              </LinearGradient>
-            </View>
-          )}
-        </View>
+          </View>
+        )}
 
         {/* ─── My Ministries (US-01/06/07/09) ───────────────────────── */}
         {sortedDutyItems.length > 0 && (
@@ -656,7 +635,11 @@ export default function HomeScreen() {
               const day = d.getDate().toString();
               const weekday = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
               return (
-                <BounceCard key={event.id} style={styles.eventListCard}>
+                <BounceCard 
+                  key={event.id} 
+                  style={styles.eventListCard}
+                  onPress={() => setSelectedEvent(event)}
+                >
                   <View style={styles.eventDateBlock}>
                     <Text style={styles.eventDateMonth}>{month}</Text>
                     <Text style={styles.eventDateDay}>{day}</Text>
@@ -701,6 +684,13 @@ export default function HomeScreen() {
         )}
       </Animated.ScrollView>
 
+      <EventDetailsModal
+        event={selectedEvent}
+        onClose={() => setSelectedEvent(null)}
+        currentUser={currentUser}
+        getUserRsvpStatus={getUserRsvpStatus}
+        handleRsvp={handleRsvp}
+      />
     </View>
   );
 }

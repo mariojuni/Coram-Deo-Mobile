@@ -22,19 +22,19 @@ export function canAccessChurchFeatures(user?: UserAccount | null): boolean {
 }
 
 export function canSubmitPrayerRequest(user?: UserAccount | null): boolean {
-  return hasMemberAccess(user);
+  return hasChurchAccess(user);
 }
 
 export function canSubmitGiving(user?: UserAccount | null): boolean {
-  return hasMemberAccess(user);
+  return hasChurchAccess(user);
 }
 
 export function canApplyToMinistry(user?: UserAccount | null): boolean {
-  return hasMemberAccess(user);
+  return hasChurchAccess(user);
 }
 
 export function canConfirmServeAssignment(user?: UserAccount | null): boolean {
-  return hasMemberAccess(user);
+  return hasChurchAccess(user);
 }
 
 export function canModeratePrayerRequests(user?: UserAccount | null): boolean {

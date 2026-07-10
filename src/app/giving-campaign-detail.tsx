@@ -6,6 +6,7 @@ import { useGiving } from '@/features/giving/presentation/hooks/useGiving';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useCachedImage } from '@/features/files/presentation/hooks/useCachedImage';
 
 const ShimmerSkeleton = ({ width, height, style, borderRadius = 8 }: any) => {
   const animValue = useRef(new Animated.Value(0)).current;
@@ -45,8 +46,13 @@ export default function GivingCampaignDetailScreen() {
       }, delay);
     };
   };
-  
   const campaign = campaigns.find(c => c.id === id);
+
+  const { cachedUri } = useCachedImage(campaign?.coverImageUrl, {
+    id: campaign?.id,
+    churchId: campaign?.churchId,
+    visibility: 'public',
+  });
 
   if (isLoading) {
     return (
@@ -129,10 +135,13 @@ export default function GivingCampaignDetailScreen() {
           <View style={[StyleSheet.absoluteFill, { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.3)' }]} />
         </Animated.View>
         <View style={styles.headerContent}>
-          <TouchableOpacity style={styles.backBtn} onPress={withDebounce(() => router.back())}>
+          <TouchableOpacity style={[styles.backBtn, { zIndex: 10 }]} onPress={() => router.back()}>
             <ChevronLeft size={24} color="#1a1a1a" />
           </TouchableOpacity>
-          <Animated.Text style={[styles.headerTitle, { opacity: headerOpacity, transform: [{ translateY: titleTranslateY }] }]}>
+          <Animated.Text 
+            style={[styles.headerTitle, { opacity: headerOpacity, transform: [{ translateY: titleTranslateY }] }]}
+            pointerEvents="none"
+          >
             {campaign.title}
           </Animated.Text>
         </View>
@@ -145,8 +154,8 @@ export default function GivingCampaignDetailScreen() {
         scrollEventThrottle={16}
       >
         <Animated.View style={{ transform: [{ scale: coverScale }, { translateY: coverTranslateY }] }}>
-          {campaign.coverImageUrl ? (
-            <Image source={{ uri: campaign.coverImageUrl }} style={styles.coverImage} />
+          {cachedUri ? (
+            <Image source={{ uri: cachedUri }} style={styles.coverImage} />
           ) : (
             <LinearGradient
               colors={['#FF6596', '#FF8AAB']}
@@ -272,6 +281,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.7)',
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 10,
   },
   content: { flex: 1 },
   coverImage: {

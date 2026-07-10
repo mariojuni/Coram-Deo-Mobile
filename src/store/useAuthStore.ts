@@ -2,6 +2,7 @@ import type { User } from 'firebase/auth';
 import { create } from 'zustand';
 import { authRepository, RegistrationPayload } from '../features/auth/data/auth.repository';
 import type { AuthCredentialResult, UserAccount } from '../features/auth/domain/auth.types';
+import { clearSensitiveCache } from '../features/files/services/fileCacheService';
 
 interface AuthState {
   currentUser: User | null;
@@ -30,7 +31,14 @@ export const useAuthStore = create<AuthState>((set) => ({
       throw error;
     }
   },
-  logout: () => authRepository.logout(),
+  logout: async () => {
+    try {
+      await clearSensitiveCache();
+    } catch (e) {
+      console.warn('Failed to clear sensitive cache on logout', e);
+    }
+    return authRepository.logout();
+  },
   initializeAuthListener: () => {
     authRepository.subscribeToAuthState(
       ({ user, profile }) => {

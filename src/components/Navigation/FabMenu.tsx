@@ -76,7 +76,6 @@ export default function FabMenu({ isStaff }: FabMenuProps) {
   };
 
   const baseItems: any[] = [
-    { icon: QrCode, key: 'scanner', title: 'Scanner', route: '/scanner' },
     { 
       icon: HeartHandshake, 
       key: 'submit-prayer', 
@@ -89,7 +88,6 @@ export default function FabMenu({ isStaff }: FabMenuProps) {
     baseItems.push({ icon: HandHeart, key: 'giving', title: 'Giving', route: '/giving' });
   }
 
-  baseItems.push({ icon: Handshake, key: 'serve', title: 'Serve', route: '/(tabs)/serve' });
   baseItems.push(...getFabMenuItems(isStaff));
 
   const menuItems = baseItems;

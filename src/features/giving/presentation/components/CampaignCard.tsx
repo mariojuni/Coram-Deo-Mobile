@@ -4,6 +4,7 @@ import { GivingCampaign } from '../../domain/giving.types';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronRight } from 'lucide-react-native';
 import DebouncedTouchable from '@/components/DebouncedTouchable';
+import { useCachedImage } from '../../../files/presentation/hooks/useCachedImage';
 
 interface CampaignCardProps {
   campaign: GivingCampaign;
@@ -13,11 +14,17 @@ interface CampaignCardProps {
 export function CampaignCard({ campaign, onPress }: CampaignCardProps) {
   const progress = Math.min((campaign.raisedAmount / campaign.goalAmount) * 100, 100);
   
+  const { cachedUri } = useCachedImage(campaign.coverImageUrl, {
+    id: campaign.id,
+    churchId: campaign.churchId,
+    visibility: 'public', // campaigns are public
+  });
+  
   return (
     <DebouncedTouchable style={styles.card} onPress={onPress} activeOpacity={0.8}>
       <View style={styles.imageContainer}>
-        {campaign.coverImageUrl ? (
-          <Image source={{ uri: campaign.coverImageUrl }} style={styles.coverImage} resizeMode="cover" />
+        {cachedUri ? (
+          <Image source={{ uri: cachedUri }} style={styles.coverImage} resizeMode="cover" />
         ) : (
           <LinearGradient
             colors={['#FF6596', '#FF8AAB']}

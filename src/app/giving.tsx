@@ -21,11 +21,14 @@ export default function GivingScreen() {
     return (
       <View style={styles.container}>
         <LinearGradient colors={['#FFE8F1', '#F9FAFB']} style={StyleSheet.absoluteFill} />
-        <View style={[styles.header, { paddingTop: insets.top + 10, paddingBottom: 16, backgroundColor: 'transparent' }]}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <ChevronLeft size={24} color="#1a1a1a" />
-            <Text style={styles.title}>Giving</Text>
-          </TouchableOpacity>
+        <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 24) }]}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity style={styles.headerCircle} onPress={() => router.back()}>
+              <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle} numberOfLines={1}>Giving</Text>
+            <View style={[styles.headerCircle, { backgroundColor: 'transparent', borderWidth: 0, elevation: 0 }]} />
+          </View>
         </View>
         <View style={styles.errorContainer}>
           <View style={styles.errorIconWrap}>
@@ -55,18 +58,22 @@ export default function GivingScreen() {
       <LinearGradient colors={['#FFE8F1', '#F5F2FF', '#FAFAFA']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0.3 }} style={StyleSheet.absoluteFill} />
       <Stack.Screen options={{ headerShown: false }} />
       
-      <View style={[styles.header, { paddingTop: insets.top + 10, paddingBottom: 16, position: 'absolute', width: '100%', zIndex: 10 }]}>
-        <Animated.View style={[StyleSheet.absoluteFill, { opacity: headerOpacity }]}>
+      <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 24) }]} pointerEvents="box-none">
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: headerOpacity }]} pointerEvents="none">
           <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
-          <View style={[StyleSheet.absoluteFill, { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.3)' }]} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} />
         </Animated.View>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <ChevronLeft size={24} color="#1a1a1a" />
-          <Text style={styles.title}>Giving</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.iconBtn} onPress={() => router.push('/my-giving')}>
-          <History size={24} color="#1a1a1a" />
-        </TouchableOpacity>
+        <View style={styles.headerContent}>
+          <TouchableOpacity style={styles.headerCircle} onPress={() => router.back()}>
+            <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
+          </TouchableOpacity>
+          <Animated.Text style={[styles.headerTitle, { opacity: headerOpacity }]} numberOfLines={1}>
+            Giving
+          </Animated.Text>
+          <TouchableOpacity style={styles.headerCircle} onPress={() => router.push('/my-giving')}>
+            <History size={20} color="#1a1a1a" strokeWidth={2} />
+          </TouchableOpacity>
+        </View>
       </View>
       
       <Animated.ScrollView 
@@ -139,18 +146,29 @@ export default function GivingScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAFAFA' },
-  header: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'space-between',
-    paddingHorizontal: 16, 
+  headerContainer: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0,
+    zIndex: 100,
+    paddingBottom: 16,
   },
-  backBtn: { flexDirection: 'row', alignItems: 'center' },
-  title: { fontSize: 26, fontWeight: '800', color: '#1a1a1a', marginLeft: 8 },
-  iconBtn: { 
-    padding: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.6)',
-    borderRadius: 20,
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginTop: 8,
+  },
+  headerCircle: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: '#fff',
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3,
+    borderWidth: 1, borderColor: 'rgba(0,0,0,0.03)',
+  },
+  headerTitle: {
+    fontSize: 18, fontWeight: '700', color: '#111827',
+    flex: 1, textAlign: 'center', marginHorizontal: 12,
   },
   content: { flex: 1, paddingHorizontal: 24 },
   

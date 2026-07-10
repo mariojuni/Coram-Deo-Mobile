@@ -180,10 +180,14 @@ export default function GivingFormScreen() {
           <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
           <View style={[StyleSheet.absoluteFill, { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.5)' }]} />
         </Animated.View>
-        <TouchableOpacity style={styles.backBtn} onPress={withDebounce(() => router.back())}>
-          <ChevronLeft size={24} color="#1a1a1a" />
-          <Text style={styles.headerTitle}>Make a Gift</Text>
-        </TouchableOpacity>
+        <View style={styles.headerContent}>
+          <TouchableOpacity style={styles.backBtn} onPress={withDebounce(() => router.back())}>
+            <ChevronLeft size={24} color="#1a1a1a" />
+          </TouchableOpacity>
+          <Animated.Text style={[styles.headerTitleCenter, { opacity: headerOpacity }]}>
+            Make a Gift
+          </Animated.Text>
+        </View>
       </View>
 
       <Animated.ScrollView 
@@ -345,16 +349,34 @@ const styles = StyleSheet.create({
     alignItems: 'center', 
     paddingHorizontal: 16, 
   },
-  backBtn: { 
-    flexDirection: 'row', 
+  headerContent: {
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    paddingRight: 16,
-    paddingLeft: 4,
-    paddingVertical: 6,
-    borderRadius: 20,
+    width: '100%',
+    height: 40,
+    paddingHorizontal: 16,
   },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: '#1a1a1a', marginLeft: 4 },
+  headerTitleCenter: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    textAlign: 'center',
+    zIndex: 1,
+    paddingHorizontal: 60,
+    pointerEvents: 'none',
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
   content: { flex: 1, paddingHorizontal: 24 },
   
   campaignInfo: {

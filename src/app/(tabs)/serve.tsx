@@ -185,12 +185,6 @@ export default function ServeScreen() {
               <Text style={styles.headerTitle}>Serve</Text>
             </View>
           </View>
-          {totalUpcoming > 0 && (
-            <View style={styles.headerBadge}>
-              <Text style={styles.headerBadgeNum}>{totalUpcoming}</Text>
-              <Text style={styles.headerBadgeLabel}>upcoming</Text>
-            </View>
-          )}
         </Animated.View>
 
         {/* Modern Pill Tab Bar */}
