@@ -21,7 +21,8 @@ function toPrayerModel(data: Record<string, unknown>, id: string): Prayer {
     name: typeof data.requesterName === 'string' ? data.requesterName : (typeof data.name === 'string' ? data.name : ''),
     request: typeof data.requestText === 'string' ? data.requestText : (typeof data.request === 'string' ? data.request : ''),
     userId: typeof data.userId === 'string' ? data.userId : '',
-    answered: Boolean(data.answered),
+    answered: Boolean(data.answered) || data.status === 'answered',
+    status: typeof data.status === 'string' ? (data.status as any) : undefined,
     likes: typeof data.likes === 'number' ? data.likes : 0,
     likedBy: Array.isArray(data.likedBy) ? data.likedBy.filter((v): v is string => typeof v === 'string') : [],
     createdAt: (data.createdAt as Prayer['createdAt']) ?? null,
@@ -29,7 +30,8 @@ function toPrayerModel(data: Record<string, unknown>, id: string): Prayer {
 }
 
 export const prayerRepository = {
-  subscribeToPrayers(churchId: string, onData: PrayersListener, onError: ErrorListener): () => void {
+  subscribeToPrayers(churchId: string | undefined | null, onData: PrayersListener, onError: ErrorListener): () => void {
+    if (!churchId) return () => {};
     const prayerQuery = query(collection(db, `churches/${churchId}/prayer_requests`), orderBy('createdAt', 'desc'));
 
     return onSnapshot(
@@ -45,10 +47,11 @@ export const prayerRepository = {
   },
 
   subscribeToLatestPrayer(
-    churchId: string,
+    churchId: string | undefined | null,
     onData: (prayer: Prayer | null) => void,
     onError: ErrorListener
   ): () => void {
+    if (!churchId) return () => {};
     const latestPrayerQuery = query(collection(db, `churches/${churchId}/prayer_requests`), orderBy('createdAt', 'desc'), limit(1));
 
     return onSnapshot(
@@ -90,7 +93,11 @@ export const prayerRepository = {
 
   async togglePrayerAnswered(churchId: string, prayerId: string, currentValue: boolean): Promise<void> {
     const prayerDocRef = doc(db, `churches/${churchId}/prayer_requests`, prayerId);
-    await updateDoc(prayerDocRef, { answered: !currentValue });
+    const nextValue = !currentValue;
+    await updateDoc(prayerDocRef, { 
+      answered: nextValue,
+      status: nextValue ? 'answered' : 'pending'
+    });
   },
 
   async addPrayer(churchId: string, payload: { requestText: string; requesterName: string; userId: string; createdAt?: string }): Promise<string> {
@@ -102,6 +109,33 @@ export const prayerRepository = {
       likedBy: [],
       answered: false,
       createdAt: payload.createdAt || new Date().toISOString(),
+    });
+    return docRef.id;
+  },
+
+  async submitPrayerRequest(payload: Omit<Prayer, 'id' | 'likes' | 'likedBy' | 'answered'>): Promise<string> {
+    if (!payload.churchId) throw new Error('churchId is required');
+    const docRef = await addDoc(collection(db, `churches/${payload.churchId}/prayer_requests`), {
+      churchId: payload.churchId,
+      userId: payload.userId,
+      memberId: payload.memberId || null,
+      title: payload.title,
+      content: payload.content,
+      category: payload.category,
+      visibility: payload.visibility,
+      isAnonymous: payload.isAnonymous,
+      status: payload.status,
+      prayedCount: 0,
+      createdBy: payload.createdBy,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      
+      // Legacy fallbacks for existing UI
+      requestText: payload.content,
+      requesterName: payload.isAnonymous ? 'Anonymous' : (payload.name || 'Anonymous'),
+      likes: 0,
+      likedBy: [],
+      answered: false,
     });
     return docRef.id;
   },

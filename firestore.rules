@@ -3,6 +3,26 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ── Helpers ──────────────────────────────────────────────────────────────
+    function isSuperAdmin() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin';
+    }
+
+    function isRoleAdmin(churchId) {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.churchId == churchId &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['super_admin', 'church_admin'];
+    }
+
+    function isPastorOrAdmin(churchId) {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.churchId == churchId &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['super_admin', 'church_admin', 'pastor'];
+    }
+
     function isSignedIn() {
       return request.auth != null;
     }
@@ -62,7 +82,18 @@ service cloud.firestore {
       allow read: if isSignedIn()
         && resource.data.churchId != null;
 
-      allow write: if isChurchAdmin(resource.data.churchId);
+      allow create: if isPastorOrAdmin(request.resource.data.churchId);
+      
+      allow update: if isPastorOrAdmin(resource.data.churchId) || 
+        (
+          isSignedIn() &&
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.churchId == resource.data.churchId &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ministry_leader' &&
+          (resource.data.leaderIds != null && request.auth.uid in resource.data.leaderIds)
+        );
+
+      allow delete: if isPastorOrAdmin(resource.data.churchId);
     }
 
     // ── ministryAssignments ──────────────────────────────────────────────────
@@ -125,6 +156,32 @@ service cloud.firestore {
     match /worshipSetlistItems/{itemId} {
       allow read: if isSignedIn();
       allow write: if isChurchAdmin(request.resource.data.churchId) || isChurchAdmin(resource.data.churchId);
+    }
+
+    // ── Users ────────────────────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      
+      allow create: if isSignedIn();
+      
+      allow update: if isSignedIn() && (
+        (isOwner(userId) && request.resource.data.role == resource.data.role && request.resource.data.churchId == resource.data.churchId) ||
+        (isSuperAdmin() && request.auth.uid != userId) ||
+        (
+          isRoleAdmin(resource.data.churchId) && 
+          request.resource.data.churchId == resource.data.churchId && 
+          request.resource.data.role != 'super_admin' && 
+          request.auth.uid != userId
+        )
+      );
+
+      allow delete: if isSuperAdmin();
+    }
+
+    // ── Role Audit Logs ──────────────────────────────────────────────────────
+    match /roleAuditLogs/{logId} {
+      allow read: if isSignedIn() && (isSuperAdmin() || isRoleAdmin(resource.data.churchId));
+      allow create: if isSignedIn();
     }
   }
 }

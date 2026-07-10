@@ -14,7 +14,8 @@ function mapDocWithId<T extends Record<string, unknown>>(docData: Record<string,
 }
 
 export const memberRepository = {
-  subscribeToMembers(churchId: string, onData: MembersListener, onError: ErrorListener): () => void {
+  subscribeToMembers(churchId: string | undefined | null, onData: MembersListener, onError: ErrorListener): () => void {
+    if (!churchId) return () => {};
     const membersQuery = query(collection(db, 'users'), where('churchId', '==', churchId));
     return onSnapshot(
       membersQuery,
@@ -28,7 +29,8 @@ export const memberRepository = {
     );
   },
 
-  subscribeToServices(churchId: string, onData: ServicesListener, onError: ErrorListener): () => void {
+  subscribeToServices(churchId: string | undefined | null, onData: ServicesListener, onError: ErrorListener): () => void {
+    if (!churchId) return () => {};
     const servicesQuery = query(collection(db, 'services'), where('churchId', '==', churchId));
     return onSnapshot(
       servicesQuery,

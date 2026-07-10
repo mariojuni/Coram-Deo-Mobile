@@ -11,6 +11,7 @@ import '../global.css';
 import { useAuthStore } from '../store/useAuthStore';
 import { useBibleVersionStore } from '../store/useBibleVersionStore';
 import { useMemberStore } from '../store/useMemberStore';
+import { canAccessMobileApp } from '../permissions/mobilePermissions';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -84,9 +85,12 @@ export default function RootLayout() {
     const inAuthGroup = segments[0] === '(auth)';
     const inPendingScreen = segments[0] === 'pending-access';
     const inWalkthrough = segments[0] === 'walkthrough';
-    const isSuperAdmin = userProfile?.role === 'super_admin' || userProfile?.role === 'admin';
+    
+    // Using strict super_admin bypass
+    const isSuperAdmin = userProfile?.role === 'super_admin';
     const isPending = !isSuperAdmin && (userProfile?.status === 'pendingChurchLink' || (!userProfile?.churchId && currentUser));
-    const isDisabled = userProfile?.status === 'disabled';
+    
+    const isDisabled = currentUser && !canAccessMobileApp(userProfile);
 
     if (currentUser && isDisabled) {
       useAuthStore.getState().logout();

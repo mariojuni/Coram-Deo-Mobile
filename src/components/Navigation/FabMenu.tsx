@@ -3,7 +3,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { HandHeart, Handshake, HeartHandshake, Plus, QrCode } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Animated, StyleSheet, TouchableOpacity, View, Text } from 'react-native';
+import { useAuthStore } from '../../store/useAuthStore';
+import { canSubmitPrayerRequest, canSubmitGiving } from '../../permissions/mobilePermissions';
+import PrayerRequestModal from '../../features/prayer/presentation/components/PrayerRequestModal';
 
 interface FabMenuProps {
   isStaff: boolean;
@@ -11,7 +14,9 @@ interface FabMenuProps {
 
 export default function FabMenu({ isStaff }: FabMenuProps) {
   const router = useRouter();
+  const { userProfile, currentUser } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
+  const [isPrayerModalOpen, setIsPrayerModalOpen] = useState(false);
   const animation = useMemo(() => new Animated.Value(0), []);
 
   const toggleMenu = () => {
@@ -30,11 +35,14 @@ export default function FabMenu({ isStaff }: FabMenuProps) {
     if (isOpen) toggleMenu();
   };
 
-  const handlePress = (route: string) => {
+  const handlePress = (actionOrRoute: string | (() => void)) => {
     closeMenu();
-    // Use setTimeout to allow menu to close before navigating
     setTimeout(() => {
-      router.push(route as any);
+      if (typeof actionOrRoute === 'function') {
+        actionOrRoute();
+      } else {
+        router.push(actionOrRoute as any);
+      }
     }, 200);
   };
 
@@ -67,14 +75,24 @@ export default function FabMenu({ isStaff }: FabMenuProps) {
     ]
   };
 
-  const menuItems = [
-    { icon: QrCode, key: 'scanner', route: '/scanner' },
-    { icon: HeartHandshake, key: 'prayer', route: '/(tabs)/community' },
-    { icon: HandHeart, key: 'giving', route: '/giving' },
-    { icon: Handshake, key: 'serve', route: '/(tabs)/serve' },
-    ...getFabMenuItems(isStaff),
+  const baseItems: any[] = [
+    { icon: QrCode, key: 'scanner', title: 'Scanner', route: '/scanner' },
+    { 
+      icon: HeartHandshake, 
+      key: 'submit-prayer', 
+      title: 'Submit Prayer Request', 
+      route: (() => setIsPrayerModalOpen(true)) as any 
+    }
   ];
 
+  if (canSubmitGiving(userProfile)) {
+    baseItems.push({ icon: HandHeart, key: 'giving', title: 'Giving', route: '/giving' });
+  }
+
+  baseItems.push({ icon: Handshake, key: 'serve', title: 'Serve', route: '/(tabs)/serve' });
+  baseItems.push(...getFabMenuItems(isStaff));
+
+  const menuItems = baseItems;
   return (
     <View style={styles.container} pointerEvents="box-none">
       {/* Overlay when open */}
@@ -90,11 +108,14 @@ export default function FabMenu({ isStaff }: FabMenuProps) {
       {menuItems.map((item, index) => (
         <Animated.View key={item.key} style={[styles.subItemContainer, getSubItemStyle(index)]}>
           <TouchableOpacity 
-            style={styles.subItem} 
+            style={styles.subItemRow} 
             onPress={() => handlePress(item.route)}
             activeOpacity={0.8}
           >
-            <item.icon size={20} color="#FF6596" />
+
+            <View style={styles.subItem}>
+              <item.icon size={20} color="#FF6596" />
+            </View>
           </TouchableOpacity>
         </Animated.View>
       ))}
@@ -116,6 +137,11 @@ export default function FabMenu({ isStaff }: FabMenuProps) {
           </Animated.View>
         </LinearGradient>
       </TouchableOpacity>
+
+      <PrayerRequestModal 
+        isOpen={isPrayerModalOpen} 
+        onClose={() => setIsPrayerModalOpen(false)} 
+      />
     </View>
   );
 }
@@ -156,7 +182,30 @@ const styles = StyleSheet.create({
   subItemContainer: {
     position: 'absolute',
     bottom: 0,
+    alignItems: 'flex-end',
+    right: 2,
+  },
+  subItemRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  subItemLabelWrap: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginRight: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  subItemLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
   },
   subItem: {
     width: 48,

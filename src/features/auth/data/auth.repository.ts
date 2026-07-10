@@ -72,9 +72,19 @@ async function fetchUserAccount(user: User): Promise<UserAccount | null> {
     data.churchId = 'YmEc6C69Xz4DKRQaQZBV';
   }
 
+  // Map legacy roles
+  let role = data.role as string;
+  if (role === 'member') role = 'viewer';
+  if (role === 'admin') role = 'church_admin';
+  if (role === 'churchAdmin') role = 'church_admin';
+  if (role === 'superAdmin') role = 'super_admin';
+  if (role === 'ministryLeader') role = 'ministry_leader';
+  if (role === 'financeAdmin') role = 'finance_admin';
+
   return {
     uid: user.uid,
     ...data,
+    role,
   } as UserAccount;
 }
 
@@ -145,7 +155,7 @@ export const authRepository = {
       memberId: matchedMember?.id || null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      role: 'member',
+      role: 'viewer',
     };
 
     await setDoc(doc(db, 'users', user.uid), userAccount);
@@ -221,7 +231,7 @@ export const authRepository = {
         memberId: matchedMember && !matchedMember.accountId ? matchedMember.id : null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        role: 'member',
+        role: 'viewer',
       };
 
       await setDoc(userDocRef, userAccount);

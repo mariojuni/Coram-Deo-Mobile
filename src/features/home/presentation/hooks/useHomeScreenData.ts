@@ -138,6 +138,16 @@ export function useHomeScreenData() {
     }
   };
 
+  const handleAnswered = async (id: string, currentValue: boolean) => {
+    const churchId = userProfile?.churchId;
+    if (!churchId) return;
+    try {
+      await prayerRepository.togglePrayerAnswered(churchId, id, currentValue);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   // We change this to update the ministry assignment status directly
   const handleMinisterialDuty = async (assignmentId: string, action: 'accept' | 'cancel') => {
     if (!currentUser?.uid) return;
@@ -158,6 +168,7 @@ export function useHomeScreenData() {
     handleMinisterialDuty,
     handlePray,
     handleRsvp,
+    handleAnswered,
     formatPrayerTimeAgo,
     assignments, // Export assignments to use in home screen
   };

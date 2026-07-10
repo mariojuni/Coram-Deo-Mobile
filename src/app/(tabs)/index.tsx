@@ -81,6 +81,7 @@ export default function HomeScreen() {
     handleMinisterialDuty,
     handlePray,
     handleRsvp,
+    handleAnswered,
     formatPrayerTimeAgo,
     displayName,
     assignments,
@@ -495,7 +496,10 @@ export default function HomeScreen() {
               </DebouncedTouchable>
             </View>
 
-            <BounceCard style={styles.prayerCardOuter}>
+            <BounceCard 
+              style={styles.prayerCardOuter}
+              onPress={() => handlePray(latestPrayer.id)}
+            >
               <View style={styles.prayerCardInner}>
                 <LinearGradient
                   colors={['#FF6596', '#B66DFF']}
@@ -506,17 +510,32 @@ export default function HomeScreen() {
                 <View style={styles.prayerRow}>
                   <View style={styles.prayerContent}>
                     <View style={styles.prayerTop}>
-                      <Text style={styles.prayerName}>{latestPrayer.name}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, paddingRight: 8 }}>
+                        <Text style={styles.prayerName} numberOfLines={1}>{latestPrayer.name}</Text>
+                        {(latestPrayer.answered || latestPrayer.status === 'answered') && (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#ECFDF3', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10, gap: 4 }}>
+                            <CheckCircle2 size={10} color="#10B981" />
+                            <Text style={{ fontSize: 10, fontWeight: '700', color: '#10B981', textTransform: 'uppercase' }}>Answered</Text>
+                          </View>
+                        )}
+                      </View>
                       <Text style={styles.prayerTime}>{formatPrayerTimeAgo(latestPrayer.createdAt)}</Text>
                     </View>
                     <Text style={styles.prayerText}>{latestPrayer.request}</Text>
                     
                     <View style={styles.prayerBottomRow}>
-                      <DebouncedTouchable
-                        style={styles.prayIconButton}
-                        onPress={() => handlePray(latestPrayer.id)}
-                        activeOpacity={0.7}
-                      >
+                      {/* Mark as Answered button for the creator */}
+                      {latestPrayer.userId === currentUserId && (
+                        <DebouncedTouchable
+                          style={styles.prayIconButton}
+                          onPress={() => handleAnswered(latestPrayer.id, latestPrayer.answered || latestPrayer.status === 'answered')}
+                          activeOpacity={0.7}
+                        >
+                          <CheckCircle2 size={18} color={(latestPrayer.answered || latestPrayer.status === 'answered') ? '#10B981' : '#9CA3AF'} />
+                        </DebouncedTouchable>
+                      )}
+                      
+                      <View style={styles.prayIconButton}>
                         <HeartHandshake 
                           size={18} 
                           color={latestPrayer.likedBy?.includes(currentUserId) ? '#FF6596' : '#9CA3AF'} 
@@ -524,7 +543,7 @@ export default function HomeScreen() {
                         <Text style={[styles.prayIconCount, latestPrayer.likedBy?.includes(currentUserId) && { color: '#FF6596' }]}>
                           {latestPrayer.likes || 0}
                         </Text>
-                      </DebouncedTouchable>
+                      </View>
                     </View>
                   </View>
                 </View>

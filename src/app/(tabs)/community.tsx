@@ -76,10 +76,90 @@ function getTabIndexFromParam(tabParam: string | string[] | undefined): TabIndex
 
 // ─── Placeholder sub-screen components ───────────────────────────────────────
 
+function PrayerCardItem({ req, currentUser, handlePray, handleAnswered }: { req: Prayer, currentUser: any, handlePray: (id: string) => void, handleAnswered: (id: string, currentValue: boolean) => void }) {
+  const isLiked = currentUser ? req.likedBy.includes(currentUser.uid) : false;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const lastPress = useRef(0);
+
+  const onPress = () => {
+    const now = Date.now();
+    if (now - lastPress.current < 500) return; // debounce
+    lastPress.current = now;
+
+    Animated.sequence([
+      Animated.timing(scaleAnim, { toValue: 0.95, duration: 100, useNativeDriver: true }),
+      Animated.spring(scaleAnim, { toValue: 1, friction: 4, tension: 50, useNativeDriver: true })
+    ]).start();
+
+    handlePray(req.id);
+  };
+
+  return (
+    <Animated.View style={[prayerStyles.prayerCardOuter, { transform: [{ scale: scaleAnim }] }]}>
+      <TouchableOpacity activeOpacity={0.9} onPress={onPress}>
+        <View style={prayerStyles.prayerCardInner}>
+          <LinearGradient
+            colors={['#FF6596', '#B66DFF']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={prayerStyles.prayerGradientBorder}
+          />
+          <View style={prayerStyles.prayerRow}>
+            <View style={prayerStyles.prayerContent}>
+              <View style={prayerStyles.prayerTop}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, paddingRight: 8 }}>
+                  <Text style={prayerStyles.prayerName} numberOfLines={1}>{req.name}</Text>
+                  {(req.answered || req.status === 'answered') && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#ECFDF3', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10, gap: 4 }}>
+                      <CheckCircle2 size={10} color="#10B981" />
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: '#10B981', textTransform: 'uppercase' }}>Answered</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={prayerStyles.prayerTime}>{formatPrayerTimeAgo(req.createdAt)}</Text>
+              </View>
+              <Text style={prayerStyles.prayerText}>{req.request}</Text>
+              
+              <View style={prayerStyles.prayerBottomRow}>
+                {req.userId === currentUser?.uid && (
+                  <TouchableOpacity
+                    style={prayerStyles.prayIconButton}
+                    onPress={() => handleAnswered(req.id, req.answered || req.status === 'answered')}
+                    activeOpacity={0.7}
+                  >
+                    <CheckCircle2 size={18} color={(req.answered || req.status === 'answered') ? '#10B981' : '#9CA3AF'} />
+                  </TouchableOpacity>
+                )}
+                <View style={prayerStyles.prayIconButton}>
+                  <HeartHandshake 
+                    size={18} 
+                    color={isLiked ? '#FF6596' : '#9CA3AF'} 
+                  />
+                  <Text style={[prayerStyles.prayIconCount, isLiked && { color: '#FF6596' }]}>
+                    {req.likes || 0}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
 function PrayersTab({ searchQuery }: SubScreenProps) {
   const currentUser = useAuthStore((state) => state.currentUser);
-  const { prayers: prayerItems, loading, togglePrayerLike } = usePrayerFeed();
+  const { prayers: prayerItems, loading, togglePrayerLike, togglePrayerAnswered } = usePrayerFeed();
   const [filter, setFilter] = useState<PrayerFilter>('Recent');
+
+  const handleAnswered = async (id: string, currentValue: boolean) => {
+    try {
+      await togglePrayerAnswered(id, currentValue);
+    } catch(err) {
+      console.error(err);
+    }
+  };
 
   const filteredRequests = useMemo(
     () => getFilteredPrayers(prayerItems, searchQuery, filter, currentUser?.uid),
@@ -162,48 +242,15 @@ function PrayersTab({ searchQuery }: SubScreenProps) {
           <Text style={placeholder.subtitle}>Try another filter or check back soon.</Text>
         </View>
       ) : (
-        filteredRequests.map((req: Prayer) => {
-          const isLiked = currentUser ? req.likedBy.includes(currentUser.uid) : false;
-
-          return (
-            <View key={req.id} style={prayerStyles.prayerCardOuter}>
-              <View style={prayerStyles.prayerCardInner}>
-                <LinearGradient
-                  colors={['#FF6596', '#B66DFF']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 0, y: 1 }}
-                  style={prayerStyles.prayerGradientBorder}
-                />
-                <View style={prayerStyles.prayerRow}>
-
-                  <View style={prayerStyles.prayerContent}>
-                    <View style={prayerStyles.prayerTop}>
-                      <Text style={prayerStyles.prayerName}>{req.name}</Text>
-                      <Text style={prayerStyles.prayerTime}>{formatPrayerTimeAgo(req.createdAt)}</Text>
-                    </View>
-                    <Text style={prayerStyles.prayerText}>{req.request}</Text>
-                    
-                    <View style={prayerStyles.prayerBottomRow}>
-                      <TouchableOpacity
-                        style={prayerStyles.prayIconButton}
-                        onPress={() => handlePray(req.id)}
-                        activeOpacity={0.7}
-                      >
-                        <HeartHandshake 
-                          size={18} 
-                          color={isLiked ? '#FF6596' : '#9CA3AF'} 
-                        />
-                        <Text style={[prayerStyles.prayIconCount, isLiked && { color: '#FF6596' }]}>
-                          {req.likes || 0}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </View>
-              </View>
-            </View>
-          );
-        })
+        filteredRequests.map((req: Prayer) => (
+          <PrayerCardItem 
+            key={req.id} 
+            req={req} 
+            currentUser={currentUser} 
+            handlePray={handlePray} 
+            handleAnswered={handleAnswered}
+          />
+        ))
       )}
     </View>
   );

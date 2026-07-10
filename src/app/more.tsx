@@ -8,7 +8,8 @@ export default function MoreScreen() {
   const userProfile = useAuthStore((state) => state.userProfile);
   
   const displayName = userProfile?.fullName || 'User';
-  const displayRole = userProfile?.role || 'Member';
+  const roleStr = userProfile?.role || 'viewer';
+  const displayRole = roleStr.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
   const hasChurchId = Boolean(userProfile?.churchId);
 
   return (

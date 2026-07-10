@@ -4,6 +4,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { GivingFund, GivingCampaign, GivingRecord, PaymentMethod } from '../domain/giving.types';
 
 export async function fetchActiveCampaigns(churchId: string): Promise<GivingCampaign[]> {
+  if (!churchId) return [];
   try {
     const q = query(
       collection(db, 'givingCampaigns'),
@@ -19,6 +20,7 @@ export async function fetchActiveCampaigns(churchId: string): Promise<GivingCamp
 }
 
 export function subscribeToActiveCampaigns(churchId: string, callback: (campaigns: GivingCampaign[]) => void): () => void {
+  if (!churchId) return () => {};
   const q = query(
     collection(db, 'givingCampaigns'),
     where('churchId', '==', churchId),
@@ -39,6 +41,7 @@ export async function fetchGivingFunds(churchId: string): Promise<GivingFund[]> 
     { id: 'fund_missions', churchId, name: 'Missions', description: 'Missions fund', isActive: true, type: 'missions', visibility: 'public', createdBy: 'admin', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
     { id: 'fund_building', churchId, name: 'Building', description: 'Building fund', isActive: true, type: 'building', visibility: 'public', createdBy: 'admin', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
   ];
+  if (!churchId) return fallback;
   try {
     const q = query(
       collection(db, 'givingFunds'),
@@ -61,6 +64,7 @@ export async function fetchPaymentMethods(churchId: string): Promise<PaymentMeth
     { id: 'pay_maya', churchId, type: 'maya', displayName: 'Maya', isActive: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
     { id: 'pay_bank', churchId, type: 'bank_transfer', displayName: 'Bank Transfer', isActive: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
   ];
+  if (!churchId) return fallback;
   try {
     const q = query(
       collection(db, 'paymentMethods'),

@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FabMenu from '../../components/Navigation/FabMenu';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useUIStore } from '../../store/useUIStore';
+import { canAccessAdminPortal } from '../../permissions/mobilePermissions';
 
 const AnimatedTabItem = ({ isFocused, route, options, onPress, IconComponent }: any) => {
   const scale = useRef(new Animated.Value(isFocused ? 1.15 : 1)).current;
@@ -124,7 +125,7 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
 
 export default function TabLayout() {
   const { userProfile } = useAuthStore();
-  const isStaff = ['super_admin', 'church_admin', 'ministry_leader'].includes(userProfile?.role?.toLowerCase() || '');
+  const isStaff = canAccessAdminPortal(userProfile);
 
   return (
     <View style={{ flex: 1 }}>
