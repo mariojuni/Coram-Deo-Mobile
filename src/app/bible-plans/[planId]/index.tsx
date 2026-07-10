@@ -6,7 +6,7 @@ import { useBiblePlanStore } from '@/store/useBiblePlanStore';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import type { Timestamp } from 'firebase/firestore';
-import { BookOpen, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { BookOpen, CheckCircle2, ChevronLeft, ChevronRight, Settings } from 'lucide-react-native';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
@@ -147,6 +147,7 @@ export default function BiblePlanDetailScreen() {
   } = useBiblePlanDetail(planId ?? '');
 
   const startPlan = useBiblePlanStore((s) => s.startPlan);
+  const cancelPlan = useBiblePlanStore((s) => s.cancelPlan);
   const plansLoading = useBiblePlanStore((s) => s.plansLoading);
   const initializeProgressListener = useBiblePlanStore((s) => s.initializeProgressListener);
   const initializeUserBiblePlansListener = useBiblePlanStore((s) => s.initializeUserBiblePlansListener);
@@ -292,6 +293,44 @@ export default function BiblePlanDetailScreen() {
     }
   };
 
+  const handlePlanOptions = () => {
+    Alert.alert(
+      'Plan Options',
+      'What would you like to do?',
+      [
+        { text: 'Dismiss', style: 'cancel' },
+        {
+          text: 'Cancel Plan',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Cancel Plan',
+              'Are you sure you want to cancel this plan? It will be removed from your active plans.',
+              [
+                { text: 'Keep Reading', style: 'cancel' },
+                {
+                  text: 'Yes, Cancel',
+                  style: 'destructive',
+                  onPress: async () => {
+                    const churchId = userProfile?.churchId;
+                    const userId = currentUser?.uid;
+                    if (!churchId || !userId || !userBiblePlan || !plan) return;
+                    try {
+                      await cancelPlan(userBiblePlan.id, plan.id, userId, churchId);
+                      router.back();
+                    } catch {
+                      Alert.alert('Error', 'Could not cancel the plan. Please try again.');
+                    }
+                  },
+                },
+              ]
+            );
+          },
+        },
+      ]
+    );
+  };
+
   const handleContinue = () => {
     if (!nextIncompleteDay || !plan) return;
     router.push(`/bible-plans/${plan.id}/day/${nextIncompleteDay.id}` as any);
@@ -314,8 +353,13 @@ export default function BiblePlanDetailScreen() {
             <ChevronLeft size={20} color="#1a1a1a" strokeWidth={2.5} />
           </Pressable>
           <Text style={styles.headerTitle} numberOfLines={1}>Bible Plan</Text>
-          {/* spacer to keep title centered */}
-          <View style={styles.headerCircle} />
+          {isStarted && !isCompleted && userBiblePlan ? (
+            <Pressable style={styles.headerCircle} onPress={handlePlanOptions} hitSlop={8}>
+              <Settings size={20} color="#1a1a1a" strokeWidth={2.5} />
+            </Pressable>
+          ) : (
+            <View style={[styles.headerCircle, { backgroundColor: 'transparent' }]} />
+          )}
         </View>
 
         {!plan && plansLoading ? (

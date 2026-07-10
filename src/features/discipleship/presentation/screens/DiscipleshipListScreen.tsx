@@ -54,7 +54,7 @@ export function DiscipleshipListScreen() {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <View style={styles.emptyIconContainer}>
+            <View style={styles.centerContainer}>
               <BookOpen size={26} color="#FF6596" />
             </View>
             <Text style={styles.emptyTitle}>No Plans Available</Text>

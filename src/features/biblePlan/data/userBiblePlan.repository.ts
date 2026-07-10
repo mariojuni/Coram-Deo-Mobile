@@ -80,6 +80,17 @@ export const userBiblePlanRepository = {
   },
 
   /**
+   * Cancel an active Bible plan for a user.
+   */
+  async cancelPlan(userBiblePlanId: string, churchId: string): Promise<void> {
+    const planRef = doc(db, 'churches', churchId, 'userBiblePlans', userBiblePlanId);
+    await updateDoc(planRef, {
+      status: 'cancelled',
+      updatedAt: new Date().toISOString(),
+    });
+  },
+
+  /**
    * Get a user's record for a specific plan (any status).
    */
   async getUserBiblePlan(userId: string, planId: string, churchId: string): Promise<UserBiblePlan | null> {

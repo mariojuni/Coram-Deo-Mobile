@@ -43,7 +43,7 @@ export interface BiblePlanDay {
 }
 
 // ─── Firestore: churches/{churchId}/userBiblePlans ────────────────────────────
-export type UserBiblePlanStatus = 'active' | 'completed' | 'abandoned';
+export type UserBiblePlanStatus = 'active' | 'completed' | 'cancelled';
 
 export interface UserBiblePlan {
   id: string;

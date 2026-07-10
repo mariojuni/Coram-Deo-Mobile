@@ -5,6 +5,8 @@ import { VerseOfTheDayCard } from '@/features/home/presentation/components/Verse
 import { useHomeScreenData } from '@/features/home/presentation/hooks/useHomeScreenData';
 import { usePrayerFeed } from '@/features/prayer/presentation/hooks/usePrayerFeed';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useGiving } from '@/features/giving/presentation/hooks/useGiving';
+import { CampaignCard } from '@/features/giving/presentation/components/CampaignCard';
 import { useSermonStore } from '@/store/useSermonStore';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -93,6 +95,8 @@ export default function HomeScreen() {
   useEffect(() => {
     if (sermons.length === 0 && !sermonsLoading) fetchSermons(true);
   }, []);
+
+  const { campaigns } = useGiving();
 
   const [activeSlide, setActiveSlide] = useState(0);
   const [savingEventId, setSavingEventId] = useState<string | null>(null);
@@ -280,12 +284,30 @@ export default function HomeScreen() {
         {/* ─── Bible Plan Progress ───────────────────────────────────────────── */}
         <BiblePlanProgressCard />
 
-        {/* ─── Quick Actions (hidden for now) ─────────────────────────── */}
-        {/* TODO: unhide when ready
-        <View style={styles.quickActionsSection}>
-          ...
-        </View>
-        */}
+        {/* ─── Active Giving Campaigns ─────────────────────────── */}
+        {campaigns.length > 0 && (
+          <View style={styles.campaignsSection}>
+            <View style={styles.sectionHeader}>
+              <View>
+                <Text style={styles.sectionOverline}>SUPPORT</Text>
+                <Text style={styles.sectionTitle}>Active Campaigns</Text>
+              </View>
+              <DebouncedTouchable
+                style={styles.upcomingCountPill}
+                onPress={() => router.push('/giving')}
+              >
+                <Text style={styles.upcomingCountText}>{campaigns.length}</Text>
+              </DebouncedTouchable>
+            </View>
+            {campaigns.map(campaign => (
+              <CampaignCard 
+                key={campaign.id}
+                campaign={campaign}
+                onPress={() => router.push({ pathname: '/giving-campaign-detail', params: { id: campaign.id } })}
+              />
+            ))}
+          </View>
+        )}
 
         {/* ─── Today Cards Carousel ───────────────────────────────────── */}
         <View style={styles.todayCarouselWrap}>
@@ -756,6 +778,8 @@ const styles = StyleSheet.create({
     borderColor: '#fff',
   },
   scrollContent: { padding: 24, paddingTop: 12, paddingBottom: 100 },
+  // ─── Campaigns section ───────────────────────────────────────────────
+  campaignsSection: { marginBottom: 8 },
   // ─── My Ministries section ───────────────────────────────────────────────
   ministriesSection: { marginBottom: 8 },
   pendingPill: { backgroundColor: '#FFFBEB', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },

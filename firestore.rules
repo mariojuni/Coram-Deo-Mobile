@@ -18,6 +18,13 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['super_admin', 'church_admin', 'ministry_leader'];
     }
 
+    function isFinanceOrChurchAdmin(churchId) {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.churchId == churchId &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['super_admin', 'church_admin', 'finance_admin'];
+    }
+
     // ── ministryApplications ─────────────────────────────────────────────────
     match /ministryApplications/{applicationId} {
 
@@ -63,6 +70,37 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isChurchAdmin(resource.data.churchId);
     }
+    // ── Giving ───────────────────────────────────────────────────────────────
+    match /givingFunds/{fundId} {
+      allow read: if isSignedIn();
+      allow write: if isChurchAdmin(request.resource.data.churchId) || isChurchAdmin(resource.data.churchId);
+    }
+    
+    match /givingCampaigns/{campaignId} {
+      allow read: if isSignedIn() && (resource == null || resource.data.churchId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.churchId);
+      allow write: if isFinanceOrChurchAdmin(request.resource.data.churchId) && (resource == null || isFinanceOrChurchAdmin(resource.data.churchId));
+    }
+    
+    match /paymentMethods/{methodId} {
+      allow read: if isSignedIn();
+      allow write: if isChurchAdmin(request.resource.data.churchId) || isChurchAdmin(resource.data.churchId);
+    }
+    
+    match /givingRecords/{recordId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isChurchAdmin(resource.data.churchId));
+      
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.churchId != null;
+        
+      allow update, delete: if isChurchAdmin(resource.data.churchId);
+    }
+    
+    match /givingExpenses/{expenseId} {
+      allow read: if isSignedIn() && (resource.data.visibility == 'public_summary' || isChurchAdmin(resource.data.churchId));
+      allow write: if isChurchAdmin(request.resource.data.churchId) || isChurchAdmin(resource.data.churchId);
+    }
+
     // ── Worship Library ──────────────────────────────────────────────────────
     match /songs/{songId} {
       allow read: if isSignedIn();

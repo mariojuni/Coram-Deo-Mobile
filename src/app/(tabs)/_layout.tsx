@@ -8,6 +8,45 @@ import FabMenu from '../../components/Navigation/FabMenu';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useUIStore } from '../../store/useUIStore';
 
+const AnimatedTabItem = ({ isFocused, route, options, onPress, IconComponent }: any) => {
+  const scale = useRef(new Animated.Value(isFocused ? 1.15 : 1)).current;
+  const translateY = useRef(new Animated.Value(isFocused ? -4 : 0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(scale, {
+        toValue: isFocused ? 1.15 : 1,
+        useNativeDriver: true,
+        friction: 5,
+        tension: 100,
+      }),
+      Animated.spring(translateY, {
+        toValue: isFocused ? -4 : 0,
+        useNativeDriver: true,
+        friction: 5,
+        tension: 100,
+      })
+    ]).start();
+  }, [isFocused]);
+
+  const color = isFocused ? '#FF6596' : '#D2D4E1';
+
+  return (
+    <TouchableOpacity
+      accessibilityRole="button"
+      accessibilityState={isFocused ? { selected: true } : {}}
+      accessibilityLabel={options.tabBarAccessibilityLabel}
+      testID={options.tabBarTestID}
+      onPress={onPress}
+      style={styles.navItem}
+    >
+      <Animated.View style={{ transform: [{ scale }, { translateY }] }}>
+        <IconComponent size={24} color={color} />
+      </Animated.View>
+    </TouchableOpacity>
+  );
+};
+
 function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
   const insets = useSafeAreaInsets();
   const tabBarVisible = useUIStore((s) => s.tabBarVisible);
@@ -54,7 +93,6 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
               }
             };
 
-            const color = isFocused ? '#FF6596' : '#D2D4E1';
             const iconByRoute = {
               index: Home,
               bible: Book,
@@ -68,17 +106,14 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
             }
 
             return (
-              <TouchableOpacity
+              <AnimatedTabItem
                 key={route.key}
-                accessibilityRole="button"
-                accessibilityState={isFocused ? { selected: true } : {}}
-                accessibilityLabel={options.tabBarAccessibilityLabel}
-                testID={options.tabBarTestID}
+                isFocused={isFocused}
+                route={route}
+                options={options}
                 onPress={onPress}
-                style={[styles.navItem, isFocused && styles.navItemActive]}
-              >
-                <IconComponent size={24} color={color} />
-              </TouchableOpacity>
+                IconComponent={IconComponent}
+              />
             );
           })}
         </View>
@@ -94,7 +129,10 @@ export default function TabLayout() {
   return (
     <View style={{ flex: 1 }}>
       <Tabs 
-        screenOptions={{ headerShown: false }}
+        screenOptions={{ 
+          headerShown: false,
+          animation: 'shift', // Adds a smooth sliding transition between tabs
+        }}
         tabBar={(props) => <CustomTabBar {...props} isStaff={isStaff} />}
       >
         <Tabs.Screen name="index" options={{ title: 'Home' }} />

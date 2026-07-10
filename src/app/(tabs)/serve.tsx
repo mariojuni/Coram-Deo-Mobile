@@ -9,9 +9,11 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Handshake, UserX } from 'lucide-react-native';
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
+    Animated,
+    Dimensions,
     ScrollView,
     StyleSheet,
     Text,
@@ -28,6 +30,64 @@ export default function ServeScreen() {
   const insets = useSafeAreaInsets();
   const userProfile = useAuthStore((s) => s.userProfile);
   const [activeTab, setActiveTab] = useState<ServeTab>('My Schedule');
+
+  const tabLayouts = useRef<({ x: number; width: number } | null)[]>(
+    Array(TABS.length).fill(null),
+  );
+  const indicatorX = useMemo(() => new Animated.Value(0), []);
+  const indicatorWidth = useMemo(() => new Animated.Value(0), []);
+  const initialised = useRef(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const screenWidth = Dimensions.get('window').width;
+
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const headerTranslateY = scrollY.interpolate({
+    inputRange: [0, 60],
+    outputRange: [0, -60],
+    extrapolate: 'clamp',
+  });
+  
+  const titleOpacity = scrollY.interpolate({
+    inputRange: [0, 40],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+
+  const activeTabIndex = TABS.indexOf(activeTab);
+
+  const handleTabLayout = (index: number, x: number, width: number) => {
+    tabLayouts.current[index] = { x, width };
+    if (index === activeTabIndex && !initialised.current) {
+      indicatorX.setValue(x);
+      indicatorWidth.setValue(width);
+      initialised.current = true;
+    }
+  };
+
+  const handleTabPress = (index: number) => {
+    const layout = tabLayouts.current[index];
+    if (layout) {
+      Animated.parallel([
+        Animated.spring(indicatorX, {
+          toValue: layout.x,
+          useNativeDriver: false,
+          tension: 80,
+          friction: 10,
+        }),
+        Animated.spring(indicatorWidth, {
+          toValue: layout.width,
+          useNativeDriver: false,
+          tension: 80,
+          friction: 10,
+        }),
+      ]).start();
+
+      const centerOffsetX = layout.x + layout.width / 2 - screenWidth / 2;
+      scrollViewRef.current?.scrollTo({ x: Math.max(0, centerOffsetX), animated: true });
+    }
+    setActiveTab(TABS[index]);
+  };
+
 
   const { grouped, allAssignments, loading: assignmentsLoading } = useMyAssignments();
   const { ministries, loading: ministriesLoading } = useServeMinistries();
@@ -66,9 +126,28 @@ export default function ServeScreen() {
   return (
     <View style={styles.screen}>
       {/* ─── Header ─── */}
-      <View style={[styles.header, { paddingTop: Math.max(insets.top, 24) }]} pointerEvents="box-none">
-        <BlurView intensity={90} tint="light" style={StyleSheet.absoluteFill} />
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.75)' }]} pointerEvents="none" />
+      <Animated.View
+        style={[
+          styles.header, 
+          { 
+            paddingTop: Math.max(insets.top, 24),
+            transform: [{ translateY: headerTranslateY }]
+          }
+        ]}
+        pointerEvents="box-none"
+      >
+        <BlurView
+          intensity={90}
+          tint="light"
+          style={[StyleSheet.absoluteFill, { top: -150 }]}
+        />
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: 'rgba(255,255,255,0.75)', top: -150 },
+          ]}
+          pointerEvents="none"
+        />
 
         {/* Gradient accent line */}
         <View style={styles.accentLine}>
@@ -81,7 +160,7 @@ export default function ServeScreen() {
         </View>
 
         {/* Title row */}
-        <View style={styles.headerContent}>
+        <Animated.View style={[styles.headerContent, { opacity: titleOpacity }]}>
           <View style={styles.headerLeft}>
             <View style={styles.headerIconWrap}>
               <LinearGradient
@@ -104,40 +183,48 @@ export default function ServeScreen() {
               <Text style={styles.headerBadgeLabel}>upcoming</Text>
             </View>
           )}
-        </View>
+        </Animated.View>
 
-        {/* Tab pills */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabScroll}
-          style={styles.tabScrollWrapper}
-        >
-          {TABS.map((tab) => (
-            <TouchableOpacity
-              key={tab}
-              onPress={() => setActiveTab(tab)}
-              activeOpacity={0.8}
-              style={styles.tabWrapper}
-            >
-              {activeTab === tab ? (
-                <LinearGradient
-                  colors={['#FF6596', '#B66DFF']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.tabPillActive}
+        {/* Modern Pill Tab Bar */}
+        <View style={styles.tabBarWrapper}>
+          <ScrollView
+            ref={scrollViewRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tabBarContent}
+          >
+            {/* Sliding pill indicator */}
+            <Animated.View
+              style={[
+                styles.indicator,
+                { left: indicatorX, width: indicatorWidth },
+              ]}
+            />
+
+            {TABS.map((tab, index) => (
+              <TouchableOpacity
+                key={tab}
+                onLayout={(e) => {
+                  const { x, width } = e.nativeEvent.layout;
+                  handleTabLayout(index, x, width);
+                }}
+                onPress={() => handleTabPress(index)}
+                style={styles.tab}
+                activeOpacity={0.75}
+              >
+                <Text
+                  style={[
+                    styles.tabText,
+                    activeTabIndex === index && styles.tabTextActive,
+                  ]}
                 >
-                  <Text style={styles.tabTextActive}>{tab}</Text>
-                </LinearGradient>
-              ) : (
-                <View style={styles.tabPill}>
-                  <Text style={styles.tabText}>{tab}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+                  {tab}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      </Animated.View>
 
       {/* ─── Content ─── */}
       {activeTab === 'My Schedule' && (
@@ -148,6 +235,10 @@ export default function ServeScreen() {
             router.push({ pathname: '/serve-assignment-detail', params: { id } } as any)
           }
           headerHeight={headerHeight}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+            { useNativeDriver: true }
+          )}
         />
       )}
       {activeTab === 'All Ministries' && (
@@ -158,6 +249,10 @@ export default function ServeScreen() {
             router.push({ pathname: '/serve-ministry-detail', params: { id } } as any)
           }
           headerHeight={headerHeight}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+            { useNativeDriver: true }
+          )}
         />
       )}
       {activeTab === 'Calendar' && (
@@ -167,6 +262,10 @@ export default function ServeScreen() {
             router.push({ pathname: '/serve-assignment-detail', params: { id } } as any)
           }
           headerHeight={headerHeight}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+            { useNativeDriver: true }
+          )}
         />
       )}
     </View>
@@ -182,12 +281,13 @@ const GROUP_CONFIG = {
 } as const;
 
 function MyScheduleTab({
-  grouped, loading, onPressAssignment, headerHeight,
+  grouped, loading, onPressAssignment, headerHeight, onScroll
 }: {
   grouped: ReturnType<typeof useMyAssignments>['grouped'];
   loading: boolean;
   onPressAssignment: (id: string) => void;
   headerHeight: number;
+  onScroll?: any;
 }) {
   if (loading) {
     return (
@@ -199,19 +299,25 @@ function MyScheduleTab({
 
   if (!grouped.length) {
     return (
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight + 16 }]}>
+      <Animated.ScrollView 
+        contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight + 16 }]}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+      >
         <ServeEmptyState
           title="No Assignments Yet"
           message="When your ministry leader schedules you, your assignments will appear here."
         />
-      </ScrollView>
+      </Animated.ScrollView>
     );
   }
 
   return (
-    <ScrollView
+    <Animated.ScrollView
       contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight + 16 }]}
       showsVerticalScrollIndicator={false}
+      onScroll={onScroll}
+      scrollEventThrottle={16}
     >
       {grouped.map((group) => {
         const cfg = GROUP_CONFIG[group.label] ?? { color: '#9CA3AF', dot: '#D1D5DB' };
@@ -232,19 +338,20 @@ function MyScheduleTab({
           </View>
         );
       })}
-    </ScrollView>
+    </Animated.ScrollView>
   );
 }
 
 // ─── All Ministries tab ───────────────────────────────────────────────────────
 
 function AllMinistriesTab({
-  ministries, loading, onPressMinistry, headerHeight,
+  ministries, loading, onPressMinistry, headerHeight, onScroll
 }: {
   ministries: ReturnType<typeof useServeMinistries>['ministries'];
   loading: boolean;
   onPressMinistry: (id: string) => void;
   headerHeight: number;
+  onScroll?: any;
 }) {
   if (loading) {
     return (
@@ -256,19 +363,25 @@ function AllMinistriesTab({
 
   if (!ministries.length) {
     return (
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight + 16 }]}>
+      <Animated.ScrollView 
+        contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight + 16 }]}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+      >
         <ServeEmptyState
           title="No Ministries Found"
           message="Your church hasn't set up any ministries yet. Check back soon."
         />
-      </ScrollView>
+      </Animated.ScrollView>
     );
   }
 
   return (
-    <ScrollView
+    <Animated.ScrollView
       contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight + 16 }]}
       showsVerticalScrollIndicator={false}
+      onScroll={onScroll}
+      scrollEventThrottle={16}
     >
       <View style={styles.ministriesHeader}>
         <Text style={styles.ministriesOverline}>ALL MINISTRIES</Text>
@@ -279,26 +392,32 @@ function AllMinistriesTab({
       {ministries.map((m) => (
         <MinistryCard key={m.id} ministry={m} onPress={() => onPressMinistry(m.id)} />
       ))}
-    </ScrollView>
+    </Animated.ScrollView>
   );
 }
 
 // ─── Calendar tab ─────────────────────────────────────────────────────────────
 
 function CalendarTab({
-  assignments, onPressAssignment, headerHeight,
+  assignments, onPressAssignment, headerHeight, onScroll
 }: {
   assignments: ReturnType<typeof useMyAssignments>['allAssignments'];
   onPressAssignment: (id: string) => void;
   headerHeight: number;
+  onScroll?: any;
 }) {
   return (
-    <View style={[styles.calendarContainer, { paddingTop: headerHeight + 16 }]}>
+    <Animated.ScrollView 
+      contentContainerStyle={[styles.calendarContainer, { paddingTop: headerHeight + 16 }]}
+      onScroll={onScroll}
+      scrollEventThrottle={16}
+      showsVerticalScrollIndicator={false}
+    >
       <ServeCalendarView
         assignments={assignments}
         onPressAssignment={(a) => onPressAssignment(a.id)}
       />
-    </View>
+    </Animated.ScrollView>
   );
 }
 
@@ -362,35 +481,38 @@ const styles = StyleSheet.create({
   headerBadgeNum: { fontSize: 18, fontWeight: '800', color: '#FF6596', lineHeight: 20 },
   headerBadgeLabel: { fontSize: 9, fontWeight: '600', color: '#FF6596', letterSpacing: 0.3 },
 
-  // Tab pills
-  tabScrollWrapper: { flexGrow: 0 },
-  tabScroll: {
+  // ── Tab bar ───
+  tabBarWrapper: {
+    paddingBottom: 12,
+    paddingTop: 4,
+  },
+  tabBarContent: {
     paddingHorizontal: 20,
-    paddingBottom: 14,
-    gap: 8,
-    flexDirection: 'row',
+    gap: 4,
+    alignItems: 'center',
   },
-  tabWrapper: {},
-  tabPill: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+  tab: {
+    paddingHorizontal: 12,
+    paddingBottom: 12,
+    paddingTop: 4,
   },
-  tabPillActive: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    shadowColor: '#FF6596',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 4,
+  tabText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#888',
+    letterSpacing: 0.1,
   },
-  tabText: { fontSize: 13, fontWeight: '600', color: '#9CA3AF' },
-  tabTextActive: { fontSize: 13, fontWeight: '700', color: '#fff' },
+  tabTextActive: {
+    color: '#1a1a1a',
+    fontWeight: '700',
+  },
+  indicator: {
+    position: 'absolute',
+    bottom: 0,
+    height: 2.5,
+    borderRadius: 2,
+    backgroundColor: '#FF6596',
+  },
 
   // Content
   scrollContent: { paddingHorizontal: 20, paddingBottom: 110 },

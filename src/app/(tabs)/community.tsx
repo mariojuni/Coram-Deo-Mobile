@@ -573,7 +573,7 @@ function EventsTab({ searchQuery }: SubScreenProps) {
 function PublicEventSetlist({ eventId, onCloseModal }: { eventId: string; onCloseModal?: () => void }) {
   const router = useRouter();
   const userProfile = useAuthStore((s) => s.userProfile);
-  const { setlist, items, loading } = useWorshipSetlist(userProfile?.churchId, eventId);
+  const { setlist, items, loading } = useWorshipSetlist(userProfile?.churchId || undefined, eventId || undefined);
   const fadeAnim = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
@@ -808,6 +808,21 @@ export default function CommunityScreen() {
   const indicatorX = useMemo(() => new Animated.Value(0), []);
   const indicatorWidth = useMemo(() => new Animated.Value(0), []);
   const initialised = useRef(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const screenWidth = Dimensions.get('window').width;
+
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const headerTranslateY = scrollY.interpolate({
+    inputRange: [0, 60],
+    outputRange: [0, -60],
+    extrapolate: 'clamp',
+  });
+  
+  const titleOpacity = scrollY.interpolate({
+    inputRange: [0, 40],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
 
   const handleTabLayout = (index: number, x: number, width: number) => {
     tabLayouts.current[index] = { x, width };
@@ -836,6 +851,9 @@ export default function CommunityScreen() {
           friction: 10,
         }),
       ]).start();
+
+      const centerOffsetX = layout.x + layout.width / 2 - screenWidth / 2;
+      scrollViewRef.current?.scrollTo({ x: Math.max(0, centerOffsetX), animated: true });
     }
     setActiveTab(index);
   };
@@ -864,25 +882,41 @@ export default function CommunityScreen() {
   return (
     <View style={styles.container}>
       {/* ── Frosted sticky header ── */}
-      <View
-        style={[styles.frostedHeader, { paddingTop: Math.max(insets.top, 24) }]}
+      <Animated.View
+        style={[
+          styles.frostedHeader, 
+          { 
+            paddingTop: Math.max(insets.top, 24),
+            transform: [{ translateY: headerTranslateY }]
+          }
+        ]}
         pointerEvents="box-none"
       >
         <BlurView
-          intensity={80}
+          intensity={90}
           tint="light"
-          style={StyleSheet.absoluteFill}
+          style={[StyleSheet.absoluteFill, { top: -150 }]}
         />
         <View
           style={[
             StyleSheet.absoluteFill,
-            { backgroundColor: 'rgba(255,255,255,0.6)' },
+            { backgroundColor: 'rgba(255,255,255,0.75)', top: -150 },
           ]}
           pointerEvents="none"
         />
 
+        {/* Gradient accent line */}
+        <View style={styles.accentLine}>
+          <LinearGradient
+            colors={['#FF6596', '#B66DFF', '#6DC8FF']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </View>
+
         {/* Title row */}
-        <View style={styles.titleRow}>
+        <Animated.View style={[styles.headerContent, { opacity: titleOpacity }]}>
           {isSearchOpen ? (
             <View style={styles.topSearchBoxExpanded}>
               <Search size={14} color="#8A8C99" />
@@ -908,7 +942,22 @@ export default function CommunityScreen() {
             </View>
           ) : (
             <>
-              <Text style={styles.title}>Community</Text>
+              <View style={styles.headerLeft}>
+                <View style={styles.headerIconWrap}>
+                  <LinearGradient
+                    colors={['#FF6596', '#B66DFF']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.headerIconGradient}
+                  >
+                    <Users size={16} color="#fff" strokeWidth={2} />
+                  </LinearGradient>
+                </View>
+                <View>
+                  <Text style={styles.headerOverline}>NETWORK</Text>
+                  <Text style={styles.headerTitle}>Community</Text>
+                </View>
+              </View>
               <TouchableOpacity
                 style={styles.searchToggleButton}
                 onPress={() => setIsSearchOpen(true)}
@@ -918,15 +967,24 @@ export default function CommunityScreen() {
               </TouchableOpacity>
             </>
           )}
-        </View>
+        </Animated.View>
 
-        {/* Underline tab bar */}
+        {/* Modern Pill Tab Bar */}
         <View style={styles.tabBarWrapper}>
           <ScrollView
+            ref={scrollViewRef}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.tabBarContent}
           >
+            {/* Sliding pill indicator */}
+            <Animated.View
+              style={[
+                styles.indicator,
+                { left: indicatorX, width: indicatorWidth },
+              ]}
+            />
+
             {TABS.map(({ key, label }, index) => (
               <TouchableOpacity
                 key={key}
@@ -948,24 +1006,21 @@ export default function CommunityScreen() {
                 </Text>
               </TouchableOpacity>
             ))}
-
-            {/* Sliding underline indicator */}
-            <Animated.View
-              style={[
-                styles.indicator,
-                { left: indicatorX, width: indicatorWidth },
-              ]}
-            />
           </ScrollView>
         </View>
-      </View>
+      </Animated.View>
 
       {/* ── Sub-screen content ── */}
-      <ScrollView
+      <Animated.ScrollView
         contentContainerStyle={[styles.content, { paddingTop: headerHeight }]}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
+        scrollEventThrottle={16}
       >
         <ActiveScreen searchQuery={activeSearchQuery} />
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 }
@@ -986,20 +1041,41 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,0,0,0.06)',
   },
-  titleRow: {
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 12,
+  accentLine: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0,
+    height: 3,
+    zIndex: 10,
+  },
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 10,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 10,
   },
-  title: {
-    fontSize: 34,
-    fontWeight: '900',
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  headerIconWrap: {},
+  headerIconGradient: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerOverline: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FF6596',
+    letterSpacing: 1.2,
+  },
+  headerTitle: {
+    fontSize: 26,
+    fontWeight: '800',
     color: '#1a1a1a',
     letterSpacing: -0.5,
+    marginTop: -1,
   },
   topSearchBoxExpanded: {
     flex: 1,
@@ -1033,11 +1109,13 @@ const styles = StyleSheet.create({
 
   // ── Tab bar ───
   tabBarWrapper: {
-    paddingBottom: 0,
+    paddingBottom: 12,
+    paddingTop: 4,
   },
   tabBarContent: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     gap: 4,
+    alignItems: 'center',
   },
   tab: {
     paddingHorizontal: 12,

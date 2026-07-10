@@ -1,132 +1,255 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
-import { Download, ChevronLeft } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import React, { useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, ActivityIndicator, Animated } from 'react-native';
+import { ChevronLeft, History, Heart, Globe, Building2, Wallet } from 'lucide-react-native';
+import { useRouter, Stack } from 'expo-router';
+import { useGiving } from '@/features/giving/presentation/hooks/useGiving';
+import { CampaignCard } from '@/features/giving/presentation/components/CampaignCard';
+import { useAuthStore } from '@/store/useAuthStore';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function GivingScreen() {
   const router = useRouter();
+  const { campaigns, isLoading } = useGiving();
+  const { userProfile } = useAuthStore();
+  const hasChurchId = !!userProfile?.churchId;
+  const insets = useSafeAreaInsets();
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  if (!hasChurchId) {
+    return (
+      <View style={styles.container}>
+        <LinearGradient colors={['#FFE8F1', '#F9FAFB']} style={StyleSheet.absoluteFill} />
+        <View style={[styles.header, { paddingTop: insets.top + 10, paddingBottom: 16, backgroundColor: 'transparent' }]}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+            <ChevronLeft size={24} color="#1a1a1a" />
+            <Text style={styles.title}>Giving</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.errorContainer}>
+          <View style={styles.errorIconWrap}>
+            <Heart size={40} color="#FF6596" fill="#FF6596" />
+          </View>
+          <Text style={styles.errorTitle}>Church Not Linked</Text>
+          <Text style={styles.errorText}>
+            Your account isn't linked to a church yet. Please contact your church admin to get linked so you can access giving features.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  const handleQuickGive = (fundType: string) => {
+    router.push({ pathname: '/giving-form', params: { fundType } });
+  };
+
+  const headerOpacity = scrollY.interpolate({
+    inputRange: [0, 40],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <View style={styles.container}>
+      <LinearGradient colors={['#FFE8F1', '#F5F2FF', '#FAFAFA']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0.3 }} style={StyleSheet.absoluteFill} />
+      <Stack.Screen options={{ headerShown: false }} />
+      
+      <View style={[styles.header, { paddingTop: insets.top + 10, paddingBottom: 16, position: 'absolute', width: '100%', zIndex: 10 }]}>
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: headerOpacity }]}>
+          <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+          <View style={[StyleSheet.absoluteFill, { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.3)' }]} />
+        </Animated.View>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <ChevronLeft size={24} color="#1a1a1a" />
           <Text style={styles.title}>Giving</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.iconBtn}>
-          <Download size={20} color="#1a1a1a" />
+        <TouchableOpacity style={styles.iconBtn} onPress={() => router.push('/my-giving')}>
+          <History size={24} color="#1a1a1a" />
         </TouchableOpacity>
       </View>
       
-      <ScrollView style={styles.content}>
-        <View style={styles.heroCard}>
-          <Text style={styles.heroSub}>Total This Month</Text>
-          <Text style={styles.heroTitle}>$42,180.50</Text>
-          <View style={styles.goalBarContainer}>
-            <View style={[styles.goalBarFill, { width: '84%' }]} />
-          </View>
-          <Text style={styles.goalText}>84% of $50,000 goal</Text>
-        </View>
+      <Animated.ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
+        scrollEventThrottle={16}
+        contentContainerStyle={{ paddingTop: insets.top + 70, paddingBottom: 40 }}
+      >
         
-        <View style={styles.bentoGrid}>
-          <View style={[styles.card, styles.fundCard]}>
-            <Text style={styles.cardTitle}>Funds</Text>
-            <View style={styles.fundList}>
-              <View style={styles.fundItem}>
-                <View style={[styles.dot, { backgroundColor: '#FF5FA0' }]} />
-                <Text style={styles.fundLabel}>General</Text>
-                <Text style={styles.fundValue}>75%</Text>
-              </View>
-              <View style={styles.fundItem}>
-                <View style={[styles.dot, { backgroundColor: '#8B6FE8' }]} />
-                <Text style={styles.fundLabel}>Missions</Text>
-                <Text style={styles.fundValue}>15%</Text>
-              </View>
-              <View style={styles.fundItem}>
-                <View style={[styles.dot, { backgroundColor: '#4D7FFF' }]} />
-                <Text style={styles.fundLabel}>Building</Text>
-                <Text style={styles.fundValue}>10%</Text>
-              </View>
-            </View>
+        <View style={styles.quickGiveSection}>
+          <Text style={styles.sectionTitle}>Support this Ministry</Text>
+          <View style={styles.quickGiveGrid}>
+            <TouchableOpacity activeOpacity={0.8} style={styles.quickGiveCard} onPress={() => handleQuickGive('tithe')}>
+              <LinearGradient colors={['#FFF0F5', '#FFE8F1']} style={styles.quickGiveIconWrap}>
+                <Wallet size={24} color="#FF6596" />
+              </LinearGradient>
+              <Text style={styles.quickGiveText}>Tithe</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity activeOpacity={0.8} style={styles.quickGiveCard} onPress={() => handleQuickGive('offering')}>
+              <LinearGradient colors={['#F0F5FF', '#E5EDFF']} style={styles.quickGiveIconWrap}>
+                <Heart size={24} color="#4D7FFF" />
+              </LinearGradient>
+              <Text style={styles.quickGiveText}>Offering</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity activeOpacity={0.8} style={styles.quickGiveCard} onPress={() => handleQuickGive('missions')}>
+              <LinearGradient colors={['#F5F0FF', '#EDE4FF']} style={styles.quickGiveIconWrap}>
+                <Globe size={24} color="#8B6FE8" />
+              </LinearGradient>
+              <Text style={styles.quickGiveText}>Missions</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity activeOpacity={0.8} style={styles.quickGiveCard} onPress={() => handleQuickGive('building')}>
+              <LinearGradient colors={['#F0FDF4', '#E1F9E8']} style={styles.quickGiveIconWrap}>
+                <Building2 size={24} color="#22C55E" />
+              </LinearGradient>
+              <Text style={styles.quickGiveText}>Building</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
-        <View style={styles.placeholderCard}>
-          <Text style={styles.placeholderTitle}>Giving Trend Chart</Text>
-          <Text style={styles.placeholderSub}>Native charts coming soon.</Text>
+        <View style={styles.campaignsSection}>
+          <Text style={styles.sectionTitle}>Active Campaigns</Text>
+          
+          {isLoading ? (
+            <ActivityIndicator size="large" color="#FF6596" style={{ marginTop: 40 }} />
+          ) : campaigns.length > 0 ? (
+            campaigns.map((campaign) => (
+              <View key={campaign.id} style={styles.campaignWrapper}>
+                <CampaignCard 
+                  campaign={campaign} 
+                  onPress={() => router.push({ pathname: '/giving-campaign-detail', params: { id: campaign.id } })}
+                />
+              </View>
+            ))
+          ) : (
+            <View style={styles.emptyCampaigns}>
+              <Heart size={32} color="#D1D5DB" style={{ marginBottom: 12 }} />
+              <Text style={styles.emptyCampaignsText}>No active campaigns right now</Text>
+            </View>
+          )}
         </View>
         
-        <View style={{ height: 40 }} />
-      </ScrollView>
-    </SafeAreaView>
+      </Animated.ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF5F8' },
+  container: { flex: 1, backgroundColor: '#FAFAFA' },
   header: { 
     flexDirection: 'row', 
     alignItems: 'center', 
     justifyContent: 'space-between',
     paddingHorizontal: 16, 
-    paddingVertical: 16,
-    backgroundColor: '#FFF5F8'
   },
   backBtn: { flexDirection: 'row', alignItems: 'center' },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#1a1a1a', marginLeft: 8 },
-  iconBtn: { padding: 8 },
+  title: { fontSize: 26, fontWeight: '800', color: '#1a1a1a', marginLeft: 8 },
+  iconBtn: { 
+    padding: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    borderRadius: 20,
+  },
   content: { flex: 1, paddingHorizontal: 24 },
-  heroCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    marginBottom: 24,
-    alignItems: 'center'
+  
+  quickGiveSection: {
+    marginTop: 10,
+    marginBottom: 36,
   },
-  heroSub: { fontSize: 16, color: '#666', marginBottom: 8 },
-  heroTitle: { fontSize: 36, fontWeight: '900', color: '#1a1a1a', marginBottom: 24 },
-  goalBarContainer: {
-    width: '100%',
-    height: 12,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 6,
-    overflow: 'hidden',
-    marginBottom: 12
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#1a1a1a',
+    marginBottom: 20,
+    letterSpacing: -0.5,
   },
-  goalBarFill: {
-    height: '100%',
-    backgroundColor: '#8B6FE8',
-    borderRadius: 6
+  quickGiveGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 16,
   },
-  goalText: { fontSize: 14, color: '#666', fontWeight: '500' },
-  bentoGrid: { flexDirection: 'row', gap: 16, marginBottom: 24 },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2
-  },
-  fundCard: { flex: 1 },
-  cardTitle: { fontSize: 18, fontWeight: 'bold', color: '#1a1a1a', marginBottom: 16 },
-  fundList: { gap: 12 },
-  fundItem: { flexDirection: 'row', alignItems: 'center' },
-  dot: { width: 12, height: 12, borderRadius: 6, marginRight: 12 },
-  fundLabel: { flex: 1, fontSize: 16, color: '#1a1a1a' },
-  fundValue: { fontSize: 16, fontWeight: 'bold', color: '#1a1a1a' },
-  placeholderCard: {
-    backgroundColor: '#E3F2FD',
-    borderRadius: 16,
-    padding: 32,
+  quickGiveCard: {
+    width: '47%',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 24,
+    padding: 20,
     alignItems: 'center',
-    justifyContent: 'center'
+    shadowColor: '#FF6596',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.8)',
   },
-  placeholderTitle: { fontSize: 18, fontWeight: 'bold', color: '#007AFF', marginBottom: 8 },
-  placeholderSub: { fontSize: 14, color: '#666' }
+  quickGiveIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  quickGiveText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1a1a1a',
+  },
+  
+  campaignsSection: {
+    marginBottom: 24,
+  },
+  campaignWrapper: {
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 2,
+  },
+  emptyCampaigns: {
+    padding: 32,
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    borderRadius: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.8)',
+    borderStyle: 'dashed',
+  },
+  emptyCampaignsText: {
+    color: '#6B7280',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+  },
+  errorIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#FFF0F5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  errorTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#1a1a1a',
+    marginBottom: 12,
+  },
+  errorText: {
+    fontSize: 17,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 26,
+  },
 });
+

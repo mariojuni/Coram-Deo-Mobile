@@ -2,8 +2,8 @@ import DebouncedTouchable from '@/components/DebouncedTouchable';
 import type { MinistryAssignment } from '@/features/ministry/domain/ministry.types';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState, useRef } from 'react';
+import { ScrollView, StyleSheet, Text, View, PanResponder, Animated, Dimensions } from 'react-native';
 
 interface ServeCalendarViewProps {
   assignments: MinistryAssignment[];
@@ -33,6 +33,7 @@ export function ServeCalendarView({ assignments, onPressAssignment }: ServeCalen
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const [selectedDay, setSelectedDay] = useState(toDateKey(today));
+  const [viewMode, setViewMode] = useState<'month' | 'week'>('week');
 
   const assignmentsByDate = useMemo(() => {
     const map: Record<string, MinistryAssignment[]> = {};
@@ -52,35 +53,125 @@ export function ServeCalendarView({ assignments, onPressAssignment }: ServeCalen
     for (let i = 0; i < firstDay; i++) cells.push(null);
     for (let d = 1; d <= daysInMonth; d++) cells.push(d);
     while (cells.length % 7 !== 0) cells.push(null);
-    return cells;
+    
+    // Group into rows of 7 to avoid flexWrap precision issues
+    const rows = [];
+    for (let i = 0; i < cells.length; i += 7) {
+      rows.push(cells.slice(i, i + 7));
+    }
+    return rows;
   }, [year, month]);
 
-  const prevMonth = () => {
-    if (month === 0) { setMonth(11); setYear(y => y - 1); }
-    else setMonth(m => m - 1);
+  const weekDays = useMemo(() => {
+    const [sY, sM, sD] = selectedDay.split('-').map(Number);
+    const date = new Date(sY, sM - 1, sD);
+    const dayOfWeek = date.getDay();
+    const sunday = new Date(date);
+    sunday.setDate(date.getDate() - dayOfWeek);
+
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(sunday);
+      d.setDate(sunday.getDate() + i);
+      days.push(d);
+    }
+    return days;
+  }, [selectedDay]);
+
+  const prevAction = () => {
+    if (viewMode === 'month') {
+      if (month === 0) { setMonth(11); setYear(y => y - 1); }
+      else setMonth(m => m - 1);
+    } else {
+      const [sY, sM, sD] = selectedDay.split('-').map(Number);
+      const d = new Date(sY, sM - 1, sD - 7);
+      setSelectedDay(toDateKey(d));
+      setMonth(d.getMonth());
+      setYear(d.getFullYear());
+    }
   };
-  const nextMonth = () => {
-    if (month === 11) { setMonth(0); setYear(y => y + 1); }
-    else setMonth(m => m + 1);
+
+  const nextAction = () => {
+    if (viewMode === 'month') {
+      if (month === 11) { setMonth(0); setYear(y => y + 1); }
+      else setMonth(m => m + 1);
+    } else {
+      const [sY, sM, sD] = selectedDay.split('-').map(Number);
+      const d = new Date(sY, sM - 1, sD + 7);
+      setSelectedDay(toDateKey(d));
+      setMonth(d.getMonth());
+      setYear(d.getFullYear());
+    }
   };
+
+  const actionsRef = useRef({ prevAction, nextAction });
+  actionsRef.current = { prevAction, nextAction };
+
+  const slideAnim = useRef(new Animated.Value(0)).current;
+
+  const handlePrev = () => {
+    Animated.timing(slideAnim, { toValue: Dimensions.get('window').width, duration: 200, useNativeDriver: true }).start(() => {
+      actionsRef.current.prevAction();
+      slideAnim.setValue(-Dimensions.get('window').width);
+      Animated.spring(slideAnim, { toValue: 0, tension: 65, friction: 13, useNativeDriver: true }).start();
+    });
+  };
+
+  const handleNext = () => {
+    Animated.timing(slideAnim, { toValue: -Dimensions.get('window').width, duration: 200, useNativeDriver: true }).start(() => {
+      actionsRef.current.nextAction();
+      slideAnim.setValue(Dimensions.get('window').width);
+      Animated.spring(slideAnim, { toValue: 0, tension: 65, friction: 13, useNativeDriver: true }).start();
+    });
+  };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && Math.abs(gestureState.dx) > 10;
+      },
+      onPanResponderMove: (_, gestureState) => {
+        slideAnim.setValue(gestureState.dx);
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dx > 50) {
+          handlePrev();
+        } else if (gestureState.dx < -50) {
+          handleNext();
+        } else {
+          Animated.spring(slideAnim, { toValue: 0, tension: 65, friction: 13, useNativeDriver: true }).start();
+        }
+      },
+    })
+  ).current;
 
   const todayKey = toDateKey(today);
   const selectedAssignments = assignmentsByDate[selectedDay] ?? [];
 
   return (
     <View style={cs.container}>
-      {/* Month navigation */}
-      <View style={cs.monthHeader}>
-        <DebouncedTouchable onPress={prevMonth} style={cs.navBtn} activeOpacity={0.7}>
-          <ChevronLeft size={18} color="#FF6596" strokeWidth={2.5} />
-        </DebouncedTouchable>
-        <View style={cs.monthCenter}>
-          <Text style={cs.monthTitle}>{MONTHS[month]}</Text>
-          <Text style={cs.yearLabel}>{year}</Text>
+      {/* Month navigation and View Mode Toggle */}
+      <View style={cs.headerTop}>
+        <View style={cs.monthNav}>
+          <DebouncedTouchable onPress={handlePrev} style={cs.navBtn} activeOpacity={0.7}>
+            <ChevronLeft size={18} color="#FF6596" strokeWidth={2.5} />
+          </DebouncedTouchable>
+          <View style={cs.monthCenter}>
+            <Text style={cs.monthTitle}>{MONTHS[month]} {year}</Text>
+          </View>
+          <DebouncedTouchable onPress={handleNext} style={cs.navBtn} activeOpacity={0.7}>
+            <ChevronRight size={18} color="#FF6596" strokeWidth={2.5} />
+          </DebouncedTouchable>
         </View>
-        <DebouncedTouchable onPress={nextMonth} style={cs.navBtn} activeOpacity={0.7}>
-          <ChevronRight size={18} color="#FF6596" strokeWidth={2.5} />
-        </DebouncedTouchable>
+
+        <View style={cs.modeToggle}>
+          <DebouncedTouchable onPress={() => setViewMode('week')} style={[cs.modeBtn, viewMode === 'week' && cs.modeBtnActive]}>
+            <Text style={[cs.modeBtnText, viewMode === 'week' && cs.modeBtnTextActive]}>W</Text>
+          </DebouncedTouchable>
+          <DebouncedTouchable onPress={() => setViewMode('month')} style={[cs.modeBtn, viewMode === 'month' && cs.modeBtnActive]}>
+            <Text style={[cs.modeBtnText, viewMode === 'month' && cs.modeBtnTextActive]}>M</Text>
+          </DebouncedTouchable>
+        </View>
       </View>
 
       {/* Weekday labels */}
@@ -91,43 +182,88 @@ export function ServeCalendarView({ assignments, onPressAssignment }: ServeCalen
       </View>
 
       {/* Day grid */}
-      <View style={cs.grid}>
-        {calendarDays.map((day, i) => {
-          if (day === null) return <View key={'e' + i} style={cs.dayCell} />;
-          const m2 = String(month + 1).padStart(2, '0');
-          const d2 = String(day).padStart(2, '0');
-          const key = year + '-' + m2 + '-' + d2;
-          const count = assignmentsByDate[key]?.length ?? 0;
-          const isToday = key === todayKey;
-          const isSel = key === selectedDay;
-          return (
-            <DebouncedTouchable key={key} style={cs.dayCell} onPress={() => setSelectedDay(key)} activeOpacity={0.8}>
-              {isSel ? (
-                <LinearGradient
-                  colors={['#FF6596', '#B66DFF']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={cs.dayCellGradient}
-                >
-                  <Text style={[cs.dayText, cs.dayTextSel]}>{day}</Text>
-                </LinearGradient>
-              ) : isToday ? (
-                <View style={cs.dayCellToday}>
-                  <Text style={[cs.dayText, cs.dayTextToday]}>{day}</Text>
-                </View>
-              ) : (
-                <Text style={cs.dayText}>{day}</Text>
-              )}
-              {count > 0 && (
-                <View style={cs.dotRow}>
-                  {Array.from({ length: Math.min(count, 3) }).map((_, di) => (
-                    <View key={di} style={[cs.dot, isSel && cs.dotSel]} />
-                  ))}
-                </View>
-              )}
-            </DebouncedTouchable>
-          );
-        })}
+      <View style={{ overflow: 'hidden' }} {...panResponder.panHandlers}>
+        <Animated.View style={[cs.grid, { transform: [{ translateX: slideAnim }] }]}>
+          {viewMode === 'month' ? (
+          calendarDays.map((row, rIndex) => (
+            <View key={rIndex} style={cs.weekRow}>
+              {row.map((day, i) => {
+                if (day === null) return <View key={'e' + i} style={cs.dayCell} />;
+                const m2 = String(month + 1).padStart(2, '0');
+                const d2 = String(day).padStart(2, '0');
+                const key = year + '-' + m2 + '-' + d2;
+                const count = assignmentsByDate[key]?.length ?? 0;
+                const isToday = key === todayKey;
+                const isSel = key === selectedDay;
+                return (
+                  <DebouncedTouchable key={key} style={cs.dayCell} onPress={() => setSelectedDay(key)} activeOpacity={0.8}>
+                    {isSel ? (
+                      <LinearGradient
+                        colors={['#FF6596', '#B66DFF']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={cs.dayCellGradient}
+                      >
+                        <Text style={[cs.dayText, cs.dayTextSel]}>{day}</Text>
+                      </LinearGradient>
+                    ) : isToday ? (
+                      <View style={cs.dayCellToday}>
+                        <Text style={[cs.dayText, cs.dayTextToday]}>{day}</Text>
+                      </View>
+                    ) : (
+                      <Text style={cs.dayText}>{day}</Text>
+                    )}
+                    {count > 0 && (
+                      <View style={cs.dotRow}>
+                        {Array.from({ length: Math.min(count, 3) }).map((_, di) => (
+                          <View key={di} style={[cs.dot, isSel && cs.dotSel]} />
+                        ))}
+                      </View>
+                    )}
+                  </DebouncedTouchable>
+                );
+              })}
+            </View>
+          ))
+        ) : (
+          <View style={cs.weekRow}>
+            {weekDays.map((dateObj, i) => {
+              const key = toDateKey(dateObj);
+              const day = dateObj.getDate();
+              const count = assignmentsByDate[key]?.length ?? 0;
+              const isToday = key === todayKey;
+              const isSel = key === selectedDay;
+              return (
+                <DebouncedTouchable key={key} style={cs.dayCell} onPress={() => { setSelectedDay(key); setMonth(dateObj.getMonth()); setYear(dateObj.getFullYear()); }} activeOpacity={0.8}>
+                  {isSel ? (
+                    <LinearGradient
+                      colors={['#FF6596', '#B66DFF']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={cs.dayCellGradient}
+                    >
+                      <Text style={[cs.dayText, cs.dayTextSel]}>{day}</Text>
+                    </LinearGradient>
+                  ) : isToday ? (
+                    <View style={cs.dayCellToday}>
+                      <Text style={[cs.dayText, cs.dayTextToday]}>{day}</Text>
+                    </View>
+                  ) : (
+                    <Text style={cs.dayText}>{day}</Text>
+                  )}
+                  {count > 0 && (
+                    <View style={cs.dotRow}>
+                      {Array.from({ length: Math.min(count, 3) }).map((_, di) => (
+                        <View key={di} style={[cs.dot, isSel && cs.dotSel]} />
+                      ))}
+                    </View>
+                  )}
+                </DebouncedTouchable>
+              );
+            })}
+          </View>
+        )}
+        </Animated.View>
       </View>
 
       {/* Selected day section */}
@@ -165,7 +301,7 @@ export function ServeCalendarView({ assignments, onPressAssignment }: ServeCalen
         </View>
       </View>
 
-      <ScrollView style={cs.list} showsVerticalScrollIndicator={false}>
+      <View style={cs.list}>
         {selectedAssignments.length === 0 ? (
           <View style={cs.empty}>
             <Text style={cs.emptyText}>No assignments on this day</Text>
@@ -194,8 +330,8 @@ export function ServeCalendarView({ assignments, onPressAssignment }: ServeCalen
             </DebouncedTouchable>
           ))
         )}
-        <View style={{ height: 40 }} />
-      </ScrollView>
+        <View style={{ height: 20 }} />
+      </View>
     </View>
   );
 }
@@ -228,16 +364,22 @@ function getStatusBg(status: string) {
 
 const cs = StyleSheet.create({
   container: { flex: 1 },
-  monthHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, paddingHorizontal: 4 },
-  navBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(255,101,150,0.08)', alignItems: 'center', justifyContent: 'center' },
-  monthCenter: { alignItems: 'center' },
-  monthTitle: { fontSize: 18, fontWeight: '800', color: '#1a1a1a', letterSpacing: -0.3 },
-  yearLabel: { fontSize: 12, color: '#9CA3AF', fontWeight: '500', marginTop: 1 },
+  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, paddingHorizontal: 4 },
+  monthNav: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  navBtn: { width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(255,101,150,0.08)', alignItems: 'center', justifyContent: 'center' },
+  monthCenter: { alignItems: 'center', minWidth: 100 },
+  monthTitle: { fontSize: 16, fontWeight: '800', color: '#1a1a1a', letterSpacing: -0.3 },
+  modeToggle: { flexDirection: 'row', backgroundColor: '#F3F4F6', borderRadius: 20, padding: 2 },
+  modeBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 18 },
+  modeBtnActive: { backgroundColor: '#fff', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 },
+  modeBtnText: { fontSize: 12, fontWeight: '600', color: '#9CA3AF' },
+  modeBtnTextActive: { color: '#1a1a1a' },
   weekdayRow: { flexDirection: 'row', marginBottom: 6 },
   weekdayLabel: { flex: 1, textAlign: 'center', fontSize: 11, fontWeight: '700', color: '#9CA3AF', letterSpacing: 0.3 },
   weekdaySun: { color: '#FF6596' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 },
-  dayCell: { width: '14.285714%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center' },
+  grid: { marginBottom: 4 },
+  weekRow: { flexDirection: 'row', width: '100%' },
+  dayCell: { flex: 1, height: 42, alignItems: 'center', justifyContent: 'center' },
   dayCellGradient: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', shadowColor: '#FF6596', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
   dayCellToday: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#FF6596' },
   dayText: { fontSize: 13, fontWeight: '600', color: '#374151' },
@@ -246,7 +388,7 @@ const cs = StyleSheet.create({
   dotRow: { flexDirection: 'row', gap: 2, position: 'absolute', bottom: 3 },
   dot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#FF6596' },
   dotSel: { backgroundColor: 'rgba(255,255,255,0.9)' },
-  sectionCard: { marginTop: 8, marginBottom: 12, backgroundColor: '#fff', borderRadius: 14, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 1 },
+  sectionCard: { marginTop: 4, marginBottom: 8, backgroundColor: '#fff', borderRadius: 14, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 1 },
   sectionLine: { height: 3 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 10 },
   sectionOverline: { fontSize: 10, fontWeight: '800', color: '#FF6596', letterSpacing: 1.2, marginBottom: 2 },

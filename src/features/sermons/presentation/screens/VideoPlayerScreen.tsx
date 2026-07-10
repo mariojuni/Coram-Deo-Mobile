@@ -30,7 +30,7 @@ export function VideoPlayerScreen() {
   const colors = useTheme();
   const insets = useSafeAreaInsets();
   
-  const progressInterval = useRef<NodeJS.Timeout | null>(null);
+  const progressInterval = useRef<ReturnType<typeof setTimeout> | null>(null);
   const videoViewRef = useRef<VideoView>(null);
   
   const { currentSermon, fetchSermonById, saveProgress, setCurrentPosition, setIsPlaying, addNote } = useSermonStore();

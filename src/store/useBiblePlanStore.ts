@@ -37,6 +37,7 @@ interface BiblePlanStore {
   initializeUserBiblePlansListener: (userId: string, churchId: string) => () => void;
   initializeProgressListener: (userId: string, planId: string, churchId: string) => () => void;
   startPlan: (payload: StartPlanPayload) => Promise<string>;
+  cancelPlan: (userBiblePlanId: string, planId: string, userId: string, churchId: string) => Promise<void>;
   markDayCompleted: (
     payload: MarkDayCompletedPayload,
     onProgress?: (step: number, label: string) => void
@@ -55,9 +56,15 @@ interface BiblePlanStore {
 
 let plansUnsubscribe: (() => void) | null = null;
 let plansChurchId: string | null = null;
+let plansRefCount = 0;
+
 let userPlansUnsubscribe: (() => void) | null = null;
 let userPlansKey: string | null = null; // userId:churchId
+let userPlansRefCount = 0;
+
 let progressUnsubscribe: (() => void) | null = null;
+let progressKey: string | null = null; // userId:planId:churchId
+let progressRefCount = 0;
 
 export const useBiblePlanStore = create<BiblePlanStore>((set, get) => ({
   plans: [],
@@ -75,9 +82,16 @@ export const useBiblePlanStore = create<BiblePlanStore>((set, get) => ({
   // ── Listeners ─────────────────────────────────────────────────────────────
 
   initializePlansListener: (churchId) => {
-    // Already listening for same church — skip reset, just return unsub
     if (plansUnsubscribe && plansChurchId === churchId) {
-      return () => { if (plansUnsubscribe) { plansUnsubscribe(); plansUnsubscribe = null; plansChurchId = null; } };
+      plansRefCount++;
+      return () => {
+        plansRefCount--;
+        if (plansRefCount <= 0 && plansUnsubscribe) {
+          plansUnsubscribe();
+          plansUnsubscribe = null;
+          plansChurchId = null;
+        }
+      };
     }
     if (plansUnsubscribe) { plansUnsubscribe(); plansUnsubscribe = null; plansChurchId = null; }
     if (!churchId) {
@@ -86,6 +100,7 @@ export const useBiblePlanStore = create<BiblePlanStore>((set, get) => ({
     }
     set({ plansLoading: true });
     plansChurchId = churchId;
+    plansRefCount = 1;
     plansUnsubscribe = biblePlanRepository.subscribeToPublishedPlans(
       churchId,
       (plans) => set({ plans, plansLoading: false }),
@@ -94,14 +109,28 @@ export const useBiblePlanStore = create<BiblePlanStore>((set, get) => ({
         set({ plansLoading: false });
       }
     );
-    return () => { if (plansUnsubscribe) { plansUnsubscribe(); plansUnsubscribe = null; plansChurchId = null; } };
+    return () => {
+      plansRefCount--;
+      if (plansRefCount <= 0 && plansUnsubscribe) {
+        plansUnsubscribe();
+        plansUnsubscribe = null;
+        plansChurchId = null;
+      }
+    };
   },
 
   initializeUserBiblePlansListener: (userId, churchId) => {
     const key = `${userId}:${churchId}`;
-    // Already listening for same user+church — skip reset
     if (userPlansUnsubscribe && userPlansKey === key) {
-      return () => { if (userPlansUnsubscribe) { userPlansUnsubscribe(); userPlansUnsubscribe = null; userPlansKey = null; } };
+      userPlansRefCount++;
+      return () => {
+        userPlansRefCount--;
+        if (userPlansRefCount <= 0 && userPlansUnsubscribe) {
+          userPlansUnsubscribe();
+          userPlansUnsubscribe = null;
+          userPlansKey = null;
+        }
+      };
     }
     if (userPlansUnsubscribe) { userPlansUnsubscribe(); userPlansUnsubscribe = null; userPlansKey = null; }
     if (!userId || !churchId) {
@@ -110,6 +139,7 @@ export const useBiblePlanStore = create<BiblePlanStore>((set, get) => ({
     }
     set({ userBiblePlansLoading: true });
     userPlansKey = key;
+    userPlansRefCount = 1;
     userPlansUnsubscribe = userBiblePlanRepository.subscribeToUserBiblePlans(
       userId,
       churchId,
@@ -119,16 +149,37 @@ export const useBiblePlanStore = create<BiblePlanStore>((set, get) => ({
         set({ userBiblePlansLoading: false });
       }
     );
-    return () => { if (userPlansUnsubscribe) { userPlansUnsubscribe(); userPlansUnsubscribe = null; userPlansKey = null; } };
+    return () => {
+      userPlansRefCount--;
+      if (userPlansRefCount <= 0 && userPlansUnsubscribe) {
+        userPlansUnsubscribe();
+        userPlansUnsubscribe = null;
+        userPlansKey = null;
+      }
+    };
   },
 
   initializeProgressListener: (userId, planId, churchId) => {
-    if (progressUnsubscribe) { progressUnsubscribe(); progressUnsubscribe = null; }
+    const key = `${userId}:${planId}:${churchId}`;
+    if (progressUnsubscribe && progressKey === key) {
+      progressRefCount++;
+      return () => {
+        progressRefCount--;
+        if (progressRefCount <= 0 && progressUnsubscribe) {
+          progressUnsubscribe();
+          progressUnsubscribe = null;
+          progressKey = null;
+        }
+      };
+    }
+    if (progressUnsubscribe) { progressUnsubscribe(); progressUnsubscribe = null; progressKey = null; }
     if (!userId || !planId || !churchId) {
       set({ planProgress: [], planProgressLoading: false });
       return () => {};
     }
     set({ planProgress: [], planProgressLoading: true });
+    progressKey = key;
+    progressRefCount = 1;
     progressUnsubscribe = biblePlanProgressRepository.subscribeToProgressForPlan(
       userId,
       planId,
@@ -139,12 +190,35 @@ export const useBiblePlanStore = create<BiblePlanStore>((set, get) => ({
         set({ planProgressLoading: false });
       }
     );
-    return () => { if (progressUnsubscribe) { progressUnsubscribe(); progressUnsubscribe = null; } };
+    return () => {
+      progressRefCount--;
+      if (progressRefCount <= 0 && progressUnsubscribe) {
+        progressUnsubscribe();
+        progressUnsubscribe = null;
+        progressKey = null;
+      }
+    };
   },
 
   // ── Actions ───────────────────────────────────────────────────────────────
 
-  startPlan: (payload) => userBiblePlanRepository.startPlan(payload),
+  startPlan: async (payload) => {
+    const id = await userBiblePlanRepository.startPlan(payload);
+    // Note: The Firestore listener will eventually pull this new record.
+    // However, to ensure immediate UI updates we could optimistically insert it if needed.
+    return id;
+  },
+
+  cancelPlan: async (userBiblePlanId, planId, userId, churchId) => {
+    // Optimistic update to instantly clear it from UI
+    set((state) => ({
+      userBiblePlans: state.userBiblePlans.map((p) =>
+        p.id === userBiblePlanId ? { ...p, status: 'cancelled' } : p
+      ),
+    }));
+    await userBiblePlanRepository.cancelPlan(userBiblePlanId, churchId);
+    await biblePlanProgressRepository.resetPlanProgress(userId, planId, churchId);
+  },
 
   markDayCompleted: (payload, onProgress) =>
     biblePlanProgressRepository.markDayCompleted(payload, onProgress),
@@ -166,7 +240,7 @@ export const useBiblePlanStore = create<BiblePlanStore>((set, get) => ({
   },
 
   getUserBiblePlanForPlan: (planId) =>
-    get().userBiblePlans.find((p) => p.planId === planId),
+    get().userBiblePlans.find((p) => p.planId === planId && p.status !== 'cancelled'),
 
   getActivePlan: () => {
     const active = get().userBiblePlans.filter((p) => p.status === 'active');

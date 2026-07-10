@@ -7,6 +7,7 @@ import {
     query,
     updateDoc,
     where,
+    deleteDoc,
 } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import type { BiblePlanProgress, MarkDayCompletedPayload } from '../domain/biblePlan.types';
@@ -196,5 +197,24 @@ export const biblePlanProgressRepository = {
   async getCompletedDayIds(userId: string, planId: string, churchId: string): Promise<Set<string>> {
     const progress = await biblePlanProgressRepository.getPlanProgress(userId, planId, churchId);
     return new Set(progress.filter((p) => p.isCompleted).map((p) => p.dayId));
+  },
+
+  /**
+   * Deletes all progress records for a given user and plan.
+   * Used when a plan is cancelled so it can be restarted from scratch.
+   */
+  async resetPlanProgress(userId: string, planId: string, churchId: string): Promise<void> {
+    if (!userId || !planId || !churchId) return;
+    const snap = await getDocs(
+      query(
+        progressCol(churchId),
+        where('userId', '==', userId),
+        where('planId', '==', planId)
+      )
+    );
+    
+    // In a real production app, consider using writeBatch for this.
+    // For simplicity, we can do sequential or Promise.all deletes.
+    await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)));
   },
 };

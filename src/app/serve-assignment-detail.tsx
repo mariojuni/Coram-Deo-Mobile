@@ -5,6 +5,7 @@ import { useMinistryStore } from '@/store/useMinistryStore';
 import { useWorshipSetlist } from '@/features/worship/presentation/hooks/useWorshipSetlist';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { BlurView } from 'expo-blur';
 import {
     AlertCircle,
     ArrowLeft,
@@ -18,11 +19,11 @@ import {
     Music,
     ChevronRight
 } from 'lucide-react-native';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
-    ScrollView,
+    Animated,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -42,18 +43,22 @@ export default function ServeAssignmentDetailScreen() {
   const [confirmingSaving, setConfirmingSaving] = useState(false);
   const [declineModalOpen, setDeclineModalOpen] = useState(false);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  
+  const scrollY = useRef(new Animated.Value(0)).current;
 
-  const { setlist, loading: setlistLoading } = useWorshipSetlist(
-    userProfile?.churchId,
-    assignment?.eventId
+  const { setlist } = useWorshipSetlist(
+    userProfile?.churchId || undefined,
+    assignment?.eventId || undefined
   );
 
   if (!assignment) {
     return (
-      <View style={[styles.screen, { paddingTop: insets.top + 20 }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <ArrowLeft size={22} color="#1a1a1a" />
-        </TouchableOpacity>
+      <View style={[styles.screen, { backgroundColor: '#FAFAFA' }]}>
+        <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+            <ArrowLeft size={22} color="#1a1a1a" />
+          </TouchableOpacity>
+        </View>
         <View style={styles.notFound}>
           <AlertCircle size={48} color="#EF4444" />
           <Text style={styles.notFoundTitle}>Assignment not found</Text>
@@ -93,7 +98,10 @@ export default function ServeAssignmentDetailScreen() {
     ? '#22C55E'
     : isDeclined
     ? '#EF4444'
+    : isCancelled
+    ? '#9CA3AF'
     : '#6B7280';
+    
   const statusBg = isPending
     ? '#FFF8E7'
     : isConfirmed
@@ -150,89 +158,194 @@ export default function ServeAssignmentDetailScreen() {
     setActionSuccess('Assignment declined.');
   };
 
+  const headerOpacity = scrollY.interpolate({
+    inputRange: [0, 50],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
+  const headerHeight = Math.max(insets.top, 20) + 60;
+
   return (
-    <View style={[styles.screen, { backgroundColor: '#F7F8FC' }]}>
-      {/* ─── Header ─── */}
-      <LinearGradient
-        colors={['#FFE8F1', '#F5F2FF']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.headerGradient, { paddingTop: Math.max(insets.top, 20) }]}
-      >
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <ArrowLeft size={22} color="#1a1a1a" />
-        </TouchableOpacity>
-        <Text style={styles.screenTitle}>Assignment</Text>
+    <View style={styles.screen}>
+      {/* ─── Animated Blur Header ─── */}
+      <View style={[styles.header, { height: headerHeight }]} pointerEvents="box-none">
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: headerOpacity }]} pointerEvents="none">
+          <BlurView intensity={90} tint="light" style={StyleSheet.absoluteFill} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.75)' }]} />
+          {/* Gradient accent line */}
+          <View style={styles.accentLine}>
+            <LinearGradient
+              colors={['#FF6596', '#B66DFF', '#6DC8FF']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={StyleSheet.absoluteFill}
+            />
+          </View>
+          {/* subtle bottom border that fades in */}
+          <View style={styles.headerBorder} />
+        </Animated.View>
 
-        <View style={[styles.statusBadge, { backgroundColor: statusBg }]}>
-          <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-          <Text style={[styles.statusText, { color: statusColor }]}>{statusLabel}</Text>
+        <View style={[styles.headerContent, { paddingTop: Math.max(insets.top, 20) }]}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.8}>
+            <ArrowLeft size={22} color="#1a1a1a" />
+          </TouchableOpacity>
         </View>
-      </LinearGradient>
+      </View>
 
-      <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}
+      <Animated.ScrollView
+        contentContainerStyle={[styles.content, { paddingTop: headerHeight + 10, paddingBottom: isOwnAssignment && isPending ? insets.bottom + 120 : insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
+        scrollEventThrottle={16}
       >
+        {/* ─── Hero Section ─── */}
+        <View style={styles.heroCard}>
+          <LinearGradient
+            colors={['#FFE8F1', '#F5F2FF']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          
+          <View style={[styles.statusBadge, { backgroundColor: statusBg }]}>
+            <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+            <Text style={[styles.statusText, { color: statusColor }]}>{statusLabel}</Text>
+          </View>
+          
+          <View style={styles.heroTitles}>
+            <Text style={styles.heroEventName}>{assignment.eventName}</Text>
+            <Text style={styles.heroMinistryName}>{assignment.ministryName}</Text>
+          </View>
+          
+          {/* Decorative background circle */}
+          <View style={styles.heroDecoCircle} />
+        </View>
+
         {/* ─── Success banner ─── */}
-        {actionSuccess ? (
+        {actionSuccess && (
           <View style={styles.successBanner}>
-            <Check size={16} color="#22C55E" strokeWidth={3} />
+            <Check size={20} color="#059669" strokeWidth={3} />
             <Text style={styles.successText}>{actionSuccess}</Text>
           </View>
-        ) : null}
+        )}
+        
+        {isConfirmed && !actionSuccess && (
+          <View style={styles.confirmedBanner}>
+            <Check size={20} color="#059669" strokeWidth={3} />
+            <Text style={styles.confirmedBannerText}>
+              You've confirmed this assignment. See you there!
+            </Text>
+          </View>
+        )}
 
-        {/* ─── Event info ─── */}
+        {isDeclined && !actionSuccess && (
+          <View style={styles.declinedBanner}>
+            <X size={20} color="#DC2626" strokeWidth={3} />
+            <Text style={styles.declinedBannerText}>
+              You've declined this assignment.
+            </Text>
+          </View>
+        )}
+
+        {/* ─── Info Section ─── */}
         <View style={styles.card}>
-          <Text style={styles.cardLabel}>Event</Text>
-          <Text style={styles.cardValue}>{assignment.eventName}</Text>
-          <Row icon={<CalendarDays size={14} color="#6B7280" />} text={formattedDate} />
-          {assignment.eventLocation ? (
-            <Row icon={<MapPin size={14} color="#6B7280" />} text={assignment.eventLocation} />
+          <Text style={styles.sectionTitle}>Role Details</Text>
+          
+          <View style={styles.infoRow}>
+            <View style={[styles.iconWrapper, { backgroundColor: '#F3EEFF' }]}>
+              <User size={20} color="#8B6FE8" />
+            </View>
+            <View style={styles.infoTextContainer}>
+              <Text style={styles.infoLabel}>Assigned Role</Text>
+              <Text style={styles.infoValue}>{assignment.roleName}</Text>
+            </View>
+          </View>
+          
+          {assignment.callTime ? (
+            <View style={styles.infoRow}>
+              <View style={[styles.iconWrapper, { backgroundColor: '#FEF3C7' }]}>
+                <Clock size={20} color="#F59E0B" />
+              </View>
+              <View style={styles.infoTextContainer}>
+                <Text style={styles.infoLabel}>Call Time</Text>
+                <Text style={styles.infoValue}>{assignment.callTime}</Text>
+              </View>
+            </View>
           ) : null}
           
-          {setlist && (
-            <TouchableOpacity 
-              style={styles.setlistLinkBtn}
-              onPress={() => router.push({ pathname: '/serve-worship-setlist', params: { eventId: assignment.eventId } } as any)}
-            >
-              <View style={styles.setlistLinkContent}>
-                <Music size={16} color="#FF6596" />
-                <Text style={styles.setlistLinkText}>View Worship Setlist</Text>
-              </View>
-              <ChevronRight size={16} color="#9CA3AF" />
-            </TouchableOpacity>
-          )}
-        </View>
+          <View style={styles.infoRow}>
+            <View style={[styles.iconWrapper, { backgroundColor: '#E8F0FF' }]}>
+              <CalendarDays size={20} color="#4D8BFF" />
+            </View>
+            <View style={styles.infoTextContainer}>
+              <Text style={styles.infoLabel}>Date</Text>
+              <Text style={styles.infoValue}>{formattedDate}</Text>
+            </View>
+          </View>
 
-        {/* ─── Ministry & Role ─── */}
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>Ministry & Role</Text>
-          <Text style={styles.cardValue}>{assignment.ministryName}</Text>
-          <Row icon={<User size={14} color="#6B7280" />} text={`Role: ${assignment.roleName}`} />
-          {assignment.callTime ? (
-            <Row icon={<Clock size={14} color="#6B7280" />} text={`Call time: ${assignment.callTime}`} />
+          {assignment.eventLocation ? (
+            <View style={styles.infoRow}>
+              <View style={[styles.iconWrapper, { backgroundColor: '#D1FAE5' }]}>
+                <MapPin size={20} color="#10B981" />
+              </View>
+              <View style={styles.infoTextContainer}>
+                <Text style={styles.infoLabel}>Location</Text>
+                <Text style={styles.infoValue}>{assignment.eventLocation}</Text>
+              </View>
+            </View>
           ) : null}
         </View>
+
+        {/* ─── Worship Setlist Link ─── */}
+        {setlist && (
+          <TouchableOpacity 
+            style={styles.setlistLinkBtn}
+            onPress={() => router.push({ pathname: '/serve-worship-setlist', params: { eventId: assignment.eventId } } as any)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.setlistLinkContent}>
+              <View style={styles.setlistIconWrap}>
+                <Music size={22} color="#fff" />
+              </View>
+              <View style={styles.setlistTextWrap}>
+                <Text style={styles.setlistLinkTitle}>Worship Setlist</Text>
+                <Text style={styles.setlistLinkSub}>View songs for this event</Text>
+              </View>
+            </View>
+            <ChevronRight size={20} color="#9CA3AF" />
+          </TouchableOpacity>
+        )}
 
         {/* ─── Notes ─── */}
         {assignment.notes ? (
-          <View style={styles.card}>
-            <Text style={styles.cardLabel}>Notes from Leader</Text>
-            <Row icon={<FileText size={14} color="#6B7280" />} text={assignment.notes} />
+          <View style={styles.notesCard}>
+            <View style={styles.notesHeader}>
+              <FileText size={18} color="#6B7280" />
+              <Text style={styles.sectionTitle}>Notes from Leader</Text>
+            </View>
+            <Text style={styles.notesText}>{assignment.notes}</Text>
           </View>
         ) : null}
 
         {/* ─── Decline reason (if declined) ─── */}
         {isDeclined && assignment.declineReason ? (
           <View style={[styles.card, styles.cardDeclined]}>
-            <Text style={styles.cardLabel}>Decline Reason</Text>
-            <Text style={styles.cardBodyText}>{assignment.declineReason}</Text>
+            <Text style={[styles.sectionTitle, { color: '#991B1B', marginBottom: 8 }]}>Decline Reason</Text>
+            <Text style={styles.declinedText}>{assignment.declineReason}</Text>
           </View>
         ) : null}
+        
+      </Animated.ScrollView>
 
-        {/* ─── Actions ─── */}
-        {isOwnAssignment && isPending && !actionSuccess ? (
+      {/* ─── Sticky Footer Actions ─── */}
+      {isOwnAssignment && isPending && !actionSuccess ? (
+        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20) }]}>
+          <BlurView intensity={90} tint="light" style={StyleSheet.absoluteFill} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.85)' }]} pointerEvents="none" />
           <View style={styles.actions}>
             <TouchableOpacity
               style={styles.declineBtn}
@@ -240,7 +353,6 @@ export default function ServeAssignmentDetailScreen() {
               disabled={confirmingSaving}
               activeOpacity={0.7}
             >
-              <X size={16} color="#EF4444" strokeWidth={2.5} />
               <Text style={styles.declineBtnText}>Decline</Text>
             </TouchableOpacity>
 
@@ -260,33 +372,15 @@ export default function ServeAssignmentDetailScreen() {
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
                   <>
-                    <Check size={16} color="#fff" strokeWidth={2.5} />
+                    <Check size={20} color="#fff" strokeWidth={3} />
                     <Text style={styles.confirmBtnText}>Confirm</Text>
                   </>
                 )}
               </LinearGradient>
             </TouchableOpacity>
           </View>
-        ) : null}
-
-        {isConfirmed && !actionSuccess ? (
-          <View style={styles.confirmedState}>
-            <Check size={20} color="#22C55E" strokeWidth={3} />
-            <Text style={styles.confirmedStateText}>
-              You've confirmed this assignment. See you there!
-            </Text>
-          </View>
-        ) : null}
-
-        {isDeclined && !actionSuccess ? (
-          <View style={styles.declinedState}>
-            <X size={20} color="#EF4444" strokeWidth={2.5} />
-            <Text style={styles.declinedStateText}>
-              You've declined this assignment. Your leader has been notified.
-            </Text>
-          </View>
-        ) : null}
-      </ScrollView>
+        </View>
+      ) : null}
 
       <DeclineModal
         isOpen={declineModalOpen}
@@ -298,202 +392,303 @@ export default function ServeAssignmentDetailScreen() {
   );
 }
 
-function Row({ icon, text }: { icon: React.ReactNode; text: string }) {
-  return (
-    <View style={styles.row}>
-      {icon}
-      <Text style={styles.rowText}>{text}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
-  headerGradient: {
-    paddingHorizontal: 24,
-    paddingBottom: 20,
-    gap: 6,
+  screen: { flex: 1, backgroundColor: '#FAFAFA' },
+  
+  header: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0,
+    zIndex: 100,
+  },
+  headerBorder: {
+    position: 'absolute',
+    bottom: 0, left: 0, right: 0,
+    height: 1,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+  },
+  accentLine: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0,
+    height: 3,
+  },
+  headerContent: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    flexDirection: 'row',
   },
   backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.7)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 3,
   },
-  screenTitle: {
-    fontSize: 26,
-    fontWeight: '900',
-    color: '#1a1a1a',
-    letterSpacing: -0.5,
+  
+  content: {
+    padding: 20,
+    gap: 16,
+  },
+  
+  heroCard: {
+    borderRadius: 28,
+    padding: 24,
+    paddingBottom: 28,
+    overflow: 'hidden',
+    shadowColor: '#FF6596',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 4,
+  },
+  heroDecoCircle: {
+    position: 'absolute',
+    top: -60,
+    right: -60,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+  },
+  heroTitles: {
+    marginTop: 16,
+    gap: 4,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 20,
-    marginTop: 4,
   },
-  statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusText: { fontSize: 12, fontWeight: '700' },
+  statusDot: { width: 8, height: 8, borderRadius: 4 },
+  statusText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase' },
+  heroEventName: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#1a1a1a',
+    letterSpacing: -1,
+    lineHeight: 36,
+  },
+  heroMinistryName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#6B7280',
+    letterSpacing: -0.3,
+  },
 
-  content: {
-    padding: 24,
-    gap: 12,
-  },
   successBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
     backgroundColor: '#ECFDF5',
-    borderRadius: 14,
-    padding: 14,
+    borderRadius: 20,
+    padding: 20,
     borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderColor: '#A7F3D0',
   },
   successText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '700',
-    color: '#16A34A',
+    color: '#059669',
   },
+  
+  confirmedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#ECFDF5',
+    borderRadius: 20,
+    padding: 20,
+  },
+  confirmedBannerText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#059669',
+  },
+  
+  declinedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#FEF2F2',
+    borderRadius: 20,
+    padding: 20,
+  },
+  declinedBannerText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#DC2626',
+  },
+
   card: {
     backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 16,
-    gap: 8,
+    borderRadius: 28,
+    padding: 24,
+    gap: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.04,
+    shadowRadius: 15,
     elevation: 2,
   },
+  notesCard: {
+    backgroundColor: '#fff',
+    borderRadius: 28,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.04,
+    shadowRadius: 15,
+    elevation: 2,
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#9CA3AF',
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+  },
+  
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  iconWrapper: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  infoTextContainer: {
+    flex: 1,
+  },
+  infoLabel: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  infoValue: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#1F2937',
+    letterSpacing: -0.3,
+  },
+
   setlistLinkBtn: {
-    marginTop: 8,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    backgroundColor: '#fff',
+    borderRadius: 28,
+    padding: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.04,
+    shadowRadius: 15,
+    elevation: 2,
   },
   setlistLinkContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 16,
   },
-  setlistLinkText: {
+  setlistIconWrap: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#FF6596',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  setlistTextWrap: {
+    gap: 4,
+  },
+  setlistLinkTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#1F2937',
+    letterSpacing: -0.3,
+  },
+  setlistLinkSub: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#FF6596',
+    color: '#6B7280',
+    fontWeight: '500',
   },
+
+  notesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  notesText: {
+    fontSize: 16,
+    color: '#374151',
+    lineHeight: 26,
+  },
+
   cardDeclined: {
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#FECACA',
   },
-  cardLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#9CA3AF',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 2,
-  },
-  cardValue: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: '#111827',
-    letterSpacing: -0.3,
-  },
-  cardBodyText: {
-    fontSize: 14,
-    color: '#374151',
-    lineHeight: 20,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-  },
-  rowText: {
-    fontSize: 14,
-    color: '#374151',
-    flex: 1,
-    lineHeight: 20,
+  declinedText: {
+    fontSize: 16,
+    color: '#991B1B',
+    lineHeight: 24,
   },
 
+  footer: {
+    position: 'absolute',
+    bottom: 0, left: 0, right: 0,
+    paddingTop: 16,
+    paddingHorizontal: 20,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
+  },
   actions: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 8,
+    gap: 14,
   },
   declineBtn: {
-    flex: 1,
-    flexDirection: 'row',
+    paddingHorizontal: 28,
+    paddingVertical: 18,
+    borderRadius: 24,
+    backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    backgroundColor: '#FEF2F2',
-    borderRadius: 16,
-    paddingVertical: 16,
-    borderWidth: 1,
-    borderColor: '#FECACA',
   },
   declineBtnText: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '700',
-    color: '#EF4444',
+    color: '#4B5563',
   },
   confirmBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    borderRadius: 16,
-    paddingVertical: 16,
+    gap: 10,
+    borderRadius: 24,
+    paddingVertical: 18,
   },
   confirmBtnText: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '700',
     color: '#fff',
-  },
-
-  confirmedState: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: '#ECFDF5',
-    borderRadius: 16,
-    padding: 16,
-    marginTop: 8,
-  },
-  confirmedStateText: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#16A34A',
-    lineHeight: 20,
-  },
-  declinedState: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: '#FEF2F2',
-    borderRadius: 16,
-    padding: 16,
-    marginTop: 8,
-  },
-  declinedStateText: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#EF4444',
-    lineHeight: 20,
+    letterSpacing: -0.2,
   },
 
   notFound: {
@@ -501,17 +696,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 40,
-    gap: 12,
+    gap: 16,
   },
   notFoundTitle: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 22,
+    fontWeight: '900',
     color: '#1F2937',
   },
   notFoundText: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#6B7280',
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 24,
   },
 });
+

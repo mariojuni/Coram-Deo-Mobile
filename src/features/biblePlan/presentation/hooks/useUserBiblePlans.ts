@@ -30,7 +30,7 @@ export function useUserBiblePlans() {
   const getPlanMeta = (planId: string) => plans.find((p) => p.id === planId) ?? null;
 
   const getUserBiblePlanForPlan = (planId: string) =>
-    userBiblePlans.find((p) => p.planId === planId);
+    userBiblePlans.find((p) => p.planId === planId && p.status !== 'cancelled');
 
   return {
     userBiblePlans,

@@ -16,7 +16,7 @@ export function useBiblePlanDetail(planId: string) {
   const plan = useBiblePlanStore((s) => s.plans.find((p) => p.id === planId) ?? null);
   const planProgress = useBiblePlanStore((s) => s.planProgress);
   const planProgressLoading = useBiblePlanStore((s) => s.planProgressLoading);
-  const userBiblePlan = useBiblePlanStore((s) => s.userBiblePlans.find((p) => p.planId === planId));
+  const userBiblePlan = useBiblePlanStore((s) => s.userBiblePlans.find((p) => p.planId === planId && p.status !== 'cancelled'));
   const getDaysForPlan = useBiblePlanStore((s) => s.getDaysForPlan);
   const initializeProgressListener = useBiblePlanStore((s) => s.initializeProgressListener);
 

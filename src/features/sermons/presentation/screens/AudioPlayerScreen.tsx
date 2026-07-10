@@ -28,8 +28,13 @@ export function AudioPlayerScreen() {
   const colors = useTheme();
   const insets = useSafeAreaInsets();
   
-  const { playAudio, pauseAudio, seekAudio, setRate, sound, isPlaying, progress, duration } = useAudio();
+  const { playAudio, pauseAudio, seekAudio, setRate, player } = useAudio();
   
+  const isPlaying = player?.playing ?? false;
+  const sound = player;
+  const duration = player?.duration ?? 0;
+  const progress = duration > 0 ? (player?.currentTime ?? 0) / duration : 0;
+
   const { 
     currentSermon, 
     fetchSermonById, 
@@ -303,7 +308,7 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   bufferingOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',

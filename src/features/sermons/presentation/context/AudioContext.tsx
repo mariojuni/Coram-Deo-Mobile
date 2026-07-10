@@ -23,7 +23,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   
   // Initialize player with no source
   const player = useAudioPlayer(null);
-  const progressInterval = useRef<NodeJS.Timeout | null>(null);
+  const progressInterval = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     // Configure audio session

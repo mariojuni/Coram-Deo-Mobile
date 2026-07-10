@@ -178,7 +178,7 @@ export default function ServeSongLyricsScreen() {
           colors={['#FFE8F1', '#F5F2FF']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
         />
       </Animated.View>
 
