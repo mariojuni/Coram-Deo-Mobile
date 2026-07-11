@@ -3,25 +3,6 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ── Helpers ──────────────────────────────────────────────────────────────
-    function isSuperAdmin() {
-      return isSignedIn() &&
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin';
-    }
-
-    function isRoleAdmin(churchId) {
-      return isSignedIn() &&
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.churchId == churchId &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['super_admin', 'church_admin'];
-    }
-
-    function isPastorOrAdmin(churchId) {
-      return isSignedIn() &&
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.churchId == churchId &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['super_admin', 'church_admin', 'pastor'];
-    }
 
     function isSignedIn() {
       return request.auth != null;
@@ -31,18 +12,70 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
+    /**
+     * Fetch the current user's document once and return it.
+     * Using a helper keeps get() calls DRY and avoids quota issues.
+     */
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function userDocExists() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    /**
+     * Multi-role check: returns true if the user's systemRoles array contains
+     * any of the provided roles.  Falls back to the legacy `role` string for
+     * documents that have not yet been migrated.
+     */
+    function hasAnySystemRole(roles) {
+      let ud = userDoc();
+      return (
+        ('systemRoles' in ud && ud.systemRoles != null && ud.systemRoles.hasAny(roles)) ||
+        ('role' in ud && ud.role in roles)
+      );
+    }
+
+    function isSuperAdmin() {
+      return userDocExists() && hasAnySystemRole(['super_admin']);
+    }
+
+    function isRoleAdmin(churchId) {
+      return userDocExists() &&
+        userDoc().churchId == churchId &&
+        hasAnySystemRole(['super_admin', 'church_admin']);
+    }
+
+    function isPastorOrAdmin(churchId) {
+      return userDocExists() &&
+        userDoc().churchId == churchId &&
+        hasAnySystemRole(['super_admin', 'church_admin', 'pastor']);
+    }
+
     function isChurchAdmin(churchId) {
-      return isSignedIn() &&
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.churchId == churchId &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['super_admin', 'church_admin', 'ministry_leader'];
+      return userDocExists() &&
+        userDoc().churchId == churchId &&
+        hasAnySystemRole(['super_admin', 'church_admin', 'ministry_leader']);
     }
 
     function isFinanceOrChurchAdmin(churchId) {
+      return userDocExists() &&
+        userDoc().churchId == churchId &&
+        hasAnySystemRole(['super_admin', 'church_admin', 'finance_admin']);
+    }
+
+    /**
+     * A ministry_leader can manage a specific ministry only if that ministryId
+     * is listed in their managedMinistryIds array.
+     */
+    function isAssignedMinistryLeader(churchId, ministryId) {
       return isSignedIn() &&
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.churchId == churchId &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['super_admin', 'church_admin', 'finance_admin'];
+        userDocExists() &&
+        userDoc().churchId == churchId &&
+        hasAnySystemRole(['ministry_leader']) &&
+        userDoc().managedMinistryIds != null &&
+        userDoc().managedMinistryIds.hasAll([ministryId]);
     }
 
     // ── ministryApplications ─────────────────────────────────────────────────
@@ -83,15 +116,9 @@ service cloud.firestore {
         && resource.data.churchId != null;
 
       allow create: if isPastorOrAdmin(request.resource.data.churchId);
-      
-      allow update: if isPastorOrAdmin(resource.data.churchId) || 
-        (
-          isSignedIn() &&
-          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.churchId == resource.data.churchId &&
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ministry_leader' &&
-          (resource.data.leaderIds != null && request.auth.uid in resource.data.leaderIds)
-        );
+
+      allow update: if isPastorOrAdmin(resource.data.churchId) ||
+        isAssignedMinistryLeader(resource.data.churchId, ministryId);
 
       allow delete: if isPastorOrAdmin(resource.data.churchId);
     }
@@ -101,35 +128,36 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isChurchAdmin(resource.data.churchId);
     }
+
     // ── Giving ───────────────────────────────────────────────────────────────
     match /givingFunds/{fundId} {
       allow read: if isSignedIn();
-      allow write: if isChurchAdmin(request.resource.data.churchId) || isChurchAdmin(resource.data.churchId);
+      allow write: if isFinanceOrChurchAdmin(request.resource.data.churchId) || isFinanceOrChurchAdmin(resource.data.churchId);
     }
-    
+
     match /givingCampaigns/{campaignId} {
       allow read: if isSignedIn() && (resource == null || resource.data.churchId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.churchId);
       allow write: if isFinanceOrChurchAdmin(request.resource.data.churchId) && (resource == null || isFinanceOrChurchAdmin(resource.data.churchId));
     }
-    
+
     match /paymentMethods/{methodId} {
       allow read: if isSignedIn();
-      allow write: if isChurchAdmin(request.resource.data.churchId) || isChurchAdmin(resource.data.churchId);
+      allow write: if isFinanceOrChurchAdmin(request.resource.data.churchId) || isFinanceOrChurchAdmin(resource.data.churchId);
     }
-    
+
     match /givingRecords/{recordId} {
-      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isChurchAdmin(resource.data.churchId));
-      
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isFinanceOrChurchAdmin(resource.data.churchId));
+
       allow create: if isSignedIn()
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.churchId != null;
-        
-      allow update, delete: if isChurchAdmin(resource.data.churchId);
+
+      allow update, delete: if isFinanceOrChurchAdmin(resource.data.churchId);
     }
-    
+
     match /givingExpenses/{expenseId} {
-      allow read: if isSignedIn() && (resource.data.visibility == 'public_summary' || isChurchAdmin(resource.data.churchId));
-      allow write: if isChurchAdmin(request.resource.data.churchId) || isChurchAdmin(resource.data.churchId);
+      allow read: if isSignedIn() && (resource.data.visibility == 'public_summary' || isFinanceOrChurchAdmin(resource.data.churchId));
+      allow write: if isFinanceOrChurchAdmin(request.resource.data.churchId) || isFinanceOrChurchAdmin(resource.data.churchId);
     }
 
     // ── Worship Library ──────────────────────────────────────────────────────
@@ -137,7 +165,7 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isChurchAdmin(request.resource.data.churchId) || isChurchAdmin(resource.data.churchId);
     }
-    
+
     match /songVersions/{versionId} {
       allow read: if isSignedIn();
       allow write: if isChurchAdmin(request.resource.data.churchId) || isChurchAdmin(resource.data.churchId);
@@ -146,13 +174,13 @@ service cloud.firestore {
     match /worshipSetlists/{setlistId} {
       allow read: if isSignedIn();
       allow write: if isChurchAdmin(request.resource.data.churchId) || isChurchAdmin(resource.data.churchId);
-      
+
       match /worshipSetlistItems/{itemId} {
         allow read: if isSignedIn();
         allow write: if isChurchAdmin(request.resource.data.churchId) || isChurchAdmin(resource.data.churchId);
       }
     }
-    
+
     match /worshipSetlistItems/{itemId} {
       allow read: if isSignedIn();
       allow write: if isChurchAdmin(request.resource.data.churchId) || isChurchAdmin(resource.data.churchId);
@@ -161,27 +189,159 @@ service cloud.firestore {
     // ── Users ────────────────────────────────────────────────────────────────
     match /users/{userId} {
       allow read: if isSignedIn();
-      
+
       allow create: if isSignedIn();
-      
+
+      // Owner can update their own doc but may NOT change their own roles or churchId.
+      // super_admin can update anyone else's doc.
+      // church_admin/role-admin can update docs within their church (but cannot grant super_admin).
       allow update: if isSignedIn() && (
-        (isOwner(userId) && request.resource.data.role == resource.data.role && request.resource.data.churchId == resource.data.churchId) ||
+        // Owner self-update: must not change systemRoles, primaryRole, role, or churchId.
+        (isOwner(userId) &&
+          request.resource.data.systemRoles == resource.data.systemRoles &&
+          request.resource.data.primaryRole == resource.data.primaryRole &&
+          request.resource.data.role == resource.data.role &&
+          request.resource.data.churchId == resource.data.churchId) ||
+
+        // super_admin can update any other user.
         (isSuperAdmin() && request.auth.uid != userId) ||
-        (
-          isRoleAdmin(resource.data.churchId) && 
-          request.resource.data.churchId == resource.data.churchId && 
-          request.resource.data.role != 'super_admin' && 
-          request.auth.uid != userId
-        )
+
+        // church_admin / role-admin can update users within their church,
+        // but cannot elevate to super_admin.
+        (isRoleAdmin(resource.data.churchId) &&
+          request.resource.data.churchId == resource.data.churchId &&
+          !(request.resource.data.systemRoles != null && request.resource.data.systemRoles.hasAll(['super_admin'])) &&
+          request.resource.data.role != 'super_admin' &&
+          request.auth.uid != userId)
       );
 
       allow delete: if isSuperAdmin();
+
+      // ── Bible preferences / highlights (per-user) ──────────────────────────
+      match /bible/{docId} {
+        allow read, write: if isSignedIn() && isOwner(userId);
+      }
     }
 
     // ── Role Audit Logs ──────────────────────────────────────────────────────
     match /roleAuditLogs/{logId} {
       allow read: if isSignedIn() && (isSuperAdmin() || isRoleAdmin(resource.data.churchId));
       allow create: if isSignedIn();
+    }
+
+    // ── Events (church schedules / RSVP) ────────────────────────────────────
+    match /events/{eventId} {
+      allow read: if isSignedIn();
+      // RSVPs can be updated by any signed-in member; creation/deletion by admins.
+      allow update: if isSignedIn();
+      allow create, delete: if isSignedIn() && isPastorOrAdmin(request.resource.data.churchId != null
+        ? request.resource.data.churchId
+        : resource.data.churchId);
+    }
+
+    // ── Churches (top-level doc + subcollections) ────────────────────────────
+    match /churches/{churchId} {
+      allow read: if isSignedIn();
+      allow write: if isRoleAdmin(churchId);
+
+      // Prayer requests subcollection
+      match /prayer_requests/{requestId} {
+        allow read: if isSignedIn() && (
+          resource.data.userId == request.auth.uid ||
+          resource.data.visibility == 'public' ||
+          isPastorOrAdmin(churchId)
+        );
+        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+        allow update: if isSignedIn() && (
+          resource.data.userId == request.auth.uid ||
+          isPastorOrAdmin(churchId)
+        );
+        allow delete: if isSignedIn() && (
+          resource.data.userId == request.auth.uid ||
+          isPastorOrAdmin(churchId)
+        );
+      }
+
+      // Bible plans subcollection (church-scoped)
+      match /bible_plans/{planId} {
+        allow read: if isSignedIn();
+        allow write: if isRoleAdmin(churchId);
+      }
+
+      // User Bible Plans (per-user progress)
+      match /userBiblePlans/{docId} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn();
+      }
+
+      match /biblePlanProgress/{docId} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn();
+      }
+    }
+
+    // ── Sermons ──────────────────────────────────────────────────────────────
+    match /sermons/{sermonId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && isPastorOrAdmin(request.resource.data.churchId != null
+        ? request.resource.data.churchId
+        : resource.data.churchId);
+    }
+
+    // Sermon notes, favourites, downloads, progress (per-user)
+    match /sermon_notes/{docId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow write: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+    }
+
+    match /sermon_favorites/{docId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow write: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+    }
+
+    match /sermon_downloads/{docId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow write: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+    }
+
+    match /sermon_progress/{docId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow write: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+    }
+
+    // ── Attendance ───────────────────────────────────────────────────────────
+    match /attendance/{recordId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && isPastorOrAdmin(resource.data.churchId);
+    }
+
+    // ── Services ─────────────────────────────────────────────────────────────
+    match /services/{serviceId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && isPastorOrAdmin(request.resource.data.churchId != null
+        ? request.resource.data.churchId
+        : resource.data.churchId);
+    }
+
+    // ── Discipleship ─────────────────────────────────────────────────────────
+    match /discipleshipPlans/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && isPastorOrAdmin(request.resource.data.churchId != null
+        ? request.resource.data.churchId
+        : resource.data.churchId);
+    }
+
+    match /discipleshipWeeks/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && isPastorOrAdmin(request.resource.data.churchId != null
+        ? request.resource.data.churchId
+        : resource.data.churchId);
+    }
+
+    match /discipleshipProgress/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
     }
   }
 }

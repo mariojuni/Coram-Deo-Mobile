@@ -100,7 +100,7 @@ export function useHomeScreenData() {
       schedules
         .filter((event) => normalizeDateToYmd(event.date) === todayString)
         .sort((a, b) => parseTimeTo24h(a.time || '9:00 AM').localeCompare(parseTimeTo24h(b.time || '9:00 AM'))),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
     [schedules, todayString]
   );
 

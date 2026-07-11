@@ -9,7 +9,7 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Handshake, UserX } from 'lucide-react-native';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Animated,
@@ -100,9 +100,6 @@ export default function ServeScreen() {
   const { grouped, allAssignments, loading: assignmentsLoading } = useMyAssignments();
   const { ministries, loading: ministriesLoading } = useServeMinistries();
 
-  const totalUpcoming = grouped
-    .filter((g) => g.label !== 'Past')
-    .reduce((sum, g) => sum + g.data.length, 0);
 
   const headerHeight = Math.max(insets.top, 24) + 118;
 
@@ -123,7 +120,7 @@ export default function ServeScreen() {
           </View>
           <Text style={styles.pendingTitle}>Not Linked to a Church</Text>
           <Text style={styles.pendingMessage}>
-            Your account isn't linked to a church yet. Contact your church admin
+            Your account isn&apos;t linked to a church yet. Contact your church admin
             to get access to Serve.
           </Text>
         </View>

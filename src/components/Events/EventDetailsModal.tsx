@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { CalendarDays, Clock, MapPin, CheckCircle2, HelpCircle, XCircle } from 'lucide-react-native';
+import { CalendarDays, CheckCircle2, HelpCircle, XCircle } from 'lucide-react-native';
 import AppModal from '@/components/ui/AppModal';
 import { PublicEventSetlist } from '@/app/(tabs)/community';
 import type { Schedule } from '@/features/schedule/domain/schedule.types';

@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, ActivityIndicator, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Animated } from 'react-native';
 import { ChevronLeft, History, Heart, Globe, Building2, Wallet } from 'lucide-react-native';
 import { useRouter, Stack } from 'expo-router';
 import { useGiving } from '@/features/giving/presentation/hooks/useGiving';
@@ -36,7 +36,7 @@ export default function GivingScreen() {
           </View>
           <Text style={styles.errorTitle}>Church Not Linked</Text>
           <Text style={styles.errorText}>
-            Your account isn't linked to a church yet. Please contact your church admin to get linked so you can access giving features.
+            Your account isn&apos;t linked to a church yet. Please contact your church admin to get linked so you can access giving features.
           </Text>
         </View>
       </View>

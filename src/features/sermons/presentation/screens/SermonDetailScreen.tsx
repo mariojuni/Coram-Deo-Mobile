@@ -14,11 +14,10 @@ import { Play, Heart, Share2, Clock, Calendar, User as UserIcon, BookOpen, FileT
 import { useSermonStore } from '@/store/useSermonStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTheme } from '@/hooks/use-theme';
-import { Colors, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import { NotesSheet } from '../components/NotesSheet';
 import { DownloadButton } from '../components/DownloadButton';
 import * as Haptics from 'expo-haptics';
-import * as ExpoSharing from 'expo-sharing';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export function SermonDetailScreen() {

@@ -35,7 +35,7 @@ export function DeclineModal({ isOpen, onClose, onConfirm, assignmentTitle }: De
     <AppModal isOpen={isOpen} onClose={handleClose} title="Decline Assignment">
       <View style={cs.container}>
         <Text style={cs.subtitle}>
-          You're about to decline your assignment for:
+          You&apos;re about to decline your assignment for:
         </Text>
         <View style={cs.assignmentBox}>
           <Text style={cs.assignmentTitle}>{assignmentTitle}</Text>

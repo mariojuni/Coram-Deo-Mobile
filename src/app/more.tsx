@@ -8,8 +8,15 @@ export default function MoreScreen() {
   const userProfile = useAuthStore((state) => state.userProfile);
   
   const displayName = userProfile?.fullName || 'User';
-  const roleStr = userProfile?.role || 'viewer';
-  const displayRole = roleStr.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+  // Use primaryRole for display; fall back to first systemRole then legacy role field.
+  const primaryRoleRaw =
+    userProfile?.primaryRole ||
+    (Array.isArray(userProfile?.systemRoles) && userProfile.systemRoles.length > 0
+      ? userProfile.systemRoles[0]
+      : undefined) ||
+    userProfile?.role ||
+    'viewer';
+  const displayRole = String(primaryRoleRaw).replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
   const hasChurchId = Boolean(userProfile?.churchId);
 
   return (

@@ -5,16 +5,16 @@ import { useMinistryStore } from '@/store/useMinistryStore';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
-import { AlertCircle, ArrowLeft, CalendarDays, CheckCircle2, Clock, HandHeart, Users, User, X, Check, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { AlertCircle, ArrowLeft, CalendarDays, CheckCircle2, Clock, HandHeart, Users, User, X, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { useState, useRef } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ServeMinistryDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const userProfile = useAuthStore((s) => s.userProfile);
+  const _userProfile = useAuthStore((s) => s.userProfile);
   const ministries = useMinistryStore((s) => s.ministries);
   const memberAssignments = useMinistryStore((s) => s.memberAssignments);
   const { withdrawApplication } = useMinistryApplicationStore();
@@ -174,7 +174,7 @@ export default function ServeMinistryDetailScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.bannerTitle}>Member Profile Required</Text>
               <Text style={styles.bannerBody}>
-                Your account isn't linked to a member profile yet. Contact your church admin to get linked so you can apply to serve.
+                Your account isn&apos;t linked to a member profile yet. Contact your church admin to get linked so you can apply to serve.
               </Text>
             </View>
           </View>
@@ -183,7 +183,7 @@ export default function ServeMinistryDetailScreen() {
             <CheckCircle2 size={20} color="#059669" />
             <View style={{ flex: 1 }}>
               <Text style={[styles.bannerTitle, { color: '#059669' }]}>Already Joined</Text>
-              <Text style={[styles.bannerBody, { color: '#064E3B' }]}>You're already part of this ministry.</Text>
+              <Text style={[styles.bannerBody, { color: '#064E3B' }]}>You&apos;re already part of this ministry.</Text>
             </View>
           </View>
         ) : applicationStatus === 'pending' ? (

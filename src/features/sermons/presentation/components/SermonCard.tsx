@@ -2,7 +2,7 @@ import { View, Text, Pressable, StyleSheet, Image, TouchableOpacity } from 'reac
 import Animated, { useAnimatedStyle, withTiming, useSharedValue } from 'react-native-reanimated';
 import { Heart, Clock, User } from 'lucide-react-native';
 import { useTheme } from '@/hooks/use-theme';
-import { Colors, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import type { Sermon } from '../../domain/sermon.types';
 import * as Haptics from 'expo-haptics';
 

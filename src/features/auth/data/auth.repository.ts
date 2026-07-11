@@ -60,31 +60,54 @@ async function checkUsernameTaken(username: string): Promise<boolean> {
   return !snap.empty;
 }
 
+/** Normalise a raw Firestore role string to a valid SystemRole. */
+function normalizeLegacyRole(raw: string): import('../domain/auth.types').SystemRole {
+  const map: Record<string, import('../domain/auth.types').SystemRole> = {
+    member: 'viewer',
+    admin: 'church_admin',
+    churchAdmin: 'church_admin',
+    superAdmin: 'super_admin',
+    ministryLeader: 'ministry_leader',
+    financeAdmin: 'finance_admin',
+  };
+  return (map[raw] ?? raw) as import('../domain/auth.types').SystemRole;
+}
+
 async function fetchUserAccount(user: User): Promise<UserAccount | null> {
   const profileDocRef = doc(db, 'users', user.uid);
   const profileSnapshot = await getDoc(profileDocRef);
   if (!profileSnapshot.exists()) return null;
-  
+
   const data = profileSnapshot.data() as Record<string, unknown>;
-  
+
   // Ensure super admin can view the primary church details if they don't have one explicitly assigned
-  if (!data.churchId && (data.role === 'super_admin' || data.role === 'admin')) {
+  if (!data.churchId && (data.role === 'super_admin' || data.role === 'admin' || (Array.isArray(data.systemRoles) && (data.systemRoles as string[]).includes('super_admin')))) {
     data.churchId = 'YmEc6C69Xz4DKRQaQZBV';
   }
 
-  // Map legacy roles
-  let role = data.role as string;
-  if (role === 'member') role = 'viewer';
-  if (role === 'admin') role = 'church_admin';
-  if (role === 'churchAdmin') role = 'church_admin';
-  if (role === 'superAdmin') role = 'super_admin';
-  if (role === 'ministryLeader') role = 'ministry_leader';
-  if (role === 'financeAdmin') role = 'finance_admin';
+  // Build systemRoles: prefer the stored array; fall back to migrating the legacy single role string.
+  let systemRoles: import('../domain/auth.types').SystemRole[];
+  if (Array.isArray(data.systemRoles) && data.systemRoles.length > 0) {
+    systemRoles = (data.systemRoles as string[]).map(normalizeLegacyRole);
+  } else if (data.role && typeof data.role === 'string') {
+    systemRoles = [normalizeLegacyRole(data.role as string)];
+  } else {
+    systemRoles = ['viewer'];
+  }
+
+  // Determine primaryRole: stored value wins; otherwise use the first item in systemRoles.
+  const primaryRole: import('../domain/auth.types').SystemRole =
+    (data.primaryRole as import('../domain/auth.types').SystemRole) ?? systemRoles[0];
+
+  // Keep legacy `role` in sync for any still-using callers (Firestore rules, etc.).
+  const legacyRole = normalizeLegacyRole((data.role as string) ?? primaryRole);
 
   return {
     uid: user.uid,
     ...data,
-    role,
+    role: legacyRole,
+    systemRoles,
+    primaryRole,
   } as UserAccount;
 }
 
@@ -156,7 +179,9 @@ export const authRepository = {
       memberId: matchedMember?.id || null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      role: 'viewer',
+      systemRoles: ['viewer'] as import('../domain/auth.types').SystemRole[],
+      primaryRole: 'viewer' as import('../domain/auth.types').SystemRole,
+      role: 'viewer', // legacy compat
     };
 
     await setDoc(doc(db, 'users', user.uid), userAccount);
@@ -232,7 +257,9 @@ export const authRepository = {
         memberId: matchedMember && !matchedMember.accountId ? matchedMember.id : null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        role: 'viewer',
+        systemRoles: ['viewer'] as import('../domain/auth.types').SystemRole[],
+        primaryRole: 'viewer' as import('../domain/auth.types').SystemRole,
+        role: 'viewer', // legacy compat
       };
 
       await setDoc(userDocRef, userAccount);

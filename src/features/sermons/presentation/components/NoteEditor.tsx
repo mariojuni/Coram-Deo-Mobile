@@ -2,7 +2,7 @@ import { View, Text, TextInput, StyleSheet, TouchableOpacity, KeyboardAvoidingVi
 import { useState, useEffect } from 'react';
 import { Save, X } from 'lucide-react-native';
 import { useTheme } from '@/hooks/use-theme';
-import { Colors, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import * as Haptics from 'expo-haptics';
 import type { SermonNote } from '../../domain/sermon.types';
 

@@ -1,8 +1,7 @@
-import { useState } from 'react';
 import { View, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
 import { Search, X } from 'lucide-react-native';
 import { useTheme } from '@/hooks/use-theme';
-import { Colors, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 
 interface SearchBarProps {
   value: string;
@@ -13,7 +12,6 @@ interface SearchBarProps {
 
 export function SearchBar({ value, onChangeText, onClear, placeholder = 'Search sermons...' }: SearchBarProps) {
   const colors = useTheme();
-  const [isFocused, setIsFocused] = useState(false);
 
   return (
     <View style={[

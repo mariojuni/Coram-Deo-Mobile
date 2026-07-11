@@ -18,7 +18,7 @@ import {
 } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
+
     Animated,
     Dimensions,
     Image,
@@ -636,7 +636,9 @@ export function PublicEventSetlist({ eventId, title = "Event Songs", onCloseModa
 
   if (!setlist || items.length === 0) return renderEmpty();
 
-  const isStaff = ['super_admin', 'church_admin', 'pastor', 'ministry_leader'].includes(userProfile?.role?.toLowerCase() || '');
+  const isStaff = Array.isArray(userProfile?.systemRoles)
+    ? userProfile.systemRoles.some((r: string) => ['super_admin', 'church_admin', 'pastor', 'ministry_leader'].includes(r))
+    : ['super_admin', 'church_admin', 'pastor', 'ministry_leader'].includes(userProfile?.role?.toLowerCase() || '');
   
   if (setlist.status !== 'published' && !isStaff) return renderEmpty();
 

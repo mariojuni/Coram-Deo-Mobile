@@ -1,8 +1,8 @@
-import { ScrollView, View, Text, StyleSheet, Pressable } from 'react-native';
+import { ScrollView, StyleSheet, Pressable } from 'react-native';
 import { Video, Mic, Layers, Grid3x3 } from 'lucide-react-native';
 import Animated, { useAnimatedStyle, withTiming, useSharedValue } from 'react-native-reanimated';
 import { useTheme } from '@/hooks/use-theme';
-import { Colors, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import type { SermonFilter } from '../../domain/sermon.types';
 import * as Haptics from 'expo-haptics';
 
@@ -11,7 +11,7 @@ interface FilterChipsProps {
   onFilterChange: (filter: SermonFilter) => void;
 }
 
-const FILTERS: Array<{ value: SermonFilter; label: string; icon: typeof Video }> = [
+const FILTERS: { value: SermonFilter; label: string; icon: typeof Video }[] = [
   { value: 'all', label: 'All', icon: Grid3x3 },
   { value: 'video', label: 'Video', icon: Video },
   { value: 'audio', label: 'Audio', icon: Mic },

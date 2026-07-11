@@ -5,11 +5,10 @@
  */
 import {
   BookOpen, Check, ChevronDown, ChevronUp, Clock, Copy, Drum, GraduationCap,
-  Guitar, Hand, HandCoins, MapPin, Mic, Monitor, Piano, Search, Users, X, Shield, Music, Heart, Star, Settings
+  Guitar, HandCoins, MapPin, Mic, Monitor, Piano, Search, Users, X, Shield, Music, Heart, Star, Settings
 } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, FlatList, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PrayingHands } from '../ui/icons/PrayingHands';
 import { ministryRepository } from '../../features/ministry/data/ministry.repository';
 import type { Schedule } from '../../features/schedule/domain/schedule.types';
@@ -83,10 +82,6 @@ function normalizeRole(name: string) {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-const fmtDate = (dateStr: string) =>
-  new Date(`${dateStr}T00:00:00`).toLocaleDateString('en-US', {
-    weekday: 'short', month: 'long', day: 'numeric', year: 'numeric',
-  });
 
 function getAssignmentKey(ministryId: string, roleName: string) {
   return `${ministryId}::${roleName}`;
@@ -222,10 +217,9 @@ interface AssignMinistriesModalProps {
 }
 
 export default function AssignMinistriesModal({ schedule, onClose }: AssignMinistriesModalProps) {
-  const insets = useSafeAreaInsets();
   const members = useMemberStore((s) => s.members);
   const memberById = useMemo(() => new Map(members.map((m) => [m.id, m])), [members]);
-  const currentUser = useAuthStore((s) => s.currentUser);
+  const _currentUser = useAuthStore((s) => s.currentUser);
   const userProfile = useAuthStore((s) => s.userProfile);
   const schedules = useScheduleStore((s) => s.schedules);
 
@@ -241,7 +235,7 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
     const fetch = async () => {
       const churchId = userProfile?.churchId as string | undefined;
       if (!churchId) return;
-      try { fetchMinistries(churchId); } catch(e) {}
+      try { fetchMinistries(churchId); } catch {}
     };
     if (ministries.length === 0) fetch();
   }, [ministries.length, userProfile?.churchId, fetchMinistries]);

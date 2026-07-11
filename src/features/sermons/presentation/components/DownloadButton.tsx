@@ -1,7 +1,7 @@
 import { TouchableOpacity, StyleSheet, Text, View, Alert, ActivityIndicator } from 'react-native';
-import { Download, Check, Trash2 } from 'lucide-react-native';
+import { Download, Check } from 'lucide-react-native';
 import { useTheme } from '@/hooks/use-theme';
-import { Colors, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import * as Haptics from 'expo-haptics';
 import { useSermonStore } from '@/store/useSermonStore';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -19,7 +19,6 @@ export function DownloadButton({ sermon, variant = 'default' }: DownloadButtonPr
   
   const {
     downloads,
-    downloadedSermons,
     downloadSermon,
     deleteDownload,
     checkIfDownloaded,
@@ -76,7 +75,7 @@ export function DownloadButton({ sermon, variant = 'default' }: DownloadButtonPr
         await downloadSermon(currentUser.uid, sermon);
         setIsDownloaded(true);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } catch (error) {
+      } catch {
         Alert.alert('Download Failed', 'Unable to download sermon. Please try again.');
       }
     }

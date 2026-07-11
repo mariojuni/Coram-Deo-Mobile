@@ -1,6 +1,5 @@
 import { addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, runTransaction, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { db } from '../../../firebase';
-import { resolveRoleId } from '../domain/ministryRoles';
 import type { Duty, Rsvp, Schedule } from '../domain/schedule.types';
 
 type SchedulesListener = (schedules: Schedule[]) => void;

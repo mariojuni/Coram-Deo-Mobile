@@ -88,7 +88,7 @@ export default function ServeWorshipSetlistScreen() {
             </View>
             <Text style={styles.emptyStateTitle}>No songs added yet</Text>
             <Text style={styles.emptyStateText}>
-              The worship leader hasn't added any songs to this setlist for the event.
+              The worship leader hasn&apos;t added any songs to this setlist for the event.
             </Text>
           </View>
         ) : (

@@ -1,5 +1,37 @@
 import type { UserAccount, SystemRole } from '../features/auth/domain/auth.types';
 
+// ─── Core role helpers ────────────────────────────────────────────────────────
+
+/**
+ * Returns the resolved list of system roles for a user.
+ * Falls back to the legacy `role` field so callers don't need to worry
+ * about which Firestore format the document uses.
+ */
+function getSystemRoles(user?: UserAccount | null): SystemRole[] {
+  if (!user) return [];
+  if (Array.isArray(user.systemRoles) && user.systemRoles.length > 0) {
+    return user.systemRoles;
+  }
+  // Legacy fallback
+  if (user.role) {
+    return [user.role as SystemRole];
+  }
+  return ['viewer'];
+}
+
+/** Returns true if the user holds the specified role. */
+export function hasRole(user: UserAccount | null | undefined, role: SystemRole): boolean {
+  return getSystemRoles(user).includes(role);
+}
+
+/** Returns true if the user holds at least one of the specified roles. */
+export function hasAnyRole(user: UserAccount | null | undefined, roles: SystemRole[]): boolean {
+  const userRoles = getSystemRoles(user);
+  return roles.some((r) => userRoles.includes(r));
+}
+
+// ─── Status / access helpers ─────────────────────────────────────────────────
+
 export function isActiveUser(user?: UserAccount | null): boolean {
   return user?.status === 'active';
 }
@@ -21,6 +53,8 @@ export function canAccessChurchFeatures(user?: UserAccount | null): boolean {
   return hasChurchAccess(user);
 }
 
+// ─── Mobile feature guards (viewer-safe) ─────────────────────────────────────
+
 export function canSubmitPrayerRequest(user?: UserAccount | null): boolean {
   return hasChurchAccess(user);
 }
@@ -37,29 +71,60 @@ export function canConfirmServeAssignment(user?: UserAccount | null): boolean {
   return hasChurchAccess(user);
 }
 
+// ─── Admin permission helpers ─────────────────────────────────────────────────
+
+/**
+ * Prayer moderation: only super_admin, church_admin, and pastor.
+ * finance_admin cannot see private prayer requests unless they also hold one of these roles.
+ */
 export function canModeratePrayerRequests(user?: UserAccount | null): boolean {
-  if (!user?.role) return false;
-  return ['super_admin', 'church_admin', 'pastor'].includes(user.role.toLowerCase());
+  return hasAnyRole(user, ['super_admin', 'church_admin', 'pastor']);
 }
 
+/**
+ * Giving management: finance_admin, church_admin, super_admin.
+ * Covers giving records, campaigns, expenses, payment methods, and finance reports.
+ */
 export function canManageGiving(user?: UserAccount | null): boolean {
-  if (!user?.role) return false;
-  return ['super_admin', 'church_admin', 'finance_admin'].includes(user.role.toLowerCase());
+  return hasAnyRole(user, ['super_admin', 'church_admin', 'finance_admin']);
 }
 
+/**
+ * Ministry management: super_admin and church_admin can manage all ministries.
+ * pastor can manage all ministries in their church scope.
+ * ministry_leader can only manage ministries listed in their managedMinistryIds.
+ */
+export function canManageMinistry(
+  user: UserAccount | null | undefined,
+  ministryId: string
+): boolean {
+  if (!user) return false;
+  if (hasAnyRole(user, ['super_admin', 'church_admin', 'pastor'])) return true;
+  if (hasRole(user, 'ministry_leader')) {
+    return Array.isArray(user.managedMinistryIds) && user.managedMinistryIds.includes(ministryId);
+  }
+  return false;
+}
+
+/**
+ * Admin portal access: any role other than viewer.
+ * viewer can use normal mobile features but cannot enter the admin portal.
+ */
 export function canAccessAdminPortal(user?: UserAccount | null): boolean {
-  if (!user?.role) return false;
-  const adminRoles = [
+  return hasAnyRole(user, [
     'super_admin',
     'church_admin',
     'pastor',
     'secretary',
     'finance_admin',
-    'ministry_leader'
-  ];
-  return adminRoles.includes(user.role.toLowerCase());
+    'ministry_leader',
+  ]);
 }
 
+/**
+ * Leaders-only prayer: the requester can always see their own request.
+ * For others, only super_admin, church_admin, and pastor may view private requests.
+ */
 export function canViewLeadersOnlyPrayer(
   user?: UserAccount | null,
   requesterUserId?: string
@@ -67,6 +132,5 @@ export function canViewLeadersOnlyPrayer(
   if (requesterUserId && user?.uid && requesterUserId === user.uid) {
     return true;
   }
-  if (!user?.role) return false;
-  return ['super_admin', 'church_admin', 'pastor'].includes(user.role.toLowerCase());
+  return canModeratePrayerRequests(user);
 }

@@ -138,7 +138,7 @@ export default function ServeAssignmentDetailScreen() {
         confirmedBy: userProfile?.uid ?? userProfile?.memberId ?? '',
       });
       setActionSuccess('Assignment confirmed.');
-    } catch (e) {
+    } catch {
       Alert.alert('Error', 'Could not confirm assignment. Please try again.');
     } finally {
       setConfirmingSaving(false);
@@ -237,7 +237,7 @@ export default function ServeAssignmentDetailScreen() {
           <View style={styles.confirmedBanner}>
             <Check size={20} color="#059669" strokeWidth={3} />
             <Text style={styles.confirmedBannerText}>
-              You've confirmed this assignment. See you there!
+              You&apos;ve confirmed this assignment. See you there!
             </Text>
           </View>
         )}
@@ -246,7 +246,7 @@ export default function ServeAssignmentDetailScreen() {
           <View style={styles.declinedBanner}>
             <X size={20} color="#DC2626" strokeWidth={3} />
             <Text style={styles.declinedBannerText}>
-              You've declined this assignment.
+              You&apos;ve declined this assignment.
             </Text>
           </View>
         )}

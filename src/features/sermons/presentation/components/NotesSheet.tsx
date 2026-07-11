@@ -2,9 +2,8 @@ import { View, Text, StyleSheet, TouchableOpacity, FlatList, Modal, Alert } from
 import { useState } from 'react';
 import { FileText, Plus, Trash2, Edit3, Clock } from 'lucide-react-native';
 import { useTheme } from '@/hooks/use-theme';
-import { Colors, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import { NoteEditor } from './NoteEditor';
-import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import type { SermonNote } from '../../domain/sermon.types';
 

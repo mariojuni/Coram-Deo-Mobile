@@ -1,6 +1,6 @@
 import { UserAccount } from '../features/auth/domain/auth.types';
 import { CloudFile } from '../features/files/domain/files.types';
-import { hasChurchAccess } from './mobilePermissions';
+import { hasAnyRole, hasRole, hasChurchAccess } from './mobilePermissions';
 
 export function canAccessCloudFile(user: UserAccount | null | undefined, file: CloudFile): boolean {
   if (!user) {
@@ -18,8 +18,6 @@ export function canAccessCloudFile(user: UserAccount | null | undefined, file: C
   }
 
   // 3. Check file visibility & 4. Check role or ownership
-  const role = user.role?.toLowerCase() || 'viewer';
-
   switch (file.visibility) {
     case 'public':
       return true;
@@ -28,27 +26,27 @@ export function canAccessCloudFile(user: UserAccount | null | undefined, file: C
       return hasChurchAccess(user);
 
     case 'leaders_only':
-      return ['super_admin', 'church_admin', 'pastor'].includes(role);
+      return hasAnyRole(user, ['super_admin', 'church_admin', 'pastor']);
 
     case 'finance_only':
-      return ['super_admin', 'church_admin', 'finance_admin'].includes(role);
+      return hasAnyRole(user, ['super_admin', 'church_admin', 'finance_admin']);
 
     case 'ministry_leaders_only':
-      if (['super_admin', 'church_admin', 'pastor'].includes(role)) return true;
-      if (role === 'ministry_leader' && file.ministryId) {
-        // Here you would check if user manages the file's ministry.
-        // Assuming user.ministryIds contains the ministries they lead.
-        // If your user model doesn't have ministryIds yet, this could be adapted.
-        // For now, allow ministry_leader if we can't definitively check, or deny if strict.
-        return true; 
+      if (hasAnyRole(user, ['super_admin', 'church_admin', 'pastor'])) return true;
+      if (hasRole(user, 'ministry_leader') && file.ministryId) {
+        // Only allow if this specific ministry is in the user's managed list.
+        return Array.isArray(user.managedMinistryIds) && user.managedMinistryIds.includes(file.ministryId);
       }
       return false;
 
     case 'admins_only':
-      return ['super_admin', 'church_admin'].includes(role) || (role === 'secretary' && !!file.relatedModule);
+      return (
+        hasAnyRole(user, ['super_admin', 'church_admin']) ||
+        (hasRole(user, 'secretary') && !!file.relatedModule)
+      );
 
     case 'private':
-      if (['super_admin', 'church_admin', 'pastor'].includes(role)) return true;
+      if (hasAnyRole(user, ['super_admin', 'church_admin', 'pastor'])) return true;
       return file.ownerUserId === user.uid || file.ownerMemberId === user.memberId;
 
     default:

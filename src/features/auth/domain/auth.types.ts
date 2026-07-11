@@ -25,7 +25,14 @@ export interface UserAccount {
   username: string;
   authProvider: string;
   status: 'active' | 'pendingChurchLink' | 'disabled';
-  role?: SystemRole | string; // Keep string to allow parsing legacy roles before transformation
+  /** Multi-role support: a user can hold more than one SystemRole simultaneously. */
+  systemRoles?: SystemRole[];
+  /** The primary role used for UI display (e.g. badge, profile card). */
+  primaryRole?: SystemRole;
+  /** IDs of ministries this user is assigned to manage (for ministry_leader). */
+  managedMinistryIds?: string[];
+  /** @deprecated Use systemRoles instead. Kept for legacy Firestore docs that have not been migrated. */
+  role?: SystemRole | string;
   createdAt: string;
   updatedAt: string;
   [key: string]: unknown;

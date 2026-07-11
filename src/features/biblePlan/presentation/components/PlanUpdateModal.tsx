@@ -1,7 +1,7 @@
 import type { BiblePlan } from '@/features/biblePlan/domain/biblePlan.types';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BookOpen } from 'lucide-react-native';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Animated, Modal, StyleSheet, Text, View } from 'react-native';
 
 // ─── Step constants ───────────────────────────────────────────────────────────

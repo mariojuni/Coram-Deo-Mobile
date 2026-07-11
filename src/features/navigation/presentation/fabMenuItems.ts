@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react-native';
-import { Calendar, Shield } from 'lucide-react-native';
+import { Shield } from 'lucide-react-native';
 
 export type FabMenuItem = {
   icon: LucideIcon;

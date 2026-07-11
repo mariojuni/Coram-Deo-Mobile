@@ -1,4 +1,4 @@
-import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import type { Member, Service } from '../domain/member.types';
 

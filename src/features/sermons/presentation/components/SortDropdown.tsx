@@ -2,7 +2,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, useColorSch
 import { useState } from 'react';
 import { ArrowUpDown, Check, X } from 'lucide-react-native';
 import { useTheme } from '@/hooks/use-theme';
-import { Colors, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import type { SermonSort } from '../../domain/sermon.types';
 import * as Haptics from 'expo-haptics';
 
@@ -12,7 +12,7 @@ interface SortDropdownProps {
   iconOnly?: boolean;
 }
 
-const SORT_OPTIONS: Array<{ value: SermonSort; label: string }> = [
+const SORT_OPTIONS: { value: SermonSort; label: string }[] = [
   { value: 'newest', label: 'Newest First' },
   { value: 'oldest', label: 'Oldest First' },
   { value: 'popular', label: 'Most Popular' },

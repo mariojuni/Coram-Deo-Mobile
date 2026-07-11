@@ -203,7 +203,7 @@ export default function BiblePlanDayScreen() {
     passages.forEach(({ bookId, chapter }) => {
       fetchChapterData(translation, `${bookId}.${chapter}`);
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [preferences?.activeTranslation, passages.map((p) => p.ref).join(',')]);
 
   // Jump to the correct passage when passageIndex or passages list changes
@@ -219,7 +219,7 @@ export default function BiblePlanDayScreen() {
     });
     saveUserPreferences(updated);
     return () => cancelAnimationFrame(frame);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [passageIndex, passages.map((p) => p.ref).join(','), preferences?.activeTranslation]);
 
   const handleUpdatePreferences = (updates: Partial<BiblePreferencesWithHighlights>) => {

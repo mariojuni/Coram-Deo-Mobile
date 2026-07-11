@@ -162,7 +162,7 @@ export default function MinistryApplicationScreen() {
         {ministry?.roles && ministry.roles.length > 0 ? (
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>Preferred Role</Text>
-            <Text style={styles.hint}>Select one or more roles you'd like to serve in.</Text>
+            <Text style={styles.hint}>Select one or more roles you&apos;d like to serve in.</Text>
             <View style={styles.rolesWrap}>
               {ministry.roles.map((role, i) => {
                 const roleLabel = typeof role === 'string' ? role : (role as any)?.name ?? String(role);

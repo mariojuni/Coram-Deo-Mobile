@@ -86,8 +86,10 @@ export default function RootLayout() {
     const inPendingScreen = segments[0] === 'pending-access';
     const inWalkthrough = segments[0] === 'walkthrough';
     
-    // Using strict super_admin bypass
-    const isSuperAdmin = userProfile?.role === 'super_admin';
+    // Using strict super_admin bypass — checks systemRoles array (multi-role compatible)
+    const isSuperAdmin = Array.isArray(userProfile?.systemRoles)
+      ? userProfile.systemRoles.includes('super_admin')
+      : userProfile?.role === 'super_admin';
     const isPending = !isSuperAdmin && (userProfile?.status === 'pendingChurchLink' || (!userProfile?.churchId && currentUser));
     
     const isDisabled = currentUser && !canAccessMobileApp(userProfile);

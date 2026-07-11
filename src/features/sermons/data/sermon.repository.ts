@@ -22,8 +22,6 @@ import { db } from '@/firebase';
 import type {
   Sermon,
   SermonNote,
-  SermonProgress,
-  SermonFavorite,
   SermonDownload,
   SermonFilters,
 } from '../domain/sermon.types';

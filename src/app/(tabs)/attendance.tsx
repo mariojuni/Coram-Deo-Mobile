@@ -1,9 +1,8 @@
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
-import { Award, Bell, QrCode, Users, Shield } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { Bell, QrCode, Shield } from 'lucide-react-native';
+import { useEffect, useState , useRef } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native';
-import { useRef } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AttendanceTab from '../../components/Staff/AttendanceTab';

@@ -1,14 +1,15 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Animated } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { ChevronLeft, Upload, CheckCircle2, ChevronDown } from 'lucide-react-native';
+import { ChevronLeft, Upload, CheckCircle2 } from 'lucide-react-native';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useGiving } from '@/features/giving/presentation/hooks/useGiving';
 import { submitGivingRecord, uploadProofOfPayment } from '@/features/giving/data/giving.repository';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-// ImagePicker imported dynamically to prevent native module crashes on startup
+import * as ImagePicker from 'expo-image-picker';
+
 
 export default function GivingFormScreen() {
   const { campaignId, fundType } = useLocalSearchParams();
@@ -48,7 +49,6 @@ export default function GivingFormScreen() {
 
   const pickImage = async () => {
     try {
-      const ImagePicker = require('expo-image-picker');
       let result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,

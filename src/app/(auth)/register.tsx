@@ -6,7 +6,7 @@ import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleShe
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../../store/useAuthStore';
-import { AuthGeometricHeader } from '../../components/ui/AuthGeometricHeader';
+
 
 export default function RegisterScreen() {
   const [step, setStep] = useState(1);

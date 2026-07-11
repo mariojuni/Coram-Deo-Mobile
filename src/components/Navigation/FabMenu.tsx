@@ -1,11 +1,11 @@
 import { getFabMenuItems } from '@/features/navigation/presentation/fabMenuItems';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { HandHeart, Handshake, HeartHandshake, Plus, QrCode } from 'lucide-react-native';
+import { HandHeart, HeartHandshake, Plus } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { Animated, StyleSheet, TouchableOpacity, View, Text } from 'react-native';
+import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useAuthStore } from '../../store/useAuthStore';
-import { canSubmitPrayerRequest, canSubmitGiving } from '../../permissions/mobilePermissions';
+import { canSubmitGiving } from '../../permissions/mobilePermissions';
 import PrayerRequestModal from '../../features/prayer/presentation/components/PrayerRequestModal';
 
 interface FabMenuProps {
@@ -14,7 +14,7 @@ interface FabMenuProps {
 
 export default function FabMenu({ isStaff }: FabMenuProps) {
   const router = useRouter();
-  const { userProfile, currentUser } = useAuthStore();
+  const { userProfile } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
   const [isPrayerModalOpen, setIsPrayerModalOpen] = useState(false);
   const animation = useMemo(() => new Animated.Value(0), []);
