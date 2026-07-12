@@ -1,5 +1,6 @@
-import { SermonDetailScreen } from '@/features/sermons/presentation/screens/SermonDetailScreen';
+import { Redirect, useLocalSearchParams } from 'expo-router';
 
 export default function SermonDetail() {
-  return <SermonDetailScreen />;
+  const { id } = useLocalSearchParams<{ id: string }>();
+  return <Redirect href={`/sermon-watch?id=${id}`} />;
 }

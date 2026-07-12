@@ -1,11 +1,35 @@
 import { useAuthStore } from '@/store/useAuthStore';
 import { useSermonStore } from '@/store/useSermonStore';
+import { useSermonPlaybackStore } from '@/store/useSermonPlaybackStore';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Bookmark, Flame, PlayCircle, Search } from 'lucide-react-native';
+import {
+  BookOpen,
+  Download,
+  Headphones,
+  Play,
+  Search,
+  X,
+} from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import type { Sermon } from '../../domain/sermon.types';
+import { ContinueWatchingCard } from './ContinueWatchingCard';
+
+// ─── Design Tokens ─────────────────────────────────────────────────────────────
+const NAVY = '#1A1A1A';
+const GOLD = '#FF6596';
+const BEIGE = '#FAFAFA';
+const OLIVE = '#C084FC';
 
 interface SermonsExperienceProps {
   searchQuery?: string;
@@ -14,564 +38,805 @@ interface SermonsExperienceProps {
 
 export function SermonsExperience({ searchQuery, showSearchInput = true }: SermonsExperienceProps) {
   const router = useRouter();
-  const currentUser = useAuthStore((state) => state.currentUser);
-  const { sermons, loading, fetchSermons, toggleFavorite, favorites, loadFavorites } = useSermonStore();
-  const [localSearch, setLocalSearch] = useState('');
-  const activeSearch = searchQuery ?? localSearch;
+  const currentUser = useAuthStore((s) => s.currentUser);
+  const userProfile = useAuthStore((s) => s.userProfile);
 
+  const { sermons, loading, fetchSermons, loadFavorites } = useSermonStore();
+  const { loadAllProgresses, getInProgressSermons, progresses } = useSermonPlaybackStore();
+
+  const [localSearch, setLocalSearch] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [filterType, setFilterType] = useState<'all' | 'video' | 'audio' | 'series'>('all');
+
+  const activeSearch = searchQuery ?? localSearch;
+  const churchId = userProfile?.churchId;
+
+  // ── Fetch sermons ──────────────────────────────────────────────────────────
   useEffect(() => {
-    if (sermons.length === 0) {
-      fetchSermons(true);
-    }
-  }, [fetchSermons, sermons.length]);
+    if (churchId) fetchSermons(churchId, true);
+  }, [churchId]);
 
   useEffect(() => {
     if (currentUser) {
       loadFavorites(currentUser.uid);
+      loadAllProgresses(currentUser.uid);
     }
-  }, [currentUser, loadFavorites]);
+  }, [currentUser]);
 
+  // ── Filter & Search ────────────────────────────────────────────────────────
   const filteredSermons = useMemo(() => {
-    const normalizedSearch = activeSearch.trim().toLowerCase();
-    if (!normalizedSearch) return sermons;
+    let list = sermons;
 
-    return sermons.filter((sermon) => {
-      const speaker = sermon.speaker?.name?.toLowerCase() ?? '';
-      const tags = sermon.tags?.join(' ').toLowerCase() ?? '';
-      return (
-        sermon.title.toLowerCase().includes(normalizedSearch) ||
-        sermon.description.toLowerCase().includes(normalizedSearch) ||
-        speaker.includes(normalizedSearch) ||
-        tags.includes(normalizedSearch)
-      );
-    });
-  }, [activeSearch, sermons]);
+    if (filterType === 'video') list = list.filter((s) => s.mediaType === 'video' || s.mediaType === 'both');
+    else if (filterType === 'audio') list = list.filter((s) => s.mediaType === 'audio' || s.mediaType === 'both');
+    else if (filterType === 'series') list = list.filter((s) => !!s.seriesId);
 
+    const q = activeSearch.trim().toLowerCase();
+    if (!q) return list;
+
+    return list.filter(
+      (s) =>
+        s.title.toLowerCase().includes(q) ||
+        s.description?.toLowerCase().includes(q) ||
+        s.preacherName?.toLowerCase().includes(q) ||
+        s.seriesTitle?.toLowerCase().includes(q) ||
+        s.scriptureReference?.toLowerCase().includes(q)
+    );
+  }, [sermons, activeSearch, filterType]);
+
+  // ── Derived data ───────────────────────────────────────────────────────────
   const featuredSermon = filteredSermons[0] ?? null;
-  const recentSermons = filteredSermons.slice(1, 6);
+  const recentSermons = filteredSermons.slice(1, 7);
   const isSearching = activeSearch.trim().length > 0;
-  const popularSermons = useMemo(
-    () => [...filteredSermons].sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0)).slice(0, 5),
-    [filteredSermons]
-  );
 
-  const sermonStats = useMemo(
-    () => ({
-      total: sermons.length,
-      videos: sermons.filter((item) => item.type === 'video').length,
-      audio: sermons.filter((item) => item.type === 'audio').length,
-    }),
-    [sermons]
-  );
-
-  const formatDuration = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const formatDate = (date: Date): string => {
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
+  const sermonSeries = useMemo(() => {
+    const map = new Map<string, { title: string; count: number; thumb?: string }>();
+    sermons.forEach((s) => {
+      if (s.seriesId && s.seriesTitle) {
+        if (!map.has(s.seriesId)) {
+          map.set(s.seriesId, { title: s.seriesTitle, count: 0, thumb: s.thumbnailUrl });
+        }
+        map.get(s.seriesId)!.count++;
+      }
     });
-  };
+    return Array.from(map.entries()).map(([id, val]) => ({ id, ...val }));
+  }, [sermons]);
 
+  const inProgressList = getInProgressSermons().filter((p) => !p.completed).slice(0, 3);
+  const inProgressWithSermons = inProgressList
+    .map((p) => ({ progress: p, sermon: sermons.find((s) => s.id === p.sermonId) ?? null }))
+    .filter((item) => item.sermon !== null);
+
+  // ── Navigation ─────────────────────────────────────────────────────────────
   const openSermon = (id: string) => {
-    router.push({ pathname: '/sermon-detail', params: { id } });
+    router.push({ pathname: '/sermon-watch', params: { id } });
   };
 
-  const handleToggleFavorite = async (sermonId: string) => {
-    if (!currentUser) return;
-    try {
-      await toggleFavorite(currentUser.uid, sermonId);
-    } catch (error) {
-      console.error(error);
-    }
+  const openAudioPlayer = (id: string) => {
+    router.push({ pathname: '/audio-player', params: { id } });
   };
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  const formatDuration = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${String(s).padStart(2, '0')}`;
+  };
+
+  const formatDate = (date: Date) =>
+    date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+  // ── Loading ────────────────────────────────────────────────────────────────
+  if (loading && sermons.length === 0) {
+    return (
+      <View style={styles.centerBox}>
+        <ActivityIndicator size="large" color={GOLD} />
+        <Text style={styles.loadingText}>Loading sermons...</Text>
+      </View>
+    );
+  }
+
+  // ── Empty state ────────────────────────────────────────────────────────────
+  if (!loading && sermons.length === 0) {
+    return (
+      <View style={styles.centerBox}>
+        <BookOpen size={56} color="#D1C4B0" strokeWidth={1.5} />
+        <Text style={styles.emptyTitle}>No Sermons Yet</Text>
+        <Text style={styles.emptySubtitle}>
+          Check back soon — new sermons will appear here as they're published.
+        </Text>
+      </View>
+    );
+  }
 
   return (
-    <View style={styles.wrap}>
-      <LinearGradient
-        colors={['#E9F1FF', '#EDF7FF', '#F7FAFF']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.heroCompact}
-      >
-        <View style={styles.heroTopRow}>
-          <View style={styles.heroBadge}>
-            <Flame size={12} color="#1D4ED8" />
-            <Text style={styles.heroBadgeText}>Word library</Text>
-          </View>
-          <View style={styles.heroCountPill}>
-            <Text style={styles.heroCountText}>{sermonStats.total}</Text>
-          </View>
-        </View>
-
-        <Text style={styles.heroTitleCompact}>Sermons</Text>
-        <Text style={styles.heroSubtitleCompact}>
-          Teaching archive for weekly growth.
-        </Text>
-
-        <View style={styles.quickStatsRow}>
-          <View style={styles.quickStatPill}>
-            <Text style={styles.quickStatValue}>{sermonStats.videos}</Text>
-            <Text style={styles.quickStatLabel}>Video</Text>
-          </View>
-          <View style={styles.quickStatPill}>
-            <Text style={styles.quickStatValue}>{sermonStats.audio}</Text>
-            <Text style={styles.quickStatLabel}>Audio</Text>
-          </View>
-        </View>
-      </LinearGradient>
-
+    <View style={{ flex: 1, backgroundColor: BEIGE }}>
+      {/* ── Search bar ── */}
       {showSearchInput && (
-        <View style={styles.searchRow}>
-          <Search size={16} color="#73809D" />
-          <TextInput
-            style={styles.searchInput}
-            value={activeSearch}
-            onChangeText={setLocalSearch}
-            placeholder="Search sermons, speakers, or tags"
-            placeholderTextColor="#94A3B8"
-          />
-        </View>
-      )}
-
-      {loading && sermons.length === 0 ? (
-        <View style={styles.placeholderWrap}>
-          <Text style={styles.placeholderSubtitle}>Loading sermons...</Text>
-        </View>
-      ) : filteredSermons.length === 0 ? (
-        <View style={styles.placeholderWrap}>
-          <Text style={styles.placeholderTitle}>No sermons found</Text>
-          <Text style={styles.placeholderSubtitle}>Try a different search term.</Text>
-        </View>
-      ) : isSearching ? (
-        <View style={styles.searchResultsList}>
-          {filteredSermons.map((sermon: Sermon) => {
-            const isFavorited = favorites.has(sermon.id);
-            return (
+        <View style={styles.searchWrap}>
+          {searchOpen ? (
+            <View style={styles.searchRow}>
+              <Search size={16} color="#9CA3AF" />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search sermons, scripture, speaker..."
+                placeholderTextColor="#B0B8C8"
+                value={localSearch}
+                onChangeText={setLocalSearch}
+                autoFocus
+                autoCorrect={false}
+              />
               <TouchableOpacity
-                key={sermon.id}
-                style={styles.searchResultCard}
-                activeOpacity={0.9}
-                onPress={() => openSermon(sermon.id)}
+                onPress={() => {
+                  setLocalSearch('');
+                  setSearchOpen(false);
+                }}
               >
-                <Image source={{ uri: sermon.thumbnailUrl }} style={styles.searchResultImage} resizeMode="cover" />
-                <View style={styles.searchResultBody}>
-                  <Text style={styles.searchResultTitle} numberOfLines={2}>{sermon.title}</Text>
-                  <Text style={styles.searchResultMeta} numberOfLines={1}>
-                    {sermon.speaker?.name} • {formatDate(sermon.date)} • {formatDuration(sermon.duration)}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={[styles.searchResultSave, isFavorited && styles.searchResultSaveActive]}
-                  onPress={() => handleToggleFavorite(sermon.id)}
-                >
-                  <Bookmark size={12} color={isFavorited ? '#FFFFFF' : '#1D4ED8'} fill={isFavorited ? '#FFFFFF' : 'transparent'} />
-                </TouchableOpacity>
+                <X size={18} color="#9CA3AF" />
               </TouchableOpacity>
-            );
-          })}
-        </View>
-      ) : (
-        <>
-          {featuredSermon && (
-            <TouchableOpacity activeOpacity={0.9} onPress={() => openSermon(featuredSermon.id)}>
-              <View style={styles.featuredCard}>
-                <Image source={{ uri: featuredSermon.thumbnailUrl }} style={styles.featuredImage} resizeMode="cover" />
-                <LinearGradient
-                  colors={['transparent', 'rgba(12,18,36,0.85)']}
-                  style={styles.featuredOverlay}
-                >
-                  <View style={styles.featuredMetaRow}>
-                    <Text style={styles.featuredMeta}>{formatDate(featuredSermon.date)}</Text>
-                    <Text style={styles.featuredMeta}>{formatDuration(featuredSermon.duration)}</Text>
-                  </View>
-                  <Text style={styles.featuredTitle} numberOfLines={2}>{featuredSermon.title}</Text>
-                  <Text style={styles.featuredSpeaker} numberOfLines={1}>{featuredSermon.speaker?.name}</Text>
-                </LinearGradient>
-              </View>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.searchTrigger}
+              onPress={() => setSearchOpen(true)}
+              activeOpacity={0.7}
+            >
+              <Search size={16} color="#9CA3AF" />
+              <Text style={styles.searchPlaceholder}>Search sermons...</Text>
             </TouchableOpacity>
           )}
-
-          {recentSermons.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Recently Uploaded</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.rowList}>
-                {recentSermons.map((sermon: Sermon) => {
-                  const isFavorited = favorites.has(sermon.id);
-                  return (
-                    <TouchableOpacity
-                      key={sermon.id}
-                      style={styles.rowCard}
-                      activeOpacity={0.9}
-                      onPress={() => openSermon(sermon.id)}
-                    >
-                      <Image source={{ uri: sermon.thumbnailUrl }} style={styles.rowImage} resizeMode="cover" />
-                      <Text style={styles.rowTitle} numberOfLines={2}>{sermon.title}</Text>
-                      <Text style={styles.rowSubtitle} numberOfLines={1}>{sermon.speaker?.name}</Text>
-                      <TouchableOpacity
-                        style={[styles.favoriteChip, isFavorited && styles.favoriteChipActive]}
-                        onPress={() => handleToggleFavorite(sermon.id)}
-                      >
-                        <Bookmark size={12} color={isFavorited ? '#FFFFFF' : '#1D4ED8'} fill={isFavorited ? '#FFFFFF' : 'transparent'} />
-                        <Text style={[styles.favoriteChipText, isFavorited && styles.favoriteChipTextActive]}>
-                          {isFavorited ? 'Saved' : 'Save'}
-                        </Text>
-                      </TouchableOpacity>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          )}
-
-          {popularSermons.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Most Played</Text>
-              <View style={styles.popularList}>
-                {popularSermons.map((sermon: Sermon) => (
-                  <TouchableOpacity key={sermon.id} style={styles.popularItem} onPress={() => openSermon(sermon.id)}>
-                    <Image source={{ uri: sermon.thumbnailUrl }} style={styles.popularImage} resizeMode="cover" />
-                    <View style={styles.popularBody}>
-                      <Text style={styles.popularTitle} numberOfLines={1}>{sermon.title}</Text>
-                      <Text style={styles.popularSubtitle} numberOfLines={1}>{sermon.speaker?.name}</Text>
-                    </View>
-                    <View style={styles.popularViews}>
-                      <PlayCircle size={13} color="#1D4ED8" />
-                      <Text style={styles.popularViewsText}>{sermon.viewCount || 0}</Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
-        </>
+        </View>
       )}
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 40 }}
+      >
+        {/* ── Filter chips ── */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterRow}
+        >
+          {(['all', 'video', 'audio', 'series'] as const).map((f) => (
+            <TouchableOpacity
+              key={f}
+              style={[styles.filterChip, filterType === f && styles.filterChipActive]}
+              onPress={() => setFilterType(f)}
+            >
+              <Text style={[styles.filterChipText, filterType === f && styles.filterChipTextActive]}>
+                {f === 'all' ? 'All' : f === 'video' ? 'Video' : f === 'audio' ? 'Audio' : 'Series'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* ── Continue Watching / Listening ── */}
+        {inProgressWithSermons.length > 0 && !isSearching && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              {inProgressWithSermons[0].progress.mediaType === 'video'
+                ? 'Continue Watching'
+                : 'Continue Listening'}
+            </Text>
+            {inProgressWithSermons.map(({ progress, sermon }) => (
+              <ContinueWatchingCard
+                key={progress.sermonId}
+                progress={progress}
+                sermon={sermon}
+                onPress={() => {
+                  if (progress.mediaType === 'video') {
+                    openSermon(progress.sermonId);
+                  } else {
+                    openAudioPlayer(progress.sermonId);
+                  }
+                }}
+              />
+            ))}
+          </View>
+        )}
+
+        {/* ── Search results ── */}
+        {isSearching ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              {filteredSermons.length} result{filteredSermons.length !== 1 ? 's' : ''}
+            </Text>
+            {filteredSermons.length === 0 ? (
+              <View style={styles.searchEmpty}>
+                <Text style={styles.searchEmptyText}>No sermons match your search.</Text>
+              </View>
+            ) : (
+              filteredSermons.map((s) => (
+                <SearchResultCard key={s.id} sermon={s} onPress={() => openSermon(s.id)} />
+              ))
+            )}
+          </View>
+        ) : (
+          <>
+            {/* ── Latest Sermon (Featured) ── */}
+            {featuredSermon && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Latest Sermon</Text>
+                <FeaturedCard
+                  sermon={featuredSermon}
+                  onPress={() => openSermon(featuredSermon.id)}
+                  onListen={() => openAudioPlayer(featuredSermon.id)}
+                />
+              </View>
+            )}
+
+            {/* ── Recent Sermons ── */}
+            {recentSermons.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Recent Sermons</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.horizontalList}
+                >
+                  {recentSermons.map((s) => (
+                    <SermonTileCard
+                      key={s.id}
+                      sermon={s}
+                      onPress={() => openSermon(s.id)}
+                    />
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* ── Series ── */}
+            {sermonSeries.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Series</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.horizontalList}
+                >
+                  {sermonSeries.map((series) => (
+                    <TouchableOpacity
+                      key={series.id}
+                      style={styles.seriesCard}
+                      onPress={() => setFilterType('series')}
+                      activeOpacity={0.85}
+                    >
+                      {series.thumb ? (
+                        <Image
+                          source={{ uri: series.thumb }}
+                          style={styles.seriesThumb}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View style={[styles.seriesThumb, { backgroundColor: '#DDE1E8' }]} />
+                      )}
+                      <LinearGradient
+                        colors={['transparent', 'rgba(26,26,26,0.88)']}
+                        style={StyleSheet.absoluteFill}
+                      />
+                      <View style={styles.seriesInfo}>
+                        <Text style={styles.seriesTitle} numberOfLines={2}>
+                          {series.title}
+                        </Text>
+                        <Text style={styles.seriesCount}>{series.count} sermons</Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* ── Downloaded shortcut ── */}
+            <View style={[styles.section, { paddingHorizontal: 20 }]}>
+              <TouchableOpacity
+                style={styles.downloadShortcut}
+                onPress={() => router.push('/downloads' as any)}
+                activeOpacity={0.85}
+              >
+                <Download size={18} color={OLIVE} />
+                <Text style={styles.downloadShortcutText}>My Downloaded Sermons</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+      </ScrollView>
     </View>
   );
 }
 
+// ─── Sub-components ────────────────────────────────────────────────────────────
+
+function FeaturedCard({ sermon, onPress, onListen }: { sermon: Sermon; onPress: () => void; onListen: () => void }) {
+  const hasVideo = sermon.mediaType === 'video' || sermon.mediaType === 'both';
+  const hasAudio = sermon.mediaType === 'audio' || sermon.mediaType === 'both';
+  const formatDate = (d: Date) =>
+    d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const formatDuration = (s: number) => {
+    const m = Math.floor(s / 60);
+    return `${m} min`;
+  };
+
+  return (
+    <TouchableOpacity style={styles.featuredCard} onPress={onPress} activeOpacity={0.9}>
+      {sermon.thumbnailUrl ? (
+        <Image source={{ uri: sermon.thumbnailUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+      ) : (
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: '#DDE1E8' }]} />
+      )}
+      <LinearGradient
+        colors={['transparent', 'rgba(26,26,26,0.95)']}
+        style={[StyleSheet.absoluteFill, { borderRadius: 20 }]}
+      />
+
+      {/* Duration badge */}
+      {sermon.durationSeconds ? (
+        <View style={styles.featuredDurationBadge}>
+          <Text style={styles.featuredDurationText}>{formatDuration(sermon.durationSeconds)}</Text>
+        </View>
+      ) : null}
+
+      {/* Content */}
+      <View style={styles.featuredContent}>
+        {sermon.seriesTitle && (
+          <View style={styles.featuredSeriesBadge}>
+            <Text style={styles.featuredSeriesBadgeText}>{sermon.seriesTitle}</Text>
+          </View>
+        )}
+        {sermon.scriptureReference ? (
+          <Text style={styles.featuredScripture}>{sermon.scriptureReference}</Text>
+        ) : null}
+        <Text style={styles.featuredTitle} numberOfLines={2}>{sermon.title}</Text>
+        <Text style={styles.featuredMeta}>
+          {sermon.preacherName} · {formatDate(sermon.sermonDate)}
+        </Text>
+
+        {/* Action row */}
+        <View style={styles.featuredActions}>
+          {hasVideo && (
+            <TouchableOpacity style={styles.featuredWatchBtn} onPress={onPress}>
+              <Play size={16} color="#fff" fill="#fff" />
+              <Text style={styles.featuredWatchText}>Watch</Text>
+            </TouchableOpacity>
+          )}
+          {hasAudio && (
+            <TouchableOpacity style={styles.featuredListenBtn} onPress={onListen}>
+              <Headphones size={16} color={GOLD} />
+              <Text style={styles.featuredListenText}>Listen</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+function SermonTileCard({ sermon, onPress }: { sermon: Sermon; onPress: () => void }) {
+  const hasVideo = sermon.mediaType === 'video' || sermon.mediaType === 'both';
+  const formatDuration = (s: number) => {
+    const m = Math.floor(s / 60);
+    return `${m}:${String(s % 60).padStart(2, '0')}`;
+  };
+
+  return (
+    <TouchableOpacity style={styles.tileCard} onPress={onPress} activeOpacity={0.88}>
+      {/* Thumbnail */}
+      <View style={styles.tileThumbnailWrap}>
+        {sermon.thumbnailUrl ? (
+          <Image source={{ uri: sermon.thumbnailUrl }} style={styles.tileThumbnail} resizeMode="cover" />
+        ) : (
+          <View style={[styles.tileThumbnail, { backgroundColor: '#DDE1E8' }]} />
+        )}
+        {/* Media indicator */}
+        <View style={[styles.tileMediaBadge, hasVideo ? styles.videoBadge : styles.audioBadge]}>
+          {hasVideo ? (
+            <Play size={9} color="#fff" fill="#fff" />
+          ) : (
+            <Headphones size={9} color="#fff" />
+          )}
+        </View>
+        {/* Duration */}
+        {sermon.durationSeconds ? (
+          <View style={styles.tileDurationBadge}>
+            <Text style={styles.tileDurationText}>{formatDuration(sermon.durationSeconds)}</Text>
+          </View>
+        ) : null}
+      </View>
+
+      {/* Info */}
+      <Text style={styles.tileTitle} numberOfLines={2}>{sermon.title}</Text>
+      {sermon.scriptureReference ? (
+        <Text style={styles.tileScripture} numberOfLines={1}>{sermon.scriptureReference}</Text>
+      ) : null}
+      <Text style={styles.tileMeta} numberOfLines={1}>{sermon.preacherName}</Text>
+    </TouchableOpacity>
+  );
+}
+
+function SearchResultCard({ sermon, onPress }: { sermon: Sermon; onPress: () => void }) {
+  const hasVideo = sermon.mediaType === 'video' || sermon.mediaType === 'both';
+  const formatDate = (d: Date) =>
+    d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+  return (
+    <TouchableOpacity style={styles.searchCard} onPress={onPress} activeOpacity={0.85}>
+      <View style={styles.searchThumbWrap}>
+        {sermon.thumbnailUrl ? (
+          <Image source={{ uri: sermon.thumbnailUrl }} style={styles.searchThumb} resizeMode="cover" />
+        ) : (
+          <View style={[styles.searchThumb, { backgroundColor: '#DDE1E8' }]} />
+        )}
+        <View style={[styles.tileMediaBadge, hasVideo ? styles.videoBadge : styles.audioBadge]}>
+          {hasVideo ? <Play size={9} color="#fff" fill="#fff" /> : <Headphones size={9} color="#fff" />}
+        </View>
+      </View>
+      <View style={styles.searchInfo}>
+        <Text style={styles.searchTitle} numberOfLines={2}>{sermon.title}</Text>
+        {sermon.scriptureReference ? (
+          <Text style={styles.searchScripture} numberOfLines={1}>{sermon.scriptureReference}</Text>
+        ) : null}
+        <Text style={styles.searchMeta} numberOfLines={1}>
+          {sermon.preacherName} · {formatDate(sermon.sermonDate)}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+// ─── Styles ────────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  wrap: {
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    gap: 14,
-  },
-  heroCompact: {
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: '#DCE8FF',
-  },
-  heroTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  centerBox: {
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    gap: 12,
+    backgroundColor: BEIGE,
   },
-  heroBadge: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 999,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+  loadingText: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    fontWeight: '500',
   },
-  heroBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#1E40AF',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  heroCountPill: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: '#CFE0FF',
-  },
-  heroCountText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#1E3A8A',
-  },
-  heroTitleCompact: {
-    marginTop: 8,
+  emptyTitle: {
     fontSize: 22,
-    fontWeight: '900',
-    color: '#0F172A',
-    letterSpacing: -0.3,
+    fontWeight: '800',
+    color: NAVY,
+    textAlign: 'center',
   },
-  heroSubtitleCompact: {
-    marginTop: 2,
-    fontSize: 13,
-    color: '#334155',
-    lineHeight: 18,
+  emptySubtitle: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    lineHeight: 22,
   },
-  quickStatsRow: {
-    marginTop: 10,
-    flexDirection: 'row',
-    gap: 8,
+  searchWrap: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 6,
   },
-  quickStatPill: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: '#DDE7FF',
+  searchTrigger: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: '#E8E2D9',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
   },
-  quickStatValue: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#1E293B',
-  },
-  quickStatLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#64748B',
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
+  searchPlaceholder: {
+    fontSize: 14,
+    color: '#B0B8C8',
   },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: GOLD,
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#DDE4F5',
-    paddingHorizontal: 12,
-    height: 46,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: '#0F172A',
+    color: NAVY,
   },
-  searchResultsList: {
-    gap: 10,
-  },
-  searchResultCard: {
+  filterRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#E5EAF6',
-    padding: 8,
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
   },
-  searchResultImage: {
-    width: 76,
-    height: 60,
-    borderRadius: 10,
-    backgroundColor: '#E2E8F0',
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: '#E8E2D9',
   },
-  searchResultBody: {
-    flex: 1,
-    gap: 2,
+  filterChipActive: {
+    backgroundColor: NAVY,
+    borderColor: NAVY,
   },
-  searchResultTitle: {
+  filterChipText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#0F172A',
-    lineHeight: 18,
+    color: '#6B7280',
   },
-  searchResultMeta: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#64748B',
-  },
-  searchResultSave: {
-    width: 28,
-    height: 28,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
-    backgroundColor: '#EFF6FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  searchResultSaveActive: {
-    borderColor: '#1D4ED8',
-    backgroundColor: '#1D4ED8',
-  },
-  placeholderWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    gap: 12,
-  },
-  placeholderTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#1A1A1A',
-  },
-  placeholderSubtitle: {
-    fontSize: 14,
-    color: '#888',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  featuredCard: {
-    borderRadius: 20,
-    overflow: 'hidden',
-    height: 210,
-    backgroundColor: '#E2E8F0',
-  },
-  featuredImage: {
-    width: '100%',
-    height: '100%',
-  },
-  featuredOverlay: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    gap: 4,
-  },
-  featuredMetaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  featuredMeta: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.85)',
-  },
-  featuredTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -0.2,
-  },
-  featuredSpeaker: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.9)',
+  filterChipTextActive: {
+    color: '#fff',
   },
   section: {
-    gap: 10,
+    paddingTop: 4,
+    paddingBottom: 8,
+    gap: 12,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '800',
-    color: '#1E293B',
-    letterSpacing: -0.2,
+    fontWeight: '900',
+    color: NAVY,
+    letterSpacing: -0.3,
+    paddingHorizontal: 20,
   },
-  rowList: {
-    gap: 10,
-    paddingRight: 20,
+  horizontalList: {
+    gap: 12,
+    paddingHorizontal: 20,
   },
-  rowCard: {
-    width: 186,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 10,
-    gap: 8,
+  // Featured card
+  featuredCard: {
+    marginHorizontal: 20,
+    height: 260,
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: '#DDE1E8',
   },
-  rowImage: {
-    width: '100%',
-    height: 102,
-    borderRadius: 10,
-    backgroundColor: '#E2E8F0',
-  },
-  rowTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#0F172A',
-    lineHeight: 18,
-    minHeight: 36,
-  },
-  rowSubtitle: {
-    fontSize: 12,
-    color: '#64748B',
-  },
-  favoriteChip: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
-    backgroundColor: '#EFF6FF',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  favoriteChipActive: {
-    borderColor: '#1D4ED8',
-    backgroundColor: '#1D4ED8',
-  },
-  favoriteChipText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#1D4ED8',
-  },
-  favoriteChipTextActive: {
-    color: '#FFFFFF',
-  },
-  popularList: {
-    gap: 10,
-  },
-  popularItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 8,
-  },
-  popularImage: {
-    width: 64,
-    height: 64,
-    borderRadius: 10,
-    backgroundColor: '#E2E8F0',
-  },
-  popularBody: {
-    flex: 1,
-    gap: 2,
-  },
-  popularTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  popularSubtitle: {
-    fontSize: 12,
-    color: '#64748B',
-  },
-  popularViews: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#EFF6FF',
-    borderRadius: 999,
+  featuredDurationBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 6,
     paddingHorizontal: 8,
-    paddingVertical: 5,
+    paddingVertical: 3,
   },
-  popularViewsText: {
+  featuredDurationText: {
+    color: '#fff',
     fontSize: 11,
     fontWeight: '700',
-    color: '#1D4ED8',
+  },
+  featuredContent: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 16,
+    gap: 5,
+  },
+  featuredSeriesBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,101,150,0.25)',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  featuredSeriesBadgeText: {
+    color: GOLD,
+    fontSize: 10,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  featuredScripture: {
+    color: 'rgba(255,101,150,0.9)',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  featuredTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '900',
+    lineHeight: 26,
+    letterSpacing: -0.3,
+  },
+  featuredMeta: {
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  featuredActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+  },
+  featuredWatchBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: GOLD,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  featuredWatchText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  featuredListenBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,101,150,0.4)',
+  },
+  featuredListenText: {
+    color: GOLD,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  // Tile card
+  tileCard: {
+    width: 160,
+    gap: 6,
+  },
+  tileThumbnailWrap: {
+    width: '100%',
+    height: 100,
+    borderRadius: 14,
+    overflow: 'hidden',
+    backgroundColor: '#DDE1E8',
+    position: 'relative',
+  },
+  tileThumbnail: {
+    width: '100%',
+    height: '100%',
+  },
+  tileMediaBadge: {
+    position: 'absolute',
+    top: 6,
+    left: 6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoBadge: { backgroundColor: GOLD },
+  audioBadge: { backgroundColor: OLIVE },
+  tileDurationBadge: {
+    position: 'absolute',
+    bottom: 5,
+    right: 5,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    borderRadius: 5,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  tileDurationText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  tileTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: NAVY,
+    lineHeight: 17,
+  },
+  tileScripture: {
+    fontSize: 11,
+    color: GOLD,
+    fontWeight: '600',
+  },
+  tileMeta: {
+    fontSize: 11,
+    color: '#9CA3AF',
+  },
+  // Series
+  seriesCard: {
+    width: 150,
+    height: 110,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#DDE1E8',
+    justifyContent: 'flex-end',
+  },
+  seriesThumb: {
+    ...StyleSheet.absoluteFill,
+  },
+  seriesInfo: {
+    padding: 10,
+  },
+  seriesTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#fff',
+    lineHeight: 17,
+  },
+  seriesCount: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.75)',
+    marginTop: 2,
+  },
+  // Search results
+  searchEmpty: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
+  searchEmptyText: {
+    fontSize: 14,
+    color: '#9CA3AF',
+  },
+  searchCard: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    marginHorizontal: 20,
+    marginBottom: 8,
+    borderRadius: 14,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  searchThumbWrap: {
+    width: 90,
+    height: 68,
+    position: 'relative',
+  },
+  searchThumb: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#DDE1E8',
+  },
+  searchInfo: {
+    flex: 1,
+    padding: 10,
+    justifyContent: 'center',
+    gap: 3,
+  },
+  searchTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: NAVY,
+    lineHeight: 17,
+  },
+  searchScripture: {
+    fontSize: 11,
+    color: GOLD,
+    fontWeight: '600',
+  },
+  searchMeta: {
+    fontSize: 11,
+    color: '#9CA3AF',
+  },
+  // Download shortcut
+  downloadShortcut: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderWidth: 1.5,
+    borderColor: '#E8E2D9',
+    borderStyle: 'dashed',
+  },
+  downloadShortcutText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: OLIVE,
   },
 });

@@ -46,7 +46,7 @@ import {
     updateRsvp,
     useScheduleStore,
 } from '../../store/useScheduleStore';
-import { useWorshipSetlist } from '../../features/worship/presentation/hooks/useWorshipSetlist';
+
 
 // ─── Sub-tab definitions ──────────────────────────────────────────────────────
 const TABS = [
@@ -570,111 +570,6 @@ function EventsTab({ searchQuery }: SubScreenProps) {
   );
 }
 
-export function PublicEventSetlist({ eventId, title = "Event Songs", onCloseModal }: { eventId: string; title?: string; onCloseModal?: () => void }) {
-  const router = useRouter();
-  const userProfile = useAuthStore((s) => s.userProfile);
-  const { setlist, items, loading } = useWorshipSetlist(userProfile?.churchId || undefined, eventId || undefined);
-  const fadeAnim = useRef(new Animated.Value(0.4)).current;
-
-  useEffect(() => {
-    if (loading) {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(fadeAnim, {
-            toValue: 1,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-          Animated.timing(fadeAnim, {
-            toValue: 0.4,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-    }
-  }, [loading, fadeAnim]);
-
-  if (loading) {
-    return (
-      <View style={{ marginTop: 0, marginBottom: 10 }}>
-        <Text style={eventsStyles.modalRsvpTitle}>{title}</Text>
-        <View style={{ backgroundColor: '#F9FAFB', borderRadius: 16, padding: 12, marginTop: 8, borderWidth: 1, borderColor: '#F3F4F6', minHeight: 120 }}>
-          {[1, 2, 3].map((_, index) => (
-            <Animated.View 
-              key={index}
-              style={{
-                flexDirection: 'row', 
-                alignItems: 'center', 
-                paddingVertical: 8, 
-                borderBottomWidth: index < 2 ? 1 : 0, 
-                borderBottomColor: '#E5E7EB',
-                opacity: fadeAnim
-              }}
-            >
-              <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: '#E5E7EB', marginRight: 12 }} />
-              <View style={{ flex: 1, paddingVertical: 2 }}>
-                <View style={{ height: 16, width: '60%', backgroundColor: '#E5E7EB', borderRadius: 4, marginBottom: 4 }} />
-                <View style={{ height: 14, width: '40%', backgroundColor: '#E5E7EB', borderRadius: 4 }} />
-              </View>
-              <View style={{ width: 16, height: 16, backgroundColor: '#E5E7EB', borderRadius: 8 }} />
-            </Animated.View>
-          ))}
-        </View>
-      </View>
-    );
-  }
-
-  const renderEmpty = () => (
-    <View style={{ marginTop: 0, marginBottom: 10 }}>
-      <Text style={eventsStyles.modalRsvpTitle}>{title}</Text>
-      <View style={{ backgroundColor: '#F9FAFB', borderRadius: 16, padding: 12, marginTop: 8, borderWidth: 1, borderColor: '#F3F4F6', minHeight: 120, alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ fontSize: 13, color: '#9CA3AF', fontWeight: '500' }}>No songs scheduled</Text>
-      </View>
-    </View>
-  );
-
-  if (!setlist || items.length === 0) return renderEmpty();
-
-  const isStaff = Array.isArray(userProfile?.systemRoles)
-    ? userProfile.systemRoles.some((r: string) => ['super_admin', 'church_admin', 'pastor', 'ministry_leader'].includes(r))
-    : ['super_admin', 'church_admin', 'pastor', 'ministry_leader'].includes(userProfile?.role?.toLowerCase() || '');
-  
-  if (setlist.status !== 'published' && !isStaff) return renderEmpty();
-
-  const publicItems = items.filter(i => isStaff || i.song?.allowPublicLyrics);
-
-  if (publicItems.length === 0) return renderEmpty();
-
-  return (
-    <View style={{ marginTop: 0, marginBottom: 10 }}>
-      <Text style={eventsStyles.modalRsvpTitle}>{title}</Text>
-      <View style={{ backgroundColor: '#F9FAFB', borderRadius: 16, padding: 12, marginTop: 8, borderWidth: 1, borderColor: '#F3F4F6' }}>
-        {publicItems.map((item, index) => (
-          <TouchableOpacity 
-            key={item.id}
-            style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: index < publicItems.length - 1 ? 1 : 0, borderBottomColor: '#E5E7EB' }}
-            onPress={() => {
-              if (onCloseModal) onCloseModal();
-              setTimeout(() => {
-                router.push({ pathname: '/serve-song-lyrics', params: { songId: item.songId, hideChords: 'true' } } as any);
-              }, 100);
-            }}
-          >
-            <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: '#E0E7FF', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-              <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#4F46E5' }}>{index + 1}</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, fontWeight: '700', color: '#1F2937' }}>{item.song?.title}</Text>
-              {item.song?.artist && <Text style={{ fontSize: 12, color: '#6B7280' }}>{item.song.artist}</Text>}
-            </View>
-            <ChevronRight size={16} color="#9CA3AF" />
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
-  );
-}
 
 function SermonsTab({ searchQuery }: SubScreenProps) {
   return <SermonsExperience searchQuery={searchQuery} showSearchInput={false} />;

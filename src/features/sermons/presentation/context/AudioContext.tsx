@@ -1,6 +1,7 @@
 import { useRef, useEffect, createContext, useContext, ReactNode } from 'react';
 import { useAudioPlayer, setAudioModeAsync, AudioPlayer } from 'expo-audio';
 import { useSermonStore } from '@/store/useSermonStore';
+import { useSermonPlaybackStore } from '@/store/useSermonPlaybackStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useEventListener } from 'expo';
 
@@ -17,7 +18,8 @@ interface AudioContextType {
 const AudioContext = createContext<AudioContextType | null>(null);
 
 export function AudioProvider({ children }: { children: ReactNode }) {
-  const { setCurrentPosition, setIsPlaying, saveProgress } = useSermonStore();
+  const { setCurrentPosition, setIsPlaying, currentSermon } = useSermonStore();
+  const { updateProgress } = useSermonPlaybackStore();
   const currentUser = useAuthStore((state) => state.currentUser);
   const currentSermonId = useRef<string | null>(null);
   
@@ -48,10 +50,17 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     const currentPos = Math.floor(status.currentTime);
     setCurrentPosition(currentPos);
     
-    if (currentUser && currentSermonId.current && status.playing) {
+    if (currentUser && currentSermonId.current && status.playing && currentSermon) {
       if (!progressInterval.current) {
         progressInterval.current = setInterval(() => {
-          saveProgress(currentUser.uid, currentSermonId.current!, Math.floor(player.currentTime));
+          updateProgress(
+            currentSermon.churchId,
+            currentUser.uid,
+            currentSermonId.current!,
+            'audio',
+            Math.floor(player.currentTime),
+            Math.floor(player.duration ?? 0)
+          );
         }, 5000);
       }
     } else if (!status.playing && progressInterval.current) {
@@ -69,6 +78,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       
       if (progressInterval.current) {
         clearInterval(progressInterval.current);
+        progressInterval.current = null;
       }
     } catch (error) {
       console.error('Error playing audio:', error);
@@ -97,9 +107,8 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   };
 
   const seekAudio = (position: number) => {
-    // `expo-audio` expects seconds, `position` argument might be milliseconds if passed from UI depending on older implementation
-    // Assuming UI passes position in ms because `VideoPlayerScreen` uses position in ms
-    player.seekTo(position / 1000);
+    // position argument is in seconds (consistent with video player)
+    player.seekTo(position);
   };
 
   const setRate = (rate: number) => {

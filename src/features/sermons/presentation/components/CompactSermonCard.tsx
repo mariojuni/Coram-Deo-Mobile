@@ -55,7 +55,7 @@ export function CompactSermonCard({ sermon, onPress }: CompactSermonCardProps) {
             {sermon.title}
           </Text>
           <Text style={[styles.speaker, { color: colors.textSecondary }]} numberOfLines={1}>
-            {sermon.speaker.name}
+            {sermon.preacherName}
           </Text>
         </View>
 

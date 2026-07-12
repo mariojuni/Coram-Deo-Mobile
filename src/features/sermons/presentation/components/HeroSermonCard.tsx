@@ -69,7 +69,7 @@ export function HeroSermonCard({ sermon, onPress, isNew = false }: HeroSermonCar
               </View>
             )}
             <View style={styles.durationBadge}>
-              <Text style={styles.durationText}>{formatDuration(sermon.duration)}</Text>
+              <Text style={styles.durationText}>{formatDuration(sermon.durationSeconds || 0)}</Text>
             </View>
           </View>
 
@@ -84,7 +84,7 @@ export function HeroSermonCard({ sermon, onPress, isNew = false }: HeroSermonCar
                   {sermon.title}
                 </Text>
                 <Text style={styles.subtitle} numberOfLines={1}>
-                  {formatDate(sermon.date)} • {sermon.speaker.name}
+                  {formatDate(sermon.sermonDate)} • {sermon.preacherName}
                 </Text>
               </View>
               

@@ -1,3 +1,5 @@
+import { sermonRepository } from "../../data/sermon.repository";
+
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Image, Modal } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -11,6 +13,7 @@ import {
   FastForward
 } from 'lucide-react-native';
 import { useSermonStore } from '@/store/useSermonStore';
+import { useSermonPlaybackStore } from '@/store/useSermonPlaybackStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useAudio } from '../context/AudioContext';
 import { useTheme } from '@/hooks/use-theme';
@@ -49,6 +52,9 @@ export function AudioPlayerScreen() {
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [showNoteEditor, setShowNoteEditor] = useState(false);
 
+  const { updateProgress, loadProgress, getProgress } = useSermonPlaybackStore();
+  const [initialSeekDone, setInitialSeekDone] = useState(false);
+
   useEffect(() => {
     if (id) {
       fetchSermonById(id);
@@ -56,11 +62,32 @@ export function AudioPlayerScreen() {
   }, [id]);
 
   const loadAudio = async () => {
-    if (!currentSermon?.audioUrl) return;
+    if (!currentSermon?.audioStoragePath) return;
 
     try {
       setIsBuffering(true);
-      await playAudio(currentSermon.audioUrl, currentSermon.id);
+      
+      const { getLocalSermonMediaUri } = require('@/features/sermons/services/sermonDownloadService');
+      const localUri = await getLocalSermonMediaUri(currentSermon, 'audio');
+      
+      if (localUri) {
+        // Play downloaded file
+        await playAudio(localUri, currentSermon.id);
+      } else {
+        // Play from remote
+        const finalUrl = await sermonRepository.resolveMediaUrl(currentSermon.audioStoragePath);
+        await playAudio(finalUrl, currentSermon.id);
+        
+        // Auto-download in the background
+        if (currentUser) {
+          const { useSermonStore: store } = require('@/store/useSermonStore');
+          const isDownloaded = await store.getState().checkIfDownloaded(currentUser.uid, currentSermon.id, 'audio');
+          if (!isDownloaded) {
+            store.getState().downloadSermon(currentUser.uid, currentSermon, 'audio').catch(console.error);
+          }
+        }
+      }
+      
       setIsBuffering(false);
     } catch (error) {
       console.error('Error loading audio:', error);
@@ -69,10 +96,39 @@ export function AudioPlayerScreen() {
   };
 
   useEffect(() => {
-    if (currentSermon?.audioUrl && !sound) {
+    if (currentSermon?.audioStoragePath && !sound) {
       loadAudio();
     }
   }, [currentSermon]);
+
+  useEffect(() => {
+    if (currentUser && currentSermon && player && !initialSeekDone) {
+      const init = async () => {
+        const savedProgress = await loadProgress(currentUser.uid, currentSermon.id);
+        if (savedProgress && savedProgress.positionSeconds > 5 && !savedProgress.completed) {
+          await seekAudio(savedProgress.positionSeconds);
+        }
+        setInitialSeekDone(true);
+      };
+      init();
+    }
+  }, [currentUser, currentSermon, player, initialSeekDone, loadProgress]);
+
+  useEffect(() => {
+    if (currentUser && currentSermon && isPlaying) {
+      const interval = setInterval(() => {
+        updateProgress(
+          currentSermon.churchId,
+          currentUser.uid,
+          currentSermon.id,
+          'audio',
+          Math.floor(player?.currentTime || 0),
+          Math.floor(duration || 0)
+        );
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [currentUser, currentSermon, isPlaying, duration]);
 
   const handlePlayPause = async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -81,7 +137,8 @@ export function AudioPlayerScreen() {
       await pauseAudio();
     } else {
       if (sound) {
-        await playAudio(currentSermon?.audioUrl || '', currentSermon?.id || '');
+        const finalUrl = await sermonRepository.resolveMediaUrl(currentSermon?.audioStoragePath || '');
+        await playAudio(finalUrl, currentSermon?.id || '');
       } else {
         await loadAudio();
       }
@@ -172,11 +229,11 @@ export function AudioPlayerScreen() {
           {currentSermon.title}
         </Text>
         <Text style={[styles.artist, { color: colors.textSecondary }]}>
-          {currentSermon.speaker.name}
+          {currentSermon.preacherName}
         </Text>
-        {currentSermon.series && (
+        {currentSermon.seriesTitle && (
           <View style={styles.seriesTag}>
-            <Text style={styles.seriesText}>{currentSermon.series.title}</Text>
+            <Text style={styles.seriesText}>{currentSermon.seriesTitle}</Text>
           </View>
         )}
       </View>

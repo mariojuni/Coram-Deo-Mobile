@@ -42,27 +42,35 @@ service cloud.firestore {
     }
 
     function isRoleAdmin(churchId) {
-      return userDocExists() &&
+      return isSuperAdmin() || (
+        userDocExists() &&
         userDoc().churchId == churchId &&
-        hasAnySystemRole(['super_admin', 'church_admin']);
+        hasAnySystemRole(['church_admin'])
+      );
     }
 
     function isPastorOrAdmin(churchId) {
-      return userDocExists() &&
+      return isSuperAdmin() || (
+        userDocExists() &&
         userDoc().churchId == churchId &&
-        hasAnySystemRole(['super_admin', 'church_admin', 'pastor']);
+        hasAnySystemRole(['church_admin', 'pastor'])
+      );
     }
 
     function isChurchAdmin(churchId) {
-      return userDocExists() &&
+      return isSuperAdmin() || (
+        userDocExists() &&
         userDoc().churchId == churchId &&
-        hasAnySystemRole(['super_admin', 'church_admin', 'ministry_leader']);
+        hasAnySystemRole(['church_admin', 'ministry_leader'])
+      );
     }
 
     function isFinanceOrChurchAdmin(churchId) {
-      return userDocExists() &&
+      return isSuperAdmin() || (
+        userDocExists() &&
         userDoc().churchId == churchId &&
-        hasAnySystemRole(['super_admin', 'church_admin', 'finance_admin']);
+        hasAnySystemRole(['church_admin', 'finance_admin'])
+      );
     }
 
     /**
@@ -288,24 +296,23 @@ service cloud.firestore {
         : resource.data.churchId);
     }
 
-    // Sermon notes, favourites, downloads, progress (per-user)
     match /sermon_notes/{docId} {
-      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow read: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid);
       allow write: if isSignedIn() && request.resource.data.userId == request.auth.uid;
     }
 
     match /sermon_favorites/{docId} {
-      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow read: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid);
       allow write: if isSignedIn() && request.resource.data.userId == request.auth.uid;
     }
 
     match /sermon_downloads/{docId} {
-      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow read: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid);
       allow write: if isSignedIn() && request.resource.data.userId == request.auth.uid;
     }
 
     match /sermon_progress/{docId} {
-      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow read: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid);
       allow write: if isSignedIn() && request.resource.data.userId == request.auth.uid;
     }
 

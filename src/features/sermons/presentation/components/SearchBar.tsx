@@ -28,8 +28,6 @@ export function SearchBar({ value, onChangeText, onClear, placeholder = 'Search 
         placeholder={placeholder}
         placeholderTextColor={colors.textSecondary}
         style={[styles.input, { color: colors.text }]}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
         returnKeyType="search"
         autoCapitalize="none"
         autoCorrect={false}

@@ -18,12 +18,14 @@ import {
   increment,
 } from 'firebase/firestore';
 import * as FileSystem from 'expo-file-system';
-import { db } from '@/firebase';
+import { db, storage } from '@/firebase';
+import { ref, getDownloadURL } from 'firebase/storage';
 import type {
   Sermon,
   SermonNote,
   SermonDownload,
   SermonFilters,
+  SermonPlaybackProgress,
 } from '../domain/sermon.types';
 
 const SERMONS_COLLECTION = 'sermons';
@@ -33,6 +35,24 @@ const FAVORITES_COLLECTION = 'sermon_favorites';
 const DOWNLOADS_COLLECTION = 'sermon_downloads';
 
 class SermonRepository {
+  /**
+   * Resolves a raw Firebase Storage path to a playable download URL.
+   * If the URL is already an HTTP or local file path, it returns it as is.
+   */
+  async resolveMediaUrl(pathOrUrl: string): Promise<string> {
+    if (!pathOrUrl) return '';
+    if (pathOrUrl.startsWith('http') || pathOrUrl.startsWith('file://') || pathOrUrl.startsWith('content://')) {
+      return pathOrUrl;
+    }
+    try {
+      const storageRef = ref(storage, pathOrUrl);
+      return await getDownloadURL(storageRef);
+    } catch (error) {
+      console.warn('Failed to resolve media URL:', error);
+      return pathOrUrl;
+    }
+  }
+
   // Fetch paginated sermons
   async fetchSermons(
     filters: SermonFilters,
@@ -44,6 +64,14 @@ class SermonRepository {
       sermonsRef,
       where('status', '==', 'published')
     );
+
+    // Strictly enforce churchId
+    if (filters.churchId) {
+      q = query(q, where('churchId', '==', filters.churchId));
+    } else {
+      // Do not query if churchId is null
+      return { sermons: [], lastDoc: undefined, hasMore: false };
+    }
 
     // Apply type filter
     if (filters.filter === 'video') {
@@ -66,7 +94,7 @@ class SermonRepository {
     }
 
     const snapshot = await getDocs(q);
-    const sermons = snapshot.docs.map(this.mapDocToSermon);
+    const sermons = snapshot.docs.map((doc) => this.mapDocToSermon(doc));
 
     return {
       sermons,
@@ -85,22 +113,28 @@ class SermonRepository {
     
     // For simple search, we'll fetch all published sermons and filter client-side
     // In production, you'd use Algolia or similar for better search
+    // Strictly enforce churchId
+    if (!filters.churchId) {
+      return { sermons: [], hasMore: false };
+    }
+
     let q = query(
       sermonsRef,
       where('status', '==', 'published'),
+      where('churchId', '==', filters.churchId),
       orderBy(this.getSortField(filters.sort), filters.sort === 'oldest' ? 'asc' : 'desc'),
       limit(100) // Fetch more for client-side filtering
     );
 
     // Apply type filter
     if (filters.filter === 'video') {
-      q = query(sermonsRef, where('type', '==', 'video'), where('status', '==', 'published'));
+      q = query(sermonsRef, where('mediaType', 'in', ['video', 'both']), where('status', '==', 'published'));
     } else if (filters.filter === 'audio') {
-      q = query(sermonsRef, where('type', '==', 'audio'), where('status', '==', 'published'));
+      q = query(sermonsRef, where('mediaType', 'in', ['audio', 'both']), where('status', '==', 'published'));
     }
 
     const snapshot = await getDocs(q);
-    let sermons = snapshot.docs.map(this.mapDocToSermon);
+    let sermons = snapshot.docs.map((doc) => this.mapDocToSermon(doc));
 
     // Client-side search filter
     const lowerQuery = searchQuery.toLowerCase();
@@ -108,9 +142,8 @@ class SermonRepository {
       return (
         sermon.title?.toLowerCase().includes(lowerQuery) ||
         sermon.description?.toLowerCase().includes(lowerQuery) ||
-        sermon.speaker?.name?.toLowerCase().includes(lowerQuery) ||
-        sermon.tags?.some(tag => tag.toLowerCase().includes(lowerQuery)) ||
-        sermon.series?.title?.toLowerCase().includes(lowerQuery)
+        sermon.preacherName?.toLowerCase().includes(lowerQuery) ||
+        sermon.seriesTitle?.toLowerCase().includes(lowerQuery)
       );
     });
 
@@ -189,24 +222,143 @@ class SermonRepository {
   }
 
   // Progress tracking
-  async saveProgress(userId: string, sermonId: string, position: number) {
+  async saveProgress(
+    churchId: string,
+    userId: string,
+    sermonId: string,
+    mediaType: 'audio' | 'video',
+    positionSeconds: number,
+    durationSeconds: number
+  ) {
     const progressId = `${userId}_${sermonId}`;
     const progressRef = doc(db, PROGRESS_COLLECTION, progressId);
-    
+    const progressPercent = durationSeconds > 0 ? (positionSeconds / durationSeconds) * 100 : 0;
+    const completed = progressPercent >= 95;
+
     await setDoc(progressRef, {
+      id: progressId,
+      churchId,
       userId,
       sermonId,
-      position,
-      lastWatchedAt: Timestamp.now(),
-      completed: false,
+      mediaType,
+      positionSeconds,
+      durationSeconds,
+      progressPercent,
+      completed,
+      lastPlayedAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
     }, { merge: true });
   }
 
-  async fetchProgress(userId: string, sermonId: string): Promise<number> {
+  async fetchProgress(userId: string, sermonId: string): Promise<SermonPlaybackProgress | null> {
     const progressId = `${userId}_${sermonId}`;
     const progressRef = doc(db, PROGRESS_COLLECTION, progressId);
-    const progressSnap = await getDoc(progressRef);
-    return progressSnap.exists() ? progressSnap.data().position : 0;
+    const snap = await getDoc(progressRef);
+    if (!snap.exists()) return null;
+    const data = snap.data();
+    return {
+      id: snap.id,
+      churchId: data.churchId || '',
+      userId: data.userId || userId,
+      sermonId: data.sermonId || sermonId,
+      mediaType: data.mediaType || 'audio',
+      positionSeconds: data.positionSeconds ?? data.position ?? 0,
+      durationSeconds: data.durationSeconds ?? 0,
+      progressPercent: data.progressPercent ?? 0,
+      completed: data.completed ?? false,
+      lastPlayedAt: data.lastPlayedAt?.toDate?.() ?? new Date(),
+      createdAt: data.createdAt?.toDate?.() ?? new Date(),
+      updatedAt: data.updatedAt?.toDate?.() ?? new Date(),
+    };
+  }
+
+  async fetchAllProgresses(userId: string): Promise<SermonPlaybackProgress[]> {
+    const q = query(
+      collection(db, PROGRESS_COLLECTION),
+      where('userId', '==', userId),
+      orderBy('lastPlayedAt', 'desc'),
+      limit(20)
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        churchId: data.churchId || '',
+        userId: data.userId || userId,
+        sermonId: data.sermonId || '',
+        mediaType: data.mediaType || 'audio',
+        positionSeconds: data.positionSeconds ?? data.position ?? 0,
+        durationSeconds: data.durationSeconds ?? 0,
+        progressPercent: data.progressPercent ?? 0,
+        completed: data.completed ?? false,
+        lastPlayedAt: data.lastPlayedAt?.toDate?.() ?? new Date(),
+        createdAt: data.createdAt?.toDate?.() ?? new Date(),
+        updatedAt: data.updatedAt?.toDate?.() ?? new Date(),
+      };
+    });
+  }
+
+  async fetchRelatedSermons(sermon: Sermon, maxResults = 6): Promise<Sermon[]> {
+    const sermonsRef = collection(db, SERMONS_COLLECTION);
+    const results: Sermon[] = [];
+    const seenIds = new Set<string>([sermon.id]);
+
+    // 1. Same series
+    if (sermon.seriesId) {
+      const seriesQuery = query(
+        sermonsRef,
+        where('churchId', '==', sermon.churchId),
+        where('status', '==', 'published'),
+        where('seriesId', '==', sermon.seriesId),
+        limit(maxResults)
+      );
+      const snap = await getDocs(seriesQuery);
+      snap.docs.forEach((doc) => {
+        if (!seenIds.has(doc.id)) {
+          results.push(this.mapDocToSermon(doc));
+          seenIds.add(doc.id);
+        }
+      });
+    }
+
+    // 2. Same preacher
+    if (results.length < maxResults && sermon.preacherId) {
+      const preacherQuery = query(
+        sermonsRef,
+        where('churchId', '==', sermon.churchId),
+        where('status', '==', 'published'),
+        where('preacherId', '==', sermon.preacherId),
+        limit(maxResults)
+      );
+      const snap = await getDocs(preacherQuery);
+      snap.docs.forEach((doc) => {
+        if (!seenIds.has(doc.id) && results.length < maxResults) {
+          results.push(this.mapDocToSermon(doc));
+          seenIds.add(doc.id);
+        }
+      });
+    }
+
+    // 3. Recent sermons as fallback
+    if (results.length < maxResults) {
+      const recentQuery = query(
+        sermonsRef,
+        where('churchId', '==', sermon.churchId),
+        where('status', '==', 'published'),
+        orderBy('sermonDate', 'desc'),
+        limit(maxResults + 1)
+      );
+      const snap = await getDocs(recentQuery);
+      snap.docs.forEach((doc) => {
+        if (!seenIds.has(doc.id) && results.length < maxResults) {
+          results.push(this.mapDocToSermon(doc));
+          seenIds.add(doc.id);
+        }
+      });
+    }
+
+    return results.slice(0, maxResults);
   }
 
   // Notes
@@ -253,12 +405,14 @@ class SermonRepository {
     sermon: Sermon,
     onProgress?: (progress: number) => void
   ): Promise<string> {
-    const mediaUrl = sermon.type === 'video' ? sermon.videoUrl : sermon.audioUrl;
+    // Note: We'll need to fetch the actual download URL from Firebase Storage
+    // using the storage path in Phase 4.
+    const mediaUrl = sermon.mediaType === 'video' ? sermon.videoStoragePath : sermon.audioStoragePath;
     if (!mediaUrl) {
-      throw new Error('No media URL available');
+      throw new Error('No media path available');
     }
 
-    const fileName = `sermon_${sermon.id}_${sermon.type}.${sermon.type === 'video' ? 'mp4' : 'm4a'}`;
+    const fileName = `sermon_${sermon.id}_${sermon.mediaType}.${sermon.mediaType === 'video' ? 'mp4' : 'm4a'}`;
     const fileUri = `${(FileSystem as any).documentDirectory}sermons/${fileName}`;
 
     // Create directory if it doesn't exist
@@ -366,30 +520,33 @@ class SermonRepository {
     switch (sort) {
       case 'newest':
       case 'oldest':
-        return 'date';
+        return 'sermonDate';
       case 'popular':
         return 'viewCount';
       case 'alphabetical':
         return 'title';
       default:
-        return 'date';
+        return 'sermonDate';
     }
   }
 
   private mapDocToSermon(doc: QueryDocumentSnapshot<DocumentData>): Sermon {
     const data = doc.data();
+    
+    const parseDate = (val: any) => {
+      if (!val) return undefined;
+      if (typeof val.toDate === 'function') return val.toDate();
+      if (typeof val === 'string' || typeof val === 'number') return new Date(val);
+      return new Date(val); // fallback
+    };
+
     return {
       id: doc.id,
       ...data,
-      date: data.date?.toDate(),
-      createdAt: data.createdAt?.toDate(),
-      updatedAt: data.updatedAt?.toDate(),
-      publishedAt: data.publishedAt?.toDate(),
-      series: data.series ? {
-        ...data.series,
-        startDate: data.series.startDate?.toDate(),
-        endDate: data.series.endDate?.toDate(),
-      } : undefined,
+      sermonDate: parseDate(data.sermonDate) || parseDate(data.date),
+      createdAt: parseDate(data.createdAt),
+      updatedAt: parseDate(data.updatedAt),
+      publishedAt: parseDate(data.publishedAt),
     } as Sermon;
   }
 }

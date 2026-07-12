@@ -57,7 +57,7 @@ export function HorizontalSermonCard({ sermon, onPress }: HorizontalSermonCardPr
           />
           {/* Duration Badge */}
           <View style={styles.durationBadge}>
-            <Text style={styles.durationText}>{formatDuration(sermon.duration)}</Text>
+            <Text style={styles.durationText}>{formatDuration(sermon.durationSeconds || 0)}</Text>
           </View>
         </View>
 
@@ -67,7 +67,7 @@ export function HorizontalSermonCard({ sermon, onPress }: HorizontalSermonCardPr
             {sermon.title}
           </Text>
           <Text style={[styles.speaker, { color: colors.textSecondary }]} numberOfLines={1}>
-            {sermon.speaker.name}
+            {sermon.preacherName}
           </Text>
         </View>
       </Animated.View>

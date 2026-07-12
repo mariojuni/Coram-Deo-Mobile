@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { sermonRepository } from '../features/sermons/data/sermon.repository';
+import { downloadSermonMedia, deleteSermonMedia, getLocalSermonMediaUri } from '../features/sermons/services/sermonDownloadService';
 import type {
   Sermon,
   SermonFilters,
@@ -26,6 +27,10 @@ interface SermonState {
   currentPosition: number;
   isPlaying: boolean;
 
+  // Related sermons
+  relatedSermons: Sermon[];
+  relatedLoading: boolean;
+
   // Favorites
   favorites: Set<string>;
   favoritesLoading: boolean;
@@ -40,24 +45,25 @@ interface SermonState {
   downloadsList: SermonDownload[];
 
   // Actions
-  fetchSermons: (reset?: boolean) => Promise<void>;
-  searchSermons: (query: string) => Promise<void>;
-  setSearchQuery: (query: string) => void;
+  fetchSermons: (churchId: string | undefined, reset?: boolean) => Promise<void>;
+  searchSermons: (churchId: string | undefined, query: string) => Promise<void>;
+  setSearchQuery: (churchId: string | undefined, query: string) => void;
   fetchSermonById: (id: string) => Promise<void>;
+  fetchRelatedSermons: (sermon: Sermon) => Promise<void>;
   setFilters: (filters: Partial<SermonFilters>) => void;
   toggleFavorite: (userId: string, sermonId: string) => Promise<void>;
   loadFavorites: (userId: string) => Promise<void>;
-  saveProgress: (userId: string, sermonId: string, position: number) => Promise<void>;
+  saveProgress: (churchId: string, userId: string, sermonId: string, mediaType: 'audio' | 'video', positionSeconds: number, durationSeconds: number) => Promise<void>;
   setCurrentPosition: (position: number) => void;
   setIsPlaying: (isPlaying: boolean) => void;
   fetchNotes: (userId: string, sermonId: string) => Promise<void>;
   addNote: (note: Omit<SermonNote, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateNote: (noteId: string, content: string) => Promise<void>;
   deleteNote: (noteId: string) => Promise<void>;
-  downloadSermon: (userId: string, sermon: Sermon) => Promise<void>;
-  deleteDownload: (userId: string, sermonId: string) => Promise<void>;
+  downloadSermon: (userId: string, sermon: Sermon, mediaType?: 'audio' | 'video') => Promise<void>;
+  deleteDownload: (userId: string, sermonId: string, mediaType?: 'audio' | 'video') => Promise<void>;
   loadDownloadedSermons: (userId: string) => Promise<void>;
-  checkIfDownloaded: (userId: string, sermonId: string) => Promise<boolean>;
+  checkIfDownloaded: (userId: string, sermonId: string, mediaType?: 'audio' | 'video') => Promise<boolean>;
   clearCurrentSermon: () => void;
 }
 
@@ -74,6 +80,8 @@ export const useSermonStore = create<SermonState>((set, get) => ({
   currentSermon: null,
   currentPosition: 0,
   isPlaying: false,
+  relatedSermons: [],
+  relatedLoading: false,
   favorites: new Set(),
   favoritesLoading: false,
   notes: [],
@@ -82,20 +90,21 @@ export const useSermonStore = create<SermonState>((set, get) => ({
   downloadedSermons: new Set(),
   downloadsList: [],
 
-  fetchSermons: async (reset = false) => {
+  fetchSermons: async (churchId, reset = false) => {
     const { filters, lastDoc, loading, searchQuery } = get();
     if (loading) return;
 
     // If there's a search query, use search instead
     if (searchQuery.trim()) {
-      return get().searchSermons(searchQuery);
+      return get().searchSermons(churchId, searchQuery);
     }
 
     set({ loading: true });
 
     try {
+      const activeFilters = { ...filters, churchId };
       const result = await sermonRepository.fetchSermons(
-        filters,
+        activeFilters,
         20,
         reset ? undefined : lastDoc
       );
@@ -112,18 +121,19 @@ export const useSermonStore = create<SermonState>((set, get) => ({
     }
   },
 
-  searchSermons: async (query: string) => {
+  searchSermons: async (churchId, query: string) => {
     const { filters } = get();
 
     set({ loading: true, searchQuery: query });
 
     if (!query.trim()) {
       // If query is empty, fetch normal sermons
-      return get().fetchSermons(true);
+      return get().fetchSermons(churchId, true);
     }
 
     try {
-      const result = await sermonRepository.searchSermons(query, filters, 20);
+      const activeFilters = { ...filters, churchId };
+      const result = await sermonRepository.searchSermons(query, activeFilters, 20);
 
       set({
         sermons: result.sermons,
@@ -137,8 +147,9 @@ export const useSermonStore = create<SermonState>((set, get) => ({
     }
   },
 
-  setSearchQuery: (query: string) => {
+  setSearchQuery: (churchId, query: string) => {
     set({ searchQuery: query });
+    get().searchSermons(churchId, query);
   },
 
   fetchSermonById: async (id: string) => {
@@ -157,6 +168,17 @@ export const useSermonStore = create<SermonState>((set, get) => ({
     }
   },
 
+  fetchRelatedSermons: async (sermon: Sermon) => {
+    set({ relatedLoading: true });
+    try {
+      const related = await sermonRepository.fetchRelatedSermons(sermon);
+      set({ relatedSermons: related, relatedLoading: false });
+    } catch (error) {
+      console.error('Error fetching related sermons:', error);
+      set({ relatedLoading: false });
+    }
+  },
+
   setFilters: (newFilters) => {
     set((state) => ({
       filters: { ...state.filters, ...newFilters },
@@ -164,7 +186,7 @@ export const useSermonStore = create<SermonState>((set, get) => ({
       lastDoc: null,
       hasMore: true,
     }));
-    get().fetchSermons(true);
+    // Note: setFilters will now just update the state. The component should call fetchSermons(churchId) after.
   },
 
   toggleFavorite: async (userId, sermonId) => {
@@ -196,9 +218,9 @@ export const useSermonStore = create<SermonState>((set, get) => ({
     }
   },
 
-  saveProgress: async (userId, sermonId, position) => {
+  saveProgress: async (churchId, userId, sermonId, mediaType, positionSeconds, durationSeconds) => {
     try {
-      await sermonRepository.saveProgress(userId, sermonId, position);
+      await sermonRepository.saveProgress(churchId, userId, sermonId, mediaType, positionSeconds, durationSeconds);
     } catch (error) {
       console.error('Error saving progress:', error);
     }
@@ -254,50 +276,56 @@ export const useSermonStore = create<SermonState>((set, get) => ({
     }
   },
 
-  downloadSermon: async (userId: string, sermon: Sermon) => {
+  downloadSermon: async (userId: string, sermon: Sermon, mediaType?: 'audio' | 'video') => {
     const { downloads } = get();
+    const typeToDownload = mediaType || (sermon.mediaType === 'video' ? 'video' : 'audio');
+    const downloadKey = `${sermon.id}_${typeToDownload}`;
     
     // Set downloading state
     const newDownloads = new Map(downloads);
-    newDownloads.set(sermon.id, { progress: 0, isDownloading: true });
+    newDownloads.set(downloadKey, { progress: 0, isDownloading: true });
     set({ downloads: newDownloads });
 
     try {
-      await sermonRepository.downloadSermon(userId, sermon, (progress) => {
+      const downloadUrl = typeToDownload === 'video' ? sermon.videoStoragePath : sermon.audioStoragePath;
+      if (!downloadUrl) throw new Error(`No ${typeToDownload} url available`);
+      
+      await downloadSermonMedia(sermon, downloadUrl, typeToDownload, (progress) => {
         const updatedDownloads = new Map(get().downloads);
-        updatedDownloads.set(sermon.id, { progress, isDownloading: true });
+        updatedDownloads.set(downloadKey, { progress, isDownloading: true });
         set({ downloads: updatedDownloads });
       });
 
       // Mark as downloaded
       const finalDownloads = new Map(get().downloads);
-      finalDownloads.delete(sermon.id);
+      finalDownloads.delete(downloadKey);
       set({ 
         downloads: finalDownloads,
-        downloadedSermons: new Set([...get().downloadedSermons, sermon.id])
+        downloadedSermons: new Set([...get().downloadedSermons, downloadKey])
       });
-
-      // Refresh downloads list
-      await get().loadDownloadedSermons(userId);
     } catch (error) {
       console.error('Error downloading sermon:', error);
       const errorDownloads = new Map(get().downloads);
-      errorDownloads.delete(sermon.id);
+      errorDownloads.delete(downloadKey);
       set({ downloads: errorDownloads });
       throw error;
     }
   },
 
-  deleteDownload: async (userId: string, sermonId: string) => {
+  deleteDownload: async (userId: string, sermonId: string, mediaType?: 'audio' | 'video') => {
     try {
-      await sermonRepository.deleteDownload(userId, sermonId);
+      const { currentSermon } = get();
+      const typeToDelete = mediaType || (currentSermon?.mediaType === 'video' ? 'video' : 'audio');
+      const downloadKey = `${sermonId}_${typeToDelete}`;
+
+      if (currentSermon && currentSermon.id === sermonId) {
+        await deleteSermonMedia(currentSermon, typeToDelete);
+      }
       
       const newDownloaded = new Set(get().downloadedSermons);
-      newDownloaded.delete(sermonId);
+      newDownloaded.delete(downloadKey);
       set({ downloadedSermons: newDownloaded });
 
-      // Refresh downloads list
-      await get().loadDownloadedSermons(userId);
     } catch (error) {
       console.error('Error deleting download:', error);
     }
@@ -308,16 +336,23 @@ export const useSermonStore = create<SermonState>((set, get) => ({
       const downloads = await sermonRepository.getDownloadedSermons(userId);
       set({
         downloadsList: downloads,
-        downloadedSermons: new Set(downloads.map(d => d.sermonId))
+        downloadedSermons: new Set(downloads.map(d => `${d.sermonId}_audio`)) // Simplified mapping
       });
     } catch (error) {
       console.error('Error loading downloaded sermons:', error);
     }
   },
 
-  checkIfDownloaded: async (userId: string, sermonId: string): Promise<boolean> => {
+  checkIfDownloaded: async (userId: string, sermonId: string, mediaType?: 'audio' | 'video'): Promise<boolean> => {
     try {
-      return await sermonRepository.checkIfDownloaded(userId, sermonId);
+      const { currentSermon } = get();
+      const typeToCheck = mediaType || (currentSermon?.mediaType === 'video' ? 'video' : 'audio');
+
+      if (currentSermon && currentSermon.id === sermonId) {
+        const uri = await getLocalSermonMediaUri(currentSermon, typeToCheck);
+        return uri !== null;
+      }
+      return false;
     } catch (error) {
       console.error('Error checking download status:', error);
       return false;

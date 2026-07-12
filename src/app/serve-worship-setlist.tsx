@@ -37,7 +37,7 @@ export default function ServeWorshipSetlistScreen() {
     return (
       <View style={[styles.screen, { paddingTop: insets.top + 20 }]}>
         <Stack.Screen options={{ headerShown: false }} />
-        <TouchableOpacity style={[styles.backBtn, { marginLeft: 24 }]} onPress={() => router.back()}>
+        <TouchableOpacity style={[styles.fixedBackBtn, { top: Math.max(insets.top, 20) + 8 }]} onPress={() => router.back()}>
           <ArrowLeft size={22} color="#1a1a1a" />
         </TouchableOpacity>
         <View style={styles.notFound}>
@@ -56,16 +56,22 @@ export default function ServeWorshipSetlistScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: '#F7F8FC' }]}>
       <Stack.Screen options={{ headerShown: false }} />
+      {/* Fixed Back Button */}
+      <TouchableOpacity 
+        style={[styles.fixedBackBtn, { top: Math.max(insets.top, 20) + 8 }]} 
+        onPress={() => router.back()}
+        activeOpacity={0.8}
+      >
+        <ArrowLeft size={22} color="#1a1a1a" />
+      </TouchableOpacity>
+
       {/* ─── Header ─── */}
       <LinearGradient
         colors={['#FFE8F1', '#F5F2FF']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={[styles.headerGradient, { paddingTop: Math.max(insets.top, 20) }]}
+        style={[styles.headerGradient, { paddingTop: Math.max(insets.top, 20) + 52 }]}
       >
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <ArrowLeft size={22} color="#1a1a1a" />
-        </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Text style={styles.screenTitle} numberOfLines={2}>{setlist.title}</Text>
           <View style={styles.subtitleBadge}>
@@ -150,19 +156,21 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
     gap: 12,
   },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.7)',
+  fixedBackBtn: {
+    position: 'absolute',
+    left: 24,
+    zIndex: 100,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   headerTitleContainer: {
     gap: 8,

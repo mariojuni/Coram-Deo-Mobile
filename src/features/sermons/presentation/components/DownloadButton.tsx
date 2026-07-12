@@ -43,7 +43,8 @@ export function DownloadButton({ sermon, variant = 'default' }: DownloadButtonPr
     }
   }, [currentUser, sermon.id]);
 
-  const downloadProgress = downloads.get(sermon.id);
+  const downloadKey = `${sermon.id}_${sermon.mediaType === 'video' ? 'video' : 'audio'}`;
+  const downloadProgress = downloads.get(downloadKey);
   const isDownloading = downloadProgress?.isDownloading || false;
   const progress = downloadProgress?.progress || 0;
 
@@ -90,7 +91,7 @@ export function DownloadButton({ sermon, variant = 'default' }: DownloadButtonPr
       <TouchableOpacity
         onPress={handleDownload}
         disabled={isDownloading}
-        style={[styles.iconButton, { backgroundColor: colors.backgroundElement }]}
+        style={styles.iconButton}
         activeOpacity={0.7}
       >
         {isDownloading ? (

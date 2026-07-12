@@ -4,54 +4,144 @@
       "collectionGroup": "biblePlans",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "churchId", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "publishedAt", "order": "DESCENDING" }
+        {
+          "fieldPath": "churchId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "publishedAt",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "biblePlanDays",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "planId", "order": "ASCENDING" },
-        { "fieldPath": "churchId", "order": "ASCENDING" },
-        { "fieldPath": "dayNumber", "order": "ASCENDING" }
+        {
+          "fieldPath": "planId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "churchId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dayNumber",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "userBiblePlans",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "userId", "order": "ASCENDING" },
-        { "fieldPath": "churchId", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" }
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "churchId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "userBiblePlans",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "userId", "order": "ASCENDING" },
-        { "fieldPath": "planId", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" }
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "planId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "biblePlanProgress",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "userId", "order": "ASCENDING" },
-        { "fieldPath": "planId", "order": "ASCENDING" },
-        { "fieldPath": "dayId", "order": "ASCENDING" }
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "planId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dayId",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "biblePlanProgress",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "userId", "order": "ASCENDING" },
-        { "fieldPath": "planId", "order": "ASCENDING" },
-        { "fieldPath": "isCompleted", "order": "ASCENDING" }
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "planId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isCompleted",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "sermons",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "churchId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "sermons",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "churchId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "sermonDate",
+          "order": "DESCENDING"
+        }
       ]
     }
   ],

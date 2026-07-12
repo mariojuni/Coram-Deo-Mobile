@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { CalendarDays, CheckCircle2, HelpCircle, XCircle } from 'lucide-react-native';
 import AppModal from '@/components/ui/AppModal';
-import { PublicEventSetlist } from '@/app/(tabs)/community';
+import { PublicEventSetlist } from '@/components/Events/PublicEventSetlist';
 import type { Schedule } from '@/features/schedule/domain/schedule.types';
 
 const isToday = (dateString?: string) => {

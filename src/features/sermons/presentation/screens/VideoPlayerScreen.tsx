@@ -14,6 +14,7 @@ import {
   FileText
 } from 'lucide-react-native';
 import { useSermonStore } from '@/store/useSermonStore';
+import { useSermonPlaybackStore } from '@/store/useSermonPlaybackStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTheme } from '@/hooks/use-theme';
 import { Spacing } from '@/constants/theme';
@@ -32,7 +33,8 @@ export function VideoPlayerScreen() {
   const progressInterval = useRef<ReturnType<typeof setTimeout> | null>(null);
   const videoViewRef = useRef<VideoView>(null);
   
-  const { currentSermon, fetchSermonById, saveProgress, setCurrentPosition, setIsPlaying, addNote } = useSermonStore();
+  const { currentSermon, fetchSermonById, setCurrentPosition, setIsPlaying, addNote } = useSermonStore();
+  const { updateProgress, getProgress, loadProgress } = useSermonPlaybackStore();
   const currentUser = useAuthStore((state) => state.currentUser);
   
   const [isPlaying, setLocalIsPlaying] = useState(false);
@@ -40,8 +42,42 @@ export function VideoPlayerScreen() {
   const [isBuffering, setIsBuffering] = useState(true);
   const [showControls, setShowControls] = useState(true);
   const [showNoteEditor, setShowNoteEditor] = useState(false);
+  const [initialSeekDone, setInitialSeekDone] = useState(false);
+  const [videoSource, setVideoSource] = useState<string | null>(null);
 
-  const player = useVideoPlayer(currentSermon?.videoUrl || null, player => {
+  useEffect(() => {
+    if (!currentSermon?.videoStoragePath) return;
+    
+    const resolveSource = async () => {
+      try {
+        const { getLocalSermonMediaUri } = require('@/features/sermons/services/sermonDownloadService');
+        const localUri = await getLocalSermonMediaUri(currentSermon, 'video');
+        
+        if (localUri) {
+          setVideoSource(localUri);
+        } else {
+          setVideoSource(currentSermon.videoStoragePath!);
+          
+          // Auto-download in the background
+          if (currentUser) {
+            const { useSermonStore: store } = require('@/store/useSermonStore');
+            const isDownloaded = await store.getState().checkIfDownloaded(currentUser.uid, currentSermon.id, 'video');
+            if (!isDownloaded) {
+              store.getState().downloadSermon(currentUser.uid, currentSermon, 'video').catch(console.error);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error resolving video source:', error);
+        setVideoSource(currentSermon.videoStoragePath!);
+      }
+    };
+    
+    resolveSource();
+  }, [currentSermon, currentUser]);
+
+  // In a real app, videoStoragePath would be resolved to a signed URL first.
+  const player = useVideoPlayer(videoSource, player => {
     player.loop = false;
   });
 
@@ -72,11 +108,31 @@ export function VideoPlayerScreen() {
     if (currentUser && currentSermon && player.playing) {
       if (!progressInterval.current) {
         progressInterval.current = setInterval(() => {
-          saveProgress(currentUser.uid, currentSermon.id, Math.floor(player.currentTime));
+          updateProgress(
+            currentSermon.churchId,
+            currentUser.uid, 
+            currentSermon.id, 
+            'video', 
+            Math.floor(player.currentTime), 
+            Math.floor(player.duration || 0)
+          );
         }, 5000);
       }
     }
   });
+
+  useEffect(() => {
+    if (currentUser && currentSermon && player && !initialSeekDone) {
+      const init = async () => {
+        const savedProgress = await loadProgress(currentUser.uid, currentSermon.id);
+        if (savedProgress && savedProgress.positionSeconds > 5 && !savedProgress.completed) {
+          player.currentTime = savedProgress.positionSeconds;
+        }
+        setInitialSeekDone(true);
+      };
+      init();
+    }
+  }, [currentUser, currentSermon, player, initialSeekDone, loadProgress]);
 
   useEffect(() => {
     if (id) {
@@ -141,7 +197,7 @@ export function VideoPlayerScreen() {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  if (!currentSermon || !currentSermon.videoUrl) {
+  if (!currentSermon || !currentSermon.videoStoragePath) {
     return (
       <View style={[styles.container, styles.centerContent, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color="#FF6596" />
@@ -189,7 +245,7 @@ export function VideoPlayerScreen() {
                   {currentSermon.title}
                 </Text>
                 <Text style={styles.videoSubtitle}>
-                  {currentSermon.speaker.name}
+                  {currentSermon.preacherName}
                 </Text>
               </View>
             </View>

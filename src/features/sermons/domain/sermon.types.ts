@@ -1,69 +1,39 @@
-export type SermonType = 'video' | 'audio';
-export type SermonStatus = 'draft' | 'published' | 'archived';
-
-export interface Speaker {
-  id: string;
-  name: string;
-  bio?: string;
-  photoUrl?: string;
-}
-
-export interface ScriptureReference {
-  book: string;
-  chapter: number;
-  verseStart: number;
-  verseEnd?: number;
-  text?: string;
-}
-
-export interface SermonSeries {
-  id: string;
-  title: string;
-  description: string;
-  thumbnailUrl?: string;
-  startDate: Date;
-  endDate?: Date;
-}
-
-export interface SermonResource {
-  id: string;
-  title: string;
-  type: 'pdf' | 'link' | 'document';
-  url: string;
-}
+export type SermonMediaType = 'audio' | 'video' | 'both';
+export type SermonStatus = 'draft' | 'published' | 'archived' | 'processing' | 'failed';
 
 export interface Sermon {
   id: string;
+  churchId: string;
   title: string;
   description: string;
-  type: SermonType;
   
-  // Media
-  videoUrl?: string;
-  audioUrl?: string;
-  thumbnailUrl: string;
-  duration: number; // in seconds
+  preacherName: string;
+  preacherId?: string;
+  sermonDate: Date;
+  scriptureReference?: string;
   
-  // Metadata
-  speaker: Speaker;
-  date: Date;
   seriesId?: string;
-  series?: SermonSeries;
-  scriptureReferences: ScriptureReference[];
-  tags: string[];
+  seriesTitle?: string;
   
-  // Resources
-  resources: SermonResource[];
-  
-  // Engagement
-  viewCount: number;
-  favoriteCount: number;
   status: SermonStatus;
+  mediaType: SermonMediaType;
   
-  // Timestamps
+  audioStoragePath?: string;
+  videoStoragePath?: string;
+  thumbnailStoragePath?: string;
+  thumbnailUrl?: string;
+  
+  durationSeconds?: number;
+  optimizedSizeBytes?: number;
+  
   createdAt: Date;
   updatedAt: Date;
   publishedAt?: Date;
+
+  // Keep these for backward compatibility with UI if needed during refactor,
+  // but eventually we might remove them or adapt them.
+  viewCount?: number;
+  favoriteCount?: number;
 }
 
 export interface SermonNote {
@@ -76,12 +46,19 @@ export interface SermonNote {
   updatedAt: Date;
 }
 
-export interface SermonProgress {
+export interface SermonPlaybackProgress {
+  id?: string;
+  churchId: string;
   userId: string;
   sermonId: string;
-  position: number; // in seconds
+  mediaType: 'audio' | 'video';
+  positionSeconds: number;
+  durationSeconds: number;
+  progressPercent: number;
   completed: boolean;
-  lastWatchedAt: Date;
+  lastPlayedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface SermonFavorite {
@@ -104,6 +81,7 @@ export type SermonFilter = 'all' | 'video' | 'audio' | 'recent' | 'series';
 export type SermonSort = 'newest' | 'oldest' | 'popular' | 'alphabetical';
 
 export interface SermonFilters {
+  churchId?: string; // Add churchId for strict scoping
   filter: SermonFilter;
   sort: SermonSort;
   seriesId?: string;

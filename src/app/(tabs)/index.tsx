@@ -98,7 +98,7 @@ export default function HomeScreen() {
   const sermonsLoading = useSermonStore((s) => s.loading);
   const fetchSermons = useSermonStore((s) => s.fetchSermons);
   useEffect(() => {
-    if (sermons.length === 0 && !sermonsLoading) fetchSermons(true);
+    if (sermons.length === 0 && !sermonsLoading) fetchSermons(userProfile?.churchId || undefined, true);
   }, []);
 
   const { campaigns } = useGiving();
@@ -564,15 +564,15 @@ export default function HomeScreen() {
               contentContainerStyle={styles.sermonRowContent}
             >
               {sermons.slice(0, 5).map((sermon) => {
-                const duration = sermon.duration
-                  ? `${Math.floor(sermon.duration / 60)} min`
+                const duration = sermon.durationSeconds
+                  ? `${Math.floor(sermon.durationSeconds / 60)} min`
                   : null;
-                const isVideo = sermon.type === 'video';
+                const isVideo = sermon.mediaType === 'video';
                 return (
                   <BounceCard
                     key={sermon.id}
                     style={styles.sermonCard}
-                    onPress={() => router.push({ pathname: '/sermon-detail', params: { id: sermon.id } })}
+                    onPress={() => router.push({ pathname: '/sermon-watch', params: { id: sermon.id } })}
                   >
                     <Image
                       source={{ uri: sermon.thumbnailUrl }}
@@ -590,7 +590,7 @@ export default function HomeScreen() {
                     <View style={styles.sermonCardInfo}>
                       <Text style={styles.sermonCardTitle} numberOfLines={2}>{sermon.title}</Text>
                       <Text style={styles.sermonCardSpeaker} numberOfLines={1}>
-                        {typeof sermon.speaker === 'string' ? sermon.speaker : sermon.speaker?.name ?? ''}
+                        {sermon.preacherName || ''}
                       </Text>
                       {duration ? (
                         <View style={styles.sermonDurationRow}>

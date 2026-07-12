@@ -82,8 +82,8 @@ export function SermonCard({ sermon, onPress, onFavorite, isFavorited }: SermonC
               resizeMode="cover"
             />
             {/* Badge for type */}
-            <View style={[styles.badge, sermon.type === 'video' ? styles.videoBadge : styles.audioBadge]}>
-              <Text style={styles.badgeText}>{sermon.type.toUpperCase()}</Text>
+            <View style={[styles.badge, sermon.mediaType === 'video' ? styles.videoBadge : styles.audioBadge]}>
+              <Text style={styles.badgeText}>{sermon.mediaType.toUpperCase()}</Text>
             </View>
 
             {/* Favorite button */}
@@ -111,26 +111,26 @@ export function SermonCard({ sermon, onPress, onFavorite, isFavorited }: SermonC
               <View style={styles.metaItem}>
                 <User size={14} color={colors.textSecondary} />
                 <Text style={[styles.metaText, { color: colors.textSecondary }]} numberOfLines={1}>
-                  {sermon.speaker.name}
+                  {sermon.preacherName}
                 </Text>
               </View>
               
               <View style={styles.metaItem}>
                 <Clock size={14} color={colors.textSecondary} />
                 <Text style={[styles.metaText, { color: colors.textSecondary }]}>
-                  {formatDuration(sermon.duration)}
+                  {formatDuration(sermon.durationSeconds || 0)}
                 </Text>
               </View>
             </View>
 
             <View style={styles.footer}>
               <Text style={[styles.date, { color: colors.textSecondary }]}>
-                {formatDate(sermon.date)}
+                {formatDate(sermon.sermonDate)}
               </Text>
               
-              {sermon.series && (
+              {sermon.seriesTitle && (
                 <View style={styles.seriesTag}>
-                  <Text style={styles.seriesText} numberOfLines={1}>{sermon.series.title}</Text>
+                  <Text style={styles.seriesText} numberOfLines={1}>{sermon.seriesTitle}</Text>
                 </View>
               )}
             </View>

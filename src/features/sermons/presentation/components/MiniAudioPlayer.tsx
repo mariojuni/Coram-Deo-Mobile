@@ -50,8 +50,8 @@ export function MiniAudioPlayer({ onPlayPause, onClose }: MiniAudioPlayerProps) 
 
   if (!currentSermon) return null;
 
-  const progress = currentSermon.duration > 0 
-    ? (currentPosition / currentSermon.duration) * 100 
+  const progress = currentSermon.durationSeconds && currentSermon.durationSeconds > 0 
+    ? (currentPosition / currentSermon.durationSeconds) * 100 
     : 0;
 
   return (
@@ -97,7 +97,7 @@ export function MiniAudioPlayer({ onPlayPause, onClose }: MiniAudioPlayerProps) 
             </Text>
             <View style={styles.subtitle}>
               <Text style={[styles.artist, { color: colors.textSecondary }]} numberOfLines={1}>
-                {currentSermon.speaker.name}
+                {currentSermon.preacherName}
               </Text>
               <Text style={[styles.time, { color: colors.textSecondary }]}>
                 {formatTime(currentPosition)}
