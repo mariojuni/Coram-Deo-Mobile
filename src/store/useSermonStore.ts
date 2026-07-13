@@ -46,6 +46,9 @@ interface SermonState {
 
   // Actions
   fetchSermons: (churchId: string | undefined, reset?: boolean) => Promise<void>;
+  subscribeSermons: (churchId: string | undefined) => () => void;
+  unsubscribeSermons: () => void;
+  _unsubscribeSermons: (() => void) | null;
   searchSermons: (churchId: string | undefined, query: string) => Promise<void>;
   setSearchQuery: (churchId: string | undefined, query: string) => void;
   fetchSermonById: (id: string) => Promise<void>;
@@ -89,6 +92,37 @@ export const useSermonStore = create<SermonState>((set, get) => ({
   downloads: new Map(),
   downloadedSermons: new Set(),
   downloadsList: [],
+  _unsubscribeSermons: null,
+
+  unsubscribeSermons: () => {
+    const { _unsubscribeSermons } = get();
+    if (_unsubscribeSermons) {
+      _unsubscribeSermons();
+      set({ _unsubscribeSermons: null });
+    }
+  },
+
+  subscribeSermons: (churchId) => {
+    get().unsubscribeSermons();
+
+    if (!churchId) return () => {};
+
+    set({ loading: true });
+
+    const unsubscribe = sermonRepository.subscribeSermons(
+      { ...get().filters, churchId },
+      (sermons) => {
+        set({ sermons, loading: false, hasMore: false });
+      },
+      (error) => {
+        console.error('Error subscribing to sermons:', error);
+        set({ loading: false });
+      }
+    );
+
+    set({ _unsubscribeSermons: unsubscribe });
+    return unsubscribe;
+  },
 
   fetchSermons: async (churchId, reset = false) => {
     const { filters, lastDoc, loading, searchQuery } = get();

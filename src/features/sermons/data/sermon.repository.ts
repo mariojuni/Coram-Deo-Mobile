@@ -16,6 +16,7 @@ import {
   QueryDocumentSnapshot,
   DocumentData,
   increment,
+  onSnapshot,
 } from 'firebase/firestore';
 import * as FileSystem from 'expo-file-system';
 import { db, storage } from '@/firebase';
@@ -101,6 +102,45 @@ class SermonRepository {
       lastDoc: snapshot.docs[snapshot.docs.length - 1],
       hasMore: snapshot.docs.length === pageSize,
     };
+  }
+
+  // Subscribe to real-time sermons
+  subscribeSermons(
+    filters: SermonFilters,
+    onData: (sermons: Sermon[]) => void,
+    onError: (error: Error) => void
+  ) {
+    const sermonsRef = collection(db, SERMONS_COLLECTION);
+    let q = query(
+      sermonsRef,
+      where('status', '==', 'published')
+    );
+
+    if (filters.churchId) {
+      q = query(q, where('churchId', '==', filters.churchId));
+    } else {
+      onData([]);
+      return () => {};
+    }
+
+    if (filters.filter === 'video') {
+      q = query(q, where('type', '==', 'video'));
+    } else if (filters.filter === 'audio') {
+      q = query(q, where('type', '==', 'audio'));
+    } else if (filters.seriesId) {
+      q = query(q, where('seriesId', '==', filters.seriesId));
+    }
+
+    q = query(
+      q,
+      orderBy(this.getSortField(filters.sort), filters.sort === 'oldest' ? 'asc' : 'desc'),
+      limit(100) // limit for realtime listener
+    );
+
+    return onSnapshot(q, (snapshot) => {
+      const sermons = snapshot.docs.map((doc) => this.mapDocToSermon(doc));
+      onData(sermons);
+    }, onError);
   }
 
   // Search sermons

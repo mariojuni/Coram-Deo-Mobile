@@ -96,9 +96,11 @@ export default function HomeScreen() {
   // Recent sermons
   const sermons = useSermonStore((s) => s.sermons);
   const sermonsLoading = useSermonStore((s) => s.loading);
-  const fetchSermons = useSermonStore((s) => s.fetchSermons);
+  const subscribeSermons = useSermonStore((s) => s.subscribeSermons);
   useEffect(() => {
-    if (sermons.length === 0 && !sermonsLoading) fetchSermons(userProfile?.churchId || undefined, true);
+    if (sermons.length === 0 && !sermonsLoading) {
+      subscribeSermons(userProfile?.churchId || undefined);
+    }
   }, []);
 
   const { campaigns } = useGiving();

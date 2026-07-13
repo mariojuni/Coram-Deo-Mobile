@@ -41,7 +41,7 @@ export function SermonsExperience({ searchQuery, showSearchInput = true }: Sermo
   const currentUser = useAuthStore((s) => s.currentUser);
   const userProfile = useAuthStore((s) => s.userProfile);
 
-  const { sermons, loading, fetchSermons, loadFavorites } = useSermonStore();
+  const { sermons, loading, subscribeSermons, loadFavorites } = useSermonStore();
   const { loadAllProgresses, getInProgressSermons, progresses } = useSermonPlaybackStore();
 
   const [localSearch, setLocalSearch] = useState('');
@@ -53,7 +53,10 @@ export function SermonsExperience({ searchQuery, showSearchInput = true }: Sermo
 
   // ── Fetch sermons ──────────────────────────────────────────────────────────
   useEffect(() => {
-    if (churchId) fetchSermons(churchId, true);
+    if (churchId) {
+      const unsubscribe = subscribeSermons(churchId);
+      return () => unsubscribe();
+    }
   }, [churchId]);
 
   useEffect(() => {
