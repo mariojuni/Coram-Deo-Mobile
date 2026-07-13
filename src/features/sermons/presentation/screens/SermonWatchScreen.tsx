@@ -188,7 +188,7 @@ export function SermonWatchScreen() {
         <View style={[styles.playerWrapper, { paddingTop: insets.top }]}>
           {/* Back button overlay */}
           <TouchableOpacity
-            style={styles.backBtn}
+            style={[styles.backBtn, { top: insets.top + 8 }]}
             onPress={() => {
               if (progressInterval.current) clearTimeout(progressInterval.current);
               router.back();
@@ -352,7 +352,6 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     position: 'absolute',
-    top: 0,
     left: 12,
     zIndex: 20,
     width: 36,
@@ -361,7 +360,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
   },
   audioHeader: {
     flexDirection: 'row',

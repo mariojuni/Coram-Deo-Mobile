@@ -3,8 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  
-  
   StyleSheet,
 } from 'react-native';
 import { Play, Headphones, Download } from 'lucide-react-native';
@@ -33,15 +31,7 @@ export function SermonActionBar({
   isDownloading = false,
   isDownloaded = false,
 }: SermonActionBarProps) {
-  const hasVideo = sermon.mediaType === 'video' || sermon.mediaType === 'both';
   const hasAudio = sermon.mediaType === 'audio' || sermon.mediaType === 'both';
-
-
-
-  const handleWatch = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onWatch();
-  };
 
   const handleListen = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -55,21 +45,11 @@ export function SermonActionBar({
 
   return (
     <View style={styles.container}>
-      {/* Primary action: Watch or Listen */}
-      {hasVideo && (
-        <TouchableOpacity style={styles.primaryBtn} onPress={handleWatch} activeOpacity={0.85}>
-          <Play size={18} color="#fff" fill="#fff" />
-          <Text style={styles.primaryBtnText}>Watch</Text>
-        </TouchableOpacity>
-      )}
-
-      {/* Secondary actions */}
       <View style={styles.secondaryRow}>
         {hasAudio && (
           <TouchableOpacity style={styles.secondaryBtn} onPress={handleListen} activeOpacity={0.85}>
             <Headphones size={16} color={OLIVE} />
-            <Text style={[styles.secondaryBtnText,
-  TouchableOpacity, { color: OLIVE }]}>Listen</Text>
+            <Text style={[styles.secondaryBtnText, { color: OLIVE }]}>Listen</Text>
           </TouchableOpacity>
         )}
 
@@ -81,8 +61,7 @@ export function SermonActionBar({
             disabled={isDownloading}
           >
             <Download size={16} color={isDownloaded ? '#fff' : NAVY} />
-            <Text style={[styles.secondaryBtnText,
-  TouchableOpacity, { color: isDownloaded ? '#fff' : NAVY }]}>
+            <Text style={[styles.secondaryBtnText, { color: isDownloaded ? '#fff' : NAVY }]}>
               {isDownloading ? 'Downloading...' : isDownloaded ? 'Downloaded' : 'Download Audio'}
             </Text>
           </TouchableOpacity>

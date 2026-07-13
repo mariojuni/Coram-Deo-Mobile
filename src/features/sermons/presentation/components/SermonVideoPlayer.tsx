@@ -46,6 +46,7 @@ export function SermonVideoPlayer({
   const [showControls, setShowControls] = useState(false);
   const [positionMs, setPositionMs] = useState(0);
   const [durationMs, setDurationMs] = useState(0);
+  const [progressBarWidth, setProgressBarWidth] = useState(0);
   const [initialSeekDone, setInitialSeekDone] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const controlsTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -53,6 +54,7 @@ export function SermonVideoPlayer({
   const player = useVideoPlayer(videoSource, (p) => {
     p.loop = false;
     p.pause();
+    p.timeUpdateEventInterval = 0.5; // Update every half second
   });
 
   // Listen to playing state
@@ -62,6 +64,8 @@ export function SermonVideoPlayer({
       scheduleHideControls();
     } else if (playerState !== 'completed' && playerState !== 'error') {
       setPlayerState('paused');
+      if (controlsTimeout.current) clearTimeout(controlsTimeout.current);
+      setShowControls(true);
     }
   });
 
@@ -104,8 +108,13 @@ export function SermonVideoPlayer({
   };
 
   const handleTap = () => {
-    setShowControls((prev) => !prev);
-    if (!showControls) scheduleHideControls();
+    if (playerState === 'paused' || playerState === 'idle') {
+      // Don't auto-hide controls if paused or idle
+      setShowControls(true);
+    } else {
+      setShowControls((prev) => !prev);
+      if (!showControls) scheduleHideControls();
+    }
   };
 
   const handlePlayPause = () => {
@@ -125,6 +134,12 @@ export function SermonVideoPlayer({
   const handleSeek = (seconds: number) => {
     const newTime = Math.max(0, Math.min(player.duration ?? 0, player.currentTime + seconds));
     player.currentTime = newTime;
+  };
+
+  const handleSeekToProgress = (locationX: number) => {
+    if (durationMs === 0 || progressBarWidth === 0) return;
+    const percentage = Math.max(0, Math.min(1, locationX / progressBarWidth));
+    player.currentTime = percentage * (durationMs / 1000);
   };
 
   const handleFullscreen = () => {
@@ -152,10 +167,7 @@ export function SermonVideoPlayer({
           resizeMode="cover"
         />
         <View style={styles.overlay}>
-          <View style={styles.errorBox}>
-            <AlertCircle size={28} color="#fff" />
-            <Text style={styles.errorText}>Video unavailable</Text>
-          </View>
+          <ActivityIndicator size="large" color={GOLD} />
         </View>
       </View>
     );
@@ -179,8 +191,8 @@ export function SermonVideoPlayer({
           onFullscreenExit={() => setIsFullscreen(false)}
         />
 
-        {/* Thumbnail overlay when idle/paused */}
-        {(playerState === 'idle' || playerState === 'paused') && sermon.thumbnailUrl && !showControls && !isFullscreen && (
+        {/* Thumbnail overlay when idle */}
+        {playerState === 'idle' && sermon.thumbnailUrl && !showControls && !isFullscreen && (
           <Image
             source={{ uri: sermon.thumbnailUrl }}
             style={[StyleSheet.absoluteFill, { backgroundColor: '#000' }]}
@@ -214,8 +226,8 @@ export function SermonVideoPlayer({
           </View>
         )}
 
-        {/* Big centered play button — idle/paused and controls hidden */}
-        {(playerState === 'idle' || playerState === 'paused') && !showControls && !isFullscreen && (
+        {/* Big centered play button — idle and controls hidden */}
+        {playerState === 'idle' && !showControls && !isFullscreen && (
           <View style={styles.overlay} pointerEvents="none">
             <View style={styles.bigPlayBtn}>
               <Play size={36} color="#fff" fill="#fff" />
@@ -275,9 +287,16 @@ export function SermonVideoPlayer({
             {/* Bottom bar */}
             <View style={styles.bottomBar}>
               <Text style={styles.timeText}>{formatTime(positionMs)}</Text>
-              <View style={styles.progressBar}>
+              <TouchableOpacity
+                style={styles.progressBarContainer}
+                activeOpacity={1}
+                onLayout={(e) => setProgressBarWidth(e.nativeEvent.layout.width)}
+                onPress={(e) => handleSeekToProgress(e.nativeEvent.locationX)}
+              >
+                <View style={styles.progressTrack} />
                 <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
-              </View>
+                <View style={[styles.progressThumb, { left: `${progress * 100}%` }]} />
+              </TouchableOpacity>
               <Text style={styles.timeText}>{formatTime(durationMs)}</Text>
               <TouchableOpacity onPress={handleFullscreen} style={{ padding: 4 }}>
                 <Maximize size={18} color="#fff" />
@@ -306,15 +325,10 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: GOLD,
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
     paddingLeft: 4,
-    shadowColor: GOLD,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 8,
   },
   resumeBanner: {
     position: 'absolute',
@@ -387,7 +401,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: 'rgba(255,101,150,0.9)',
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -410,15 +424,36 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     minWidth: 38,
   },
-  progressBar: {
+  progressBarContainer: {
     flex: 1,
-    height: 3,
+    height: 30,
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  progressTrack: {
+    width: '100%',
+    height: 4,
     borderRadius: 2,
     backgroundColor: 'rgba(255,255,255,0.3)',
-    overflow: 'hidden',
+    position: 'absolute',
+    left: 0,
+    top: 13,
   },
   progressFill: {
-    height: '100%',
+    height: 4,
+    borderRadius: 2,
     backgroundColor: GOLD,
+    position: 'absolute',
+    left: 0,
+    top: 13,
+  },
+  progressThumb: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: GOLD,
+    position: 'absolute',
+    top: 8,
+    marginLeft: -7,
   },
 });
