@@ -52,7 +52,11 @@ export function ContinueWatchingCard({ progress, sermon, isPlaying, onPress, onP
 
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               {onPlayPause && (
-                <TouchableOpacity onPress={onPlayPause} style={styles.actionBtn} hitSlop={{top:10, bottom:10, left:10, right:10}}>
+                <TouchableOpacity
+                  onPress={(e) => { e.stopPropagation(); onPlayPause(); }}
+                  style={styles.actionBtn}
+                  hitSlop={{top:10, bottom:10, left:10, right:10}}
+                >
                   {isPlaying ? (
                     <Pause size={20} color={NAVY} fill={NAVY} />
                   ) : (
@@ -62,7 +66,11 @@ export function ContinueWatchingCard({ progress, sermon, isPlaying, onPress, onP
               )}
 
               {onDismiss && (
-                <TouchableOpacity onPress={onDismiss} style={styles.actionBtn} hitSlop={{top:10, bottom:10, left:10, right:10}}>
+                <TouchableOpacity
+                  onPress={(e) => { e.stopPropagation(); onDismiss(); }}
+                  style={styles.actionBtn}
+                  hitSlop={{top:10, bottom:10, left:10, right:10}}
+                >
                   <X size={20} color="#9CA3AF" />
                 </TouchableOpacity>
               )}

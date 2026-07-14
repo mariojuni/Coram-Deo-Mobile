@@ -140,8 +140,6 @@ export default function TabLayout() {
     state.getInProgressSermons().filter((p) => !p.completed).slice(0, 3)
   ));
   
-  console.log("inProgressList length:", inProgressList.length, "progress:", inProgressList[0]?.progressPercent);
-
   const audio = useAudio();
 
   const inProgressWithSermons = inProgressList
@@ -188,26 +186,21 @@ export default function TabLayout() {
             progress={topSermon.progress}
             sermon={topSermon.sermon}
             isPlaying={isCurrentAudioPlaying}
-            onPlayPause={() => {
-              if (topSermon.progress.mediaType === 'video') {
-                router.push({ pathname: '/sermon-watch', params: { id: topSermon.progress.sermonId } });
+            onPlayPause={topSermon.progress.mediaType === 'audio' ? () => {
+              if (audio.player?.playing) {
+                audio.pauseAudio();
               } else {
-                if (audio.player?.playing) {
-                  audio.pauseAudio();
-                } else {
-                  // When paused, navigate to player to guarantee correct sermon loads and resumes
-                  router.push({ pathname: '/audio-player', params: { id: topSermon.progress.sermonId } });
-                }
+                router.navigate({ pathname: '/audio-player', params: { id: topSermon.progress.sermonId } });
               }
-            }}
+            } : undefined}
             onDismiss={() => {
               useSermonPlaybackStore.getState().dismissSermon(topSermon.progress.sermonId);
             }}
             onPress={() => {
               if (topSermon.progress.mediaType === 'video') {
-                router.push({ pathname: '/sermon-watch', params: { id: topSermon.progress.sermonId } });
+                router.navigate({ pathname: '/sermon-watch', params: { id: topSermon.progress.sermonId } });
               } else {
-                router.push({ pathname: '/audio-player', params: { id: topSermon.progress.sermonId } });
+                router.navigate({ pathname: '/audio-player', params: { id: topSermon.progress.sermonId } });
               }
             }}
           />

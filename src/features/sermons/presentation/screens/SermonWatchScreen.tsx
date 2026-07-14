@@ -173,8 +173,20 @@ export function SermonWatchScreen() {
 
   if (loading || !currentSermon || !isProgressLoaded) {
     return (
-      <View style={[styles.screen, { alignItems: 'center', justifyContent: 'center' }]}>
-        <ActivityIndicator size="large" color={GOLD} />
+      <View style={styles.screen}>
+        <Stack.Screen options={{ headerShown: false }} />
+        {/* Black video area placeholder with back button */}
+        <View style={[styles.playerWrapper, { paddingTop: insets.top, height: (insets.top + 220) }]}>
+          <TouchableOpacity
+            style={[styles.backBtn, { top: insets.top + 8 }]}
+            onPress={() => router.back()}
+          >
+            <ArrowLeft size={20} color="#fff" />
+          </TouchableOpacity>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <ActivityIndicator size="large" color="#fff" />
+          </View>
+        </View>
       </View>
     );
   }

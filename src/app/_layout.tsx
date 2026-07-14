@@ -135,6 +135,7 @@ export default function RootLayout() {
             <Stack.Screen name="giving" options={{ headerShown: false }} />
             <Stack.Screen name="version-manager" options={{ presentation: 'modal', headerShown: false }} />
             <Stack.Screen name="audio-player" options={{ presentation: 'modal', headerShown: false }} />
+            <Stack.Screen name="sermon-watch" options={{ headerShown: false }} />
             <Stack.Screen name="sermon-detail" options={{ headerShown: false }} />
             <Stack.Screen name="serve-assignment-detail" options={{ headerShown: false }} />
             <Stack.Screen name="serve-ministry-detail" options={{ headerShown: false }} />

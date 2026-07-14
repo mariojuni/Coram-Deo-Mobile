@@ -187,6 +187,16 @@ export const useSermonStore = create<SermonState>((set, get) => ({
   },
 
   fetchSermonById: async (id: string) => {
+    // Use cached sermon immediately if already in store (avoids loading flash)
+    const cached = get().sermons.find((s) => s.id === id)
+      ?? get().relatedSermons.find((s) => s.id === id)
+      ?? (get().currentSermon?.id === id ? get().currentSermon : null);
+    
+    if (cached) {
+      set({ currentSermon: cached, loading: false });
+      return;
+    }
+
     set({ loading: true });
     try {
       const sermon = await sermonRepository.fetchSermonById(id);

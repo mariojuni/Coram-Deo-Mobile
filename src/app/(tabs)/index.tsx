@@ -623,7 +623,7 @@ export default function HomeScreen() {
                   <BounceCard
                     key={sermon.id}
                     style={styles.sermonCard}
-                    onPress={() => router.push({ pathname: '/sermon-watch', params: { id: sermon.id } })}
+                    onPress={() => router.navigate({ pathname: '/sermon-watch', params: { id: sermon.id } })}
                   >
                     <Image
                       source={{ uri: sermon.thumbnailUrl }}

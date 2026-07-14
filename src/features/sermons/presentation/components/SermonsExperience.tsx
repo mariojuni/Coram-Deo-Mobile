@@ -113,11 +113,11 @@ export function SermonsExperience({ searchQuery, showSearchInput = true }: Sermo
 
   // ── Navigation ─────────────────────────────────────────────────────────────
   const openSermon = (id: string) => {
-    router.push({ pathname: '/sermon-watch', params: { id } });
+    router.navigate({ pathname: '/sermon-watch', params: { id } });
   };
 
   const openAudioPlayer = (id: string) => {
-    router.push({ pathname: '/audio-player', params: { id } });
+    router.navigate({ pathname: '/audio-player', params: { id } });
   };
 
   // ── Helpers ────────────────────────────────────────────────────────────────

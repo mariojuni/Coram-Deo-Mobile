@@ -72,8 +72,8 @@ export function DownloadsScreen() {
 
 
   const handleSermonPress = (sermonId: string) => {
-    router.push({
-      pathname: '/sermon-detail',
+    router.navigate({
+      pathname: '/sermon-watch',
       params: { id: sermonId }
     });
   };
