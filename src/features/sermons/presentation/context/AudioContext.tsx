@@ -44,30 +44,37 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  useEventListener(player, 'playbackStatusUpdate', (status) => {
-    setIsPlaying(status.playing);
+  useEffect(() => {
+    if (!player) return;
     
-    const currentPos = Math.floor(status.currentTime);
-    setCurrentPosition(currentPos);
+    // Sync player state to global store every second
+    const syncInterval = setInterval(() => {
+      setIsPlaying(player.playing);
+      setCurrentPosition(Math.floor(player.currentTime));
+    }, 1000);
     
-    if (currentUser && currentSermonId.current && status.playing && currentSermon) {
-      if (!progressInterval.current) {
-        progressInterval.current = setInterval(() => {
-          updateProgress(
-            currentSermon.churchId,
-            currentUser.uid,
-            currentSermonId.current!,
-            'audio',
-            Math.floor(player.currentTime),
-            Math.floor(player.duration ?? 0)
-          );
-        }, 5000);
-      }
-    } else if (!status.playing && progressInterval.current) {
-      clearInterval(progressInterval.current);
-      progressInterval.current = null;
+    return () => clearInterval(syncInterval);
+  }, [player, setIsPlaying, setCurrentPosition]);
+
+  useEffect(() => {
+    // Only run if we're actually playing something
+    const isPlaying = player?.playing;
+    
+    if (isPlaying && currentUser && currentSermonId.current && currentSermon) {
+      const interval = setInterval(() => {
+        updateProgress(
+          currentSermon.churchId,
+          currentUser.uid,
+          currentSermonId.current!,
+          'audio',
+          Math.floor(player?.currentTime || 0),
+          Math.floor(player?.duration || 0)
+        );
+      }, 5000);
+      
+      return () => clearInterval(interval);
     }
-  });
+  }, [player?.playing, currentUser, currentSermon]);
 
   const playAudio = async (audioUrl: string, sermonId: string, initialPositionSeconds?: number) => {
     try {

@@ -35,18 +35,19 @@ export function AudioPlayerScreen() {
   
   const { playAudio, pauseAudio, seekAudio, setRate, player } = useAudio();
   
-  const isPlaying = player?.playing ?? false;
-  const sound = player;
-  const duration = player?.duration ?? 0;
-  const progress = duration > 0 ? (player?.currentTime ?? 0) / duration : 0;
-
   const { 
     currentSermon, 
     fetchSermonById, 
     toggleFavorite,
     favorites,
-    addNote
+    addNote,
+    currentPosition,
+    isPlaying
   } = useSermonStore();
+  
+  const sound = player;
+  const duration = player?.duration ?? 0;
+  const progress = duration > 0 ? currentPosition / duration : 0;
   
   const currentUser = useAuthStore((state) => state.currentUser);
   
@@ -117,21 +118,7 @@ export function AudioPlayerScreen() {
 
   // Initial seek is now handled directly in loadAudio
 
-  useEffect(() => {
-    if (currentUser && currentSermon && isPlaying) {
-      const interval = setInterval(() => {
-        updateProgress(
-          currentSermon.churchId,
-          currentUser.uid,
-          currentSermon.id,
-          'audio',
-          Math.floor(player?.currentTime || 0),
-          Math.floor(duration || 0)
-        );
-      }, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [currentUser, currentSermon, isPlaying, duration]);
+  // Progress interval is handled centrally by AudioContext
 
   const handlePlayPause = async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -196,7 +183,6 @@ export function AudioPlayerScreen() {
   }
 
   const isFavorited = favorites.has(currentSermon.id);
-  const currentPosition = progress * duration;
 
   return (
     <LinearGradient 

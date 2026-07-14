@@ -139,6 +139,9 @@ export default function TabLayout() {
   const inProgressList = useSermonPlaybackStore(useShallow((state) => 
     state.getInProgressSermons().filter((p) => !p.completed).slice(0, 3)
   ));
+  
+  console.log("inProgressList length:", inProgressList.length, "progress:", inProgressList[0]?.progressPercent);
+
   const audio = useAudio();
 
   const inProgressWithSermons = inProgressList
