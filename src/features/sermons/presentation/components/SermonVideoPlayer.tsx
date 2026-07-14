@@ -36,7 +36,7 @@ export function SermonVideoPlayer({
   videoSource,
 }: SermonVideoPlayerProps) {
   const videoViewRef = useRef<VideoView>(null);
-  const [playerState, setPlayerState] = useState<PlayerState>('idle');
+  const [playerState, setPlayerState] = useState<PlayerState>('loading');
   const [showControls, setShowControls] = useState(false);
   const [positionMs, setPositionMs] = useState(0);
   const [durationMs, setDurationMs] = useState(0);
@@ -75,6 +75,7 @@ export function SermonVideoPlayer({
         }
         setInitialSeekDone(true);
         setPlayerState('paused');
+        setShowControls(true);
       }
     } else if (status === 'error') {
       setPlayerState('error');
@@ -229,14 +230,7 @@ export function SermonVideoPlayer({
           </View>
         )}
 
-        {/* Resume banner */}
-        {playerState === 'idle' && savedProgress && savedProgress.positionSeconds > 5 && !savedProgress.completed && !showControls && !isFullscreen && (
-          <View style={styles.resumeBanner} pointerEvents="none">
-            <Text style={styles.resumeText}>
-              Continue from {formatTime(savedProgress.positionSeconds * 1000)}
-            </Text>
-          </View>
-        )}
+
 
         {/* Completed State */}
         {playerState === 'completed' && !isFullscreen && (
