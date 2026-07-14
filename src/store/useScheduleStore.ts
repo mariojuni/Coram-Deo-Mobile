@@ -16,6 +16,7 @@ interface ScheduleStore {
   schedules: Schedule[];
   schedulesLoading: boolean;
   initializeSchedulesListener: () => () => void;
+  clearSchedulesListener: () => void;
 }
 
 let schedulesUnsubscribe: (() => void) | null = null;
@@ -44,8 +45,16 @@ export const useScheduleStore = create<ScheduleStore>((set) => ({
       if (schedulesSubscriberCount === 0 && schedulesUnsubscribe) {
         schedulesUnsubscribe();
         schedulesUnsubscribe = null;
-      }
+      };
     };
+  },
+  clearSchedulesListener: () => {
+    if (schedulesUnsubscribe) {
+      schedulesUnsubscribe();
+      schedulesUnsubscribe = null;
+    }
+    schedulesSubscriberCount = 0;
+    set({ schedules: [], schedulesLoading: false });
   },
 }));
 

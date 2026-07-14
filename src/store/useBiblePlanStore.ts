@@ -45,6 +45,7 @@ interface BiblePlanStore {
   openPlanUpdate: (dayNumber: number, totalDays: number) => void;
   setPlanUpdateStep: (step: number, label: string) => void;
   closePlanUpdate: () => void;
+  clearAllListeners: () => void;
 
   // ── Selectors ─────────────────────────────────────────────────────────────
   getDaysForPlan: (planId: string) => BiblePlanDay[];
@@ -198,6 +199,20 @@ export const useBiblePlanStore = create<BiblePlanStore>((set, get) => ({
         progressKey = null;
       }
     };
+  },
+
+  clearAllListeners: () => {
+    if (plansUnsubscribe) { plansUnsubscribe(); plansUnsubscribe = null; plansChurchId = null; plansRefCount = 0; }
+    if (userPlansUnsubscribe) { userPlansUnsubscribe(); userPlansUnsubscribe = null; userPlansKey = null; userPlansRefCount = 0; }
+    if (progressUnsubscribe) { progressUnsubscribe(); progressUnsubscribe = null; progressKey = null; progressRefCount = 0; }
+    set({
+      plans: [],
+      userBiblePlans: [],
+      planProgress: [],
+      plansLoading: false,
+      userBiblePlansLoading: false,
+      planProgressLoading: false,
+    });
   },
 
   // ── Actions ───────────────────────────────────────────────────────────────

@@ -3,6 +3,9 @@ import { create } from 'zustand';
 import { authRepository, RegistrationPayload } from '../features/auth/data/auth.repository';
 import type { AuthCredentialResult, UserAccount } from '../features/auth/domain/auth.types';
 import { clearSensitiveCache } from '../features/files/services/fileCacheService';
+import { useMemberStore } from './useMemberStore';
+import { useScheduleStore } from './useScheduleStore';
+import { useBiblePlanStore } from './useBiblePlanStore';
 
 interface AuthState {
   currentUser: User | null;
@@ -33,6 +36,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   logout: async () => {
     try {
+      useMemberStore.getState().initializeMembersListener(null);
+      useMemberStore.getState().initializeServicesListener(null);
+      useScheduleStore.getState().clearSchedulesListener();
+      useBiblePlanStore.getState().clearAllListeners();
       await clearSensitiveCache();
     } catch (e) {
       console.warn('Failed to clear sensitive cache on logout', e);

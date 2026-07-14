@@ -11,17 +11,24 @@ interface MemberStore {
   initializeServicesListener: (churchId?: string | null) => void;
 }
 
+let unsubscribeMembers: (() => void) | null = null;
+let unsubscribeServices: (() => void) | null = null;
+
 export const useMemberStore = create<MemberStore>((set) => ({
   members: [],
   services: [],
   membersLoading: true,
   servicesLoading: true,
   initializeMembersListener: (churchId?: string | null) => {
+    if (unsubscribeMembers) {
+      unsubscribeMembers();
+      unsubscribeMembers = null;
+    }
     if (!churchId) {
       set({ members: [], membersLoading: false });
       return;
     }
-    memberRepository.subscribeToMembers(churchId,
+    unsubscribeMembers = memberRepository.subscribeToMembers(churchId,
       (members) => {
         set({ members, membersLoading: false });
       },
@@ -33,11 +40,15 @@ export const useMemberStore = create<MemberStore>((set) => ({
   },
 
   initializeServicesListener: (churchId?: string | null) => {
+    if (unsubscribeServices) {
+      unsubscribeServices();
+      unsubscribeServices = null;
+    }
     if (!churchId) {
       set({ services: [], servicesLoading: false });
       return;
     }
-    memberRepository.subscribeToServices(churchId,
+    unsubscribeServices = memberRepository.subscribeToServices(churchId,
       (services) => {
         set({ services, servicesLoading: false });
       },

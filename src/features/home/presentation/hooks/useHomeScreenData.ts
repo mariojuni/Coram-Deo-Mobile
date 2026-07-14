@@ -65,8 +65,13 @@ export function useHomeScreenData() {
       const userId = currentUser?.uid;
       if (!churchId || !userId) return;
 
-      initializePlansListener(churchId);
-      initializeUserBiblePlansListener(userId, churchId);
+      const unsubPlans = initializePlansListener(churchId);
+      const unsubUserPlans = initializeUserBiblePlansListener(userId, churchId);
+
+      return () => {
+        unsubPlans();
+        unsubUserPlans();
+      };
     }, [userProfile?.churchId, currentUser?.uid, initializePlansListener, initializeUserBiblePlansListener])
   );
 

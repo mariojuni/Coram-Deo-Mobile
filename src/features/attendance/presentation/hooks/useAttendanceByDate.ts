@@ -18,6 +18,11 @@ export function useAttendanceByDate(date: string, options?: { membersOnly?: bool
         setLoading(false);
       },
       (error) => {
+        if (error.message.includes('Missing or insufficient permissions')) {
+          // Ignore error during logout race conditions
+          setLoading(false);
+          return;
+        }
         console.error('Error fetching attendance check-ins:', error);
         setLoading(false);
       }
