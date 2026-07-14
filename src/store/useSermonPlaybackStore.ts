@@ -4,6 +4,7 @@ import { sermonRepository } from '../features/sermons/data/sermon.repository';
 
 interface SermonPlaybackState {
   progresses: Record<string, SermonPlaybackProgress>; // Key: sermonId
+  dismissedSermons: Record<string, boolean>; // Key: sermonId
   loading: boolean;
   
   loadProgress: (userId: string, sermonId: string) => Promise<SermonPlaybackProgress | null>;
@@ -19,10 +20,13 @@ interface SermonPlaybackState {
   getProgress: (sermonId: string) => SermonPlaybackProgress | undefined;
   getInProgressSermons: () => SermonPlaybackProgress[];
   clearProgress: (sermonId: string) => void;
+  dismissSermon: (sermonId: string) => void;
+  unhideSermon: (sermonId: string) => void;
 }
 
 export const useSermonPlaybackStore = create<SermonPlaybackState>((set, get) => ({
   progresses: {},
+  dismissedSermons: {},
   loading: false,
 
   loadProgress: async (userId, sermonId) => {
@@ -104,8 +108,9 @@ export const useSermonPlaybackStore = create<SermonPlaybackState>((set, get) => 
 
   getInProgressSermons: () => {
     const progresses = get().progresses;
+    const dismissedSermons = get().dismissedSermons;
     return Object.values(progresses).filter(
-      (p) => p.positionSeconds > 5 && !p.completed
+      (p) => p.positionSeconds > 5 && !p.completed && !dismissedSermons[p.sermonId]
     ).sort((a, b) => b.lastPlayedAt.getTime() - a.lastPlayedAt.getTime());
   },
 
@@ -115,5 +120,17 @@ export const useSermonPlaybackStore = create<SermonPlaybackState>((set, get) => 
       delete next[sermonId];
       return { progresses: next };
     });
+  },
+
+  dismissSermon: (sermonId) => {
+    set((state) => ({
+      dismissedSermons: { ...state.dismissedSermons, [sermonId]: true }
+    }));
+  },
+
+  unhideSermon: (sermonId) => {
+    set((state) => ({
+      dismissedSermons: { ...state.dismissedSermons, [sermonId]: false }
+    }));
   },
 }));

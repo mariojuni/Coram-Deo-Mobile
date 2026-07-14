@@ -49,25 +49,31 @@ export function SermonWatchScreen() {
     checkIfDownloaded,
   } = useSermonStore();
 
-  const { loadProgress, updateProgress, getProgress } = useSermonPlaybackStore();
+  const { loadProgress, updateProgress, getProgress, unhideSermon } = useSermonPlaybackStore();
 
   const [videoSource, setVideoSource] = useState<string | null>(null);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isProgressLoaded, setIsProgressLoaded] = useState(false);
   const progressInterval = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load sermon
   useEffect(() => {
     if (id) {
       fetchSermonById(id);
+      unhideSermon(id);
     }
   }, [id]);
 
   // Load saved progress
   useEffect(() => {
     if (currentUser && id) {
-      loadProgress(currentUser.uid, id);
+      loadProgress(currentUser.uid, id).finally(() => {
+        setIsProgressLoaded(true);
+      });
+    } else if (!currentUser) {
+      setIsProgressLoaded(true);
     }
   }, [currentUser, id]);
 
@@ -165,7 +171,7 @@ export function SermonWatchScreen() {
   const formatDate = (date: Date) =>
     date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
-  if (loading && !currentSermon) {
+  if (loading || !currentSermon || !isProgressLoaded) {
     return (
       <View style={[styles.screen, { alignItems: 'center', justifyContent: 'center' }]}>
         <ActivityIndicator size="large" color={GOLD} />

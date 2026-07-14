@@ -13,6 +13,8 @@ import { useSermonPlaybackStore } from '../../store/useSermonPlaybackStore';
 import { ContinueWatchingCard } from '../../features/sermons/presentation/components/ContinueWatchingCard';
 import { useRouter, usePathname } from 'expo-router';
 import { useAudio } from '../../features/sermons/presentation/context/AudioContext';
+import { useShallow } from 'zustand/react/shallow';
+
 const AnimatedTabItem = ({ isFocused, route, options, onPress, IconComponent }: any) => {
   const scale = useRef(new Animated.Value(isFocused ? 1.15 : 1)).current;
   const translateY = useRef(new Animated.Value(isFocused ? -4 : 0)).current;
@@ -133,13 +135,19 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  const { sermons } = useSermonStore();
-  const { getInProgressSermons, clearProgress } = useSermonPlaybackStore();
+  const { sermons, currentSermon, relatedSermons } = useSermonStore();
+  const inProgressList = useSermonPlaybackStore(useShallow((state) => 
+    state.getInProgressSermons().filter((p) => !p.completed).slice(0, 3)
+  ));
   const audio = useAudio();
 
-  const inProgressList = getInProgressSermons().filter((p) => !p.completed).slice(0, 3);
   const inProgressWithSermons = inProgressList
-    .map((p) => ({ progress: p, sermon: sermons.find((s) => s.id === p.sermonId) ?? null }))
+    .map((p) => {
+      const sermon = sermons.find((s) => s.id === p.sermonId) 
+        ?? relatedSermons.find((s) => s.id === p.sermonId)
+        ?? (currentSermon?.id === p.sermonId ? currentSermon : null);
+      return { progress: p, sermon };
+    })
     .filter((item) => item.sermon !== null);
 
   const pathname = usePathname();
@@ -190,7 +198,7 @@ export default function TabLayout() {
               }
             }}
             onDismiss={() => {
-              clearProgress(topSermon.progress.sermonId);
+              useSermonPlaybackStore.getState().dismissSermon(topSermon.progress.sermonId);
             }}
             onPress={() => {
               if (topSermon.progress.mediaType === 'video') {

@@ -56,12 +56,13 @@ export function AudioPlayerScreen() {
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [localPosition, setLocalPosition] = useState(0);
 
-  const { updateProgress, loadProgress, getProgress } = useSermonPlaybackStore();
+  const { updateProgress, loadProgress, getProgress, unhideSermon } = useSermonPlaybackStore();
   const [initialSeekDone, setInitialSeekDone] = useState(false);
 
   useEffect(() => {
     if (id) {
       fetchSermonById(id);
+      unhideSermon(id);
     }
   }, [id]);
 
@@ -74,13 +75,22 @@ export function AudioPlayerScreen() {
       const { getLocalSermonMediaUri } = require('@/features/sermons/services/sermonDownloadService');
       const localUri = await getLocalSermonMediaUri(currentSermon, 'audio');
       
+      let initialPos = 0;
+      if (currentUser) {
+        const savedProgress = await loadProgress(currentUser.uid, currentSermon.id);
+        if (savedProgress && savedProgress.positionSeconds > 5 && !savedProgress.completed) {
+          initialPos = savedProgress.positionSeconds;
+        }
+      }
+      setInitialSeekDone(true);
+      
       if (localUri) {
         // Play downloaded file
-        await playAudio(localUri, currentSermon.id);
+        await playAudio(localUri, currentSermon.id, initialPos);
       } else {
         // Play from remote
         const finalUrl = await sermonRepository.resolveMediaUrl(currentSermon.audioStoragePath);
-        await playAudio(finalUrl, currentSermon.id);
+        await playAudio(finalUrl, currentSermon.id, initialPos);
         
         // Auto-download in the background
         if (currentUser) {
@@ -105,18 +115,7 @@ export function AudioPlayerScreen() {
     }
   }, [currentSermon]);
 
-  useEffect(() => {
-    if (currentUser && currentSermon && player && !initialSeekDone) {
-      const init = async () => {
-        const savedProgress = await loadProgress(currentUser.uid, currentSermon.id);
-        if (savedProgress && savedProgress.positionSeconds > 5 && !savedProgress.completed) {
-          await seekAudio(savedProgress.positionSeconds);
-        }
-        setInitialSeekDone(true);
-      };
-      init();
-    }
-  }, [currentUser, currentSermon, player, initialSeekDone, loadProgress]);
+  // Initial seek is now handled directly in loadAudio
 
   useEffect(() => {
     if (currentUser && currentSermon && isPlaying) {

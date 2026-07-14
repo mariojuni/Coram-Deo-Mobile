@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useSermonStore } from '@/store/useSermonStore';
 import { useSermonPlaybackStore } from '@/store/useSermonPlaybackStore';
+import { useShallow } from 'zustand/react/shallow';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import {
@@ -34,7 +35,7 @@ export function SermonsExperience({ searchQuery, showSearchInput = true }: Sermo
   const currentUser = useAuthStore((s) => s.currentUser);
   const userProfile = useAuthStore((s) => s.userProfile);
 
-  const { sermons, loading, subscribeSermons, loadFavorites } = useSermonStore();
+  const { sermons, loading, hasMore, fetchSermons, currentSermon, relatedSermons, subscribeSermons, loadFavorites } = useSermonStore();
   const { loadAllProgresses, getInProgressSermons, progresses } = useSermonPlaybackStore();
 
   const [localSearch, setLocalSearch] = useState('');
@@ -98,9 +99,16 @@ export function SermonsExperience({ searchQuery, showSearchInput = true }: Sermo
     return Array.from(map.entries()).map(([id, val]) => ({ id, ...val }));
   }, [sermons]);
 
-  const inProgressList = getInProgressSermons().filter((p) => !p.completed).slice(0, 3);
+  const inProgressList = useSermonPlaybackStore(useShallow((state) =>
+    state.getInProgressSermons().filter((p) => !p.completed).slice(0, 3)
+  ));
   const inProgressWithSermons = inProgressList
-    .map((p) => ({ progress: p, sermon: sermons.find((s) => s.id === p.sermonId) ?? null }))
+    .map((p) => {
+      const sermon = sermons.find((s) => s.id === p.sermonId) 
+        ?? relatedSermons.find((s) => s.id === p.sermonId)
+        ?? (currentSermon?.id === p.sermonId ? currentSermon : null);
+      return { progress: p, sermon };
+    })
     .filter((item) => item.sermon !== null);
 
   // ── Navigation ─────────────────────────────────────────────────────────────
