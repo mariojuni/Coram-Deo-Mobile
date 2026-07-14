@@ -10,6 +10,7 @@ export interface Prayer {
   id: string;
   // Legacy / existing fields
   name?: string;
+  userPhotoUrl?: string;
   request?: string;
   likes?: number;
   likedBy?: string[];

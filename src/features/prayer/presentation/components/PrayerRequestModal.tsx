@@ -6,12 +6,13 @@ import {
 import AppModal from '@/components/ui/AppModal';
 import { useAuthStore } from '@/store/useAuthStore';
 import { prayerRepository } from '../../data/prayer.repository';
-import type { PrayerCategory, PrayerVisibility, PrayerStatus } from '../../domain/prayer.types';
+import type { Prayer, PrayerCategory, PrayerVisibility, PrayerStatus } from '../../domain/prayer.types';
 import { LinearGradient } from 'expo-linear-gradient';
 
 interface PrayerRequestModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialData?: Prayer | null;
 }
 
 const CATEGORIES: { label: string; value: PrayerCategory }[] = [
@@ -23,7 +24,7 @@ const CATEGORIES: { label: string; value: PrayerCategory }[] = [
   { label: 'Other', value: 'other' },
 ];
 
-export default function PrayerRequestModal({ isOpen, onClose }: PrayerRequestModalProps) {
+export default function PrayerRequestModal({ isOpen, onClose, initialData }: PrayerRequestModalProps) {
   const { userProfile, currentUser } = useAuthStore();
   
   const [title, setTitle] = useState('');
@@ -34,6 +35,18 @@ export default function PrayerRequestModal({ isOpen, onClose }: PrayerRequestMod
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [error, setError] = useState('');
+
+  React.useEffect(() => {
+    if (isOpen && initialData) {
+      setTitle(initialData.title || '');
+      setContent(initialData.content || initialData.request || '');
+      setCategory(initialData.category || 'other');
+      setVisibility(initialData.visibility || 'church_members_only');
+      setIsAnonymous(initialData.isAnonymous || false);
+    } else if (isOpen && !initialData) {
+      resetForm();
+    }
+  }, [isOpen, initialData]);
 
   const resetForm = () => {
     setTitle('');
@@ -78,25 +91,43 @@ export default function PrayerRequestModal({ isOpen, onClose }: PrayerRequestMod
     try {
       const status: PrayerStatus = visibility === 'church_members_only' ? 'pending' : 'approved';
 
-      await prayerRepository.submitPrayerRequest({
-        churchId,
-        userId,
-        memberId: memberId || undefined,
-        title: title.trim(),
-        content: content.trim(),
-        category: category!,
-        visibility,
-        isAnonymous,
-        status,
-        name: (userProfile?.name as string) || (currentUser?.displayName as string) || 'Anonymous',
-        createdBy: userId,
-      });
+      if (initialData && initialData.id) {
+        await prayerRepository.updatePrayerRequest(churchId, initialData.id, {
+          title: title.trim(),
+          content: content.trim(),
+          category: category!,
+          visibility,
+          isAnonymous,
+          status,
+        });
 
-      Alert.alert(
-        'Request Submitted',
-        'Prayer request submitted. Our church family will pray with you.',
-        [{ text: 'OK', onPress: handleClose }]
-      );
+        Alert.alert(
+          'Request Updated',
+          'Prayer request has been updated successfully.',
+          [{ text: 'OK', onPress: handleClose }]
+        );
+      } else {
+        await prayerRepository.submitPrayerRequest({
+          churchId,
+          userId,
+          memberId: memberId || undefined,
+          title: title.trim(),
+          content: content.trim(),
+          category: category!,
+          visibility,
+          isAnonymous,
+          status,
+          name: isAnonymous ? 'Anonymous' : ((userProfile?.fullName as string) || (currentUser?.displayName as string) || 'Anonymous'),
+          userPhotoUrl: isAnonymous ? undefined : ((userProfile?.photoUrl as string) || (currentUser?.photoURL as string) || undefined),
+          createdBy: userId,
+        });
+
+        Alert.alert(
+          'Request Submitted',
+          'Prayer request submitted. Our church family will pray with you.',
+          [{ text: 'OK', onPress: handleClose }]
+        );
+      }
     } catch (e: any) {
       console.error(e);
       setError('Failed to submit prayer request. Please try again later.');
@@ -106,7 +137,7 @@ export default function PrayerRequestModal({ isOpen, onClose }: PrayerRequestMod
   };
 
   return (
-    <AppModal isOpen={isOpen} onClose={handleClose} title="Submit Prayer Request" headerTitleAlign="center">
+    <AppModal isOpen={isOpen} onClose={handleClose} title={initialData ? "Edit Prayer Request" : "Submit Prayer Request"} headerTitleAlign="center">
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView style={styles.scrollContainer} contentContainerStyle={{ paddingBottom: 40 }}>
           

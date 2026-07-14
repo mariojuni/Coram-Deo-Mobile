@@ -5,15 +5,16 @@ import { VerseOfTheDayCard } from '@/features/home/presentation/components/Verse
 import { useHomeScreenData } from '@/features/home/presentation/hooks/useHomeScreenData';
 import { usePrayerFeed } from '@/features/prayer/presentation/hooks/usePrayerFeed';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useUIStore } from '@/store/useUIStore';
 import { useGiving } from '@/features/giving/presentation/hooks/useGiving';
 import { CampaignCard } from '@/features/giving/presentation/components/CampaignCard';
 import { useSermonStore } from '@/store/useSermonStore';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { CalendarDays, CheckCircle2, ChevronRight, Clock, HeartHandshake, HelpCircle, MapPin, Play, XCircle } from 'lucide-react-native';
+import { CalendarDays, CheckCircle2, ChevronRight, Clock, HeartHandshake, HelpCircle, MapPin, Play, XCircle, Pencil, Trash2, MoreHorizontal, User } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert, ActionSheetIOS, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Schedule } from '@/features/schedule/domain/schedule.types';
 import { EventDetailsModal } from '@/components/Events/EventDetailsModal';
@@ -90,7 +91,8 @@ export default function HomeScreen() {
     displayName,
     assignments,
   } = useHomeScreenData();
-  const { prayers } = usePrayerFeed();
+  const { prayers, loading: prayersLoading, togglePrayerLike, deletePrayer } = usePrayerFeed();
+  const openPrayerModal = useUIStore((state) => state.openPrayerModal);
   const prayerCount = prayers.length;
 
   // Recent sermons
@@ -491,44 +493,91 @@ export default function HomeScreen() {
                 <View style={styles.prayerRow}>
                   <View style={styles.prayerContent}>
                     <View style={styles.prayerTop}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, paddingRight: 8 }}>
-                        <Text style={styles.prayerName} numberOfLines={1}>{latestPrayer.name}</Text>
-                        {(latestPrayer.answered || latestPrayer.status === 'answered') && (
-                          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#ECFDF3', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10, gap: 4 }}>
-                            <CheckCircle2 size={10} color="#10B981" />
-                            <Text style={{ fontSize: 10, fontWeight: '700', color: '#10B981', textTransform: 'uppercase' }}>Answered</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center', marginRight: 10, overflow: 'hidden' }}>
+                          {latestPrayer.userPhotoUrl ? (
+                            <Image source={{ uri: latestPrayer.userPhotoUrl }} style={{ width: 36, height: 36 }} />
+                          ) : (
+                            <User size={20} color="#9CA3AF" />
+                          )}
+                        </View>
+                        <View style={{ flex: 1, justifyContent: 'center' }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Text style={styles.prayerName} numberOfLines={1}>{latestPrayer.name}</Text>
+                            {(latestPrayer.answered || latestPrayer.status === 'answered') && (
+                              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#ECFDF3', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10, gap: 4 }}>
+                                <CheckCircle2 size={10} color="#10B981" />
+                                <Text style={{ fontSize: 10, fontWeight: '700', color: '#10B981', textTransform: 'uppercase' }}>Answered</Text>
+                              </View>
+                            )}
                           </View>
+                          <Text style={styles.prayerTime}>{formatPrayerTimeAgo(latestPrayer.createdAt)}</Text>
+                        </View>
+                        {latestPrayer.userId === currentUserId && (
+                          <DebouncedTouchable
+                            onPress={() => {
+                              if (Platform.OS === 'ios') {
+                                ActionSheetIOS.showActionSheetWithOptions(
+                                  {
+                                    options: ['Cancel', 'Edit', 'Delete'],
+                                    destructiveButtonIndex: 2,
+                                    cancelButtonIndex: 0,
+                                  },
+                                  (buttonIndex) => {
+                                    if (buttonIndex === 1) {
+                                      openPrayerModal(latestPrayer);
+                                    } else if (buttonIndex === 2) {
+                                      deletePrayer(latestPrayer.id);
+                                    }
+                                  }
+                                );
+                              } else {
+                                Alert.alert('Manage Prayer Request', 'Choose an action', [
+                                  { text: 'Cancel', style: 'cancel' },
+                                  { text: 'Edit', onPress: () => openPrayerModal(latestPrayer) },
+                                  { text: 'Delete', style: 'destructive', onPress: () => deletePrayer(latestPrayer.id) },
+                                ]);
+                              }
+                            }}
+                            style={{ padding: 4, alignSelf: 'flex-start' }}
+                          >
+                            <MoreHorizontal size={20} color="#6B7280" />
+                          </DebouncedTouchable>
                         )}
                       </View>
-                      <Text style={styles.prayerTime}>{formatPrayerTimeAgo(latestPrayer.createdAt)}</Text>
                     </View>
-                    <Text style={styles.prayerText}>{latestPrayer.request}</Text>
+                    <Text style={styles.prayerText}>
+                      {latestPrayer.title ? <Text style={{ fontWeight: '700', color: '#111827' }}>{latestPrayer.title} — </Text> : null}
+                      {latestPrayer.request || latestPrayer.content}
+                    </Text>
                     
-                    <View style={styles.prayerBottomRow}>
-                      {/* Mark as Answered button for the creator */}
-                      {latestPrayer.userId === currentUserId && (
-                        <DebouncedTouchable
-                          style={styles.prayIconButton}
-                          onPress={() => handleAnswered(latestPrayer.id, latestPrayer.answered || latestPrayer.status === 'answered')}
-                          activeOpacity={0.7}
-                        >
-                          <CheckCircle2 size={18} color={(latestPrayer.answered || latestPrayer.status === 'answered') ? '#10B981' : '#9CA3AF'} />
-                        </DebouncedTouchable>
-                      )}
-                      
-                      <View style={styles.prayIconButton}>
-                        <HeartHandshake 
-                          size={18} 
-                          color={latestPrayer.likedBy?.includes(currentUserId) ? '#FF6596' : '#9CA3AF'} 
-                        />
-                        <Text style={[styles.prayIconCount, latestPrayer.likedBy?.includes(currentUserId) && { color: '#FF6596' }]}>
-                          {latestPrayer.likes || 0}
-                        </Text>
+                    <View style={[styles.prayerBottomRow, { justifyContent: 'flex-end', marginTop: 12 }]}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        {/* Mark as Answered button for the creator */}
+                        {latestPrayer.userId === currentUserId && (
+                            <DebouncedTouchable
+                              style={styles.prayIconButton}
+                              onPress={() => handleAnswered(latestPrayer.id, latestPrayer.answered || latestPrayer.status === 'answered')}
+                              activeOpacity={0.7}
+                            >
+                              <CheckCircle2 size={18} color={(latestPrayer.answered || latestPrayer.status === 'answered') ? '#10B981' : '#9CA3AF'} />
+                            </DebouncedTouchable>
+                        )}
+                        
+                        <View style={styles.prayIconButton}>
+                          <HeartHandshake 
+                            size={18} 
+                            color={latestPrayer.likedBy?.includes(currentUserId) ? '#FF6596' : '#9CA3AF'} 
+                          />
+                          <Text style={[styles.prayIconCount, latestPrayer.likedBy?.includes(currentUserId) && { color: '#FF6596' }]}>
+                            {latestPrayer.likes || 0}
+                          </Text>
+                        </View>
                       </View>
+                    </View>
                     </View>
                   </View>
                 </View>
-              </View>
             </BounceCard>
 
             <DebouncedTouchable

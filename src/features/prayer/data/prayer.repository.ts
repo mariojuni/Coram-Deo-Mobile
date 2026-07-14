@@ -8,6 +8,7 @@ import {
     query,
     runTransaction,
     updateDoc,
+    deleteDoc,
 } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import type { Prayer } from '../domain/prayer.types';
@@ -20,12 +21,20 @@ function toPrayerModel(data: Record<string, unknown>, id: string): Prayer {
     id,
     name: typeof data.requesterName === 'string' ? data.requesterName : (typeof data.name === 'string' ? data.name : ''),
     request: typeof data.requestText === 'string' ? data.requestText : (typeof data.request === 'string' ? data.request : ''),
+    title: typeof data.title === 'string' ? data.title : undefined,
+    content: typeof data.content === 'string' ? data.content : undefined,
+    category: typeof data.category === 'string' ? (data.category as any) : undefined,
+    visibility: typeof data.visibility === 'string' ? (data.visibility as any) : undefined,
+    isAnonymous: typeof data.isAnonymous === 'boolean' ? data.isAnonymous : undefined,
+    prayedCount: typeof data.prayedCount === 'number' ? data.prayedCount : undefined,
     userId: typeof data.userId === 'string' ? data.userId : '',
+    createdBy: typeof data.createdBy === 'string' ? data.createdBy : undefined,
     answered: Boolean(data.answered) || data.status === 'answered',
     status: typeof data.status === 'string' ? (data.status as any) : undefined,
     likes: typeof data.likes === 'number' ? data.likes : 0,
     likedBy: Array.isArray(data.likedBy) ? data.likedBy.filter((v): v is string => typeof v === 'string') : [],
     createdAt: (data.createdAt as Prayer['createdAt']) ?? null,
+    updatedAt: (data.updatedAt as Prayer['updatedAt']) ?? null,
   };
 }
 
@@ -138,5 +147,25 @@ export const prayerRepository = {
       answered: false,
     });
     return docRef.id;
+  },
+
+  async updatePrayerRequest(churchId: string, prayerId: string, payload: Partial<Prayer>): Promise<void> {
+    const docRef = doc(db, `churches/${churchId}/prayer_requests`, prayerId);
+    
+    // Ensure we also update legacy fields if title/content changes
+    const updates: any = {
+      ...payload,
+      updatedAt: new Date().toISOString(),
+    };
+    if (payload.content) {
+      updates.requestText = payload.content;
+    }
+    
+    await updateDoc(docRef, updates);
+  },
+
+  async deletePrayerRequest(churchId: string, prayerId: string): Promise<void> {
+    const docRef = doc(db, `churches/${churchId}/prayer_requests`, prayerId);
+    await deleteDoc(docRef);
   },
 };

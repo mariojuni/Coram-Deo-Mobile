@@ -1,19 +1,21 @@
 import { BlurView } from 'expo-blur';
-import { HeartHandshake, Search, X } from 'lucide-react-native';
+import { HeartHandshake, Search, X, Pencil, Trash2, MoreHorizontal, User, CheckCircle2 } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert, ActionSheetIOS, Platform, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { formatPrayerTimeAgo, getFilteredPrayers } from '../../features/prayer/domain/prayer.selectors';
 import type { Prayer, PrayerFilter } from '../../features/prayer/domain/prayer.types';
 import { usePrayerFeed } from '../../features/prayer/presentation/hooks/usePrayerFeed';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useUIStore } from '../../store/useUIStore';
 
 const PRAYER_FILTERS: PrayerFilter[] = ['Recent', 'My Requests'];
 
 export default function PrayerScreen() {
   const currentUser = useAuthStore((state) => state.currentUser);
-  const { prayers, loading, togglePrayerLike } = usePrayerFeed();
+  const openPrayerModal = useUIStore((state) => state.openPrayerModal);
+  const { prayers, loading, togglePrayerLike, deletePrayer } = usePrayerFeed();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<PrayerFilter>('Recent');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -108,25 +110,81 @@ export default function PrayerScreen() {
 
                     <View style={styles.prayerContent}>
                       <View style={styles.prayerTop}>
-                        <Text style={styles.prayerName}>{req.name}</Text>
-                        <Text style={styles.prayerTime}>{formatPrayerTimeAgo(req.createdAt)}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center', marginRight: 10, overflow: 'hidden' }}>
+                            {req.userPhotoUrl ? (
+                              <Image source={{ uri: req.userPhotoUrl }} style={{ width: 36, height: 36 }} />
+                            ) : (
+                              <User size={20} color="#9CA3AF" />
+                            )}
+                          </View>
+                          <View style={{ flex: 1, justifyContent: 'center' }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <Text style={styles.prayerName} numberOfLines={1}>{req.name}</Text>
+                              {(req.answered || req.status === 'answered') && (
+                                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#ECFDF3', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10, gap: 4 }}>
+                                  <CheckCircle2 size={10} color="#10B981" />
+                                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#10B981', textTransform: 'uppercase' }}>Answered</Text>
+                                </View>
+                              )}
+                            </View>
+                            <Text style={styles.prayerTime}>{formatPrayerTimeAgo(req.createdAt)}</Text>
+                          </View>
+                          {req.userId === currentUser?.uid && (
+                            <TouchableOpacity
+                              onPress={() => {
+                                if (Platform.OS === 'ios') {
+                                  ActionSheetIOS.showActionSheetWithOptions(
+                                    {
+                                      options: ['Cancel', 'Edit', 'Delete'],
+                                      destructiveButtonIndex: 2,
+                                      cancelButtonIndex: 0,
+                                    },
+                                    (buttonIndex) => {
+                                      if (buttonIndex === 1) {
+                                        openPrayerModal(req);
+                                      } else if (buttonIndex === 2) {
+                                        deletePrayer(req.id);
+                                      }
+                                    }
+                                  );
+                                } else {
+                                  Alert.alert('Manage Prayer Request', 'Choose an action', [
+                                    { text: 'Cancel', style: 'cancel' },
+                                    { text: 'Edit', onPress: () => openPrayerModal(req) },
+                                    { text: 'Delete', style: 'destructive', onPress: () => deletePrayer(req.id) },
+                                  ]);
+                                }
+                              }}
+                              style={{ padding: 4, alignSelf: 'flex-start' }}
+                            >
+                              <MoreHorizontal size={20} color="#6B7280" />
+                            </TouchableOpacity>
+                          )}
+                        </View>
                       </View>
-                      <Text style={styles.prayerText}>{req.request}</Text>
+                      <Text style={styles.prayerText}>
+                        {req.title ? <Text style={{ fontWeight: '700', color: '#111827' }}>{req.title} — </Text> : null}
+                        {req.request || req.content}
+                      </Text>
                       
-                      <View style={styles.prayerBottomRow}>
-                        <TouchableOpacity
-                          style={styles.prayIconButton}
-                          onPress={() => handlePray(req.id)}
-                          activeOpacity={0.7}
-                        >
-                          <HeartHandshake 
-                            size={18} 
-                            color={isLiked ? '#FF6596' : '#9CA3AF'} 
-                          />
-                          <Text style={[styles.prayIconCount, isLiked && { color: '#FF6596' }]}>
-                            {req.likes || 0}
-                          </Text>
-                        </TouchableOpacity>
+                      <View style={[styles.prayerBottomRow, { justifyContent: 'flex-end', marginTop: 12 }]}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+
+                          <TouchableOpacity
+                            style={styles.prayIconButton}
+                            onPress={() => handlePray(req.id)}
+                            activeOpacity={0.7}
+                          >
+                            <HeartHandshake 
+                              size={18} 
+                              color={isLiked ? '#FF6596' : '#9CA3AF'} 
+                            />
+                            <Text style={[styles.prayIconCount, isLiked && { color: '#FF6596' }]}>
+                              {req.likes || 0}
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
                       </View>
                     </View>
                   </View>

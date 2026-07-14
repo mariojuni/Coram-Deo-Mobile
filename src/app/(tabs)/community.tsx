@@ -12,6 +12,10 @@ import {
     MapPin,
     PlayCircle,
     Search,
+    Pencil,
+    Trash2,
+    MoreHorizontal,
+    User,
     Users,
     X,
     XCircle,
@@ -29,6 +33,9 @@ import {
     TextInput,
     TouchableOpacity,
     View,
+    Alert,
+    ActionSheetIOS,
+    Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppModal from '../../components/ui/AppModal';
@@ -39,6 +46,7 @@ import { usePrayerFeed } from '../../features/prayer/presentation/hooks/usePraye
 import type { Schedule } from '../../features/schedule/domain/schedule.types';
 import { SermonsExperience } from '../../features/sermons/presentation/components/SermonsExperience';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useUIStore } from '../../store/useUIStore';
 import { useMemberStore } from '../../store/useMemberStore';
 import {
     getUpcomingSchedules,
@@ -78,7 +86,7 @@ function getTabIndexFromParam(tabParam: string | string[] | undefined): TabIndex
 
 // ─── Placeholder sub-screen components ───────────────────────────────────────
 
-function PrayerCardItem({ req, currentUser, handlePray, handleAnswered }: { req: Prayer, currentUser: any, handlePray: (id: string) => void, handleAnswered: (id: string, currentValue: boolean) => void }) {
+function PrayerCardItem({ req, currentUser, handlePray, handleAnswered, openPrayerModal, deletePrayer }: { req: Prayer, currentUser: any, handlePray: (id: string) => void, handleAnswered: (id: string, currentValue: boolean) => void, openPrayerModal: (prayer: Prayer) => void, deletePrayer: (id: string) => void }) {
   const isLiked = currentUser ? (req.likedBy || []).includes(currentUser.uid) : false;
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const lastPress = useRef(0);
@@ -109,37 +117,84 @@ function PrayerCardItem({ req, currentUser, handlePray, handleAnswered }: { req:
           <View style={prayerStyles.prayerRow}>
             <View style={prayerStyles.prayerContent}>
               <View style={prayerStyles.prayerTop}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, paddingRight: 8 }}>
-                  <Text style={prayerStyles.prayerName} numberOfLines={1}>{req.name}</Text>
-                  {(req.answered || req.status === 'answered') && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#ECFDF3', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10, gap: 4 }}>
-                      <CheckCircle2 size={10} color="#10B981" />
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: '#10B981', textTransform: 'uppercase' }}>Answered</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center', marginRight: 10, overflow: 'hidden' }}>
+                    {req.userPhotoUrl ? (
+                      <Image source={{ uri: req.userPhotoUrl }} style={{ width: 36, height: 36 }} />
+                    ) : (
+                      <User size={20} color="#9CA3AF" />
+                    )}
+                  </View>
+                  <View style={{ flex: 1, justifyContent: 'center' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={prayerStyles.prayerName} numberOfLines={1}>{req.name}</Text>
+                      {(req.answered || req.status === 'answered') && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#ECFDF3', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10, gap: 4 }}>
+                          <CheckCircle2 size={10} color="#10B981" />
+                          <Text style={{ fontSize: 10, fontWeight: '700', color: '#10B981', textTransform: 'uppercase' }}>Answered</Text>
+                        </View>
+                      )}
                     </View>
+                    <Text style={prayerStyles.prayerTime}>{formatPrayerTimeAgo(req.createdAt)}</Text>
+                  </View>
+                  {req.userId === currentUser?.uid && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (Platform.OS === 'ios') {
+                          ActionSheetIOS.showActionSheetWithOptions(
+                            {
+                              options: ['Cancel', 'Edit', 'Delete'],
+                              destructiveButtonIndex: 2,
+                              cancelButtonIndex: 0,
+                            },
+                            (buttonIndex) => {
+                              if (buttonIndex === 1) {
+                                openPrayerModal(req);
+                              } else if (buttonIndex === 2) {
+                                deletePrayer(req.id);
+                              }
+                            }
+                          );
+                        } else {
+                          Alert.alert('Manage Prayer Request', 'Choose an action', [
+                            { text: 'Cancel', style: 'cancel' },
+                            { text: 'Edit', onPress: () => openPrayerModal(req) },
+                            { text: 'Delete', style: 'destructive', onPress: () => deletePrayer(req.id) },
+                          ]);
+                        }
+                      }}
+                      style={{ padding: 4, alignSelf: 'flex-start' }}
+                    >
+                      <MoreHorizontal size={20} color="#6B7280" />
+                    </TouchableOpacity>
                   )}
                 </View>
-                <Text style={prayerStyles.prayerTime}>{formatPrayerTimeAgo(req.createdAt)}</Text>
               </View>
-              <Text style={prayerStyles.prayerText}>{req.request}</Text>
+              <Text style={prayerStyles.prayerText}>
+                {req.title ? <Text style={{ fontWeight: '700', color: '#111827' }}>{req.title} — </Text> : null}
+                {req.request || req.content}
+              </Text>
               
-              <View style={prayerStyles.prayerBottomRow}>
-                {req.userId === currentUser?.uid && (
-                  <TouchableOpacity
-                    style={prayerStyles.prayIconButton}
-                    onPress={() => handleAnswered(req.id, req.answered || req.status === 'answered')}
-                    activeOpacity={0.7}
-                  >
-                    <CheckCircle2 size={18} color={(req.answered || req.status === 'answered') ? '#10B981' : '#9CA3AF'} />
-                  </TouchableOpacity>
-                )}
-                <View style={prayerStyles.prayIconButton}>
-                  <HeartHandshake 
-                    size={18} 
-                    color={isLiked ? '#FF6596' : '#9CA3AF'} 
-                  />
-                  <Text style={[prayerStyles.prayIconCount, isLiked && { color: '#FF6596' }]}>
-                    {req.likes || 0}
-                  </Text>
+              <View style={[prayerStyles.prayerBottomRow, { justifyContent: 'flex-end', marginTop: 12 }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  {req.userId === currentUser?.uid && (
+                      <TouchableOpacity
+                        style={prayerStyles.prayIconButton}
+                        onPress={() => handleAnswered(req.id, req.answered || req.status === 'answered')}
+                        activeOpacity={0.7}
+                      >
+                        <CheckCircle2 size={18} color={(req.answered || req.status === 'answered') ? '#10B981' : '#9CA3AF'} />
+                      </TouchableOpacity>
+                  )}
+                  <View style={prayerStyles.prayIconButton}>
+                    <HeartHandshake 
+                      size={18} 
+                      color={isLiked ? '#FF6596' : '#9CA3AF'} 
+                    />
+                    <Text style={[prayerStyles.prayIconCount, isLiked && { color: '#FF6596' }]}>
+                      {req.likes || 0}
+                    </Text>
+                  </View>
                 </View>
               </View>
             </View>
@@ -152,7 +207,8 @@ function PrayerCardItem({ req, currentUser, handlePray, handleAnswered }: { req:
 
 function PrayersTab({ searchQuery }: SubScreenProps) {
   const currentUser = useAuthStore((state) => state.currentUser);
-  const { prayers: prayerItems, loading, togglePrayerLike, togglePrayerAnswered } = usePrayerFeed();
+  const openPrayerModal = useUIStore((state) => state.openPrayerModal);
+  const { prayers: prayerItems, loading, togglePrayerLike, togglePrayerAnswered, deletePrayer } = usePrayerFeed();
   const [filter, setFilter] = useState<PrayerFilter>('Recent');
 
   const handleAnswered = async (id: string, currentValue: boolean) => {
@@ -250,7 +306,9 @@ function PrayersTab({ searchQuery }: SubScreenProps) {
             req={req} 
             currentUser={currentUser} 
             handlePray={handlePray} 
-            handleAnswered={handleAnswered}
+            handleAnswered={handleAnswered} 
+            openPrayerModal={openPrayerModal}
+            deletePrayer={deletePrayer}
           />
         ))
       )}

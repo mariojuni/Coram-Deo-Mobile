@@ -5,6 +5,7 @@ import { HandHeart, HeartHandshake, Plus } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useUIStore } from '../../store/useUIStore';
 import { canSubmitGiving } from '../../permissions/mobilePermissions';
 import PrayerRequestModal from '../../features/prayer/presentation/components/PrayerRequestModal';
 
@@ -15,8 +16,8 @@ interface FabMenuProps {
 export default function FabMenu({ isStaff }: FabMenuProps) {
   const router = useRouter();
   const { userProfile } = useAuthStore();
+  const { prayerModalOpen, editingPrayer, openPrayerModal, closePrayerModal } = useUIStore();
   const [isOpen, setIsOpen] = useState(false);
-  const [isPrayerModalOpen, setIsPrayerModalOpen] = useState(false);
   const animation = useMemo(() => new Animated.Value(0), []);
 
   const toggleMenu = () => {
@@ -80,7 +81,7 @@ export default function FabMenu({ isStaff }: FabMenuProps) {
       icon: HeartHandshake, 
       key: 'submit-prayer', 
       title: 'Submit Prayer Request', 
-      route: (() => setIsPrayerModalOpen(true)) as any 
+      route: (() => openPrayerModal()) as any 
     }
   ];
 
@@ -137,8 +138,9 @@ export default function FabMenu({ isStaff }: FabMenuProps) {
       </TouchableOpacity>
 
       <PrayerRequestModal 
-        isOpen={isPrayerModalOpen} 
-        onClose={() => setIsPrayerModalOpen(false)} 
+        isOpen={prayerModalOpen} 
+        onClose={closePrayerModal} 
+        initialData={editingPrayer}
       />
     </View>
   );

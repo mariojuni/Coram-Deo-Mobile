@@ -38,10 +38,21 @@ export function usePrayerFeed() {
     await prayerRepository.togglePrayerAnswered(churchId, prayerId, currentValue);
   }, [churchId]);
 
+  const deletePrayer = useCallback(async (prayerId: string) => {
+    if (!churchId) return;
+    try {
+      await prayerRepository.deletePrayerRequest(churchId, prayerId);
+    } catch (error) {
+      console.error('Error deleting prayer request:', error);
+      throw error;
+    }
+  }, [churchId]);
+
   return {
     prayers,
     loading: churchId ? loading : false,
     togglePrayerLike,
     togglePrayerAnswered,
+    deletePrayer,
   };
 }
