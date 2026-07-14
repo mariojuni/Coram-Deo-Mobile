@@ -14,7 +14,8 @@ import {
     Search,
     Users,
     X,
-    XCircle
+    XCircle,
+    Download
 } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -697,6 +698,7 @@ const SUB_SCREENS = [
 
 export default function CommunityScreen() {
   const params = useGlobalSearchParams<{ tab?: string | string[] }>();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<TabIndex>(() => getTabIndexFromParam(params.tab) ?? 0);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -864,13 +866,24 @@ export default function CommunityScreen() {
                   <Text style={styles.headerTitle}>Community</Text>
                 </View>
               </View>
-              <TouchableOpacity
-                style={styles.searchToggleButton}
-                onPress={() => setIsSearchOpen(true)}
-                activeOpacity={0.85}
-              >
-                <Search size={17} color="#6E7388" />
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginRight: 4 }}>
+                {activeTabKey === 'sermons' && (
+                  <TouchableOpacity
+                    style={styles.searchToggleButton}
+                    onPress={() => router.push('/downloads' as any)}
+                    activeOpacity={0.85}
+                  >
+                    <Download size={18} color="#6E7388" />
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={styles.searchToggleButton}
+                  onPress={() => setIsSearchOpen(true)}
+                  activeOpacity={0.85}
+                >
+                  <Search size={17} color="#6E7388" />
+                </TouchableOpacity>
+              </View>
             </>
           )}
         </Animated.View>

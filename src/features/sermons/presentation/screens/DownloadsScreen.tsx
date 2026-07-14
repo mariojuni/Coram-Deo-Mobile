@@ -18,43 +18,56 @@ export function DownloadsScreen() {
     downloadsList,
     loadDownloadedSermons,
     deleteDownload,
-    fetchSermonById,
   } = useSermonStore();
   
   const currentUser = useAuthStore((state) => state.currentUser);
   const [loading, setLoading] = useState(true);
   const [sermons, setSermons] = useState<Sermon[]>([]);
 
-  const loadDownloads = useCallback(async () => {
-    if (!currentUser) return;
-    
-    setLoading(true);
-    try {
-      await loadDownloadedSermons(currentUser.uid);
-      
-      // Fetch sermon details for each download
-      const sermonPromises = downloadsList.map(async (download) => {
-        await fetchSermonById(download.sermonId);
-        return useSermonStore.getState().currentSermon;
-      });
-      
-      const fetchedSermons = await Promise.all(sermonPromises);
-      setSermons(fetchedSermons.filter((s): s is Sermon => s !== null));
-    } catch (error) {
-      console.error('Error loading downloads:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [currentUser, downloadsList, fetchSermonById, loadDownloadedSermons]);
-
+  // Initial load of the downloads list
   useEffect(() => {
     if (currentUser) {
-      const timeout = setTimeout(() => {
-        void loadDownloads();
-      }, 0);
-      return () => clearTimeout(timeout);
+      loadDownloadedSermons(currentUser.uid).catch(console.error);
     }
-  }, [currentUser, loadDownloads]);
+  }, [currentUser, loadDownloadedSermons]);
+
+  // When downloadsList changes, fetch the full sermon details
+  useEffect(() => {
+    let isMounted = true;
+    
+    const fetchDetails = async () => {
+      if (!downloadsList) return;
+      
+      try {
+        setLoading(true);
+        const { sermonRepository } = require('../../data/sermon.repository');
+        
+        // Fetch sermon details for each download directly from repository
+        // to avoid mutating the global currentSermon state
+        const sermonPromises = downloadsList.map(async (download) => {
+          return await sermonRepository.fetchSermonById(download.sermonId);
+        });
+        
+        const fetchedSermons = await Promise.all(sermonPromises);
+        
+        if (isMounted) {
+          setSermons(fetchedSermons.filter((s): s is Sermon => s !== null));
+        }
+      } catch (error) {
+        console.error('Error loading download details:', error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchDetails();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [downloadsList]);
 
 
 

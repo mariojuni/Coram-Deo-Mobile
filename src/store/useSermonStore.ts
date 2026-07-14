@@ -324,11 +324,14 @@ export const useSermonStore = create<SermonState>((set, get) => ({
       const downloadUrl = typeToDownload === 'video' ? sermon.videoStoragePath : sermon.audioStoragePath;
       if (!downloadUrl) throw new Error(`No ${typeToDownload} url available`);
       
-      await downloadSermonMedia(sermon, downloadUrl, typeToDownload, (progress) => {
+      const localUri = await downloadSermonMedia(sermon, downloadUrl, typeToDownload, (progress) => {
         const updatedDownloads = new Map(get().downloads);
         updatedDownloads.set(downloadKey, { progress, isDownloading: true });
         set({ downloads: updatedDownloads });
       });
+
+      // Save to Firestore
+      await sermonRepository.saveDownloadRecord(userId, sermon, localUri);
 
       // Mark as downloaded
       const finalDownloads = new Map(get().downloads);
@@ -355,6 +358,9 @@ export const useSermonStore = create<SermonState>((set, get) => ({
       if (currentSermon && currentSermon.id === sermonId) {
         await deleteSermonMedia(currentSermon, typeToDelete);
       }
+      
+      // Delete from Firestore
+      await sermonRepository.deleteDownloadRecord(userId, sermonId);
       
       const newDownloaded = new Set(get().downloadedSermons);
       newDownloaded.delete(downloadKey);

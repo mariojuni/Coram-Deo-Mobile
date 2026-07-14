@@ -478,16 +478,25 @@ class SermonRepository {
     }
 
     // Save download record to Firestore
+    await this.saveDownloadRecord(userId, sermon, result.uri);
+
+    return result.uri;
+  }
+
+  async saveDownloadRecord(userId: string, sermon: Sermon, fileUri: string): Promise<void> {
     const downloadRef = doc(db, DOWNLOADS_COLLECTION, `${userId}_${sermon.id}`);
     await setDoc(downloadRef, {
       userId,
       sermonId: sermon.id,
-      fileUri: result.uri,
+      fileUri: fileUri,
       downloadedAt: Timestamp.now(),
-      size: await this.getFileSize(result.uri),
+      size: await this.getFileSize(fileUri),
     });
+  }
 
-    return result.uri;
+  async deleteDownloadRecord(userId: string, sermonId: string): Promise<void> {
+    const downloadRef = doc(db, DOWNLOADS_COLLECTION, `${userId}_${sermonId}`);
+    await deleteDoc(downloadRef);
   }
 
   async getDownloadedSermons(userId: string): Promise<SermonDownload[]> {

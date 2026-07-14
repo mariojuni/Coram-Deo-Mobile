@@ -147,40 +147,61 @@ export function SermonsExperience({ searchQuery, showSearchInput = true }: Sermo
 
   return (
     <View style={{ flex: 1, backgroundColor: BEIGE }}>
-      {/* ── Search bar ── */}
+      {/* ── Search bar and Downloads ── */}
       {showSearchInput && (
-        <View style={styles.searchWrap}>
-          {searchOpen ? (
-            <View style={styles.searchRow}>
-              <Search size={16} color="#9CA3AF" />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search sermons, scripture, speaker..."
-                placeholderTextColor="#B0B8C8"
-                value={localSearch}
-                onChangeText={setLocalSearch}
-                autoFocus
-                autoCorrect={false}
-              />
+        <View style={[styles.searchWrap, { flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
+          <View style={{ flex: 1 }}>
+            {searchOpen ? (
+              <View style={styles.searchRow}>
+                <Search size={16} color="#9CA3AF" />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search sermons, scripture, speaker..."
+                  placeholderTextColor="#B0B8C8"
+                  value={localSearch}
+                  onChangeText={setLocalSearch}
+                  autoFocus
+                  autoCorrect={false}
+                />
+                <TouchableOpacity
+                  onPress={() => {
+                    setLocalSearch('');
+                    setSearchOpen(false);
+                  }}
+                >
+                  <X size={18} color="#9CA3AF" />
+                </TouchableOpacity>
+              </View>
+            ) : (
               <TouchableOpacity
-                onPress={() => {
-                  setLocalSearch('');
-                  setSearchOpen(false);
-                }}
+                style={styles.searchTrigger}
+                onPress={() => setSearchOpen(true)}
+                activeOpacity={0.7}
               >
-                <X size={18} color="#9CA3AF" />
+                <Search size={16} color="#9CA3AF" />
+                <Text style={styles.searchPlaceholder}>Search sermons...</Text>
               </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={styles.searchTrigger}
-              onPress={() => setSearchOpen(true)}
-              activeOpacity={0.7}
-            >
-              <Search size={16} color="#9CA3AF" />
-              <Text style={styles.searchPlaceholder}>Search sermons...</Text>
-            </TouchableOpacity>
-          )}
+            )}
+          </View>
+          
+          <TouchableOpacity 
+            onPress={() => router.push('/downloads' as any)}
+            style={{ 
+              width: 44, 
+              height: 44, 
+              borderRadius: 22, 
+              backgroundColor: '#FAFAFA', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.05,
+              shadowRadius: 4,
+              elevation: 2
+            }}
+          >
+            <Download size={20} color="#FF6596" />
+          </TouchableOpacity>
         </View>
       )}
 
@@ -297,18 +318,6 @@ export function SermonsExperience({ searchQuery, showSearchInput = true }: Sermo
                 </ScrollView>
               </View>
             )}
-
-            {/* ── Downloaded shortcut ── */}
-            <View style={[styles.section, { paddingHorizontal: 20 }]}>
-              <TouchableOpacity
-                style={styles.downloadShortcut}
-                onPress={() => router.push('/downloads' as any)}
-                activeOpacity={0.85}
-              >
-                <Download size={18} color={OLIVE} />
-                <Text style={styles.downloadShortcutText}>My Downloaded Sermons</Text>
-              </TouchableOpacity>
-            </View>
           </>
         )}
       </ScrollView>
