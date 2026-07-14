@@ -215,6 +215,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: 12,
+    zIndex: 200,
+    elevation: 10,
   },
   navContainer: {
     flex: 1,

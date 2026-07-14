@@ -12,8 +12,8 @@ import {
   Search,
   X,
 } from 'lucide-react-native';
-import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useEffect, useMemo, useState, useRef } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Animated, TouchableWithoutFeedback } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Sermon } from '../../domain/sermon.types';
 
@@ -337,40 +337,46 @@ function FeaturedCard({ sermon, onPress, onListen }: { sermon: Sermon; onPress: 
     return `${m} min`;
   };
 
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, speed: 50, bounciness: 0 }).start();
+  };
+  const handlePressOut = () => {
+    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 15, bounciness: 12 }).start();
+  };
+
   return (
-    <TouchableOpacity style={styles.featuredCard} onPress={onPress} activeOpacity={0.9}>
-      {sermon.thumbnailUrl ? (
-        <Image source={{ uri: sermon.thumbnailUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" cachePolicy="memory-disk" transition={200} />
-      ) : (
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: '#DDE1E8' }]} />
-      )}
-      <LinearGradient
-        colors={['transparent', 'rgba(26,26,26,0.95)']}
-        style={[StyleSheet.absoluteFill, { borderRadius: 24 }]}
-      />
-
-      {/* Main Play Icon Overlay */}
-      {hasVideo && (
-        <View style={styles.featuredPlayOverlay}>
-          <View style={styles.featuredPlayButton}>
-            <Play size={24} color="#fff" fill="#fff" style={{ marginLeft: 3 }} />
-          </View>
-        </View>
-      )}
-
-      {/* Content */}
-      <View style={styles.featuredContent}>
-        {sermon.seriesTitle && (
-          <View style={styles.featuredSeriesBadge}>
-            <Text style={styles.featuredSeriesBadgeText}>{sermon.seriesTitle}</Text>
-          </View>
+    <TouchableWithoutFeedback onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut}>
+      <Animated.View style={[styles.featuredCard, { transform: [{ scale }] }]}>
+        {sermon.thumbnailUrl ? (
+          <Image source={{ uri: sermon.thumbnailUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" cachePolicy="memory-disk" transition={200} />
+        ) : (
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: '#DDE1E8' }]} />
         )}
-        <Text style={styles.featuredTitle} numberOfLines={2}>{sermon.title}</Text>
-        <Text style={styles.featuredMeta}>
-          {sermon.preacherName} • {formatDate(sermon.sermonDate)}
-        </Text>
-      </View>
-    </TouchableOpacity>
+        <LinearGradient
+          colors={['transparent', 'rgba(26,26,26,0.95)']}
+          style={[StyleSheet.absoluteFill, { borderRadius: 24 }]}
+        />
+
+
+        {/* Content */}
+        <View style={styles.featuredContent}>
+          {sermon.seriesTitle && (
+            <View style={styles.featuredSeriesBadge}>
+              <Text style={styles.featuredSeriesBadgeText}>{sermon.seriesTitle}</Text>
+            </View>
+          )}
+          <Text style={styles.featuredTitle} numberOfLines={2}>{sermon.title}</Text>
+          {sermon.scriptureReference ? (
+            <Text style={styles.featuredScripture} numberOfLines={1}>{sermon.scriptureReference}</Text>
+          ) : null}
+          <Text style={styles.featuredMeta}>
+            {sermon.preacherName} • {formatDate(sermon.sermonDate)}
+          </Text>
+        </View>
+      </Animated.View>
+    </TouchableWithoutFeedback>
   );
 }
 
@@ -570,7 +576,11 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   featuredPlayOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -615,6 +625,11 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     lineHeight: 34,
     letterSpacing: -0.5,
+  },
+  featuredScripture: {
+    color: GOLD,
+    fontSize: 15,
+    fontWeight: '700',
   },
   featuredMeta: {
     color: 'rgba(255,255,255,0.8)',
