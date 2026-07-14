@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Modal } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import Slider from '@react-native-community/slider';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { useEventListener } from 'expo';
+import { useEvent, useEventListener } from 'expo';
 import { 
   Play, 
   Pause, 
@@ -19,6 +20,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useTheme } from '@/hooks/use-theme';
 import { Spacing } from '@/constants/theme';
 import { NoteEditor } from '../components/NoteEditor';
+import { useAudio } from '../context/AudioContext';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -37,13 +39,16 @@ export function VideoPlayerScreen() {
   const { updateProgress, getProgress, loadProgress } = useSermonPlaybackStore();
   const currentUser = useAuthStore((state) => state.currentUser);
   
-  const [isPlaying, setLocalIsPlaying] = useState(false);
   const [position, setPosition] = useState(0);
+  const [isScrubbing, setIsScrubbing] = useState(false);
   const [isBuffering, setIsBuffering] = useState(true);
   const [showControls, setShowControls] = useState(true);
   const [showNoteEditor, setShowNoteEditor] = useState(false);
   const [initialSeekDone, setInitialSeekDone] = useState(false);
   const [videoSource, setVideoSource] = useState<string | null>(null);
+  
+  const audio = useAudio();
+  const transitionRef = useRef({ playing: false, time: 0, source: null as string | null, sermonId: null as string | null });
 
   useEffect(() => {
     if (!currentSermon?.videoStoragePath) return;
@@ -83,14 +88,14 @@ export function VideoPlayerScreen() {
 
   const duration = player?.duration ? player.duration * 1000 : 0;
 
-  useEventListener(player, 'playingChange', ({ isPlaying }) => {
-    setLocalIsPlaying(isPlaying);
+  const { isPlaying } = useEvent(player, 'playingChange', { isPlaying: player?.playing ?? false });
+
+  useEffect(() => {
     setIsPlaying(isPlaying);
-    
     if (isPlaying) {
       setIsBuffering(false);
     }
-  });
+  }, [isPlaying, setIsPlaying]);
 
   useEventListener(player, 'statusChange', ({ status }) => {
     if (status === 'loading' || status === 'error') {
@@ -102,7 +107,12 @@ export function VideoPlayerScreen() {
 
   useEventListener(player, 'timeUpdate', (payload) => {
     const currentPos = payload.currentTime;
-    setPosition(currentPos * 1000);
+    
+    // Only update position if we are not scrubbing
+    if (!isScrubbing) {
+      setPosition(currentPos * 1000);
+    }
+    
     setCurrentPosition(Math.floor(currentPos));
 
     if (currentUser && currentSermon && player.playing) {
@@ -135,6 +145,15 @@ export function VideoPlayerScreen() {
   }, [currentUser, currentSermon, player, initialSeekDone, loadProgress]);
 
   useEffect(() => {
+    transitionRef.current = {
+      playing: isPlaying,
+      time: position / 1000,
+      source: videoSource,
+      sermonId: currentSermon?.id || null,
+    };
+  }, [isPlaying, position, videoSource, currentSermon]);
+
+  useEffect(() => {
     if (id) {
       fetchSermonById(id);
     }
@@ -143,6 +162,12 @@ export function VideoPlayerScreen() {
       // Cleanup
       if (progressInterval.current) {
         clearInterval(progressInterval.current);
+      }
+      
+      // Transition to audio if playing
+      const state = transitionRef.current;
+      if (state.playing && state.source && state.sermonId) {
+        audio.playAudio(state.source, state.sermonId, state.time);
       }
     };
   }, [id]);
@@ -276,9 +301,23 @@ export function VideoPlayerScreen() {
               {/* Progress Bar */}
               <View style={styles.progressContainer}>
                 <Text style={styles.timeText}>{formatTime(position)}</Text>
-                <View style={styles.progressBar}>
-                  <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
-                </View>
+                <Slider
+                  style={styles.slider}
+                  minimumValue={0}
+                  maximumValue={duration > 0 ? duration : 1}
+                  value={position}
+                  minimumTrackTintColor="#FF6596"
+                  maximumTrackTintColor="rgba(255, 255, 255, 0.3)"
+                  thumbTintColor="#FF6596"
+                  onSlidingStart={() => setIsScrubbing(true)}
+                  onValueChange={(val) => setPosition(val)}
+                  onSlidingComplete={(val) => {
+                    setIsScrubbing(false);
+                    if (player) {
+                      player.currentTime = val / 1000;
+                    }
+                  }}
+                />
                 <Text style={styles.timeText}>{formatTime(duration)}</Text>
               </View>
 
@@ -433,6 +472,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
     borderRadius: 2,
     overflow: 'hidden',
+  },
+  slider: {
+    flex: 1,
+    height: 40,
   },
   progressFill: {
     height: '100%',

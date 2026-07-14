@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity, Image, Pressable } from 'react-native';
+import { Image } from 'expo-image';
+import { View, Text, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
 import { Play, Pause, X } from 'lucide-react-native';
 import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
@@ -88,7 +89,7 @@ export function MiniAudioPlayer({ onPlayPause, onClose }: MiniAudioPlayerProps) 
             source={{ uri: currentSermon.thumbnailUrl }}
             style={styles.thumbnail}
             resizeMode="cover"
-          />
+          cachePolicy="memory-disk" transition={200} />
 
           {/* Info */}
           <View style={styles.info}>

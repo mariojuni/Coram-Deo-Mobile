@@ -1,5 +1,6 @@
+import { Image } from 'expo-image';
 import React from 'react';
-import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, withTiming, useSharedValue } from 'react-native-reanimated';
 import { useTheme } from '@/hooks/use-theme';
 import { Spacing } from '@/constants/theme';
@@ -54,7 +55,7 @@ export function HorizontalSermonCard({ sermon, onPress }: HorizontalSermonCardPr
             source={{ uri: sermon.thumbnailUrl }}
             style={styles.image}
             resizeMode="cover"
-          />
+          cachePolicy="memory-disk" transition={200} />
           {/* Duration Badge */}
           <View style={styles.durationBadge}>
             <Text style={styles.durationText}>{formatDuration(sermon.durationSeconds || 0)}</Text>

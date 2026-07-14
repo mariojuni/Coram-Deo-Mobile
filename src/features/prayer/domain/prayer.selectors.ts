@@ -36,8 +36,8 @@ export function getFilteredPrayers(
 
   return prayers.filter((prayer) => {
     const matchesSearch =
-      prayer.request.toLowerCase().includes(normalizedSearch) ||
-      prayer.name.toLowerCase().includes(normalizedSearch);
+      (prayer.request?.toLowerCase() || '').includes(normalizedSearch) ||
+      (prayer.name?.toLowerCase() || '').includes(normalizedSearch);
 
     if (!matchesSearch) return false;
 

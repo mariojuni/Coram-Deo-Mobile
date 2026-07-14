@@ -1,12 +1,6 @@
+import { Image } from 'expo-image';
 import React, { useState, useRef, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
-  Image,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useEventListener } from 'expo';
 import {
@@ -165,7 +159,7 @@ export function SermonVideoPlayer({
           source={sermon.thumbnailUrl ? { uri: sermon.thumbnailUrl } : undefined}
           style={StyleSheet.absoluteFill}
           resizeMode="cover"
-        />
+        cachePolicy="memory-disk" transition={200} />
         <View style={styles.overlay}>
           <ActivityIndicator size="large" color={GOLD} />
         </View>
@@ -197,7 +191,7 @@ export function SermonVideoPlayer({
             source={{ uri: sermon.thumbnailUrl }}
             style={[StyleSheet.absoluteFill, { backgroundColor: '#000' }]}
             resizeMode="cover"
-          />
+          cachePolicy="memory-disk" transition={200} />
         )}
 
         {/* Loading Spinner */}

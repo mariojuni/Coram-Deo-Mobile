@@ -1,11 +1,6 @@
+import { Image } from 'expo-image';
 import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Image,
-  StyleSheet,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Play, Headphones, Clock } from 'lucide-react-native';
 import type { Sermon } from '../../domain/sermon.types';
 import * as Haptics from 'expo-haptics';
@@ -40,7 +35,7 @@ export function RelatedSermonCard({ sermon, onPress }: RelatedSermonCardProps) {
       {/* Thumbnail */}
       <View style={styles.thumbContainer}>
         {sermon.thumbnailUrl ? (
-          <Image source={{ uri: sermon.thumbnailUrl }} style={styles.thumb} resizeMode="cover" />
+          <Image source={{ uri: sermon.thumbnailUrl }} style={styles.thumb} resizeMode="cover" cachePolicy="memory-disk" transition={200} />
         ) : (
           <View style={[styles.thumb, styles.thumbPlaceholder]} />
         )}

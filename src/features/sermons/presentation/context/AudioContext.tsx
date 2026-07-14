@@ -7,7 +7,7 @@ import { useEventListener } from 'expo';
 
 interface AudioContextType {
   player: AudioPlayer | null;
-  playAudio: (audioUrl: string, sermonId: string) => Promise<void>;
+  playAudio: (audioUrl: string, sermonId: string, initialPositionSeconds?: number) => Promise<void>;
   pauseAudio: () => void;
   resumeAudio: () => void;
   stopAudio: () => void;
@@ -69,10 +69,13 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     }
   });
 
-  const playAudio = async (audioUrl: string, sermonId: string) => {
+  const playAudio = async (audioUrl: string, sermonId: string, initialPositionSeconds?: number) => {
     try {
       currentSermonId.current = sermonId;
       player.replace(audioUrl);
+      if (initialPositionSeconds !== undefined) {
+        player.seekTo(initialPositionSeconds);
+      }
       player.play();
       setIsPlaying(true);
       

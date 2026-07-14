@@ -94,7 +94,7 @@ export default function PrayerScreen() {
           </View>
         ) : (
           filteredRequests.map((req: Prayer) => {
-            const isLiked = currentUser ? req.likedBy.includes(currentUser.uid) : false;
+            const isLiked = currentUser && req.likedBy ? req.likedBy.includes(currentUser.uid) : false;
             return (
               <View key={req.id} style={styles.prayerCardOuter}>
                 <View style={styles.prayerCardInner}>

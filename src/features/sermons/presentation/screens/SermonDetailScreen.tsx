@@ -1,15 +1,6 @@
+import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  Image, 
-  TouchableOpacity,
-  ActivityIndicator,
-  Share,
-  Modal,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Share, Modal } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Play, Heart, Share2, Clock, Calendar, User as UserIcon, BookOpen, FileText, ArrowLeft } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -129,7 +120,7 @@ export function SermonDetailScreen() {
             source={{ uri: currentSermon.thumbnailUrl }}
             style={styles.heroImage}
             resizeMode="cover"
-          />
+          cachePolicy="memory-disk" transition={200} />
           <LinearGradient
             colors={['transparent', 'rgba(0,0,0,0.5)', 'rgba(0,0,0,0.95)']}
             style={styles.heroGradient}

@@ -20,7 +20,7 @@ export function useCachedImage(url?: string, mockFileContext?: Partial<CloudFile
         return;
       }
 
-      const fileContext: CloudFile = {
+      const fileContext = {
         id: memoizedContext?.id || url.split('/').pop()?.split('?')[0] || 'unknown',
         churchId: memoizedContext?.churchId || 'default',
         fileName: memoizedContext?.fileName || 'image.jpg',
@@ -39,7 +39,7 @@ export function useCachedImage(url?: string, mockFileContext?: Partial<CloudFile
 
       setLoading(true);
       try {
-        const uri = await getFileUri(currentUser, fileContext);
+        const uri = await getFileUri(currentUser, fileContext as CloudFile);
         if (isMounted) {
           setCachedUri(uri);
         }

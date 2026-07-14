@@ -88,7 +88,7 @@ export default function PrayerRequestModal({ isOpen, onClose }: PrayerRequestMod
         visibility,
         isAnonymous,
         status,
-        name: userProfile?.name || currentUser?.displayName || 'Anonymous',
+        name: (userProfile?.name as string) || (currentUser?.displayName as string) || 'Anonymous',
         createdBy: userId,
       });
 

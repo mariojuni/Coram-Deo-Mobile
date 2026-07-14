@@ -1,8 +1,10 @@
+import { Image } from 'expo-image';
 import { sermonRepository } from "../../data/sermon.repository";
 
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Image, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Modal } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import Slider from '@react-native-community/slider';
 import { 
   Play, 
   Pause,
@@ -51,6 +53,8 @@ export function AudioPlayerScreen() {
   const [isBuffering, setIsBuffering] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [showNoteEditor, setShowNoteEditor] = useState(false);
+  const [isScrubbing, setIsScrubbing] = useState(false);
+  const [localPosition, setLocalPosition] = useState(0);
 
   const { updateProgress, loadProgress, getProgress } = useSermonPlaybackStore();
   const [initialSeekDone, setInitialSeekDone] = useState(false);
@@ -215,7 +219,7 @@ export function AudioPlayerScreen() {
           source={{ uri: currentSermon.thumbnailUrl }}
           style={styles.artwork}
           resizeMode="cover"
-        />
+        cachePolicy="memory-disk" transition={200} />
         {isBuffering && (
           <View style={styles.bufferingOverlay}>
             <ActivityIndicator size="large" color="#FFF" />
@@ -240,12 +244,29 @@ export function AudioPlayerScreen() {
 
       {/* Progress Bar */}
       <View style={styles.progressContainer}>
-        <View style={[styles.progressBar, { backgroundColor: colors.backgroundElement }]}>
-          <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
-        </View>
+        <Slider
+          style={styles.slider}
+          minimumValue={0}
+          maximumValue={duration > 0 ? duration : 1}
+          value={isScrubbing ? localPosition : currentPosition}
+          minimumTrackTintColor="#FF6596"
+          maximumTrackTintColor="rgba(0, 0, 0, 0.1)"
+          thumbTintColor="#FF6596"
+          onSlidingStart={() => {
+            setIsScrubbing(true);
+            setLocalPosition(currentPosition);
+          }}
+          onValueChange={(val) => setLocalPosition(val)}
+          onSlidingComplete={async (val) => {
+            setIsScrubbing(false);
+            if (player) {
+              await seekAudio(val);
+            }
+          }}
+        />
         <View style={styles.timeContainer}>
           <Text style={[styles.timeText, { color: colors.textSecondary }]}>
-            {formatTime(currentPosition)}
+            {formatTime(isScrubbing ? localPosition : currentPosition)}
           </Text>
           <Text style={[styles.timeText, { color: colors.textSecondary }]}>
             {formatTime(duration)}
@@ -401,15 +422,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     marginBottom: Spacing.four,
   },
-  progressBar: {
-    height: 4,
-    borderRadius: 2,
-    overflow: 'hidden',
-    marginBottom: Spacing.one,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#FF6596',
+  slider: {
+    width: '100%',
+    height: 40,
   },
   timeContainer: {
     flexDirection: 'row',

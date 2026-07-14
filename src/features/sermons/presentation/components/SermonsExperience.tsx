@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useSermonStore } from '@/store/useSermonStore';
 import { useSermonPlaybackStore } from '@/store/useSermonPlaybackStore';
@@ -12,18 +13,9 @@ import {
   X,
 } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Sermon } from '../../domain/sermon.types';
-import { ContinueWatchingCard } from './ContinueWatchingCard';
 
 // ─── Design Tokens ─────────────────────────────────────────────────────────────
 const NAVY = '#1A1A1A';
@@ -38,6 +30,7 @@ interface SermonsExperienceProps {
 
 export function SermonsExperience({ searchQuery, showSearchInput = true }: SermonsExperienceProps) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const currentUser = useAuthStore((s) => s.currentUser);
   const userProfile = useAuthStore((s) => s.userProfile);
 
@@ -193,7 +186,7 @@ export function SermonsExperience({ searchQuery, showSearchInput = true }: Sermo
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: inProgressWithSermons.length > 0 && !isSearching ? 100 : 40 }}
       >
         {/* ── Filter chips ── */}
         <ScrollView
@@ -213,31 +206,6 @@ export function SermonsExperience({ searchQuery, showSearchInput = true }: Sermo
             </TouchableOpacity>
           ))}
         </ScrollView>
-
-        {/* ── Continue Watching / Listening ── */}
-        {inProgressWithSermons.length > 0 && !isSearching && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              {inProgressWithSermons[0].progress.mediaType === 'video'
-                ? 'Continue Watching'
-                : 'Continue Listening'}
-            </Text>
-            {inProgressWithSermons.map(({ progress, sermon }) => (
-              <ContinueWatchingCard
-                key={progress.sermonId}
-                progress={progress}
-                sermon={sermon}
-                onPress={() => {
-                  if (progress.mediaType === 'video') {
-                    openSermon(progress.sermonId);
-                  } else {
-                    openAudioPlayer(progress.sermonId);
-                  }
-                }}
-              />
-            ))}
-          </View>
-        )}
 
         {/* ── Search results ── */}
         {isSearching ? (
@@ -310,7 +278,7 @@ export function SermonsExperience({ searchQuery, showSearchInput = true }: Sermo
                           source={{ uri: series.thumb }}
                           style={styles.seriesThumb}
                           resizeMode="cover"
-                        />
+                        cachePolicy="memory-disk" transition={200} />
                       ) : (
                         <View style={[styles.seriesThumb, { backgroundColor: '#DDE1E8' }]} />
                       )}
@@ -363,21 +331,23 @@ function FeaturedCard({ sermon, onPress, onListen }: { sermon: Sermon; onPress: 
   return (
     <TouchableOpacity style={styles.featuredCard} onPress={onPress} activeOpacity={0.9}>
       {sermon.thumbnailUrl ? (
-        <Image source={{ uri: sermon.thumbnailUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+        <Image source={{ uri: sermon.thumbnailUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" cachePolicy="memory-disk" transition={200} />
       ) : (
         <View style={[StyleSheet.absoluteFill, { backgroundColor: '#DDE1E8' }]} />
       )}
       <LinearGradient
         colors={['transparent', 'rgba(26,26,26,0.95)']}
-        style={[StyleSheet.absoluteFill, { borderRadius: 20 }]}
+        style={[StyleSheet.absoluteFill, { borderRadius: 24 }]}
       />
 
-      {/* Duration badge */}
-      {sermon.durationSeconds ? (
-        <View style={styles.featuredDurationBadge}>
-          <Text style={styles.featuredDurationText}>{formatDuration(sermon.durationSeconds)}</Text>
+      {/* Main Play Icon Overlay */}
+      {hasVideo && (
+        <View style={styles.featuredPlayOverlay}>
+          <View style={styles.featuredPlayButton}>
+            <Play size={24} color="#fff" fill="#fff" style={{ marginLeft: 3 }} />
+          </View>
         </View>
-      ) : null}
+      )}
 
       {/* Content */}
       <View style={styles.featuredContent}>
@@ -386,29 +356,10 @@ function FeaturedCard({ sermon, onPress, onListen }: { sermon: Sermon; onPress: 
             <Text style={styles.featuredSeriesBadgeText}>{sermon.seriesTitle}</Text>
           </View>
         )}
-        {sermon.scriptureReference ? (
-          <Text style={styles.featuredScripture}>{sermon.scriptureReference}</Text>
-        ) : null}
         <Text style={styles.featuredTitle} numberOfLines={2}>{sermon.title}</Text>
         <Text style={styles.featuredMeta}>
-          {sermon.preacherName} · {formatDate(sermon.sermonDate)}
+          {sermon.preacherName} • {formatDate(sermon.sermonDate)}
         </Text>
-
-        {/* Action row */}
-        <View style={styles.featuredActions}>
-          {hasVideo && (
-            <TouchableOpacity style={styles.featuredWatchBtn} onPress={onPress}>
-              <Play size={16} color="#fff" fill="#fff" />
-              <Text style={styles.featuredWatchText}>Watch</Text>
-            </TouchableOpacity>
-          )}
-          {hasAudio && (
-            <TouchableOpacity style={styles.featuredListenBtn} onPress={onListen}>
-              <Headphones size={16} color={GOLD} />
-              <Text style={styles.featuredListenText}>Listen</Text>
-            </TouchableOpacity>
-          )}
-        </View>
       </View>
     </TouchableOpacity>
   );
@@ -426,7 +377,7 @@ function SermonTileCard({ sermon, onPress }: { sermon: Sermon; onPress: () => vo
       {/* Thumbnail */}
       <View style={styles.tileThumbnailWrap}>
         {sermon.thumbnailUrl ? (
-          <Image source={{ uri: sermon.thumbnailUrl }} style={styles.tileThumbnail} resizeMode="cover" />
+          <Image source={{ uri: sermon.thumbnailUrl }} style={styles.tileThumbnail} resizeMode="cover" cachePolicy="memory-disk" transition={200} />
         ) : (
           <View style={[styles.tileThumbnail, { backgroundColor: '#DDE1E8' }]} />
         )}
@@ -465,7 +416,7 @@ function SearchResultCard({ sermon, onPress }: { sermon: Sermon; onPress: () => 
     <TouchableOpacity style={styles.searchCard} onPress={onPress} activeOpacity={0.85}>
       <View style={styles.searchThumbWrap}>
         {sermon.thumbnailUrl ? (
-          <Image source={{ uri: sermon.thumbnailUrl }} style={styles.searchThumb} resizeMode="cover" />
+          <Image source={{ uri: sermon.thumbnailUrl }} style={styles.searchThumb} resizeMode="cover" cachePolicy="memory-disk" transition={200} />
         ) : (
           <View style={[styles.searchThumb, { backgroundColor: '#DDE1E8' }]} />
         )}
@@ -593,99 +544,73 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   // Featured card
-  featuredCard: {
-    marginHorizontal: 20,
-    height: 260,
-    borderRadius: 20,
-    overflow: 'hidden',
-    backgroundColor: '#DDE1E8',
-  },
-  featuredDurationBadge: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  featuredDurationText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  featuredContent: {
+  floatingContinueWatching: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    padding: 16,
-    gap: 5,
+    zIndex: 100,
+  },
+  // Featured card
+  featuredCard: {
+    marginHorizontal: 20,
+    height: 320,
+    borderRadius: 24,
+    overflow: 'hidden',
+    backgroundColor: '#DDE1E8',
+    justifyContent: 'flex-end',
+  },
+  featuredPlayOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  featuredPlayButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(255,101,150,0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#FF6596',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  featuredContent: {
+    padding: 24,
+    gap: 8,
+    position: 'relative',
+    zIndex: 10,
   },
   featuredSeriesBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255,101,150,0.25)',
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
+    backgroundColor: 'rgba(255,101,150,0.2)',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,101,150,0.3)',
   },
   featuredSeriesBadgeText: {
     color: GOLD,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
     textTransform: 'uppercase',
-  },
-  featuredScripture: {
-    color: 'rgba(255,101,150,0.9)',
-    fontSize: 12,
-    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   featuredTitle: {
     color: '#fff',
-    fontSize: 20,
+    fontSize: 28,
     fontWeight: '900',
-    lineHeight: 26,
-    letterSpacing: -0.3,
+    lineHeight: 34,
+    letterSpacing: -0.5,
   },
   featuredMeta: {
-    color: 'rgba(255,255,255,0.75)',
-    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
     fontWeight: '500',
-  },
-  featuredActions: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 4,
-  },
-  featuredWatchBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: GOLD,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  featuredWatchText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  featuredListenBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,101,150,0.4)',
-  },
-  featuredListenText: {
-    color: GOLD,
-    fontSize: 13,
-    fontWeight: '700',
   },
   // Tile card
   tileCard: {

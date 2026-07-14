@@ -8,7 +8,11 @@ import FabMenu from '../../components/Navigation/FabMenu';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useUIStore } from '../../store/useUIStore';
 import { canAccessAdminPortal } from '../../permissions/mobilePermissions';
-
+import { useSermonStore } from '../../store/useSermonStore';
+import { useSermonPlaybackStore } from '../../store/useSermonPlaybackStore';
+import { ContinueWatchingCard } from '../../features/sermons/presentation/components/ContinueWatchingCard';
+import { useRouter, usePathname } from 'expo-router';
+import { useAudio } from '../../features/sermons/presentation/context/AudioContext';
 const AnimatedTabItem = ({ isFocused, route, options, onPress, IconComponent }: any) => {
   const scale = useRef(new Animated.Value(isFocused ? 1.15 : 1)).current;
   const translateY = useRef(new Animated.Value(isFocused ? -4 : 0)).current;
@@ -126,6 +130,23 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
 export default function TabLayout() {
   const { userProfile } = useAuthStore();
   const isStaff = canAccessAdminPortal(userProfile);
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+
+  const { sermons } = useSermonStore();
+  const { getInProgressSermons, clearProgress } = useSermonPlaybackStore();
+  const audio = useAudio();
+
+  const inProgressList = getInProgressSermons().filter((p) => !p.completed).slice(0, 3);
+  const inProgressWithSermons = inProgressList
+    .map((p) => ({ progress: p, sermon: sermons.find((s) => s.id === p.sermonId) ?? null }))
+    .filter((item) => item.sermon !== null);
+
+  const pathname = usePathname();
+  const showMiniPlayer = pathname.startsWith('/community') || pathname.startsWith('/sermons');
+  
+  const topSermon = inProgressWithSermons.length > 0 ? inProgressWithSermons[0] : null;
+  const isCurrentAudioPlaying = topSermon?.progress.mediaType === 'audio' && (audio.player?.playing ?? false);
 
   return (
     <View style={{ flex: 1 }}>
@@ -148,6 +169,39 @@ export default function TabLayout() {
           options={{ title: 'Staff', href: null }}
         />
       </Tabs>
+
+      {/* ── Global Floating Continue Watching ── */}
+      {showMiniPlayer && topSermon && (
+        <View style={[styles.globalContinueWatching, { bottom: Math.max(insets.bottom, 16) + 64 }]}>
+          <ContinueWatchingCard
+            progress={topSermon.progress}
+            sermon={topSermon.sermon}
+            isPlaying={isCurrentAudioPlaying}
+            onPlayPause={() => {
+              if (topSermon.progress.mediaType === 'video') {
+                router.push({ pathname: '/sermon-watch', params: { id: topSermon.progress.sermonId } });
+              } else {
+                if (audio.player?.playing) {
+                  audio.pauseAudio();
+                } else {
+                  // When paused, navigate to player to guarantee correct sermon loads and resumes
+                  router.push({ pathname: '/audio-player', params: { id: topSermon.progress.sermonId } });
+                }
+              }
+            }}
+            onDismiss={() => {
+              clearProgress(topSermon.progress.sermonId);
+            }}
+            onPress={() => {
+              if (topSermon.progress.mediaType === 'video') {
+                router.push({ pathname: '/sermon-watch', params: { id: topSermon.progress.sermonId } });
+              } else {
+                router.push({ pathname: '/audio-player', params: { id: topSermon.progress.sermonId } });
+              }
+            }}
+          />
+        </View>
+      )}
     </View>
   );
 }
@@ -184,5 +238,11 @@ const styles = StyleSheet.create({
   },
   navItemActive: {
     transform: [{ translateY: -2 }],
+  },
+  globalContinueWatching: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    zIndex: 100,
   }
 });

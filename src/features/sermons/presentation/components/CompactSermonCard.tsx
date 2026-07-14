@@ -1,5 +1,6 @@
+import { Image } from 'expo-image';
 import React from 'react';
-import { View, Text, Pressable, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable, StyleSheet, TouchableOpacity } from 'react-native';
 import Animated, { useAnimatedStyle, withTiming, useSharedValue } from 'react-native-reanimated';
 import { ListPlus, CloudDownload, MoreVertical } from 'lucide-react-native';
 import { useTheme } from '@/hooks/use-theme';
@@ -47,7 +48,7 @@ export function CompactSermonCard({ sermon, onPress }: CompactSermonCardProps) {
             source={{ uri: sermon.thumbnailUrl }} 
             style={styles.thumbnail}
             resizeMode="cover"
-          />
+          cachePolicy="memory-disk" transition={200} />
         </View>
 
         <View style={styles.contentContainer}>

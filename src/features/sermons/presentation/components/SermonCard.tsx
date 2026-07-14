@@ -1,4 +1,5 @@
-import { View, Text, Pressable, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { Image } from 'expo-image';
+import { View, Text, Pressable, StyleSheet, TouchableOpacity } from 'react-native';
 import Animated, { useAnimatedStyle, withTiming, useSharedValue } from 'react-native-reanimated';
 import { Heart, Clock, User } from 'lucide-react-native';
 import { useTheme } from '@/hooks/use-theme';
@@ -80,7 +81,7 @@ export function SermonCard({ sermon, onPress, onFavorite, isFavorited }: SermonC
               source={{ uri: sermon.thumbnailUrl }} 
               style={styles.thumbnail}
               resizeMode="cover"
-            />
+            cachePolicy="memory-disk" transition={200} />
             {/* Badge for type */}
             <View style={[styles.badge, sermon.mediaType === 'video' ? styles.videoBadge : styles.audioBadge]}>
               <Text style={styles.badgeText}>{sermon.mediaType.toUpperCase()}</Text>
