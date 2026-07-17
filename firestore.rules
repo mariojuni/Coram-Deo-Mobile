@@ -86,6 +86,27 @@ service cloud.firestore {
         userDoc().managedMinistryIds.hasAll([ministryId]);
     }
 
+    function isWorshipAdmin(churchId, ministryId) {
+      return isPastorOrAdmin(churchId) || 
+             (ministryId != null && isAssignedMinistryLeader(churchId, ministryId));
+    }
+
+    function canReadWorship(churchId, ministryId) {
+      if (isPastorOrAdmin(churchId)) return true;
+      if (ministryId != null && userDocExists() && userDoc().memberId != null) {
+        let minDoc = get(/databases/$(database)/documents/ministries/$(ministryId));
+        if (minDoc != null) {
+          return minDoc.data.churchId == churchId && 
+                 minDoc.data.features.worshipTabEnabled == true &&
+                 minDoc.data.memberIds != null && 
+                 minDoc.data.memberIds.hasAny([userDoc().memberId]);
+        }
+      }
+      // Fallback for church-wide worship items without a specific ministryId,
+      // or if we can't easily query all ministries for the user in rules.
+      return isSignedIn() && userDocExists() && userDoc().churchId == churchId;
+    }
+
     // ── ministryApplications ─────────────────────────────────────────────────
     match /ministryApplications/{applicationId} {
 
@@ -170,28 +191,32 @@ service cloud.firestore {
 
     // ── Worship Library ──────────────────────────────────────────────────────
     match /songs/{songId} {
-      allow read: if isSignedIn();
-      allow write: if isChurchAdmin(request.resource.data.churchId) || isChurchAdmin(resource.data.churchId);
+      allow read: if canReadWorship(resource.data.churchId, resource.data.get('ministryId', null));
+      allow write: if isWorshipAdmin(request.resource.data.churchId, request.resource.data.get('ministryId', null)) || 
+                      isWorshipAdmin(resource.data.churchId, resource.data.get('ministryId', null));
     }
 
     match /songVersions/{versionId} {
-      allow read: if isSignedIn();
-      allow write: if isChurchAdmin(request.resource.data.churchId) || isChurchAdmin(resource.data.churchId);
+      allow read: if canReadWorship(resource.data.churchId, resource.data.get('ministryId', null));
+      allow write: if isWorshipAdmin(request.resource.data.churchId, request.resource.data.get('ministryId', null)) || 
+                      isWorshipAdmin(resource.data.churchId, resource.data.get('ministryId', null));
     }
 
     match /worshipSetlists/{setlistId} {
-      allow read: if isSignedIn();
-      allow write: if isChurchAdmin(request.resource.data.churchId) || isChurchAdmin(resource.data.churchId);
+      allow read: if canReadWorship(resource.data.churchId, resource.data.get('ministryId', null));
+      allow write: if isWorshipAdmin(request.resource.data.churchId, request.resource.data.get('ministryId', null)) || 
+                      isWorshipAdmin(resource.data.churchId, resource.data.get('ministryId', null));
 
       match /worshipSetlistItems/{itemId} {
-        allow read: if isSignedIn();
-        allow write: if isChurchAdmin(request.resource.data.churchId) || isChurchAdmin(resource.data.churchId);
+        allow read: if canReadWorship(get(/databases/$(database)/documents/worshipSetlists/$(setlistId)).data.churchId, get(/databases/$(database)/documents/worshipSetlists/$(setlistId)).data.get('ministryId', null));
+        allow write: if isWorshipAdmin(get(/databases/$(database)/documents/worshipSetlists/$(setlistId)).data.churchId, get(/databases/$(database)/documents/worshipSetlists/$(setlistId)).data.get('ministryId', null));
       }
     }
 
     match /worshipSetlistItems/{itemId} {
-      allow read: if isSignedIn();
-      allow write: if isChurchAdmin(request.resource.data.churchId) || isChurchAdmin(resource.data.churchId);
+      allow read: if canReadWorship(resource.data.churchId, resource.data.get('ministryId', null));
+      allow write: if isWorshipAdmin(request.resource.data.churchId, request.resource.data.get('ministryId', null)) || 
+                      isWorshipAdmin(resource.data.churchId, resource.data.get('ministryId', null));
     }
 
     // ── Users ────────────────────────────────────────────────────────────────

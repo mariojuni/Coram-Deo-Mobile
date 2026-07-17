@@ -304,7 +304,7 @@ export default function ServeAssignmentDetailScreen() {
         {setlist && (
           <TouchableOpacity 
             style={styles.setlistLinkBtn}
-            onPress={() => router.push({ pathname: '/serve-worship-setlist', params: { eventId: assignment.eventId } } as any)}
+            onPress={() => router.push({ pathname: '/serve-worship-setlist', params: { eventId: assignment.eventId, hideChords: 'true' } } as any)}
             activeOpacity={0.8}
           >
             <View style={styles.setlistLinkContent}>

@@ -3,30 +3,20 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, FlatList }
 import { Music, ChevronRight, Calendar } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/useAuthStore';
-import { worshipRepository } from '../../features/worship/data/worship.repository';
+import { useWorshipStore } from '../../store/useWorshipStore';
 
 export default function WorshipTab() {
   const router = useRouter();
   const userProfile = useAuthStore(s => s.userProfile);
-  const [setlists, setSetlists] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { setlists, setlistsLoading, initializeSetlistsListener } = useWorshipStore();
 
   useEffect(() => {
-    const fetchSetlists = async () => {
-      if (!userProfile?.churchId) return;
-      try {
-        const data = await worshipRepository.getSetlists(userProfile.churchId);
-        setSetlists(data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSetlists();
-  }, [userProfile?.churchId]);
+    if (!userProfile?.churchId) return;
+    const unsubscribe = initializeSetlistsListener(userProfile.churchId);
+    return () => unsubscribe();
+  }, [userProfile?.churchId, initializeSetlistsListener]);
 
-  if (loading) {
+  if (setlistsLoading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#FF6596" />

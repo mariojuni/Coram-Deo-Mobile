@@ -14,7 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ServeWorshipSetlistScreen() {
-  const { eventId } = useLocalSearchParams<{ eventId: string }>();
+  const { eventId, hideChords } = useLocalSearchParams<{ eventId: string; hideChords?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const userProfile = useAuthStore((s) => s.userProfile);
@@ -103,7 +103,7 @@ export default function ServeWorshipSetlistScreen() {
               key={item.id}
               style={styles.card}
               activeOpacity={0.7}
-              onPress={() => router.push({ pathname: '/serve-song-lyrics', params: { songId: item.songId } } as any)}
+              onPress={() => router.push({ pathname: '/serve-song-lyrics', params: { songId: item.songId, hideChords, setlistItemId: item.id } } as any)}
             >
               <View style={styles.orderBadge}>
                 <Text style={styles.orderBadgeText}>{index + 1}</Text>

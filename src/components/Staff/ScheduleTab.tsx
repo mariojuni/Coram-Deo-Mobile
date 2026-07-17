@@ -1,6 +1,6 @@
 import { CalendarPlus, Clock, MapPin, Pencil } from 'lucide-react-native';
 import { useEffect, useCallback, useMemo, useState } from 'react';
-import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native';
 import { useMemberStore } from '../../store/useMemberStore';
 import { useMinistryStore } from '../../store/useMinistryStore';
 import { getMinisterialTeam, type Schedule, useScheduleStore } from '../../store/useScheduleStore';
@@ -22,7 +22,13 @@ type ScheduleCardItem = {
   weekday: string;
 };
 
-export default function ScheduleTab() {
+export default function ScheduleTab({ 
+  onScroll, 
+  headerHeight = 0 
+}: { 
+  onScroll?: any; 
+  headerHeight?: number; 
+}) {
   const schedules = useScheduleStore((state) => state.schedules);
   const { assignments, initializeAssignmentsListener } = useMinistryStore();
   const userProfile = useAuthStore((s) => s.userProfile);
@@ -159,30 +165,51 @@ export default function ScheduleTab() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.headerRow}>
-        <Text style={styles.title}>Event Schedules</Text>
-        <TouchableOpacity 
-          style={styles.addIconBtn} 
-          onPress={() => {
-            setEventToEdit(null);
-            setIsAddModalOpen(true);
-          }}
-        >
-          <CalendarPlus size={24} color="#FF6596" />
-        </TouchableOpacity>
-      </View>
-
       {scheduleItems.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>No upcoming schedules found.</Text>
-        </View>
+        <Animated.ScrollView 
+          onScroll={onScroll} 
+          scrollEventThrottle={16}
+          contentContainerStyle={{ paddingTop: headerHeight + 16, flexGrow: 1 }}
+        >
+          <View style={[styles.headerRow, { paddingHorizontal: 20 }]}>
+            <Text style={styles.title}>Event Schedules</Text>
+            <TouchableOpacity 
+              style={styles.addIconBtn} 
+              onPress={() => {
+                setEventToEdit(null);
+                setIsAddModalOpen(true);
+              }}
+            >
+              <CalendarPlus size={24} color="#FF6596" />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>No upcoming schedules found.</Text>
+          </View>
+        </Animated.ScrollView>
       ) : (
-        <FlatList
+        <Animated.FlatList
           data={scheduleItems}
           renderItem={renderScheduleItem}
-          keyExtractor={(item) => item.schedule.id}
+          keyExtractor={(item: any) => item.schedule.id}
           ItemSeparatorComponent={renderSeparator}
-          contentContainerStyle={styles.listContainer}
+          contentContainerStyle={[styles.listContainer, { paddingTop: headerHeight + 16 }]}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+          ListHeaderComponent={
+            <View style={styles.headerRow}>
+              <Text style={styles.title}>Event Schedules</Text>
+              <TouchableOpacity 
+                style={styles.addIconBtn} 
+                onPress={() => {
+                  setEventToEdit(null);
+                  setIsAddModalOpen(true);
+                }}
+              >
+                <CalendarPlus size={24} color="#FF6596" />
+              </TouchableOpacity>
+            </View>
+          }
           initialNumToRender={6}
           maxToRenderPerBatch={8}
           updateCellsBatchingPeriod={32}
@@ -219,7 +246,7 @@ const styles = StyleSheet.create({
   addIconBtn: { padding: 8, backgroundColor: '#fff', borderRadius: 24, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
   emptyState: { padding: 40, alignItems: 'center' },
   emptyText: { color: '#888', fontSize: 15 },
-  listContainer: { paddingBottom: 8 },
+  listContainer: { paddingBottom: 8, paddingHorizontal: 20 },
   listSeparator: { height: 16 },
   card: { backgroundColor: '#fff', borderRadius: 16, padding: 16, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 15, shadowOffset: { width: 0, height: 8 }, elevation: 4, borderWidth: 1, borderColor: 'rgba(0,0,0,0.02)' },
   cardWithoutTeam: { paddingBottom: 12 },

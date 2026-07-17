@@ -2,8 +2,8 @@ export type GivingFundType = 'tithe' | 'offering' | 'missions' | 'building' | 'm
 export type VisibilityType = 'public' | 'members_only' | 'admin_only';
 export type CampaignType = 'building_project' | 'ministry_fundraising' | 'missions' | 'event' | 'special_project';
 export type CampaignStatus = 'draft' | 'active' | 'completed' | 'archived';
-export type RecordStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
-export type ExpenseCategory = 'materials' | 'labor' | 'transportation' | 'equipment' | 'food' | 'printing' | 'miscellaneous';
+export type RecordStatus = 'pending' | 'approved' | 'completed' | 'rejected' | 'cancelled';
+export type ExpenseCategory = 'utilities' | 'ministry_supplies' | 'events_programs' | 'salaries_stipends' | 'facility_maintenance' | 'missions_outreach' | 'other';
 export type PaymentMethodType = 'gcash' | 'maya' | 'bank_transfer' | 'cash' | 'check' | 'other';
 
 export interface GivingFund {
@@ -47,18 +47,27 @@ export interface GivingRecord {
   churchId: string;
   userId: string;
   memberId?: string;
+  donorName?: string;
   fundId: string;
+  fundType?: string; // human-readable fund name, written on approval (matches web)
   campaignId?: string;
   amount: number;
   currency: 'PHP';
   paymentMethod: PaymentMethodType;
+  method?: string; // mirrors 'method' written by web on approval
   referenceNumber?: string;
   proofOfPaymentUrl?: string;
+  proofUrl?: string; // mirrors 'proofUrl' written by web on approval
   note?: string;
-  status: RecordStatus;
+  notes?: string; // mirrors 'notes' written by web on approval
+  status: RecordStatus; // 'completed' is the web app's approved state
+  /** YYYY-MM-DD date string — written on approval, used for ledger queries */
+  date?: string;
   submittedAt: string;
   reviewedBy?: string;
   reviewedAt?: string;
+  approvedBy?: string; // matches web
+  approvedAt?: any; // matches web (serverTimestamp)
   rejectionReason?: string;
   receiptNumber?: string;
   receiptUrl?: string;
@@ -69,19 +78,21 @@ export interface GivingRecord {
 export interface GivingExpense {
   id: string;
   churchId: string;
-  fundId: string;
+  fundId?: string;
   campaignId?: string;
-  title: string;
+  /** YYYY-MM-DD — matches web app's 'date' field */
+  date: string;
+  /** Payee/vendor name — matches web app's 'payee' field */
+  payee: string;
   description?: string;
   amount: number;
   currency: 'PHP';
-  category: ExpenseCategory;
-  expenseDate: string;
-  vendorName?: string;
-  receiptImageUrl?: string;
+  category: string; // string to match web app categories (e.g. 'Utilities')
+  receiptUrl?: string;
   recordedBy: string;
   approvedBy?: string;
-  visibility: 'admin_only' | 'public_summary';
+  visibility?: 'admin_only' | 'public_summary';
+  churchId_payee?: string; // composite for querying if needed
   createdAt: string;
   updatedAt: string;
 }

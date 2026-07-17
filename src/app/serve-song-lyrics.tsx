@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Music, Minus, Plus } from 'lucide-react-native';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useWorshipStore } from '@/store/useWorshipStore';
 import { useEffect, useState, useRef } from 'react';
 import {
   ActivityIndicator,
@@ -38,10 +39,30 @@ export default function ServeSongLyricsScreen() {
 
   const scrollY = useRef(new Animated.Value(0)).current;
 
+  const { activeSetlistItems } = useWorshipStore();
+
   useEffect(() => {
     if (!songId) return;
     let isMounted = true;
     
+    // 1. Try to find the item in our already-fetched memory cache to make it instant
+    if (setlistItemId && activeSetlistItems.length > 0) {
+      const cachedItem = activeSetlistItems.find(item => item.id === setlistItemId);
+      if (cachedItem && cachedItem.song) {
+        setSong(cachedItem.song);
+        setSetlistItem(cachedItem);
+        if (cachedItem.capo !== undefined) setCapo(cachedItem.capo);
+        if (cachedItem.preferredAccidental === 'flat') setPreferFlats(true);
+        if (cachedItem.selectedKey) {
+          const diff = getStepsBetweenKeys(cachedItem.song.defaultKey || 'C', cachedItem.selectedKey);
+          setTransposeSteps(diff);
+        }
+        setLoading(false);
+        return; // Skip network call entirely!
+      }
+    }
+    
+    // 2. Fall back to network call if directly navigated to without setlist context
     const fetchData = async () => {
       try {
         const s = await worshipRepository.getSong(songId);
@@ -68,7 +89,7 @@ export default function ServeSongLyricsScreen() {
     
     fetchData();
     return () => { isMounted = false; };
-  }, [songId, setlistItemId]);
+  }, [songId, setlistItemId, activeSetlistItems]);
 
   if (loading) {
     return (

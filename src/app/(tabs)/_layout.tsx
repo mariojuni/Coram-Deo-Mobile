@@ -7,7 +7,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FabMenu from '../../components/Navigation/FabMenu';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useUIStore } from '../../store/useUIStore';
-import { canAccessAdminPortal } from '../../permissions/mobilePermissions';
+import { canAccessAdminPortal, canViewStaffScreen } from '../../permissions/mobilePermissions';
+import { useMinistryStore } from '../../store/useMinistryStore';
 import { useSermonStore } from '../../store/useSermonStore';
 import { useSermonPlaybackStore } from '../../store/useSermonPlaybackStore';
 import { ContinueWatchingCard } from '../../features/sermons/presentation/components/ContinueWatchingCard';
@@ -131,7 +132,15 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
 
 export default function TabLayout() {
   const { userProfile } = useAuthStore();
-  const isStaff = canAccessAdminPortal(userProfile);
+  
+  // Get active ministries for the user to check staff/tool permissions
+  const userMinistries = useMinistryStore((state) => state.ministries).filter(
+    (m) => m.members?.some((mem) => mem.memberId === userProfile?.memberId)
+  );
+  
+  // Check if they have access to the Staff tab
+  const isStaff = canViewStaffScreen(userProfile, userMinistries);
+  
   const insets = useSafeAreaInsets();
   const router = useRouter();
 

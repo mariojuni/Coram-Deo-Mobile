@@ -14,31 +14,78 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { useMemberStore } from '../../store/useMemberStore';
 import { useMinistryStore } from '../../store/useMinistryStore';
 import { getUndismissedNotificationCount, useScheduleStore } from '../../store/useScheduleStore';
+import { canViewStaffScreen, canViewWorshipTab, canViewServeTools } from '../../permissions/mobilePermissions';
+import { canAccessFinanceTools } from '../../permissions/financePermissions';
+import FinanceTab from '../../components/Staff/FinanceTab';
 
 export default function AttendanceScreen() {
   const members = useMemberStore((state) => state.members);
   const userProfile = useAuthStore((state) => state.userProfile);
   const schedules = useScheduleStore((state) => state.schedules);
   const initializeSchedulesListener = useScheduleStore((state) => state.initializeSchedulesListener);
-  const isStaff = ['super_admin', 'church_admin', 'ministry_leader'].includes(userProfile?.role?.toLowerCase() || '');
+  const userMinistries = useMinistryStore((state) => state.ministries).filter(m => m.members?.some(mem => mem.memberId === userProfile?.memberId));
+  const isStaff = canViewStaffScreen(userProfile, userMinistries);
+  
   const router = useRouter();
-  const TABS = [
-    { key: 'attendance', label: 'Attendance' },
-    { key: 'events', label: 'Events' },
-    { key: 'worship', label: 'Worship' },
-  ];
+  
+  // Build tabs dynamically
+  const TABS = [];
+  if (canAccessFinanceTools(userProfile) || isStaff) { 
+    // Usually Attendance/Events goes here if admin, or we can use another generic check
+    // Assuming attendance and events for anyone who is "staff" in the legacy sense or canViewServeTools
+    // Actually the user wants Serve Tools -> Events, Finance -> Attendance(just an example), etc.
+    // Let's keep Attendance and Events if canViewServeTools or canManageAnyMinistry
+  }
+  
+  // The exact requirements say:
+  // Show Worship tab if canViewWorshipTab is true
+  // Show Finance if canAccessFinanceTools (Attendance is not Finance, but maybe let's map Attendance to Finance or general staff?)
+  // Let's assume Attendance is part of admin/Serve. The requirements:
+  // - Show Worship tab/card if canViewWorshipTab is true.
+  // - Show Finance Tools if canAccessFinanceTools is true. (Wait, the existing tabs are Attendance, Events, Worship).
+  
+  if (canViewServeTools(userProfile, userMinistries)) {
+    TABS.push({ key: 'attendance', label: 'Attendance' });
+    TABS.push({ key: 'events', label: 'Events' });
+  }
+  if (canViewWorshipTab(userProfile, userMinistries)) {
+    TABS.push({ key: 'worship', label: 'Worship' });
+  }
+  if (canAccessFinanceTools(userProfile)) {
+    TABS.push({ key: 'finance', label: 'Finance' });
+  }
+
   const [activeTab, setActiveTab] = useState(0);
 
   const scrollViewRef = useRef<ScrollView>(null);
   const tabLayouts = useRef<{ x: number; width: number }[]>([]);
   const indicatorX = useRef(new Animated.Value(0)).current;
   const indicatorWidth = useRef(new Animated.Value(0)).current;
+  const initialised = useRef(false);
+
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const headerTranslateY = scrollY.interpolate({
+    inputRange: [0, 60],
+    outputRange: [0, -60],
+    extrapolate: 'clamp',
+  });
+  const titleOpacity = scrollY.interpolate({
+    inputRange: [0, 40],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+
+  const handleScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+    { useNativeDriver: true }
+  );
 
   const handleTabLayout = (index: number, x: number, width: number) => {
     tabLayouts.current[index] = { x, width };
-    if (activeTab === index) {
+    if (activeTab === index && !initialised.current) {
       indicatorX.setValue(x);
       indicatorWidth.setValue(width);
+      initialised.current = true;
     }
   };
 
@@ -81,7 +128,10 @@ export default function AttendanceScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.frostedHeader, { paddingTop: Math.max(insets.top, 24) }]} pointerEvents="box-none">
+      <Animated.View style={[styles.frostedHeader, { 
+        paddingTop: Math.max(insets.top, 24),
+        transform: [{ translateY: headerTranslateY }]
+      }]} pointerEvents="box-none">
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.6)' }]} pointerEvents="none" />
 
@@ -95,7 +145,7 @@ export default function AttendanceScreen() {
           />
         </View>
 
-        <View style={styles.headerContent}>
+        <Animated.View style={[styles.headerContent, { opacity: titleOpacity }]}>
           <View style={styles.headerLeft}>
             <View style={styles.headerIconWrap}>
               <LinearGradient
@@ -127,7 +177,7 @@ export default function AttendanceScreen() {
               <QrCode size={20} color="#1a1a1a" />
             </TouchableOpacity>
           </View>
-        </View>
+        </Animated.View>
 
       <View style={styles.tabBarWrapper}>
         <ScrollView 
@@ -159,26 +209,38 @@ export default function AttendanceScreen() {
           ))}
         </ScrollView>
         </View>
-      </View>
+      </Animated.View>
 
-      {activeTab === 1 ? (
-        <View style={[styles.content, { flex: 1, paddingTop: Math.max(insets.top, 24) + 146 }]}>
-          <ScheduleTab />
+      {TABS.length > 0 && TABS[activeTab]?.key === 'events' ? (
+        <View style={{ flex: 1 }}>
+          <ScheduleTab 
+            onScroll={handleScroll}
+            headerHeight={Math.max(insets.top, 24) + 146}
+          />
         </View>
       ) : (
-        <ScrollView contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 24) + 146 }]}>
+        <Animated.ScrollView 
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 24) + 162 }]}
+        >
 
-          {activeTab === 0 && (
+          {TABS.length > 0 && TABS[activeTab]?.key === 'attendance' && (
             <AttendanceTab 
               members={members} 
               showStaffFeatures={isStaff} 
             />
           )}
 
-          {activeTab === 2 && (
+          {TABS.length > 0 && TABS[activeTab]?.key === 'worship' && (
             <WorshipTab />
           )}
-        </ScrollView>
+
+          {TABS.length > 0 && TABS[activeTab]?.key === 'finance' && (
+            <FinanceTab />
+          )}
+        </Animated.ScrollView>
       )}
     </View>
   );

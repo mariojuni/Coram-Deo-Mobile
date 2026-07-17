@@ -15,6 +15,14 @@ export interface Ministry {
   roles: string[];
   roleDetails?: Record<string, { icon: string; color: string }>;
   members?: MinistryMember[];
+  features?: {
+    staffScreenEnabled?: boolean;
+    worshipTabEnabled?: boolean;
+    serveSchedulingEnabled?: boolean;
+    songLibraryEnabled?: boolean;
+    setlistEnabled?: boolean;
+    chordChartEnabled?: boolean;
+  };
   churchId: string;
   status: string;
   createdAt?: string;

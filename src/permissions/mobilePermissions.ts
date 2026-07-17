@@ -1,4 +1,5 @@
 import type { UserAccount, SystemRole } from '../features/auth/domain/auth.types';
+import type { Ministry } from '../features/ministry/domain/ministry.types';
 
 // ─── Core role helpers ────────────────────────────────────────────────────────
 
@@ -133,4 +134,51 @@ export function canViewLeadersOnlyPrayer(
     return true;
   }
   return canModeratePrayerRequests(user);
+}
+
+// ─── Staff Management & Tool Visibility ──────────────────────────────────────
+
+export function canViewWorshipTab(user?: UserAccount | null, userMinistries?: Ministry[]): boolean {
+  if (hasAnyRole(user, ['super_admin', 'church_admin', 'pastor'])) return true;
+  if (!hasMemberAccess(user)) return false;
+  
+  if (userMinistries && userMinistries.length > 0) {
+    return userMinistries.some(m => m.status === 'Active' && m.features?.worshipTabEnabled === true);
+  }
+  return false;
+}
+
+export function canManageWorship(user?: UserAccount | null, ministryId?: string): boolean {
+  if (hasAnyRole(user, ['super_admin', 'church_admin', 'pastor'])) return true;
+  if (!hasMemberAccess(user)) return false;
+  if (ministryId && hasRole(user, 'ministry_leader')) {
+    return Array.isArray(user?.managedMinistryIds) && user.managedMinistryIds.includes(ministryId);
+  }
+  return false;
+}
+
+export function canAccessFinanceTools(user?: UserAccount | null): boolean {
+  return canManageGiving(user);
+}
+
+export function canViewServeTools(user?: UserAccount | null, userMinistries?: Ministry[]): boolean {
+  if (hasAnyRole(user, ['super_admin', 'church_admin', 'pastor', 'ministry_leader'])) return true;
+  if (!hasMemberAccess(user)) return false;
+  if (userMinistries && userMinistries.length > 0) {
+    return userMinistries.some(m => m.status === 'Active' && m.features?.serveSchedulingEnabled === true);
+  }
+  return false;
+}
+
+export function canManageAnyMinistry(user?: UserAccount | null): boolean {
+  return hasAnyRole(user, ['super_admin', 'church_admin', 'pastor', 'ministry_leader']); 
+}
+
+export function canViewStaffScreen(user?: UserAccount | null, userMinistries?: Ministry[]): boolean {
+  return (
+    canViewWorshipTab(user, userMinistries) ||
+    canAccessFinanceTools(user) ||
+    canViewServeTools(user, userMinistries) ||
+    canManageAnyMinistry(user)
+  );
 }
