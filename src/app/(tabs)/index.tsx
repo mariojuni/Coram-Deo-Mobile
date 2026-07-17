@@ -621,7 +621,7 @@ export default function HomeScreen() {
             </BounceCard>
 
             <DebouncedTouchable
-              style={styles.seeAllEventsBtn}
+              style={[styles.seeAllEventsBtn, { marginTop: 0 }]}
               onPress={() => router.push({ pathname: '/(tabs)/community', params: { tab: 'prayers' } })}
             >
               <Text style={styles.seeAllEventsBtnText}>See all prayers</Text>
