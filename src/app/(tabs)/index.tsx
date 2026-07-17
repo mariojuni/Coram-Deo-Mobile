@@ -20,6 +20,22 @@ import type { Schedule } from '@/features/schedule/domain/schedule.types';
 import { EventDetailsModal } from '@/components/Events/EventDetailsModal';
 import { canModeratePrayerRequests } from '@/permissions/mobilePermissions';
 
+function isThisWeek(dateString: string) {
+  const date = new Date(dateString);
+  const now = new Date();
+  
+  const currentDay = now.getDay() === 0 ? 7 : now.getDay();
+  
+  const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - currentDay + 1);
+  startOfWeek.setHours(0, 0, 0, 0);
+  
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
+  endOfWeek.setHours(23, 59, 59, 999);
+
+  return date >= startOfWeek && date <= endOfWeek;
+}
+
 function getGreeting() {
   const h = new Date().getHours();
   if (h < 12) return 'Good morning';
@@ -165,7 +181,7 @@ export default function HomeScreen() {
       assignments
         .filter((a) => a.eventId === schedule.id && a.memberId === currentUserId)
         .map((assignment) => ({ assignment, schedule }))
-    );
+    ).filter(({ schedule }) => isThisWeek(schedule.date));
 
     const order = (status: string) => {
       if (status === 'Pending') return 0;
@@ -436,7 +452,7 @@ export default function HomeScreen() {
             {sortedDutyItems.map(({ assignment, schedule }) => (
               <BounceCard 
                 key={assignment.id}
-                onPress={() => router.push('/(tabs)/serve')}
+                onPress={() => router.push({ pathname: '/serve-assignment-detail', params: { id: assignment.id } })}
               >
                 <MinistryDutyCard
                   assignment={assignment}
@@ -461,6 +477,14 @@ export default function HomeScreen() {
                 />
               </BounceCard>
             ))}
+
+            <DebouncedTouchable
+              style={[styles.seeAllEventsBtn, { marginTop: 0 }]}
+              onPress={() => router.push('/(tabs)/serve')}
+            >
+              <Text style={styles.seeAllEventsBtnText}>See all ministries</Text>
+              <ChevronRight size={14} color="#FF6596" />
+            </DebouncedTouchable>
           </View>
         )}
 
