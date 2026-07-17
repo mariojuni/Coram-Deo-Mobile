@@ -107,6 +107,7 @@ export function EventDetailsModal({
           eventId={event.id} 
           title={isToday(event.date) ? "Today's Songs" : "Event Songs"} 
           onCloseModal={onClose} 
+          preloadedSongList={event.songList}
         />
 
         <View style={styles.rsvpSection}>

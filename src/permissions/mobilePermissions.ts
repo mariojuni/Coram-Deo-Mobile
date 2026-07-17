@@ -72,6 +72,30 @@ export function canConfirmServeAssignment(user?: UserAccount | null): boolean {
   return hasChurchAccess(user);
 }
 
+// ─── Comment guards ──────────────────────────────────────────────────────────
+
+export function canViewComments(user?: UserAccount | null, targetVisibility?: string): boolean {
+  if (!hasChurchAccess(user)) return false;
+  if (targetVisibility === 'leaders_only') {
+    return canModeratePrayerRequests(user);
+  }
+  return true;
+}
+
+export function canCreateComment(user?: UserAccount | null): boolean {
+  return hasMemberAccess(user) || (isActiveUser(user) && hasMemberAccess(user));
+}
+
+export function canDeleteComment(user: UserAccount | null | undefined, authorUserId: string): boolean {
+  if (!user || !user.uid) return false;
+  if (user.uid === authorUserId) return true;
+  return canModerateComments(user);
+}
+
+export function canModerateComments(user?: UserAccount | null): boolean {
+  return hasAnyRole(user, ['super_admin', 'church_admin', 'pastor']);
+}
+
 // ─── Admin permission helpers ─────────────────────────────────────────────────
 
 /**

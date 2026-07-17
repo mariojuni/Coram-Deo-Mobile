@@ -5,7 +5,14 @@ export interface Member {
   middleName?: string;
   lastName: string;
   fullName: string;
-  birthday?: string;
+  birthday?: string; // Kept for backward compatibility
+  birthDate?: string;
+  birthMonth?: number;
+  birthDay?: number;
+  birthMonthDay?: string;
+  birthdayVisibility?: 'members_only' | 'leaders_only' | 'hidden';
+  showBirthYear?: boolean;
+  showAge?: boolean;
   gender?: string;
   email?: string;
   phoneNumber?: string;

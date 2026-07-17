@@ -12,7 +12,7 @@ import { useSermonStore } from '@/store/useSermonStore';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { CalendarDays, CheckCircle2, ChevronRight, Clock, HeartHandshake, HelpCircle, MapPin, Play, XCircle, Pencil, Trash2, MoreHorizontal, User } from 'lucide-react-native';
+import { CalendarDays, CheckCircle2, ChevronRight, Clock, HeartHandshake, HelpCircle, MapPin, Play, XCircle, Pencil, Trash2, MoreHorizontal, User, MessageCircle } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert, ActionSheetIOS, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -564,7 +564,11 @@ export default function HomeScreen() {
                             </DebouncedTouchable>
                         )}
                         
-                        <View style={styles.prayIconButton}>
+                        <DebouncedTouchable 
+                          style={styles.prayIconButton}
+                          onPress={() => handlePray(latestPrayer.id)}
+                          activeOpacity={0.7}
+                        >
                           <HeartHandshake 
                             size={18} 
                             color={latestPrayer.likedBy?.includes(currentUserId) ? '#FF6596' : '#9CA3AF'} 
@@ -572,7 +576,18 @@ export default function HomeScreen() {
                           <Text style={[styles.prayIconCount, latestPrayer.likedBy?.includes(currentUserId) && { color: '#FF6596' }]}>
                             {latestPrayer.likes || 0}
                           </Text>
-                        </View>
+                        </DebouncedTouchable>
+
+                        <DebouncedTouchable
+                          style={[styles.prayIconButton, { marginLeft: 16, marginRight: 0 }]}
+                          onPress={() => router.push(`/comment-thread?targetType=prayer_request&targetId=${latestPrayer.id}`)}
+                          activeOpacity={0.7}
+                        >
+                          <MessageCircle size={18} color="#9CA3AF" />
+                          <Text style={styles.prayIconCount}>
+                            {latestPrayer.commentCount || 0}
+                          </Text>
+                        </DebouncedTouchable>
                       </View>
                     </View>
                     </View>

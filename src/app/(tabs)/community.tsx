@@ -18,8 +18,11 @@ import {
     User,
     Users,
     X,
-    XCircle,
-    Download
+    Download,
+    Cake,
+    Send,
+    MessageCircle,
+    XCircle
 } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -36,6 +39,7 @@ import {
     Alert,
     ActionSheetIOS,
     Platform,
+    Share,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppModal from '../../components/ui/AppModal';
@@ -43,11 +47,14 @@ import { EventDetailsModal } from '../../components/Events/EventDetailsModal';
 import { formatPrayerTimeAgo, getFilteredPrayers } from '../../features/prayer/domain/prayer.selectors';
 import type { Prayer, PrayerFilter } from '../../features/prayer/domain/prayer.types';
 import { usePrayerFeed } from '../../features/prayer/presentation/hooks/usePrayerFeed';
+import { CommentButton } from '../../features/comments/presentation/components/CommentButton';
 import type { Schedule } from '../../features/schedule/domain/schedule.types';
 import { SermonsExperience } from '../../features/sermons/presentation/components/SermonsExperience';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useUIStore } from '../../store/useUIStore';
 import { useMemberStore } from '../../store/useMemberStore';
+import type { Member } from '../../features/member/domain/member.types';
+import { formatMemberName, parseMemberDate, formatBirthday } from '@/features/member/domain/member.utils';
 import {
     getUpcomingSchedules,
     getUserRsvpStatus,
@@ -87,6 +94,7 @@ function getTabIndexFromParam(tabParam: string | string[] | undefined): TabIndex
 // ─── Placeholder sub-screen components ───────────────────────────────────────
 
 function PrayerCardItem({ req, currentUser, handlePray, handleAnswered, openPrayerModal, deletePrayer }: { req: Prayer, currentUser: any, handlePray: (id: string) => void, handleAnswered: (id: string, currentValue: boolean) => void, openPrayerModal: (prayer: Prayer) => void, deletePrayer: (id: string) => void }) {
+  const router = useRouter();
   const isLiked = currentUser ? (req.likedBy || []).includes(currentUser.uid) : false;
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const lastPress = useRef(0);
@@ -186,7 +194,11 @@ function PrayerCardItem({ req, currentUser, handlePray, handleAnswered, openPray
                         <CheckCircle2 size={18} color={(req.answered || req.status === 'answered') ? '#10B981' : '#9CA3AF'} />
                       </TouchableOpacity>
                   )}
-                  <View style={prayerStyles.prayIconButton}>
+                  <TouchableOpacity
+                    style={prayerStyles.prayIconButton}
+                    activeOpacity={0.7}
+                    onPress={() => handlePray(req.id)}
+                  >
                     <HeartHandshake 
                       size={18} 
                       color={isLiked ? '#FF6596' : '#9CA3AF'} 
@@ -194,6 +206,16 @@ function PrayerCardItem({ req, currentUser, handlePray, handleAnswered, openPray
                     <Text style={[prayerStyles.prayIconCount, isLiked && { color: '#FF6596' }]}>
                       {req.likes || 0}
                     </Text>
+                  </TouchableOpacity>
+
+                  <View style={{ marginLeft: 8 }}>
+                    <CommentButton 
+                      count={req.commentCount || 0} 
+                      variant="icon-only" 
+                      size={18} 
+                      color="#9CA3AF"
+                      onPress={() => router.push(`/comment-thread?targetType=prayer_request&targetId=${req.id}`)}
+                    />
                   </View>
                 </View>
               </View>
@@ -206,6 +228,7 @@ function PrayerCardItem({ req, currentUser, handlePray, handleAnswered, openPray
 }
 
 function PrayersTab({ searchQuery }: SubScreenProps) {
+  const router = useRouter();
   const currentUser = useAuthStore((state) => state.currentUser);
   const openPrayerModal = useUIStore((state) => state.openPrayerModal);
   const { prayers: prayerItems, loading, togglePrayerLike, togglePrayerAnswered, deletePrayer } = usePrayerFeed();
@@ -637,109 +660,163 @@ function SermonsTab({ searchQuery }: SubScreenProps) {
 function MembersTab({ searchQuery }: SubScreenProps) {
   const members = useMemberStore((state) => state.members);
   const membersLoading = useMemberStore((state) => state.membersLoading);
+  const userProfile = useAuthStore((state) => state.userProfile);
+  const router = useRouter();
+  const { todayBirthdays, upcomingBirthdays } = useMemo(() => {
+    const today = new Date();
+    const curMonth = today.getMonth() + 1;
+    const curDay = today.getDate();
+
+    const canSeeLeadersOnly = userProfile?.role === 'pastor' || userProfile?.role === 'church_admin' || userProfile?.role === 'super_admin';
+
+    const validMembers = members.filter(m => {
+        if (m.status === 'inactive') return false;
+        
+        const visibility = m.birthdayVisibility || 'members_only';
+        if (visibility === 'hidden') return false;
+        if (visibility === 'leaders_only' && !canSeeLeadersOnly) return false;
+        
+        return parseMemberDate(m) !== null;
+    });
+
+    const parsedMembers = validMembers.map(m => {
+        const d = parseMemberDate(m)!;
+        return { ...m, parsedMonth: d.m, parsedDay: d.d } as Member & { parsedMonth: number, parsedDay: number };
+    });
+
+    const todayBirthdays = parsedMembers.filter(m => m.parsedMonth === curMonth && m.parsedDay === curDay);
+    
+    const nextMonth = curMonth === 12 ? 1 : curMonth + 1;
+    const allUpcoming = parsedMembers
+      .filter(m => 
+        (m.parsedMonth === curMonth && m.parsedDay > curDay) || 
+        (m.parsedMonth === nextMonth)
+      )
+      .sort((a, b) => {
+          if (a.parsedMonth !== b.parsedMonth) return a.parsedMonth - b.parsedMonth;
+          return a.parsedDay - b.parsedDay;
+      });
+
+    return { 
+        todayBirthdays, 
+        upcomingBirthdays: allUpcoming.slice(0, 3) 
+    };
+  }, [members, userProfile]);
 
   const filteredMembers = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    if (!query) return members;
-
-    return members.filter((member) => {
-      const haystack = `${member.name || ''} ${member.firstName || ''} ${member.lastName || ''} ${member.role || ''}`.toLowerCase();
-      return haystack.includes(query);
-    });
+    if (!members) return [];
+    let filtered = members;
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((m) => {
+        const name = formatMemberName(m).toLowerCase();
+        return name.includes(query);
+      });
+    }
+    return filtered.sort((a, b) => formatMemberName(a).localeCompare(formatMemberName(b)));
   }, [members, searchQuery]);
 
-  const toTitleCase = (str: string) => {
-    if (!str) return '';
-    return str.split(/[\s-]+/).map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-    ).join(' ');
+  const sendGreeting = (member: any) => {
+    Share.share({
+      message: `Happy birthday ${formatMemberName(member)}! May the Lord bless you and strengthen you as you continue to walk with Him.`
+    });
   };
 
-  const formatMemberName = (member: any) => {
-    let displayName = member.name || '';
-    if (member.firstName || member.lastName) {
-        const f = toTitleCase(member.firstName);
-        const l = toTitleCase(member.lastName);
-        const m = member.middleName ? member.middleName.charAt(0).toUpperCase() + '.' : '';
-        displayName = [f, m, l].filter(Boolean).join(' ');
-    } else if (member.name) {
-        const parts = member.name.split(' ').filter(Boolean);
-        if (parts.length > 2) {
-            const f = toTitleCase(parts[0]);
-            const l = toTitleCase(parts[parts.length - 1]);
-            const m = parts[1].charAt(0).toUpperCase() + '.';
-            displayName = `${f} ${m} ${l}`;
-        } else {
-            displayName = toTitleCase(member.name);
-        }
-    }
-    return displayName || 'Unnamed Member';
-  };
-
-  const formatBirthday = (dateStr?: string) => {
-    if (!dateStr) return '';
-    
-    let date: Date | null = null;
-    
-    // Check if it matches YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss
-    const ymd = dateStr.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-    if (ymd) {
-      const [, y, m, d] = ymd;
-      date = new Date(Number(y), Number(m) - 1, Number(d));
-    } else {
-      // Check for MM/DD/YYYY
-      const mdy = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-      if (mdy) {
-        const [, m, d, y] = mdy;
-        date = new Date(Number(y), Number(m) - 1, Number(d));
-      } else {
-        date = new Date(dateStr);
-      }
-    }
-    
-    if (date && !isNaN(date.getTime())) {
-      const formatted = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-      return formatted;
-    }
-    
-    return dateStr;
+  const renderBirthdaySection = (title: string, data: any[]) => {
+      if (data.length === 0) return null;
+      return (
+          <View style={membersStyles.birthdaySection}>
+              <Text style={membersStyles.birthdaySectionTitle}>{title}</Text>
+              {data.map(member => (
+                  <View key={member.id} style={membersStyles.card}>
+                      <Image
+                          source={{ uri: member.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(formatMemberName(member))}&background=f0f0f0&color=999` }}
+                          style={membersStyles.avatar}
+                      />
+                      <View style={membersStyles.details}>
+                          <Text style={membersStyles.name}>{formatMemberName(member)}</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                              <Cake size={12} color="#D97706" />
+                              <Text style={membersStyles.meta}>{formatBirthday(member)}</Text>
+                          </View>
+                          {member.ministryIds && member.ministryIds.length > 0 && (
+                              <Text style={membersStyles.ministryMeta}>Ministry member</Text>
+                          )}
+                      </View>
+                      <TouchableOpacity style={membersStyles.greetingBtn} onPress={() => sendGreeting(member)}>
+                          <Send size={14} color="#D97706" />
+                          <Text style={membersStyles.greetingBtnText}>Send</Text>
+                      </TouchableOpacity>
+                  </View>
+              ))}
+          </View>
+      );
   };
 
   return (
     <View style={membersStyles.wrap}>
+      {(todayBirthdays.length > 0 || upcomingBirthdays.length > 0) && (
+        <View style={membersStyles.birthdaySnapshotCard}>
+            <View style={membersStyles.birthdaySnapshotHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Cake size={18} color="#D97706" />
+                    <Text style={membersStyles.birthdaySnapshotTitle}>Celebrations</Text>
+                </View>
+                <TouchableOpacity onPress={() => router.push('/birthdays')} style={membersStyles.seeAllBtn}>
+                    <Text style={membersStyles.seeAllText}>View All</Text>
+                    <ChevronRight size={14} color="#D97706" />
+                </TouchableOpacity>
+            </View>
+            
+            <View style={membersStyles.birthdaySnapshotList}>
+                {todayBirthdays.map(m => (
+                    <View key={`today-${m.id}`} style={membersStyles.birthdaySnapshotItem}>
+                        <Image source={{ uri: m.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(formatMemberName(m))}&background=f0f0f0&color=999` }} style={membersStyles.snapshotAvatar} />
+                        <View style={{ flex: 1 }}>
+                            <Text style={membersStyles.snapshotName} numberOfLines={1}>{formatMemberName(m)}</Text>
+                            <Text style={[membersStyles.snapshotMeta, { color: '#FF6596', fontWeight: '700' }]}>Today!</Text>
+                        </View>
+                    </View>
+                ))}
+                {upcomingBirthdays.map(m => (
+                    <View key={`up-${m.id}`} style={membersStyles.birthdaySnapshotItem}>
+                        <Image source={{ uri: m.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(formatMemberName(m))}&background=f0f0f0&color=999` }} style={membersStyles.snapshotAvatar} />
+                        <View style={{ flex: 1 }}>
+                            <Text style={membersStyles.snapshotName} numberOfLines={1}>{formatMemberName(m)}</Text>
+                            <Text style={membersStyles.snapshotMeta}>{formatBirthday(m)}</Text>
+                        </View>
+                    </View>
+                ))}
+            </View>
+        </View>
+      )}
+
       {membersLoading ? (
         <View style={placeholder.wrap}>
           <Text style={placeholder.subtitle}>Loading members...</Text>
         </View>
       ) : filteredMembers.length === 0 ? (
-        <View style={placeholder.wrap}>
-          <Text style={placeholder.title}>No members found</Text>
-          <Text style={placeholder.subtitle}>Try another search term.</Text>
-        </View>
-      ) : (
-        filteredMembers.map((member) => (
-          <View key={member.id} style={membersStyles.card}>
-            <Image
-              source={{
-                uri:
-                  member.avatar ||
-                  `https://ui-avatars.com/api/?name=${encodeURIComponent(formatMemberName(member))}&background=f0f0f0&color=999`,
-              }}
-              style={membersStyles.avatar}
-            />
-
-            <View style={membersStyles.details}>
-              <Text style={membersStyles.name}>{formatMemberName(member)}</Text>
-              <Text style={membersStyles.meta}>{formatBirthday(member.birthday)}</Text>
-            </View>
-
-            <View style={[membersStyles.statusPill, member.status === 'inactive' && membersStyles.statusPillInactive]}>
-              <Text style={[membersStyles.statusText, member.status === 'inactive' && membersStyles.statusTextInactive]}>
-                {member.status === 'inactive' ? 'Inactive' : 'Active'}
-              </Text>
-            </View>
+          <View style={placeholder.wrap}>
+            <Text style={placeholder.title}>No members found</Text>
+            <Text style={placeholder.subtitle}>Try another search term.</Text>
           </View>
-        ))
+      ) : (
+          filteredMembers.map((member) => (
+            <View key={member.id} style={membersStyles.card}>
+              <Image
+                source={{ uri: member.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(formatMemberName(member))}&background=f0f0f0&color=999` }}
+                style={membersStyles.avatar}
+              />
+              <View style={membersStyles.details}>
+                <Text style={membersStyles.name}>{formatMemberName(member)}</Text>
+              </View>
+              <View style={[membersStyles.statusPill, member.status === 'inactive' && membersStyles.statusPillInactive]}>
+                <Text style={[membersStyles.statusText, member.status === 'inactive' && membersStyles.statusTextInactive]}>
+                  {member.status === 'inactive' ? 'Inactive' : 'Active'}
+                </Text>
+              </View>
+            </View>
+          ))
       )}
     </View>
   );
@@ -1293,60 +1370,198 @@ const membersStyles = StyleSheet.create({
   wrap: {
     paddingHorizontal: 20,
     paddingTop: 18,
-    gap: 10,
+    gap: 12,
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#E9EBF4',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 3,
   },
   avatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: '#E5E7EB',
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
   details: {
     flex: 1,
+    justifyContent: 'center',
   },
   name: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#1E2235',
+    letterSpacing: -0.2,
   },
   meta: {
-    marginTop: 2,
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6B7280',
+    marginTop: 3,
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#79809B',
   },
   statusPill: {
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    backgroundColor: '#ECFDF3',
+    backgroundColor: '#F0FDF4',
     borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderColor: '#DCFCE7',
   },
   statusPillInactive: {
     backgroundColor: '#F9FAFB',
-    borderColor: '#E5E7EB',
+    borderColor: '#F3F4F6',
   },
   statusText: {
     fontSize: 10,
-    fontWeight: '700',
-    color: '#15803D',
+    fontWeight: '800',
+    color: '#166534',
     textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    letterSpacing: 0.5,
   },
   statusTextInactive: {
-    color: '#6B7280',
+    color: '#9CA3AF',
+  },
+  segmentedControl: {
+      flexDirection: 'row',
+      backgroundColor: '#EEF0F7',
+      borderRadius: 12,
+      padding: 4,
+      marginBottom: 12,
+  },
+  segmentBtn: {
+      flex: 1,
+      paddingVertical: 10,
+      alignItems: 'center',
+      borderRadius: 10,
+  },
+  segmentBtnActive: {
+      backgroundColor: '#FFFFFF',
+      shadowColor: '#1E2235',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.06,
+      shadowRadius: 4,
+      elevation: 2,
+  },
+  segmentText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: '#79809B',
+  },
+  segmentTextActive: {
+      color: '#1E2235',
+      fontWeight: '700',
+  },
+  birthdaySnapshotCard: {
+      backgroundColor: '#FFFFFF',
+      borderRadius: 16,
+      padding: 16,
+      marginBottom: 8,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.03,
+      shadowRadius: 10,
+      elevation: 2,
+      borderWidth: 1,
+      borderColor: '#FFFBEB',
+  },
+  birthdaySnapshotHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 12,
+  },
+  birthdaySnapshotTitle: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: '#D97706',
+      letterSpacing: -0.3,
+  },
+  seeAllBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+  },
+  seeAllText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: '#D97706',
+  },
+  birthdaySnapshotList: {
+      gap: 12,
+  },
+  birthdaySnapshotItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+  },
+  snapshotAvatar: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: '#FEF3C7',
+  },
+  snapshotName: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: '#1E2235',
+  },
+  snapshotMeta: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: '#79809B',
+      marginTop: 2,
+  },
+  birthdaysWrap: {
+      gap: 24,
+      paddingBottom: 40,
+  },
+  birthdaySection: {
+      gap: 12,
+  },
+  birthdaySectionTitle: {
+      fontSize: 17,
+      fontWeight: '800',
+      color: '#1E2235',
+      marginLeft: 4,
+      marginTop: 4,
+      letterSpacing: -0.3,
+  },
+  greetingBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: '#FFFBEB',
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: '#FEF3C7',
+  },
+  greetingBtnText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: '#D97706',
+  },
+  ministryMeta: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: '#B66DFF',
+      marginTop: 4,
   },
 });
 

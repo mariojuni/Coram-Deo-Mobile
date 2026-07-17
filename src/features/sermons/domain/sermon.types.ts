@@ -34,6 +34,7 @@ export interface Sermon {
   // but eventually we might remove them or adapt them.
   viewCount?: number;
   favoriteCount?: number;
+  commentCount?: number;
 }
 
 export interface SermonNote {

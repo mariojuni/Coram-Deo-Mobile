@@ -1,5 +1,5 @@
 import { BlurView } from 'expo-blur';
-import { HeartHandshake, Search, X, Pencil, Trash2, MoreHorizontal, User, CheckCircle2 } from 'lucide-react-native';
+import { HeartHandshake, Search, X, Pencil, Trash2, MoreHorizontal, User, CheckCircle2, MessageCircle } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert, ActionSheetIOS, Platform, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,6 +9,8 @@ import type { Prayer, PrayerFilter } from '../../features/prayer/domain/prayer.t
 import { usePrayerFeed } from '../../features/prayer/presentation/hooks/usePrayerFeed';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useUIStore } from '../../store/useUIStore';
+import { CommentButton } from '../../features/comments/presentation/components/CommentButton';
+import { useRouter } from 'expo-router';
 
 const PRAYER_FILTERS: PrayerFilter[] = ['Recent', 'My Requests'];
 
@@ -19,6 +21,7 @@ export default function PrayerScreen() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<PrayerFilter>('Recent');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const router = useRouter();
 
   const handlePray = async (id: string) => {
     try {
@@ -184,6 +187,16 @@ export default function PrayerScreen() {
                               {req.likes || 0}
                             </Text>
                           </TouchableOpacity>
+
+                          <View style={{ marginLeft: 8 }}>
+                            <CommentButton 
+                              count={req.commentCount || 0} 
+                              variant="icon-only" 
+                              size={18} 
+                              color="#9CA3AF"
+                              onPress={() => router.push(`/comment-thread?targetType=prayer_request&targetId=${req.id}`)}
+                            />
+                          </View>
                         </View>
                       </View>
                     </View>

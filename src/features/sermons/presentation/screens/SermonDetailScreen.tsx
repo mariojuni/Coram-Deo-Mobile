@@ -13,6 +13,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { Spacing } from '@/constants/theme';
 import { NotesSheet } from '../components/NotesSheet';
 import { DownloadButton } from '../components/DownloadButton';
+import { CommentButton } from '@/features/comments/presentation/components/CommentButton';
 
 export function SermonDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -161,6 +162,16 @@ export function SermonDetailScreen() {
             
             <View style={styles.iconBtn}>
               <DownloadButton sermon={currentSermon} variant="icon-only" />
+            </View>
+
+            <View style={styles.iconBtn}>
+              <CommentButton 
+                count={currentSermon.commentCount || 0}
+                variant="icon-only"
+                color="#4B5563"
+                size={22}
+                onPress={() => router.push(`/comment-thread?targetType=sermon&targetId=${currentSermon.id}`)}
+              />
             </View>
 
             <TouchableOpacity style={styles.iconBtn} onPress={handleShare} activeOpacity={0.8} disabled={sharing}>

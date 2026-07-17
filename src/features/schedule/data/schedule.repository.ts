@@ -1,5 +1,6 @@
 import { addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, runTransaction, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { db } from '../../../firebase';
+import { worshipRepository } from '../../worship/data/worship.repository';
 import type { Duty, Rsvp, Schedule } from '../domain/schedule.types';
 
 type SchedulesListener = (schedules: Schedule[]) => void;
@@ -53,19 +54,40 @@ function toSchedule(docId: string, data: Record<string, unknown>): Schedule {
     location: typeof data.location === 'string' ? data.location : '',
     duties,
     rsvps,
+    songList: Array.isArray(data.songList) ? data.songList : undefined,
     createdAt: data.createdAt,
   };
 }
 
 export const scheduleRepository = {
-  subscribeToSchedules(onData: SchedulesListener, onError: ErrorListener): () => void {
+  subscribeToSchedules(churchId: string | undefined, onData: SchedulesListener, onError: ErrorListener): () => void {
     const scheduleQuery = query(collection(db, 'events'), orderBy('date', 'asc'));
 
     return onSnapshot(
       scheduleQuery,
-      (snapshot) => {
-        const schedules = snapshot.docs.map((docSnap) => toSchedule(docSnap.id, docSnap.data() as Record<string, unknown>));
-        onData(schedules);
+      async (snapshot) => {
+        const baseSchedules = snapshot.docs.map((docSnap) => toSchedule(docSnap.id, docSnap.data() as Record<string, unknown>));
+        
+        if (!churchId) {
+           onData(baseSchedules);
+           return;
+        }
+
+        const enriched = await Promise.all(
+          baseSchedules.map(async (schedule) => {
+            try {
+              const setlist = await worshipRepository.getSetlistForEvent(churchId, schedule.id);
+              if (setlist) {
+                 const items = await worshipRepository.getSetlistItems(setlist.id);
+                 schedule.songList = items;
+              }
+            } catch(e) {
+               console.error("Failed to fetch setlist for event", schedule.id, e);
+            }
+            return schedule;
+          })
+        );
+        onData(enriched);
       },
       (error) => onError(error)
     );

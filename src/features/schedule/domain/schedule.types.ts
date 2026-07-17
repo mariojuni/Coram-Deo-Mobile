@@ -23,5 +23,6 @@ export interface Schedule {
   location: string;
   duties: Duty[];
   rsvps: Rsvp[];
+  songList?: any[];
   createdAt?: unknown;
 }

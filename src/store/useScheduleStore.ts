@@ -22,6 +22,8 @@ interface ScheduleStore {
 let schedulesUnsubscribe: (() => void) | null = null;
 let schedulesSubscriberCount = 0;
 
+import { useAuthStore } from './useAuthStore';
+
 export const useScheduleStore = create<ScheduleStore>((set) => ({
   schedules: [],
   schedulesLoading: true,
@@ -29,7 +31,9 @@ export const useScheduleStore = create<ScheduleStore>((set) => ({
     schedulesSubscriberCount += 1;
 
     if (!schedulesUnsubscribe) {
+      const churchId = useAuthStore.getState().userProfile?.churchId;
       schedulesUnsubscribe = scheduleRepository.subscribeToSchedules(
+        churchId || undefined,
         (nextSchedules) => {
           set({ schedules: nextSchedules, schedulesLoading: false });
         },

@@ -27,6 +27,7 @@ export interface Prayer {
   isAnonymous?: boolean;
   status?: PrayerStatus;
   prayedCount?: number;
+  commentCount?: number;
   createdBy?: string;
   createdAt?: Timestamp | Date | number | null;
   updatedAt?: Timestamp | Date | number | null;

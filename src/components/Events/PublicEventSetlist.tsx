@@ -3,85 +3,29 @@ import { View, Text, TouchableOpacity, Animated, StyleSheet } from 'react-native
 import { useRouter } from 'expo-router';
 import { ChevronRight } from 'lucide-react-native';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useWorshipSetlist } from '@/features/worship/presentation/hooks/useWorshipSetlist';
 
 interface PublicEventSetlistProps {
   eventId: string;
   title?: string;
   onCloseModal?: () => void;
+  preloadedSongList?: any[];
 }
 
-export function PublicEventSetlist({ eventId, title = "Event Songs", onCloseModal }: PublicEventSetlistProps) {
+export function PublicEventSetlist({ eventId, title = "Event Songs", onCloseModal, preloadedSongList }: PublicEventSetlistProps) {
   const router = useRouter();
   const userProfile = useAuthStore((s) => s.userProfile);
-  const { setlist, items, loading } = useWorshipSetlist(userProfile?.churchId || undefined, eventId || undefined);
-  const fadeAnim = useRef(new Animated.Value(0.4)).current;
+  
+  const displayItems = preloadedSongList || [];
 
-  useEffect(() => {
-    if (loading) {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(fadeAnim, {
-            toValue: 1,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-          Animated.timing(fadeAnim, {
-            toValue: 0.4,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-    }
-  }, [loading, fadeAnim]);
-
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.modalRsvpTitle}>{title}</Text>
-        <View style={styles.listContainer}>
-          {[1, 2, 3].map((_, index) => (
-            <Animated.View 
-              key={index}
-              style={[
-                styles.listItem,
-                { borderBottomWidth: index < 2 ? 1 : 0, opacity: fadeAnim }
-              ]}
-            >
-              <View style={styles.skeletonAvatar} />
-              <View style={styles.skeletonTextContainer}>
-                <View style={styles.skeletonTitle} />
-                <View style={styles.skeletonSubtitle} />
-              </View>
-              <View style={styles.skeletonIcon} />
-            </Animated.View>
-          ))}
-        </View>
-      </View>
-    );
-  }
-
-  const renderEmpty = () => (
-    <View style={styles.container}>
-      <Text style={styles.modalRsvpTitle}>{title}</Text>
-      <View style={[styles.listContainer, { alignItems: 'center', justifyContent: 'center' }]}>
-        <Text style={styles.emptyText}>No songs scheduled</Text>
-      </View>
-    </View>
-  );
-
-  if (!setlist || items.length === 0) return renderEmpty();
+  if (displayItems.length === 0) return null;
 
   const isStaff = Array.isArray(userProfile?.systemRoles)
     ? userProfile.systemRoles.some((r: string) => ['super_admin', 'church_admin', 'pastor', 'ministry_leader'].includes(r))
     : ['super_admin', 'church_admin', 'pastor', 'ministry_leader'].includes(userProfile?.role?.toLowerCase() || '');
-  
-  if (setlist.status !== 'published' && !isStaff) return renderEmpty();
 
-  const publicItems = items.filter(i => isStaff || i.song?.allowPublicLyrics);
+  const publicItems = displayItems.filter(i => isStaff || i.song?.allowPublicLyrics);
 
-  if (publicItems.length === 0) return renderEmpty();
+  if (publicItems.length === 0) return null;
 
   return (
     <View style={styles.container}>
