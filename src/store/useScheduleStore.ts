@@ -22,7 +22,6 @@ interface ScheduleStore {
 let schedulesUnsubscribe: (() => void) | null = null;
 let schedulesSubscriberCount = 0;
 
-import { useAuthStore } from './useAuthStore';
 
 export const useScheduleStore = create<ScheduleStore>((set) => ({
   schedules: [],
@@ -31,6 +30,7 @@ export const useScheduleStore = create<ScheduleStore>((set) => ({
     schedulesSubscriberCount += 1;
 
     if (!schedulesUnsubscribe) {
+      const { useAuthStore } = require('./useAuthStore');
       const churchId = useAuthStore.getState().userProfile?.churchId;
       schedulesUnsubscribe = scheduleRepository.subscribeToSchedules(
         churchId || undefined,

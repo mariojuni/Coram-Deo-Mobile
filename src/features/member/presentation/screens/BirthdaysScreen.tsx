@@ -65,8 +65,8 @@ export function BirthdaysScreen() {
         return (
             <View style={styles.birthdaySection}>
                 <View style={styles.sectionHeaderRow}>
-                    {isToday && <Sparkles size={18} color="#FF6B6B" />}
-                    <Text style={[styles.birthdaySectionTitle, isToday && { color: '#FF6B6B' }]}>{title}</Text>
+                    {isToday && <Sparkles size={18} color="#FF6596" />}
+                    <Text style={[styles.birthdaySectionTitle, isToday && { color: '#FF6596' }]}>{title}</Text>
                 </View>
                 {data.map(member => (
                     <View key={member.id} style={styles.card}>
@@ -75,7 +75,6 @@ export function BirthdaysScreen() {
                                 source={{ uri: member.photoUrl || member.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(formatMemberName(member))}&background=f0f0f0&color=999` }}
                                 style={styles.avatar}
                             />
-                            {isToday && <View style={styles.onlineDotToday} />}
                         </View>
                         <View style={styles.details}>
                             <Text style={styles.name}>{formatMemberName(member)}</Text>
@@ -97,7 +96,7 @@ export function BirthdaysScreen() {
                         </View>
                         <TouchableOpacity style={styles.greetingBtn} onPress={() => sendGreeting(member)}>
                             <LinearGradient
-                                colors={['#FF6B6B', '#FF8E53']}
+                                colors={['#FF6596', '#C084FC']}
                                 start={{ x: 0, y: 0 }}
                                 end={{ x: 1, y: 0 }}
                                 style={StyleSheet.absoluteFill}
@@ -127,10 +126,10 @@ export function BirthdaysScreen() {
                     </View>
                 </View>
 
-            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 70 }]} showsVerticalScrollIndicator={false}>
                 <View style={styles.heroBanner}>
                     <LinearGradient
-                        colors={['#FF6B6B', '#FF8E53']}
+                        colors={['#FFD1DF', '#E8D4FF', '#D4E4FF']}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
                         style={StyleSheet.absoluteFill}
@@ -139,7 +138,7 @@ export function BirthdaysScreen() {
                     <View style={styles.heroOrb2} />
                     <View style={styles.heroContent}>
                         <View style={styles.heroIconWrap}>
-                            <Gift size={24} color="#FF6B6B" />
+                            <Gift size={24} color="#FF6596" />
                         </View>
                         <Text style={styles.heroTitle}>This Month</Text>
                         <Text style={styles.heroSubtitle}>
@@ -217,7 +216,6 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         paddingHorizontal: 20,
-        paddingTop: 110,
         paddingBottom: 40,
         gap: 24,
     },
@@ -239,16 +237,18 @@ const styles = StyleSheet.create({
         width: 140,
         height: 140,
         borderRadius: 70,
-        backgroundColor: 'rgba(255,255,255,0.15)',
+        backgroundColor: '#FFFFFF',
+        opacity: 0.6,
     },
     heroOrb2: {
         position: 'absolute',
-        bottom: -30,
-        left: -20,
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        backgroundColor: 'rgba(255,255,255,0.1)',
+        bottom: -50,
+        left: -30,
+        width: 160,
+        height: 160,
+        borderRadius: 80,
+        backgroundColor: '#FFFFFF',
+        opacity: 0.4,
     },
     heroContent: {
         alignItems: 'center',
@@ -269,13 +269,24 @@ const styles = StyleSheet.create({
     heroTitle: {
         fontSize: 22,
         fontWeight: '900',
-        color: '#FFFFFF',
+        color: '#1E2235',
         marginBottom: 4,
     },
     heroSubtitle: {
         fontSize: 14,
         fontWeight: '600',
-        color: 'rgba(255,255,255,0.9)',
+        color: '#6B7280',
+    },
+    heroStatNum: {
+        fontSize: 24,
+        fontWeight: '900',
+        color: '#1E2235',
+    },
+    heroStatLabel: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#6B7280',
+        marginTop: 2,
     },
     birthdaySection: {
         gap: 16,

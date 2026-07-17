@@ -5,14 +5,15 @@ import { MoreHorizontal, User } from 'lucide-react-native';
 import type { Comment } from '../../domain/comment.types';
 import { commentRepository } from '../../data/comment.repository';
 
+import { useAuthStore } from '@/store/useAuthStore';
+import { canModerateComments } from '@/permissions/mobilePermissions';
+
 interface CommentItemProps {
   comment: Comment;
   churchId: string;
   onReply: (comment: Comment) => void;
   onDelete: (comment: Comment) => void;
   onHide?: (comment: Comment) => void;
-  canDelete: boolean;
-  canModerate: boolean;
   level?: number;
 }
 
@@ -22,10 +23,12 @@ export function CommentItem({
   onReply, 
   onDelete, 
   onHide,
-  canDelete, 
-  canModerate,
   level = 0
 }: CommentItemProps) {
+  const { userProfile } = useAuthStore();
+  const canDelete = userProfile?.uid === comment.authorUserId;
+  const canModerate = canModerateComments(userProfile);
+
   const [replies, setReplies] = useState<Comment[]>([]);
   const [loadingReplies, setLoadingReplies] = useState(false);
   const [showReplies, setShowReplies] = useState(false);
@@ -145,8 +148,6 @@ export function CommentItem({
                 onReply={onReply}
                 onDelete={onDelete}
                 onHide={onHide}
-                canDelete={canDelete} // Note: realistically this should be recalculated per reply, but we'll assume author comparison is inside onDelete
-                canModerate={canModerate}
                 level={level + 1} 
               />
             ))

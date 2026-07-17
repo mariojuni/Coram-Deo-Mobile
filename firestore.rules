@@ -254,10 +254,10 @@ service cloud.firestore {
     // ── Comments ─────────────────────────────────────────────────────────────
     match /comments/{commentId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.authorUserId == request.auth.uid;
       // Allow the comment author to update/delete, or allow a pastor/admin of the church to moderate
       allow update, delete: if isSignedIn() && (
-        resource.data.userId == request.auth.uid ||
+        resource.data.authorUserId == request.auth.uid ||
         isPastorOrAdmin(resource.data.churchId)
       );
     }
@@ -293,7 +293,9 @@ service cloud.firestore {
         allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
         allow update: if isSignedIn() && (
           resource.data.userId == request.auth.uid ||
-          isPastorOrAdmin(churchId)
+          isPastorOrAdmin(churchId) ||
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['likes', 'likedBy', 'prayedCount', 'commentCount', 'updatedAt'])
         );
         allow delete: if isSignedIn() && (
           resource.data.userId == request.auth.uid ||

@@ -18,6 +18,7 @@ import { Animated, Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpa
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Schedule } from '@/features/schedule/domain/schedule.types';
 import { EventDetailsModal } from '@/components/Events/EventDetailsModal';
+import { canModeratePrayerRequests } from '@/permissions/mobilePermissions';
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -152,7 +153,7 @@ export default function HomeScreen() {
 
   // Name: fullName from Firestore profile, falling back to Firebase Auth displayName
   const fullName = userProfile?.fullName || currentUser?.displayName || displayName;
-  const firstName = fullName.split(' ')[0];
+  const firstName = userProfile?.firstName || fullName.split(' ')[0];
   const initials = (userProfile?.firstName?.charAt(0) ?? firstName.charAt(0)).toUpperCase();
 
   // Avatar: Firestore photoUrl → Firebase Auth photoURL → initials fallback
@@ -481,7 +482,7 @@ export default function HomeScreen() {
 
             <BounceCard 
               style={styles.prayerCardOuter}
-              onPress={() => handlePray(latestPrayer.id)}
+              onPress={() => router.push({ pathname: '/comment-thread', params: { targetType: 'prayer_request', targetId: latestPrayer.id } })}
             >
               <View style={styles.prayerCardInner}>
                 <LinearGradient
@@ -513,7 +514,7 @@ export default function HomeScreen() {
                           </View>
                           <Text style={styles.prayerTime}>{formatPrayerTimeAgo(latestPrayer.createdAt)}</Text>
                         </View>
-                        {latestPrayer.userId === currentUserId && (
+                        {(latestPrayer.userId === currentUserId || canModeratePrayerRequests(userProfile)) && (
                           <DebouncedTouchable
                             onPress={() => {
                               if (Platform.OS === 'ios') {
@@ -553,10 +554,10 @@ export default function HomeScreen() {
                     
                     <View style={[styles.prayerBottomRow, { justifyContent: 'flex-end', marginTop: 12 }]}>
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        {/* Mark as Answered button for the creator */}
-                        {latestPrayer.userId === currentUserId && (
+                        {/* Mark as Answered button for the creator or admins */}
+                        {(latestPrayer.userId === currentUserId || canModeratePrayerRequests(userProfile)) && (
                             <DebouncedTouchable
-                              style={styles.prayIconButton}
+                              style={[styles.prayIconButton, { marginRight: 10 }]}
                               onPress={() => handleAnswered(latestPrayer.id, latestPrayer.answered || latestPrayer.status === 'answered')}
                               activeOpacity={0.7}
                             >
@@ -564,6 +565,17 @@ export default function HomeScreen() {
                             </DebouncedTouchable>
                         )}
                         
+                        <DebouncedTouchable
+                          style={[styles.prayIconButton, { marginRight: 10 }]}
+                          onPress={() => router.push({ pathname: '/comment-thread', params: { targetType: 'prayer_request', targetId: latestPrayer.id } })}
+                          activeOpacity={0.7}
+                        >
+                          <MessageCircle size={18} color="#9CA3AF" />
+                          <Text style={styles.prayIconCount}>
+                            {latestPrayer.commentCount || 0}
+                          </Text>
+                        </DebouncedTouchable>
+
                         <DebouncedTouchable 
                           style={styles.prayIconButton}
                           onPress={() => handlePray(latestPrayer.id)}
@@ -575,17 +587,6 @@ export default function HomeScreen() {
                           />
                           <Text style={[styles.prayIconCount, latestPrayer.likedBy?.includes(currentUserId) && { color: '#FF6596' }]}>
                             {latestPrayer.likes || 0}
-                          </Text>
-                        </DebouncedTouchable>
-
-                        <DebouncedTouchable
-                          style={[styles.prayIconButton, { marginLeft: 16, marginRight: 0 }]}
-                          onPress={() => router.push(`/comment-thread?targetType=prayer_request&targetId=${latestPrayer.id}`)}
-                          activeOpacity={0.7}
-                        >
-                          <MessageCircle size={18} color="#9CA3AF" />
-                          <Text style={styles.prayIconCount}>
-                            {latestPrayer.commentCount || 0}
                           </Text>
                         </DebouncedTouchable>
                       </View>

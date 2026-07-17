@@ -56,5 +56,9 @@ export const formatBirthday = (member: any) => {
     const d = parseMemberDate(member);
     if (!d) return '';
     const date = new Date(2000, d.m - 1, d.d);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    let formatted = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    if (d.y) {
+        formatted += `, ${d.y}`;
+    }
+    return formatted;
 };

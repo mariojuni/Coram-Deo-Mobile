@@ -43,6 +43,8 @@ export function useComments(churchId: string, targetType: CommentTargetType, tar
       }
     } catch (err) {
       console.error('Error fetching comments:', err);
+      // Prevent infinite loop if query fails (e.g. missing index)
+      setHasMore(false);
     } finally {
       setLoading(false);
       setLoadingMore(false);

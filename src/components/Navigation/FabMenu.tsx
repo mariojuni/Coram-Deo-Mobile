@@ -3,11 +3,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { HandHeart, HeartHandshake, Plus } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Animated, StyleSheet, TouchableOpacity, View, Text } from 'react-native';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useUIStore } from '../../store/useUIStore';
 import { canSubmitGiving } from '../../permissions/mobilePermissions';
-import PrayerRequestModal from '../../features/prayer/presentation/components/PrayerRequestModal';
 
 interface FabMenuProps {
   isStaff: boolean;
@@ -16,7 +15,7 @@ interface FabMenuProps {
 export default function FabMenu({ isStaff }: FabMenuProps) {
   const router = useRouter();
   const { userProfile } = useAuthStore();
-  const { prayerModalOpen, editingPrayer, openPrayerModal, closePrayerModal } = useUIStore();
+  const { openPrayerModal } = useUIStore();
   const [isOpen, setIsOpen] = useState(false);
   const animation = useMemo(() => new Animated.Value(0), []);
 
@@ -111,7 +110,6 @@ export default function FabMenu({ isStaff }: FabMenuProps) {
             onPress={() => handlePress(item.route)}
             activeOpacity={0.8}
           >
-
             <View style={styles.subItem}>
               <item.icon size={20} color="#FF6596" />
             </View>
@@ -136,12 +134,6 @@ export default function FabMenu({ isStaff }: FabMenuProps) {
           </Animated.View>
         </LinearGradient>
       </TouchableOpacity>
-
-      <PrayerRequestModal 
-        isOpen={prayerModalOpen} 
-        onClose={closePrayerModal} 
-        initialData={editingPrayer}
-      />
     </View>
   );
 }

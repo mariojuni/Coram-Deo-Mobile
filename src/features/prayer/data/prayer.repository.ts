@@ -33,6 +33,8 @@ function toPrayerModel(data: Record<string, unknown>, id: string): Prayer {
     status: typeof data.status === 'string' ? (data.status as any) : undefined,
     likes: typeof data.likes === 'number' ? data.likes : 0,
     likedBy: Array.isArray(data.likedBy) ? data.likedBy.filter((v): v is string => typeof v === 'string') : [],
+    commentCount: typeof data.commentCount === 'number' ? data.commentCount : 0,
+    userPhotoUrl: typeof data.userPhotoUrl === 'string' ? data.userPhotoUrl : undefined,
     createdAt: (data.createdAt as Prayer['createdAt']) ?? null,
     updatedAt: (data.updatedAt as Prayer['updatedAt']) ?? null,
   };
@@ -117,6 +119,8 @@ export const prayerRepository = {
       likes: 0,
       likedBy: [],
       answered: false,
+      commentCount: 0,
+      userPhotoUrl: null,
       createdAt: payload.createdAt || new Date().toISOString(),
     });
     return docRef.id;
@@ -142,9 +146,11 @@ export const prayerRepository = {
       // Legacy fallbacks for existing UI
       requestText: payload.content,
       requesterName: payload.isAnonymous ? 'Anonymous' : (payload.name || 'Anonymous'),
+      userPhotoUrl: payload.isAnonymous ? null : (payload.userPhotoUrl || null),
       likes: 0,
       likedBy: [],
       answered: false,
+      commentCount: 0,
     });
     return docRef.id;
   },

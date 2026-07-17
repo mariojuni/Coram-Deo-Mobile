@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, Text, StyleSheet, FlatList, TextInput, 
   TouchableOpacity, KeyboardAvoidingView, Platform, 
-  ActivityIndicator, Alert, Keyboard 
+  ActivityIndicator, Alert, Keyboard, ActionSheetIOS 
 } from 'react-native';
 
-import { Stack as ExpoStack, useLocalSearchParams as useExpoSearchParams, useRouter as useExpoRouter } from 'expo-router';
-import { ArrowLeft, X, Send, User, CheckCircle2, MessageCircle, HeartHandshake } from 'lucide-react-native';
+import { Stack as ExpoStack, useLocalSearchParams as useExpoSearchParams, useRouter as useExpoRouter, useFocusEffect } from 'expo-router';
+import { ArrowLeft, X, Send, User, CheckCircle2, MessageCircle, HeartHandshake, ChevronLeft, MoreVertical } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,8 +14,11 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useComments } from '../hooks/useComments';
 import { CommentItem } from '../components/CommentItem';
 import type { Comment, CommentTargetType } from '../../domain/comment.types';
-import { canCreateComment, canDeleteComment, canModerateComments } from '@/permissions/mobilePermissions';
+import { canCreateComment, canDeleteComment, canModerateComments, canModeratePrayerRequests } from '@/permissions/mobilePermissions';
 import { formatPrayerTimeAgo } from '@/features/prayer/domain/prayer.selectors';
+import { prayerRepository } from '@/features/prayer/data/prayer.repository';
+import { useUIStore } from '@/store/useUIStore';
+import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
 
 import { db } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
@@ -27,6 +30,7 @@ export function CommentThreadScreen() {
   
   const { currentUser, userProfile } = useAuthStore();
   const churchId = userProfile?.churchId;
+  const openPrayerModal = useUIStore((state) => state.openPrayerModal);
   
   const [parentData, setParentData] = useState<any>(null);
   const [loadingParent, setLoadingParent] = useState(true);
@@ -52,36 +56,119 @@ export function CommentThreadScreen() {
   const canCreate = canCreateComment(userProfile);
   const canModerate = canModerateComments(userProfile);
 
-  useEffect(() => {
-    if (churchId && targetType && targetId) {
-      loadParentData();
-      fetchComments(true);
-    } else {
-      setLoadingParent(false);
-    }
-  }, [churchId, targetType, targetId]);
+  useFocusEffect(
+    React.useCallback(() => {
+      if (churchId && targetType && targetId) {
+        loadParentData();
+        fetchComments(true);
+      } else {
+        setLoadingParent(false);
+      }
+    }, [churchId, targetType, targetId])
+  );
 
   const loadParentData = async () => {
     try {
-      if (!churchId || !targetId) return;
-      let ref;
+      setLoadingParent(true);
       if (targetType === 'prayer_request') {
-        ref = doc(db, 'churches', churchId, 'prayer_requests', targetId);
+        const docRef = doc(db, 'churches', churchId!, 'prayer_requests', targetId);
+        const snapshot = await getDoc(docRef);
+        if (snapshot.exists()) {
+          setParentData({ id: snapshot.id, ...snapshot.data() });
+        }
       } else if (targetType === 'sermon') {
-        ref = doc(db, 'churches', churchId, 'sermons', targetId);
-      }
-      
-      if (ref) {
-        const snap = await getDoc(ref);
-        if (snap.exists()) {
-          setParentData(snap.data());
+        const docRef = doc(db, 'churches', churchId!, 'sermons', targetId);
+        const snapshot = await getDoc(docRef);
+        if (snapshot.exists()) {
+          setParentData({ id: snapshot.id, ...snapshot.data() });
         }
       }
     } catch (e) {
-      console.error('Error loading parent data', e);
+      console.error(e);
     } finally {
       setLoadingParent(false);
     }
+  };
+
+  const handlePray = async () => {
+    if (!churchId || !parentData || !currentUser?.uid || targetType !== 'prayer_request') return;
+    try {
+      await prayerRepository.togglePrayerLike(churchId, targetId, currentUser.uid);
+      const isLiked = parentData.likedBy?.includes(currentUser.uid);
+      setParentData((prev: any) => prev ? {
+        ...prev,
+        likes: Math.max(0, (prev.likes || 0) + (isLiked ? -1 : 1)),
+        likedBy: isLiked 
+          ? prev.likedBy?.filter((id: string) => id !== currentUser.uid) 
+          : [...(prev.likedBy || []), currentUser.uid]
+      } : prev);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleAnswered = async () => {
+    if (!churchId || !parentData || targetType !== 'prayer_request') return;
+    try {
+      const currentAns = parentData.answered || parentData.status === 'answered';
+      await prayerRepository.togglePrayerAnswered(churchId, targetId, currentAns);
+      setParentData((prev: any) => prev ? { ...prev, answered: !currentAns, status: !currentAns ? 'answered' : 'pending' } : prev);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleHeaderMenu = () => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Cancel', 'Edit', 'Delete'],
+          cancelButtonIndex: 0,
+          destructiveButtonIndex: 2,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) {
+            if (parentData) openPrayerModal(parentData);
+          } else if (buttonIndex === 2) {
+            handleDeletePrayer();
+          }
+        }
+      );
+    } else {
+      Alert.alert(
+        'Manage Prayer Request',
+        'Choose an action',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Edit', onPress: () => { if (parentData) openPrayerModal(parentData); } },
+          { text: 'Delete', onPress: handleDeletePrayer, style: 'destructive' }
+        ]
+      );
+    }
+  };
+
+  const handleDeletePrayer = () => {
+    Alert.alert(
+      'Delete Prayer Request',
+      'Are you sure you want to delete this prayer request? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            if (!churchId) return;
+            try {
+              await prayerRepository.deletePrayerRequest(churchId, targetId);
+              router.back();
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete prayer request.');
+              console.error(error);
+            }
+          }
+        }
+      ]
+    );
   };
 
   const handleSend = async () => {
@@ -127,8 +214,23 @@ export function CommentThreadScreen() {
     ]);
   };
 
-  const renderParentHeader = () => {
-    if (loadingParent) return <ActivityIndicator style={styles.headerLoader} />;
+  const renderHeader = () => {
+    if (loadingParent) {
+      return (
+        <View style={{ padding: 20 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+            <ShimmerSkeleton width={48} height={48} borderRadius={24} />
+            <View style={{ marginLeft: 12 }}>
+              <ShimmerSkeleton width={120} height={16} style={{ marginBottom: 8 }} />
+              <ShimmerSkeleton width={80} height={12} />
+            </View>
+          </View>
+          <ShimmerSkeleton width="100%" height={20} style={{ marginBottom: 8 }} />
+          <ShimmerSkeleton width="80%" height={20} style={{ marginBottom: 16 }} />
+          <ShimmerSkeleton width="100%" height={150} borderRadius={16} />
+        </View>
+      );
+    }
     if (!parentData) return null;
 
     if (targetType === 'prayer_request') {
@@ -136,26 +238,48 @@ export function CommentThreadScreen() {
         <View style={styles.flatParentContainer}>
           <Text style={styles.flatPrayerText}>
             {parentData.title ? <Text style={{ fontWeight: '700', color: '#111827' }}>{parentData.title} — </Text> : null}
-            {parentData.request || parentData.content}
+            {parentData.request || parentData.requestText || parentData.content}
           </Text>
 
           <View style={styles.flatPrayerBottomRow}>
+            {/* Answered Tag */}
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               {(parentData.answered || parentData.status === 'answered') && (
-                <View style={styles.flatAnsweredBadge}>
-                  <CheckCircle2 size={18} color="#10B981" />
+                <View style={[styles.flatAnsweredBadge, { marginRight: 8 }]}>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: '#10B981', marginRight: 4 }}>Answered</Text>
                 </View>
               )}
-              <View style={[styles.prayIconButton, { marginLeft: (parentData.answered || parentData.status === 'answered') ? 16 : 0 }]}>
-                <HeartHandshake size={18} color="#9CA3AF" />
-                <Text style={styles.prayIconCount}>{parentData.likes || 0}</Text>
-              </View>
-              <View style={[styles.prayIconButton, { marginLeft: 16 }]}>
+            </View>
+
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              {(parentData.userId === currentUser?.uid || canModeratePrayerRequests(userProfile)) ? (
+                <TouchableOpacity style={[styles.prayIconButton, { marginRight: 16 }]} onPress={handleAnswered}>
+                  <CheckCircle2 size={18} color={(parentData.answered || parentData.status === 'answered') ? '#10B981' : '#9CA3AF'} />
+                </TouchableOpacity>
+              ) : (
+                (parentData.answered || parentData.status === 'answered') && (
+                  <View style={[styles.flatAnsweredBadge, { marginRight: 16 }]}>
+                    <CheckCircle2 size={18} color="#10B981" />
+                  </View>
+                )
+              )}
+              
+              <View style={[styles.prayIconButton, { marginRight: 16 }]}>
                 <MessageCircle size={18} color="#FF6596" />
                 <Text style={[styles.prayIconCount, { color: '#FF6596' }]}>
                   {parentData.commentCount || comments.length || 0}
                 </Text>
               </View>
+
+              {(() => {
+                const isLiked = parentData.likedBy?.includes(currentUser?.uid || '');
+                return (
+                  <TouchableOpacity style={styles.prayIconButton} onPress={handlePray}>
+                    <HeartHandshake size={18} color={isLiked ? "#FF6596" : "#9CA3AF"} />
+                    <Text style={[styles.prayIconCount, isLiked && { color: "#FF6596" }]}>{parentData.likes || 0}</Text>
+                  </TouchableOpacity>
+                );
+              })()}
             </View>
           </View>
         </View>
@@ -187,20 +311,28 @@ export function CommentThreadScreen() {
       <ExpoStack.Screen options={{ headerShown: false }} />
       
       <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <ArrowLeft size={24} color="#111827" />
+        <TouchableOpacity style={styles.headerCircle} onPress={() => router.back()} hitSlop={8}>
+          <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
         </TouchableOpacity>
         
-        {targetType === 'prayer_request' && parentData ? (
+        {targetType === 'prayer_request' && loadingParent ? (
+          <View style={styles.headerUserInfo}>
+            <ShimmerSkeleton width={32} height={32} borderRadius={16} />
+            <View style={{ flex: 1 }}>
+              <ShimmerSkeleton width={100} height={14} style={{ marginBottom: 4 }} />
+              <ShimmerSkeleton width={60} height={12} />
+            </View>
+          </View>
+        ) : targetType === 'prayer_request' && parentData ? (
           <View style={styles.headerUserInfo}>
             {parentData.userPhotoUrl ? (
               <Image source={{ uri: parentData.userPhotoUrl }} style={styles.headerAvatar} />
             ) : (
               <View style={[styles.headerAvatar, { alignItems: 'center', justifyContent: 'center' }]}><User size={16} color="#9CA3AF" /></View>
             )}
-            <View>
+            <View style={{ flex: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={styles.headerName} numberOfLines={1}>{parentData.name}</Text>
+                <Text style={styles.headerName} numberOfLines={1}>{parentData.name || parentData.requesterName || parentData.authorName || 'Anonymous'}</Text>
               </View>
               <Text style={styles.headerTime}>{formatPrayerTimeAgo(parentData.createdAt)}</Text>
             </View>
@@ -209,20 +341,38 @@ export function CommentThreadScreen() {
           <Text style={styles.headerTitle}>Comments</Text>
         )}
         
-        <View style={{ width: 40 }} />
+        {targetType === 'prayer_request' && parentData && (parentData.userId === currentUser?.uid || canModeratePrayerRequests(userProfile)) ? (
+          <TouchableOpacity style={styles.headerCircle} onPress={handleHeaderMenu} hitSlop={8}>
+            <MoreVertical size={24} color="#1a1a1a" />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 40 }} />
+        )}
       </View>
 
       <FlatList
         data={comments}
         keyExtractor={item => item.id}
-        ListHeaderComponent={renderParentHeader}
+        ListHeaderComponent={renderHeader()}
         ListHeaderComponentStyle={styles.listHeader}
         contentContainerStyle={styles.listContent}
         onEndReached={() => {
           if (hasMore && !loadingMore) fetchComments(false);
         }}
         onEndReachedThreshold={0.5}
-        ListFooterComponent={loadingMore ? <ActivityIndicator style={{ margin: 20 }} /> : null}
+        ListFooterComponent={loadingMore ? (
+          <View style={{ padding: 20, flexDirection: 'row' }}>
+            <ShimmerSkeleton width={36} height={36} borderRadius={18} />
+            <View style={{ marginLeft: 12, flex: 1 }}>
+              <View style={{ flexDirection: 'row', marginBottom: 6 }}>
+                <ShimmerSkeleton width={100} height={14} style={{ marginRight: 8 }} />
+                <ShimmerSkeleton width={40} height={14} />
+              </View>
+              <ShimmerSkeleton width="90%" height={14} style={{ marginBottom: 4 }} />
+              <ShimmerSkeleton width="60%" height={14} />
+            </View>
+          </View>
+        ) : null}
         renderItem={({ item }) => (
           <CommentItem 
             comment={item} 
@@ -230,8 +380,6 @@ export function CommentThreadScreen() {
             onReply={handleReply}
             onDelete={handleDelete}
             onHide={handleHide}
-            canDelete={canDeleteComment(userProfile, item.authorUserId)}
-            canModerate={canModerate}
           />
         )}
         ListEmptyComponent={
@@ -240,9 +388,23 @@ export function CommentThreadScreen() {
               <Text style={styles.emptyTitle}>No comments yet</Text>
               <Text style={styles.emptySub}>Be the first to share your thoughts.</Text>
             </View>
-          ) : (
-            <ActivityIndicator style={{ marginTop: 40 }} />
-          )
+          ) : loading ? (
+            <View style={{ padding: 20 }}>
+              {[1, 2, 3].map((key) => (
+                <View key={key} style={{ flexDirection: 'row', marginBottom: 20 }}>
+                  <ShimmerSkeleton width={36} height={36} borderRadius={18} />
+                  <View style={{ marginLeft: 12, flex: 1 }}>
+                    <View style={{ flexDirection: 'row', marginBottom: 6 }}>
+                      <ShimmerSkeleton width={100} height={14} style={{ marginRight: 8 }} />
+                      <ShimmerSkeleton width={40} height={14} />
+                    </View>
+                    <ShimmerSkeleton width="90%" height={14} style={{ marginBottom: 4 }} />
+                    <ShimmerSkeleton width="60%" height={14} />
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : null
         }
       />
 
@@ -258,12 +420,6 @@ export function CommentThreadScreen() {
         )}
         
         <View style={styles.inputRow}>
-          {userProfile?.photoUrl ? (
-            <Image source={{ uri: userProfile.photoUrl }} style={styles.myAvatar} />
-          ) : (
-             <View style={[styles.myAvatar, { backgroundColor: '#E5E7EB' }]} />
-          )}
-          
           <TextInput
             ref={inputRef}
             style={styles.input}
@@ -313,6 +469,21 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F3F4F6',
     backgroundColor: '#FFF',
   },
+  headerCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#eee',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
   backBtn: {
     width: 40,
     height: 40,
@@ -330,6 +501,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-start',
     gap: 12,
+    marginLeft: 12,
   },
   headerAvatar: {
     width: 32,

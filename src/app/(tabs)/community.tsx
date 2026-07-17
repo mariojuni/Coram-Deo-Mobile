@@ -55,6 +55,7 @@ import { useUIStore } from '../../store/useUIStore';
 import { useMemberStore } from '../../store/useMemberStore';
 import type { Member } from '../../features/member/domain/member.types';
 import { formatMemberName, parseMemberDate, formatBirthday } from '@/features/member/domain/member.utils';
+import { canModeratePrayerRequests } from '@/permissions/mobilePermissions';
 import {
     getUpcomingSchedules,
     getUserRsvpStatus,
@@ -95,6 +96,7 @@ function getTabIndexFromParam(tabParam: string | string[] | undefined): TabIndex
 
 function PrayerCardItem({ req, currentUser, handlePray, handleAnswered, openPrayerModal, deletePrayer }: { req: Prayer, currentUser: any, handlePray: (id: string) => void, handleAnswered: (id: string, currentValue: boolean) => void, openPrayerModal: (prayer: Prayer) => void, deletePrayer: (id: string) => void }) {
   const router = useRouter();
+  const userProfile = useAuthStore((state) => state.userProfile);
   const isLiked = currentUser ? (req.likedBy || []).includes(currentUser.uid) : false;
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const lastPress = useRef(0);
@@ -109,7 +111,7 @@ function PrayerCardItem({ req, currentUser, handlePray, handleAnswered, openPray
       Animated.spring(scaleAnim, { toValue: 1, friction: 4, tension: 50, useNativeDriver: true })
     ]).start();
 
-    handlePray(req.id);
+    router.push({ pathname: '/comment-thread', params: { targetType: 'prayer_request', targetId: req.id } });
   };
 
   return (
@@ -145,7 +147,7 @@ function PrayerCardItem({ req, currentUser, handlePray, handleAnswered, openPray
                     </View>
                     <Text style={prayerStyles.prayerTime}>{formatPrayerTimeAgo(req.createdAt)}</Text>
                   </View>
-                  {req.userId === currentUser?.uid && (
+                  {(req.userId === currentUser?.uid || canModeratePrayerRequests(userProfile)) && (
                     <TouchableOpacity
                       onPress={() => {
                         if (Platform.OS === 'ios') {
@@ -185,15 +187,26 @@ function PrayerCardItem({ req, currentUser, handlePray, handleAnswered, openPray
               
               <View style={[prayerStyles.prayerBottomRow, { justifyContent: 'flex-end', marginTop: 12 }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  {req.userId === currentUser?.uid && (
+                  {(req.userId === currentUser?.uid || canModeratePrayerRequests(userProfile)) && (
                       <TouchableOpacity
-                        style={prayerStyles.prayIconButton}
+                        style={[prayerStyles.prayIconButton, { marginRight: 10 }]}
                         onPress={() => handleAnswered(req.id, req.answered || req.status === 'answered')}
                         activeOpacity={0.7}
                       >
                         <CheckCircle2 size={18} color={(req.answered || req.status === 'answered') ? '#10B981' : '#9CA3AF'} />
                       </TouchableOpacity>
                   )}
+
+                  <View style={{ marginRight: 10 }}>
+                    <CommentButton 
+                      count={req.commentCount || 0} 
+                      variant="icon-only" 
+                      size={18} 
+                      color="#9CA3AF"
+                      onPress={() => router.push({ pathname: '/comment-thread', params: { targetType: 'prayer_request', targetId: req.id } })}
+                    />
+                  </View>
+
                   <TouchableOpacity
                     style={prayerStyles.prayIconButton}
                     activeOpacity={0.7}
@@ -207,16 +220,6 @@ function PrayerCardItem({ req, currentUser, handlePray, handleAnswered, openPray
                       {req.likes || 0}
                     </Text>
                   </TouchableOpacity>
-
-                  <View style={{ marginLeft: 8 }}>
-                    <CommentButton 
-                      count={req.commentCount || 0} 
-                      variant="icon-only" 
-                      size={18} 
-                      color="#9CA3AF"
-                      onPress={() => router.push(`/comment-thread?targetType=prayer_request&targetId=${req.id}`)}
-                    />
-                  </View>
                 </View>
               </View>
             </View>
@@ -729,7 +732,7 @@ function MembersTab({ searchQuery }: SubScreenProps) {
       {(todayBirthdays.length > 0 || upcomingBirthdays.length > 0) && (
         <View style={membersStyles.birthdaySnapshotCard}>
             <LinearGradient
-                colors={['#FF6B6B', '#FF8E53']}
+                colors={['#FFD1DF', '#E8D4FF', '#D4E4FF']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={StyleSheet.absoluteFill}
@@ -741,13 +744,13 @@ function MembersTab({ searchQuery }: SubScreenProps) {
             <View style={membersStyles.birthdaySnapshotHeader}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <View style={membersStyles.cakeIconWrap}>
-                        <Cake size={16} color="#FF6B6B" />
+                        <Cake size={16} color="#FF6596" />
                     </View>
                     <Text style={membersStyles.birthdaySnapshotTitle}>Celebrations</Text>
                 </View>
                 <TouchableOpacity onPress={() => router.push('/birthdays')} style={membersStyles.seeAllBtn} activeOpacity={0.7}>
                     <Text style={membersStyles.seeAllText}>View All</Text>
-                    <ChevronRight size={14} color="#FFF" />
+                    <ChevronRight size={14} color="#FF6596" />
                 </TouchableOpacity>
             </View>
             
@@ -791,7 +794,6 @@ function MembersTab({ searchQuery }: SubScreenProps) {
                     source={{ uri: member.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(formatMemberName(member))}&background=f0f0f0&color=999` }}
                     style={membersStyles.avatar}
                   />
-                  {member.status !== 'inactive' && <View style={membersStyles.onlineDot} />}
               </View>
               <View style={membersStyles.details}>
                 <Text style={membersStyles.name}>{formatMemberName(member)}</Text>
@@ -1469,7 +1471,8 @@ const membersStyles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: '#FFFFFF',
+    opacity: 0.6,
   },
   snapshotOrb2: {
     position: 'absolute',
@@ -1478,7 +1481,8 @@ const membersStyles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: '#FFFFFF',
+    opacity: 0.4,
   },
   birthdaySnapshotHeader: {
     flexDirection: 'row',
@@ -1498,14 +1502,14 @@ const membersStyles = StyleSheet.create({
   birthdaySnapshotTitle: {
     fontSize: 18,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: '#1E2235',
     letterSpacing: -0.3,
   },
   seeAllBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
@@ -1513,7 +1517,7 @@ const membersStyles = StyleSheet.create({
   seeAllText: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#FF6596',
   },
   birthdaySnapshotList: {
     paddingHorizontal: 20,
@@ -1554,18 +1558,18 @@ const membersStyles = StyleSheet.create({
   snapshotBadgeTodayText: {
     fontSize: 9,
     fontWeight: '900',
-    color: '#FF6B6B',
+    color: '#FF6596',
   },
   snapshotName: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#1E2235',
     textAlign: 'center',
   },
   snapshotUpcomingDate: {
     fontSize: 10,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.8)',
+    color: '#6B7280',
     textAlign: 'center',
     marginTop: 2,
   },

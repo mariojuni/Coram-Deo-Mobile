@@ -153,7 +153,7 @@ export default function ExpenseTrackerScreen() {
       ) : (
         <FlatList
           data={expenses}
-          keyExtractor={item => item.id}
+          keyExtractor={(item, index) => item.id || `expense-${index}`}
           renderItem={renderItem}
           contentContainerStyle={[styles.list, { paddingTop: Math.max(insets.top, 24) + 70 }]}
         />

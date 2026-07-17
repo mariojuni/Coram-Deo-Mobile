@@ -12,6 +12,8 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useBibleVersionStore } from '../store/useBibleVersionStore';
 import { useMemberStore } from '../store/useMemberStore';
 import { canAccessMobileApp } from '../permissions/mobilePermissions';
+import PrayerRequestModal from '../features/prayer/presentation/components/PrayerRequestModal';
+import { useUIStore } from '../store/useUIStore';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -19,6 +21,8 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [loaded] = useFonts({});
+
+  const { prayerModalOpen, editingPrayer, closePrayerModal } = useUIStore();
 
   const initialized = useAuthStore((state) => state.initialized);
   const currentUser = useAuthStore((state) => state.currentUser);
@@ -144,6 +148,11 @@ export default function RootLayout() {
             <Stack.Screen name="staff-finance" options={{ headerShown: false }} />
             <Stack.Screen name="+not-found" />
           </Stack>
+          <PrayerRequestModal 
+            isOpen={prayerModalOpen} 
+            onClose={closePrayerModal} 
+            initialData={editingPrayer} 
+          />
         </AudioProvider>
       </ThemeProvider>
     </GestureHandlerRootView>

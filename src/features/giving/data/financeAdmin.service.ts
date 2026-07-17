@@ -221,7 +221,7 @@ export async function getRecentExpenses(churchId: string, maxCount: number = 20)
     limit(maxCount)
   );
   const snap = await getDocs(q);
-  return snap.docs.map(d => d.data() as GivingExpense);
+  return snap.docs.map(d => ({ ...d.data(), id: d.id } as GivingExpense));
 }
 
 export async function getMonthlyFinanceSummary(churchId: string, startOfMonthIso: string): Promise<{ 

@@ -117,6 +117,8 @@ export const commentRepository = {
       const cDoc = await transaction.get(commentRef);
       if (!cDoc.exists() || cDoc.data().status === 'deleted') return;
 
+      const targetDoc = await transaction.get(parentDocRef);
+
       // Soft delete
       transaction.update(commentRef, { 
         status: 'deleted', 
@@ -125,7 +127,6 @@ export const commentRepository = {
       });
 
       // Update parent target commentCount (we'll decrement it since it's deleted)
-      const targetDoc = await transaction.get(parentDocRef);
       if (targetDoc.exists()) {
         const currentCount = targetDoc.data().commentCount || 0;
         transaction.update(parentDocRef, { commentCount: Math.max(0, currentCount - 1) });

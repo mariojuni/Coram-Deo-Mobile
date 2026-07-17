@@ -122,7 +122,7 @@ export function useHomeScreenData() {
   }, [currentUser, schedules, assignments]);
 
   const rawDisplayName = userProfile?.fullName || currentUser?.displayName || 'Guest';
-  const displayName = rawDisplayName.split(' ')[0];
+  const displayName = userProfile?.firstName || rawDisplayName.split(' ')[0];
 
   const handleRsvp = async (eventId: string, status: string) => {
     if (!currentUser?.uid) return;

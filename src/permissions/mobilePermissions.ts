@@ -83,7 +83,8 @@ export function canViewComments(user?: UserAccount | null, targetVisibility?: st
 }
 
 export function canCreateComment(user?: UserAccount | null): boolean {
-  return hasMemberAccess(user) || (isActiveUser(user) && hasMemberAccess(user));
+  if (hasAnyRole(user, ['super_admin', 'church_admin', 'pastor'])) return true;
+  return hasMemberAccess(user);
 }
 
 export function canDeleteComment(user: UserAccount | null | undefined, authorUserId: string): boolean {
