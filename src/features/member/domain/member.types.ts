@@ -4,7 +4,6 @@ export interface Member {
   firstName: string;
   middleName?: string;
   lastName: string;
-  fullName: string;
   birthday?: string; // Kept for backward compatibility
   birthDate?: string;
   birthMonth?: number;

@@ -121,7 +121,7 @@ export function useHomeScreenData() {
     return getUpcomingMinisterialDuties(schedules, assignments, currentUser.uid);
   }, [currentUser, schedules, assignments]);
 
-  const rawDisplayName = userProfile?.fullName || currentUser?.displayName || 'Guest';
+  const rawDisplayName = [userProfile?.firstName, userProfile?.lastName].filter(Boolean).join(' ') || currentUser?.displayName || 'Guest';
   const displayName = userProfile?.firstName || rawDisplayName.split(' ')[0];
 
   const handleRsvp = async (eventId: string, status: string) => {

@@ -17,6 +17,7 @@ interface AuthState {
   loginWithGoogle: () => Promise<AuthCredentialResult>;
   logout: () => Promise<void>;
   initializeAuthListener: () => void;
+  updateUserProfile: (updates: Partial<UserAccount>) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -61,5 +62,10 @@ export const useAuthStore = create<AuthState>((set) => ({
         set({ loading: false, initialized: true });
       }
     );
+  },
+  updateUserProfile: (updates) => {
+    set((state) => ({
+      userProfile: state.userProfile ? { ...state.userProfile, ...updates } : null,
+    }));
   }
 }));

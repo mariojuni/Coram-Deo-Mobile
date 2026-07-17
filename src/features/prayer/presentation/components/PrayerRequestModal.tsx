@@ -117,7 +117,7 @@ export default function PrayerRequestModal({ isOpen, onClose, initialData }: Pra
           visibility,
           isAnonymous,
           status,
-          name: isAnonymous ? 'Anonymous' : ((userProfile?.fullName as string) || (currentUser?.displayName as string) || 'Anonymous'),
+          name: isAnonymous ? 'Anonymous' : (([userProfile?.firstName, userProfile?.lastName].filter(Boolean).join(' ')) || (currentUser?.displayName as string) || 'Anonymous'),
           userPhotoUrl: isAnonymous ? undefined : ((userProfile?.photoUrl as string) || (currentUser?.photoURL as string) || undefined),
           createdBy: userId,
         });

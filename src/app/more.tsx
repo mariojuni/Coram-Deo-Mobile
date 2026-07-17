@@ -7,7 +7,8 @@ export default function MoreScreen() {
   const router = useRouter();
   const userProfile = useAuthStore((state) => state.userProfile);
   
-  const displayName = userProfile?.fullName || 'User';
+  const currentUser = useAuthStore((state) => state.currentUser);
+  const displayName = [userProfile?.firstName, userProfile?.lastName].filter(Boolean).join(' ') || currentUser?.displayName || 'User';
   // Use primaryRole for display; fall back to first systemRole then legacy role field.
   const primaryRoleRaw =
     userProfile?.primaryRole ||

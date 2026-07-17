@@ -34,7 +34,7 @@ export function hasAnyRole(user: UserAccount | null | undefined, roles: SystemRo
 // ─── Status / access helpers ─────────────────────────────────────────────────
 
 export function isActiveUser(user?: UserAccount | null): boolean {
-  return user?.status === 'active';
+  return user?.status?.toLowerCase() === 'active';
 }
 
 export function hasChurchAccess(user?: UserAccount | null): boolean {
@@ -206,4 +206,22 @@ export function canViewStaffScreen(user?: UserAccount | null, userMinistries?: M
     canViewServeTools(user, userMinistries) ||
     canManageAnyMinistry(user)
   );
+}
+
+// ─── Profile & Personal Settings ─────────────────────────────────────────────
+
+export function canViewOwnProfile(user?: UserAccount | null): boolean {
+  return isActiveUser(user);
+}
+
+export function canEditOwnProfile(user?: UserAccount | null): boolean {
+  return isActiveUser(user);
+}
+
+export function canUpdateOwnAvatar(user?: UserAccount | null): boolean {
+  return canEditOwnProfile(user);
+}
+
+export function canViewOwnBibleActivity(user?: UserAccount | null): boolean {
+  return isActiveUser(user);
 }

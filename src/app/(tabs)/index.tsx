@@ -167,9 +167,10 @@ export default function HomeScreen() {
   const greeting = getGreeting();
   const todayLabel = getTodayLabel();
 
-  // Name: fullName from Firestore profile, falling back to Firebase Auth displayName
-  const fullName = userProfile?.fullName || currentUser?.displayName || displayName;
-  const firstName = userProfile?.firstName || fullName.split(' ')[0];
+  // Name: local DB name first, falling back to Firebase Auth displayName
+  const dbName = [userProfile?.firstName, userProfile?.lastName].filter(Boolean).join(' ');
+  const fullName = dbName || currentUser?.displayName || displayName;
+  const firstName = userProfile?.firstName || fullName.split(' ')[0] || 'U';
   const initials = (userProfile?.firstName?.charAt(0) ?? firstName.charAt(0)).toUpperCase();
 
   // Avatar: Firestore photoUrl → Firebase Auth photoURL → initials fallback
@@ -270,7 +271,7 @@ export default function HomeScreen() {
           {/* Avatar — always visible */}
           <Animated.View style={[styles.avatarBtn, { transform: [{ scale: avatarScale }] }]}>
             <DebouncedTouchable
-              onPress={() => router.push('/my-qr')}
+              onPress={() => router.push('/profile')}
               activeOpacity={0.8}
             >
             {photoUrl ? (
@@ -489,24 +490,20 @@ export default function HomeScreen() {
         )}
 
         {/* ─── Prayers ─────────────────────────────────────────────────── */}
-        {latestPrayer ? (
+        {prayers.length > 0 ? (
           <View style={styles.upcomingSection}>
             <View style={styles.sectionHeader}>
               <View>
                 <Text style={styles.sectionOverline}>COMMUNITY SUPPORT</Text>
                 <Text style={styles.sectionTitle}>Prayer Requests</Text>
               </View>
-              <DebouncedTouchable
-                style={styles.upcomingCountPill}
-                onPress={() => router.push({ pathname: '/(tabs)/community', params: { tab: 'prayers' } })}
-              >
-                <Text style={styles.upcomingCountText}>{prayerCount}</Text>
-              </DebouncedTouchable>
             </View>
 
+            {prayers.slice(0, 3).map((prayer) => (
             <BounceCard 
-              style={styles.prayerCardOuter}
-              onPress={() => router.push({ pathname: '/comment-thread', params: { targetType: 'prayer_request', targetId: latestPrayer.id } })}
+              key={prayer.id}
+              style={[styles.prayerCardOuter, { marginBottom: 12 }]}
+              onPress={() => router.push({ pathname: '/comment-thread', params: { targetType: 'prayer_request', targetId: prayer.id } })}
             >
               <View style={styles.prayerCardInner}>
                 <LinearGradient
@@ -520,25 +517,25 @@ export default function HomeScreen() {
                     <View style={styles.prayerTop}>
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center', marginRight: 10, overflow: 'hidden' }}>
-                          {latestPrayer.userPhotoUrl ? (
-                            <Image source={{ uri: latestPrayer.userPhotoUrl }} style={{ width: 36, height: 36 }} />
+                          {prayer.userPhotoUrl ? (
+                            <Image source={{ uri: prayer.userPhotoUrl }} style={{ width: 36, height: 36 }} />
                           ) : (
                             <User size={20} color="#9CA3AF" />
                           )}
                         </View>
                         <View style={{ flex: 1, justifyContent: 'center' }}>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <Text style={styles.prayerName} numberOfLines={1}>{latestPrayer.name}</Text>
-                            {(latestPrayer.answered || latestPrayer.status === 'answered') && (
+                            <Text style={styles.prayerName} numberOfLines={1}>{prayer.name}</Text>
+                            {(prayer.answered || prayer.status === 'answered') && (
                               <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#ECFDF3', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10, gap: 4 }}>
                                 <CheckCircle2 size={10} color="#10B981" />
                                 <Text style={{ fontSize: 10, fontWeight: '700', color: '#10B981', textTransform: 'uppercase' }}>Answered</Text>
                               </View>
                             )}
                           </View>
-                          <Text style={styles.prayerTime}>{formatPrayerTimeAgo(latestPrayer.createdAt)}</Text>
+                          <Text style={styles.prayerTime}>{formatPrayerTimeAgo(prayer.createdAt)}</Text>
                         </View>
-                        {(latestPrayer.userId === currentUserId || canModeratePrayerRequests(userProfile)) && (
+                        {(prayer.userId === currentUserId || canModeratePrayerRequests(userProfile)) && (
                           <DebouncedTouchable
                             onPress={() => {
                               if (Platform.OS === 'ios') {
@@ -550,17 +547,17 @@ export default function HomeScreen() {
                                   },
                                   (buttonIndex) => {
                                     if (buttonIndex === 1) {
-                                      openPrayerModal(latestPrayer);
+                                      openPrayerModal(prayer);
                                     } else if (buttonIndex === 2) {
-                                      deletePrayer(latestPrayer.id);
+                                      deletePrayer(prayer.id);
                                     }
                                   }
                                 );
                               } else {
                                 Alert.alert('Manage Prayer Request', 'Choose an action', [
                                   { text: 'Cancel', style: 'cancel' },
-                                  { text: 'Edit', onPress: () => openPrayerModal(latestPrayer) },
-                                  { text: 'Delete', style: 'destructive', onPress: () => deletePrayer(latestPrayer.id) },
+                                  { text: 'Edit', onPress: () => openPrayerModal(prayer) },
+                                  { text: 'Delete', style: 'destructive', onPress: () => deletePrayer(prayer.id) },
                                 ]);
                               }
                             }}
@@ -572,45 +569,45 @@ export default function HomeScreen() {
                       </View>
                     </View>
                     <Text style={styles.prayerText}>
-                      {latestPrayer.title ? <Text style={{ fontWeight: '700', color: '#111827' }}>{latestPrayer.title} — </Text> : null}
-                      {latestPrayer.request || latestPrayer.content}
+                      {prayer.title ? <Text style={{ fontWeight: '700', color: '#111827' }}>{prayer.title} — </Text> : null}
+                      {prayer.request || prayer.content}
                     </Text>
                     
                     <View style={[styles.prayerBottomRow, { justifyContent: 'flex-end', marginTop: 12 }]}>
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         {/* Mark as Answered button for the creator or admins */}
-                        {(latestPrayer.userId === currentUserId || canModeratePrayerRequests(userProfile)) && (
+                        {(prayer.userId === currentUserId || canModeratePrayerRequests(userProfile)) && (
                             <DebouncedTouchable
                               style={[styles.prayIconButton, { marginRight: 10 }]}
-                              onPress={() => handleAnswered(latestPrayer.id, latestPrayer.answered || latestPrayer.status === 'answered')}
+                              onPress={() => handleAnswered(prayer.id, prayer.answered || prayer.status === 'answered')}
                               activeOpacity={0.7}
                             >
-                              <CheckCircle2 size={18} color={(latestPrayer.answered || latestPrayer.status === 'answered') ? '#10B981' : '#9CA3AF'} />
+                              <CheckCircle2 size={18} color={(prayer.answered || prayer.status === 'answered') ? '#10B981' : '#9CA3AF'} />
                             </DebouncedTouchable>
                         )}
                         
                         <DebouncedTouchable
                           style={[styles.prayIconButton, { marginRight: 10 }]}
-                          onPress={() => router.push({ pathname: '/comment-thread', params: { targetType: 'prayer_request', targetId: latestPrayer.id } })}
+                          onPress={() => router.push({ pathname: '/comment-thread', params: { targetType: 'prayer_request', targetId: prayer.id } })}
                           activeOpacity={0.7}
                         >
                           <MessageCircle size={18} color="#9CA3AF" />
                           <Text style={styles.prayIconCount}>
-                            {latestPrayer.commentCount || 0}
+                            {prayer.commentCount || 0}
                           </Text>
                         </DebouncedTouchable>
 
                         <DebouncedTouchable 
                           style={styles.prayIconButton}
-                          onPress={() => handlePray(latestPrayer.id)}
+                          onPress={() => handlePray(prayer.id)}
                           activeOpacity={0.7}
                         >
                           <HeartHandshake 
                             size={18} 
-                            color={latestPrayer.likedBy?.includes(currentUserId) ? '#FF6596' : '#9CA3AF'} 
+                            color={prayer.likedBy?.includes(currentUserId) ? '#FF6596' : '#9CA3AF'} 
                           />
-                          <Text style={[styles.prayIconCount, latestPrayer.likedBy?.includes(currentUserId) && { color: '#FF6596' }]}>
-                            {latestPrayer.likes || 0}
+                          <Text style={[styles.prayIconCount, prayer.likedBy?.includes(currentUserId) && { color: '#FF6596' }]}>
+                            {prayer.likes || 0}
                           </Text>
                         </DebouncedTouchable>
                       </View>
@@ -619,6 +616,7 @@ export default function HomeScreen() {
                   </View>
                 </View>
             </BounceCard>
+            ))}
 
             <DebouncedTouchable
               style={[styles.seeAllEventsBtn, { marginTop: 0 }]}
@@ -637,12 +635,6 @@ export default function HomeScreen() {
                 <Text style={styles.sectionOverline}>WATCH &amp; LISTEN</Text>
                 <Text style={styles.sectionTitle}>Recent Sermons</Text>
               </View>
-              <DebouncedTouchable
-                style={styles.upcomingCountPill}
-                onPress={() => router.push({ pathname: '/(tabs)/community', params: { tab: 'sermons' } })}
-              >
-                <Text style={styles.upcomingCountText}>{sermons.length}</Text>
-              </DebouncedTouchable>
             </View>
 
             <ScrollView
@@ -708,12 +700,6 @@ export default function HomeScreen() {
                 <Text style={styles.sectionOverline}>WHAT&apos;S NEXT</Text>
                 <Text style={styles.sectionTitle}>Upcoming Events</Text>
               </View>
-              <DebouncedTouchable
-                style={styles.upcomingCountPill}
-                onPress={() => router.push({ pathname: '/(tabs)/community', params: { tab: 'events' } })}
-              >
-                <Text style={styles.upcomingCountText}>{upcomingList.length}</Text>
-              </DebouncedTouchable>
             </View>
 
             {upcomingList.slice(0, 3).map((event) => {

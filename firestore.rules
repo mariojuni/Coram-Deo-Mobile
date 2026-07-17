@@ -224,12 +224,12 @@ service cloud.firestore {
       // super_admin can update anyone else's doc.
       // church_admin/role-admin can update docs within their church (but cannot grant super_admin).
       allow update: if isSignedIn() && (
-        // Owner self-update: must not change systemRoles, primaryRole, role, or churchId.
-        (isOwner(userId) &&
-          request.resource.data.systemRoles == resource.data.systemRoles &&
-          request.resource.data.primaryRole == resource.data.primaryRole &&
-          request.resource.data.role == resource.data.role &&
-          request.resource.data.churchId == resource.data.churchId) ||
+        // Owner self-update or updating linked member doc: must not change roles or churchId.
+        ((isOwner(userId) || (resource.data.get('accountId', null) == request.auth.uid || resource.data.get('authUid', null) == request.auth.uid)) &&
+          request.resource.data.get('systemRoles', null) == resource.data.get('systemRoles', null) &&
+          request.resource.data.get('primaryRole', null) == resource.data.get('primaryRole', null) &&
+          request.resource.data.get('role', null) == resource.data.get('role', null) &&
+          request.resource.data.get('churchId', null) == resource.data.get('churchId', null)) ||
 
         // super_admin can update any other user.
         (isSuperAdmin() && request.auth.uid != userId) ||

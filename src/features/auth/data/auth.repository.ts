@@ -85,6 +85,13 @@ async function fetchUserAccount(user: User): Promise<UserAccount | null> {
     data.churchId = 'YmEc6C69Xz4DKRQaQZBV';
   }
 
+  // Map legacy `name` to `firstName` and `lastName` if missing
+  if (data.name && typeof data.name === 'string') {
+    const parts = data.name.split(' ');
+    if (!data.firstName) data.firstName = parts[0] || '';
+    if (!data.lastName) data.lastName = parts.slice(1).join(' ') || '';
+  }
+
   // Build systemRoles: prefer the stored array; fall back to migrating the legacy single role string.
   let systemRoles: import('../domain/auth.types').SystemRole[];
   if (Array.isArray(data.systemRoles) && data.systemRoles.length > 0) {
@@ -140,7 +147,6 @@ export const authRepository = {
     const authCredential = await createUserWithEmailAndPassword(auth, payload.email || '', payload.password);
     const user = authCredential.user;
 
-    const fullName = `${payload.firstName} ${payload.lastName}`.trim();
     let status: 'active' | 'pendingChurchLink' = 'pendingChurchLink';
     let churchId = null;
 
@@ -169,7 +175,6 @@ export const authRepository = {
       firstName: payload.firstName,
       middleName: payload.middleName || '',
       lastName: payload.lastName,
-      fullName: fullName,
       email: payload.email || '',
       phoneNumber: payload.phoneNumber || '',
       username: payload.username,
@@ -246,7 +251,6 @@ export const authRepository = {
       const userAccount: Omit<UserAccount, 'uid'> = {
         firstName,
         lastName,
-        fullName: user.displayName || '',
         email: email || '',
         phoneNumber: phoneNumber || '',
         photoUrl: user.photoURL || '',
@@ -263,6 +267,24 @@ export const authRepository = {
       };
 
       await setDoc(userDocRef, userAccount);
+    } else {
+      // User doc already exists (e.g. manually created with same UID)
+      const data = userDoc.data();
+      const updates: any = {};
+      
+      if (!data?.accountId) updates.accountId = user.uid;
+      if (!data?.authUid) updates.authUid = user.uid;
+      if (!data?.photoUrl && user.photoURL) updates.photoUrl = user.photoURL;
+      if (user.displayName) {
+        const nameParts = user.displayName.split(' ');
+        if (!data?.firstName) updates.firstName = nameParts[0] || '';
+        if (!data?.lastName) updates.lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+      }
+      
+      if (Object.keys(updates).length > 0) {
+        updates.updatedAt = serverTimestamp();
+        await updateDoc(userDocRef, updates);
+      }
     }
 
     return authCredential;

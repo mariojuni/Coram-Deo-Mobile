@@ -18,7 +18,6 @@ export interface UserAccount {
   firstName: string;
   middleName?: string;
   lastName: string;
-  fullName: string;
   email?: string;
   phoneNumber?: string;
   photoUrl?: string;

@@ -179,7 +179,7 @@ export function CommentThreadScreen() {
       await addComment(
         currentUser.uid,
         userProfile.memberId || '',
-        (userProfile.fullName as string) || (currentUser.displayName as string) || 'Anonymous',
+        ([userProfile.firstName, userProfile.lastName].filter(Boolean).join(' ')) || (currentUser.displayName as string) || 'Anonymous',
         inputText.trim(),
         replyingTo ? replyingTo.id : null,
         (userProfile.photoUrl as string) || (currentUser.photoURL as string)
