@@ -1,11 +1,24 @@
 import type { Prayer, PrayerFilter } from './prayer.types';
 
-function normalizeDate(value: Prayer['createdAt']): Date | null {
+function normalizeDate(value: any): Date | null {
   if (!value) return null;
   if (value instanceof Date) return value;
   if (typeof value === 'number') return new Date(value);
-  if (typeof value === 'object' && 'toDate' in value && typeof value.toDate === 'function') {
-    return value.toDate();
+  if (typeof value === 'string') {
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  if (typeof value === 'object') {
+    if ('toDate' in value && typeof value.toDate === 'function') {
+      return value.toDate();
+    }
+    // Handle serialized Firestore timestamps
+    if ('seconds' in value || '_seconds' in value) {
+      const seconds = value.seconds || value._seconds;
+      if (typeof seconds === 'number') {
+        return new Date(seconds * 1000);
+      }
+    }
   }
   return null;
 }

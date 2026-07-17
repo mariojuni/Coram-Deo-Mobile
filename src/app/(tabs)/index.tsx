@@ -603,11 +603,7 @@ export default function HomeScreen() {
               <ChevronRight size={14} color="#FF6596" />
             </DebouncedTouchable>
           </View>
-        ) : (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>No prayer requests yet.</Text>
-          </View>
-        )}
+        ) : null}
         {/* ─── Recent Sermons ──────────────────────────────────────────── */}
         {sermons.length > 0 && (
           <View style={styles.upcomingSection}>

@@ -92,19 +92,14 @@ service cloud.firestore {
     }
 
     function canReadWorship(churchId, ministryId) {
-      if (isPastorOrAdmin(churchId)) return true;
-      if (ministryId != null && userDocExists() && userDoc().memberId != null) {
-        let minDoc = get(/databases/$(database)/documents/ministries/$(ministryId));
-        if (minDoc != null) {
-          return minDoc.data.churchId == churchId && 
-                 minDoc.data.features.worshipTabEnabled == true &&
-                 minDoc.data.memberIds != null && 
-                 minDoc.data.memberIds.hasAny([userDoc().memberId]);
-        }
-      }
-      // Fallback for church-wide worship items without a specific ministryId,
-      // or if we can't easily query all ministries for the user in rules.
-      return isSignedIn() && userDocExists() && userDoc().churchId == churchId;
+      return isPastorOrAdmin(churchId) || 
+        (ministryId != null && userDocExists() && userDoc().memberId != null &&
+         exists(/databases/$(database)/documents/ministries/$(ministryId)) &&
+         get(/databases/$(database)/documents/ministries/$(ministryId)).data.churchId == churchId &&
+         get(/databases/$(database)/documents/ministries/$(ministryId)).data.features.worshipTabEnabled == true &&
+         get(/databases/$(database)/documents/ministries/$(ministryId)).data.memberIds != null && 
+         get(/databases/$(database)/documents/ministries/$(ministryId)).data.memberIds.hasAny([userDoc().memberId])) ||
+        (isSignedIn() && userDocExists() && userDoc().churchId == churchId);
     }
 
     // ── ministryApplications ─────────────────────────────────────────────────
@@ -254,6 +249,17 @@ service cloud.firestore {
       match /bible/{docId} {
         allow read, write: if isSignedIn() && isOwner(userId);
       }
+    }
+
+    // ── Comments ─────────────────────────────────────────────────────────────
+    match /comments/{commentId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      // Allow the comment author to update/delete, or allow a pastor/admin of the church to moderate
+      allow update, delete: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isPastorOrAdmin(resource.data.churchId)
+      );
     }
 
     // ── Role Audit Logs ──────────────────────────────────────────────────────

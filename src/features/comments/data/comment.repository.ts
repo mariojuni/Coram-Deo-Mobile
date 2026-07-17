@@ -68,7 +68,7 @@ export const commentRepository = {
     const commentRef = doc(collection(db, COMMENTS_COLLECTION));
     const now = Timestamp.now();
 
-    const parentCollection = data.targetType === 'prayer_request' ? 'prayerRequests' : 'sermons';
+    const parentCollection = data.targetType === 'prayer_request' ? 'prayer_requests' : 'sermons';
     const parentDocRef = doc(db, 'churches', data.churchId, parentCollection, data.targetId);
 
     const newCommentData = {
@@ -110,7 +110,7 @@ export const commentRepository = {
 
   async deleteComment(churchId: string, targetType: CommentTargetType, targetId: string, commentId: string, parentCommentId: string | null) {
     const commentRef = doc(db, COMMENTS_COLLECTION, commentId);
-    const parentCollection = targetType === 'prayer_request' ? 'prayerRequests' : 'sermons';
+    const parentCollection = targetType === 'prayer_request' ? 'prayer_requests' : 'sermons';
     const parentDocRef = doc(db, 'churches', churchId, parentCollection, targetId);
 
     await runTransaction(db, async (transaction) => {

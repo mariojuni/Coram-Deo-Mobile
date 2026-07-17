@@ -722,72 +722,55 @@ function MembersTab({ searchQuery }: SubScreenProps) {
     });
   };
 
-  const renderBirthdaySection = (title: string, data: any[]) => {
-      if (data.length === 0) return null;
-      return (
-          <View style={membersStyles.birthdaySection}>
-              <Text style={membersStyles.birthdaySectionTitle}>{title}</Text>
-              {data.map(member => (
-                  <View key={member.id} style={membersStyles.card}>
-                      <Image
-                          source={{ uri: member.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(formatMemberName(member))}&background=f0f0f0&color=999` }}
-                          style={membersStyles.avatar}
-                      />
-                      <View style={membersStyles.details}>
-                          <Text style={membersStyles.name}>{formatMemberName(member)}</Text>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                              <Cake size={12} color="#D97706" />
-                              <Text style={membersStyles.meta}>{formatBirthday(member)}</Text>
-                          </View>
-                          {member.ministryIds && member.ministryIds.length > 0 && (
-                              <Text style={membersStyles.ministryMeta}>Ministry member</Text>
-                          )}
-                      </View>
-                      <TouchableOpacity style={membersStyles.greetingBtn} onPress={() => sendGreeting(member)}>
-                          <Send size={14} color="#D97706" />
-                          <Text style={membersStyles.greetingBtnText}>Send</Text>
-                      </TouchableOpacity>
-                  </View>
-              ))}
-          </View>
-      );
-  };
+
 
   return (
     <View style={membersStyles.wrap}>
       {(todayBirthdays.length > 0 || upcomingBirthdays.length > 0) && (
         <View style={membersStyles.birthdaySnapshotCard}>
+            <LinearGradient
+                colors={['#FF6B6B', '#FF8E53']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+            />
+            {/* Orbs */}
+            <View style={membersStyles.snapshotOrb1} />
+            <View style={membersStyles.snapshotOrb2} />
+            
             <View style={membersStyles.birthdaySnapshotHeader}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Cake size={18} color="#D97706" />
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View style={membersStyles.cakeIconWrap}>
+                        <Cake size={16} color="#FF6B6B" />
+                    </View>
                     <Text style={membersStyles.birthdaySnapshotTitle}>Celebrations</Text>
                 </View>
-                <TouchableOpacity onPress={() => router.push('/birthdays')} style={membersStyles.seeAllBtn}>
+                <TouchableOpacity onPress={() => router.push('/birthdays')} style={membersStyles.seeAllBtn} activeOpacity={0.7}>
                     <Text style={membersStyles.seeAllText}>View All</Text>
-                    <ChevronRight size={14} color="#D97706" />
+                    <ChevronRight size={14} color="#FFF" />
                 </TouchableOpacity>
             </View>
             
-            <View style={membersStyles.birthdaySnapshotList}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={membersStyles.birthdaySnapshotList}>
                 {todayBirthdays.map(m => (
                     <View key={`today-${m.id}`} style={membersStyles.birthdaySnapshotItem}>
-                        <Image source={{ uri: m.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(formatMemberName(m))}&background=f0f0f0&color=999` }} style={membersStyles.snapshotAvatar} />
-                        <View style={{ flex: 1 }}>
-                            <Text style={membersStyles.snapshotName} numberOfLines={1}>{formatMemberName(m)}</Text>
-                            <Text style={[membersStyles.snapshotMeta, { color: '#FF6596', fontWeight: '700' }]}>Today!</Text>
+                        <View style={membersStyles.snapshotAvatarWrap}>
+                            <Image source={{ uri: m.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(formatMemberName(m))}&background=f0f0f0&color=999` }} style={membersStyles.snapshotAvatar} />
+                            <View style={membersStyles.snapshotBadgeToday}>
+                                <Text style={membersStyles.snapshotBadgeTodayText}>TODAY</Text>
+                            </View>
                         </View>
+                        <Text style={membersStyles.snapshotName} numberOfLines={1}>{formatMemberName(m)}</Text>
                     </View>
                 ))}
                 {upcomingBirthdays.map(m => (
                     <View key={`up-${m.id}`} style={membersStyles.birthdaySnapshotItem}>
                         <Image source={{ uri: m.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(formatMemberName(m))}&background=f0f0f0&color=999` }} style={membersStyles.snapshotAvatar} />
-                        <View style={{ flex: 1 }}>
-                            <Text style={membersStyles.snapshotName} numberOfLines={1}>{formatMemberName(m)}</Text>
-                            <Text style={membersStyles.snapshotMeta}>{formatBirthday(m)}</Text>
-                        </View>
+                        <Text style={membersStyles.snapshotName} numberOfLines={1}>{formatMemberName(m)}</Text>
+                        <Text style={membersStyles.snapshotUpcomingDate}>{formatBirthday(m)}</Text>
                     </View>
                 ))}
-            </View>
+            </ScrollView>
         </View>
       )}
 
@@ -803,12 +786,26 @@ function MembersTab({ searchQuery }: SubScreenProps) {
       ) : (
           filteredMembers.map((member) => (
             <View key={member.id} style={membersStyles.card}>
-              <Image
-                source={{ uri: member.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(formatMemberName(member))}&background=f0f0f0&color=999` }}
-                style={membersStyles.avatar}
-              />
+              <View style={membersStyles.avatarWrap}>
+                  <Image
+                    source={{ uri: member.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(formatMemberName(member))}&background=f0f0f0&color=999` }}
+                    style={membersStyles.avatar}
+                  />
+                  {member.status !== 'inactive' && <View style={membersStyles.onlineDot} />}
+              </View>
               <View style={membersStyles.details}>
                 <Text style={membersStyles.name}>{formatMemberName(member)}</Text>
+                {member.ministryIds && member.ministryIds.length > 0 && (
+                    <LinearGradient
+                        colors={['#F3E8FF', '#E0E7FF']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={membersStyles.ministryBadge}
+                    >
+                        <HeartHandshake size={10} color="#8B5CF6" />
+                        <Text style={membersStyles.ministryBadgeText}>Ministry</Text>
+                    </LinearGradient>
+                )}
               </View>
               <View style={[membersStyles.statusPill, member.status === 'inactive' && membersStyles.statusPillInactive]}>
                 <Text style={[membersStyles.statusText, member.status === 'inactive' && membersStyles.statusTextInactive]}>
@@ -1371,197 +1368,206 @@ const membersStyles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 18,
     gap: 12,
+    paddingBottom: 100,
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
+    gap: 14,
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
     elevation: 3,
   },
+  avatarWrap: {
+    position: 'relative',
+  },
   avatar: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: '#F3F4F6',
     borderWidth: 2,
     borderColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+  },
+  onlineDot: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#10B981',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   details: {
     flex: 1,
     justifyContent: 'center',
+    gap: 4,
   },
   name: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '800',
     color: '#1E2235',
     letterSpacing: -0.2,
   },
-  meta: {
-    marginTop: 3,
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#79809B',
+  ministryBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  ministryBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#6D28D9',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   statusPill: {
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    backgroundColor: '#F0FDF4',
-    borderWidth: 1,
-    borderColor: '#DCFCE7',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#ECFDF5',
   },
   statusPillInactive: {
-    backgroundColor: '#F9FAFB',
-    borderColor: '#F3F4F6',
+    backgroundColor: '#F3F4F6',
   },
   statusText: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#166534',
+    color: '#059669',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   statusTextInactive: {
     color: '#9CA3AF',
   },
-  segmentedControl: {
-      flexDirection: 'row',
-      backgroundColor: '#EEF0F7',
-      borderRadius: 12,
-      padding: 4,
-      marginBottom: 12,
-  },
-  segmentBtn: {
-      flex: 1,
-      paddingVertical: 10,
-      alignItems: 'center',
-      borderRadius: 10,
-  },
-  segmentBtnActive: {
-      backgroundColor: '#FFFFFF',
-      shadowColor: '#1E2235',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.06,
-      shadowRadius: 4,
-      elevation: 2,
-  },
-  segmentText: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: '#79809B',
-  },
-  segmentTextActive: {
-      color: '#1E2235',
-      fontWeight: '700',
-  },
   birthdaySnapshotCard: {
-      backgroundColor: '#FFFFFF',
-      borderRadius: 16,
-      padding: 16,
-      marginBottom: 8,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.03,
-      shadowRadius: 10,
-      elevation: 2,
-      borderWidth: 1,
-      borderColor: '#FFFBEB',
+    borderRadius: 24,
+    marginBottom: 16,
+    overflow: 'hidden',
+    shadowColor: '#FF6B6B',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 5,
+  },
+  snapshotOrb1: {
+    position: 'absolute',
+    top: -40,
+    right: -20,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  snapshotOrb2: {
+    position: 'absolute',
+    bottom: -30,
+    left: -20,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: 'rgba(255,255,255,0.1)',
   },
   birthdaySnapshotHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  cakeIconWrap: {
+    backgroundColor: '#FFFFFF',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   birthdaySnapshotTitle: {
-      fontSize: 16,
-      fontWeight: '800',
-      color: '#D97706',
-      letterSpacing: -0.3,
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: -0.3,
   },
   seeAllBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
   },
   seeAllText: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: '#D97706',
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
   birthdaySnapshotList: {
-      gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    gap: 16,
+    flexDirection: 'row',
   },
   birthdaySnapshotItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
+    alignItems: 'center',
+    width: 64,
+  },
+  snapshotAvatarWrap: {
+    position: 'relative',
+    marginBottom: 8,
   },
   snapshotAvatar: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      backgroundColor: '#FEF3C7',
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.8)',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    marginBottom: 8,
+  },
+  snapshotBadgeToday: {
+    position: 'absolute',
+    bottom: 0,
+    alignSelf: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  snapshotBadgeTodayText: {
+    fontSize: 9,
+    fontWeight: '900',
+    color: '#FF6B6B',
   },
   snapshotName: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: '#1E2235',
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textAlign: 'center',
   },
-  snapshotMeta: {
-      fontSize: 12,
-      fontWeight: '500',
-      color: '#79809B',
-      marginTop: 2,
-  },
-  birthdaysWrap: {
-      gap: 24,
-      paddingBottom: 40,
-  },
-  birthdaySection: {
-      gap: 12,
-  },
-  birthdaySectionTitle: {
-      fontSize: 17,
-      fontWeight: '800',
-      color: '#1E2235',
-      marginLeft: 4,
-      marginTop: 4,
-      letterSpacing: -0.3,
-  },
-  greetingBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      backgroundColor: '#FFFBEB',
-      paddingHorizontal: 14,
-      paddingVertical: 10,
-      borderRadius: 999,
-      borderWidth: 1,
-      borderColor: '#FEF3C7',
-  },
-  greetingBtnText: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: '#D97706',
-  },
-  ministryMeta: {
-      fontSize: 11,
-      fontWeight: '600',
-      color: '#B66DFF',
-      marginTop: 4,
+  snapshotUpcomingDate: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.8)',
+    textAlign: 'center',
+    marginTop: 2,
   },
 });
 

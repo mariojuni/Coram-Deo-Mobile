@@ -6,14 +6,16 @@ import {
 } from 'react-native';
 
 import { Stack as ExpoStack, useLocalSearchParams as useExpoSearchParams, useRouter as useExpoRouter } from 'expo-router';
-import { ArrowLeft, X, Send } from 'lucide-react-native';
+import { ArrowLeft, X, Send, User, CheckCircle2, MessageCircle, HeartHandshake } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useComments } from '../hooks/useComments';
 import { CommentItem } from '../components/CommentItem';
 import type { Comment, CommentTargetType } from '../../domain/comment.types';
 import { canCreateComment, canDeleteComment, canModerateComments } from '@/permissions/mobilePermissions';
+import { formatPrayerTimeAgo } from '@/features/prayer/domain/prayer.selectors';
 
 import { db } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
@@ -45,6 +47,8 @@ export function CommentThreadScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const inputRef = useRef<TextInput>(null);
 
+  // We should allow typing for any signed-in user or active member
+  // and handle the validation on submit to prevent the field from being completely disabled/unfocusable
   const canCreate = canCreateComment(userProfile);
   const canModerate = canModerateComments(userProfile);
 
@@ -62,7 +66,7 @@ export function CommentThreadScreen() {
       if (!churchId || !targetId) return;
       let ref;
       if (targetType === 'prayer_request') {
-        ref = doc(db, 'churches', churchId, 'prayerRequests', targetId);
+        ref = doc(db, 'churches', churchId, 'prayer_requests', targetId);
       } else if (targetType === 'sermon') {
         ref = doc(db, 'churches', churchId, 'sermons', targetId);
       }
@@ -129,13 +133,30 @@ export function CommentThreadScreen() {
 
     if (targetType === 'prayer_request') {
       return (
-        <View style={styles.parentHeaderContainer}>
-          <Text style={styles.parentTitle}>{parentData.title}</Text>
-          <Text style={styles.parentContent} numberOfLines={3}>{parentData.content || parentData.request}</Text>
-          <View style={styles.parentStats}>
-            <Text style={styles.parentStatText}>{parentData.prayedCount || 0} Prayed</Text>
-            <Text style={styles.parentStatText}>•</Text>
-            <Text style={styles.parentStatText}>{parentData.commentCount || 0} Comments</Text>
+        <View style={styles.flatParentContainer}>
+          <Text style={styles.flatPrayerText}>
+            {parentData.title ? <Text style={{ fontWeight: '700', color: '#111827' }}>{parentData.title} — </Text> : null}
+            {parentData.request || parentData.content}
+          </Text>
+
+          <View style={styles.flatPrayerBottomRow}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              {(parentData.answered || parentData.status === 'answered') && (
+                <View style={styles.flatAnsweredBadge}>
+                  <CheckCircle2 size={18} color="#10B981" />
+                </View>
+              )}
+              <View style={[styles.prayIconButton, { marginLeft: (parentData.answered || parentData.status === 'answered') ? 16 : 0 }]}>
+                <HeartHandshake size={18} color="#9CA3AF" />
+                <Text style={styles.prayIconCount}>{parentData.likes || 0}</Text>
+              </View>
+              <View style={[styles.prayIconButton, { marginLeft: 16 }]}>
+                <MessageCircle size={18} color="#FF6596" />
+                <Text style={[styles.prayIconCount, { color: '#FF6596' }]}>
+                  {parentData.commentCount || comments.length || 0}
+                </Text>
+              </View>
+            </View>
           </View>
         </View>
       );
@@ -147,8 +168,8 @@ export function CommentThreadScreen() {
               <Image source={{ uri: parentData.thumbnailUrl }} style={styles.sermonThumb} />
             )}
             <View style={styles.sermonHeaderInfo}>
-              <Text style={styles.parentTitle} numberOfLines={2}>{parentData.title}</Text>
-              <Text style={styles.parentSubtitle}>{parentData.preacherName}</Text>
+              <Text style={styles.sermonTitle} numberOfLines={2}>{parentData.title}</Text>
+              <Text style={styles.sermonSubtitle}>{parentData.preacherName}</Text>
             </View>
           </View>
         </View>
@@ -169,7 +190,25 @@ export function CommentThreadScreen() {
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <ArrowLeft size={24} color="#111827" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Comments</Text>
+        
+        {targetType === 'prayer_request' && parentData ? (
+          <View style={styles.headerUserInfo}>
+            {parentData.userPhotoUrl ? (
+              <Image source={{ uri: parentData.userPhotoUrl }} style={styles.headerAvatar} />
+            ) : (
+              <View style={[styles.headerAvatar, { alignItems: 'center', justifyContent: 'center' }]}><User size={16} color="#9CA3AF" /></View>
+            )}
+            <View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={styles.headerName} numberOfLines={1}>{parentData.name}</Text>
+              </View>
+              <Text style={styles.headerTime}>{formatPrayerTimeAgo(parentData.createdAt)}</Text>
+            </View>
+          </View>
+        ) : (
+          <Text style={styles.headerTitle}>Comments</Text>
+        )}
+        
         <View style={{ width: 40 }} />
       </View>
 
@@ -228,28 +267,31 @@ export function CommentThreadScreen() {
           <TextInput
             ref={inputRef}
             style={styles.input}
-            placeholder={canCreate ? "Write a comment..." : "You must be a member to comment."}
+            placeholder="Write a comment..."
             placeholderTextColor="#9CA3AF"
             value={inputText}
             onChangeText={setInputText}
             multiline
-            editable={canCreate}
             maxLength={1000}
           />
           
-          {canCreate && (
-            <TouchableOpacity 
-              style={[styles.sendBtn, (!inputText.trim() || isSubmitting) && styles.sendBtnDisabled]} 
-              onPress={handleSend}
-              disabled={!inputText.trim() || isSubmitting}
-            >
+          <TouchableOpacity 
+            style={[styles.sendBtn, (!inputText.trim() || isSubmitting || !canCreate) && styles.sendBtnDisabled]} 
+            onPress={() => {
+              if (!canCreate) {
+                Alert.alert('Members Only', 'You must be a member of this church to comment.');
+                return;
+              }
+              handleSend();
+            }}
+            disabled={!inputText.trim() || isSubmitting}
+          >
               {isSubmitting ? (
                 <ActivityIndicator size="small" color="#FFF" />
               ) : (
                 <Send size={18} color="#FFF" />
               )}
             </TouchableOpacity>
-          )}
         </View>
       </View>
     </KeyboardAvoidingView>
@@ -282,6 +324,30 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#111827',
   },
+  headerUserInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    gap: 12,
+  },
+  headerAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F3F4F6',
+  },
+  headerName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  headerTime: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 1,
+    textAlign: 'left',
+  },
   listHeader: {
     marginBottom: 16,
   },
@@ -289,35 +355,36 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 40,
   },
-  parentHeaderContainer: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 16,
-    padding: 16,
+  flatParentContainer: {
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
     marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
-  parentTitle: {
+  flatPrayerText: {
     fontSize: 18,
-    fontWeight: '700',
     color: '#111827',
-    marginBottom: 6,
+    lineHeight: 28,
   },
-  parentContent: {
-    fontSize: 15,
-    color: '#4B5563',
-    lineHeight: 22,
-    marginBottom: 12,
-  },
-  parentStats: {
+  flatPrayerBottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
+    marginTop: 16,
   },
-  parentStatText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#6B7280',
+  flatAnsweredBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  prayIconButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  prayIconCount: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#9CA3AF',
   },
   sermonHeaderRow: {
     flexDirection: 'row',
@@ -332,9 +399,23 @@ const styles = StyleSheet.create({
   sermonHeaderInfo: {
     flex: 1,
   },
-  parentSubtitle: {
+  sermonTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  sermonSubtitle: {
     fontSize: 14,
     color: '#6B7280',
+    marginTop: 4,
+  },
+  parentHeaderContainer: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   headerLoader: {
     marginVertical: 20,

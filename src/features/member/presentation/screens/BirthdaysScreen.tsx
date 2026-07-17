@@ -1,9 +1,11 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Share } from 'react-native';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
-import { ChevronLeft, Cake, Send } from 'lucide-react-native';
+import { Stack, useRouter } from 'expo-router';
+import { ChevronLeft, Cake, Send, Sparkles, Gift, HeartHandshake } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { useMemberStore } from '@/store/useMemberStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { formatMemberName, parseMemberDate, formatBirthday } from '../../domain/member.utils';
@@ -58,29 +60,49 @@ export function BirthdaysScreen() {
         });
     };
 
-    const renderBirthdaySection = (title: string, data: any[]) => {
+    const renderBirthdaySection = (title: string, data: any[], isToday = false) => {
         if (data.length === 0) return null;
         return (
             <View style={styles.birthdaySection}>
-                <Text style={styles.birthdaySectionTitle}>{title}</Text>
+                <View style={styles.sectionHeaderRow}>
+                    {isToday && <Sparkles size={18} color="#FF6B6B" />}
+                    <Text style={[styles.birthdaySectionTitle, isToday && { color: '#FF6B6B' }]}>{title}</Text>
+                </View>
                 {data.map(member => (
                     <View key={member.id} style={styles.card}>
-                        <Image
-                            source={{ uri: member.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(formatMemberName(member))}&background=f0f0f0&color=999` }}
-                            style={styles.avatar}
-                        />
+                        <View style={styles.avatarWrap}>
+                            <Image
+                                source={{ uri: member.photoUrl || member.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(formatMemberName(member))}&background=f0f0f0&color=999` }}
+                                style={styles.avatar}
+                            />
+                            {isToday && <View style={styles.onlineDotToday} />}
+                        </View>
                         <View style={styles.details}>
                             <Text style={styles.name}>{formatMemberName(member)}</Text>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                                <Cake size={12} color="#D97706" />
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                <Cake size={12} color="#79809B" />
                                 <Text style={styles.meta}>{formatBirthday(member)}</Text>
                             </View>
                             {member.ministryIds && member.ministryIds.length > 0 && (
-                                <Text style={styles.ministryMeta}>Ministry member</Text>
+                                <LinearGradient
+                                    colors={['#F3E8FF', '#E0E7FF']}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                    style={styles.ministryBadge}
+                                >
+                                    <HeartHandshake size={10} color="#8B5CF6" />
+                                    <Text style={styles.ministryBadgeText}>Ministry</Text>
+                                </LinearGradient>
                             )}
                         </View>
                         <TouchableOpacity style={styles.greetingBtn} onPress={() => sendGreeting(member)}>
-                            <Send size={14} color="#D97706" />
+                            <LinearGradient
+                                colors={['#FF6B6B', '#FF8E53']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={StyleSheet.absoluteFill}
+                            />
+                            <Send size={14} color="#FFF" />
                             <Text style={styles.greetingBtnText}>Send</Text>
                         </TouchableOpacity>
                     </View>
@@ -90,16 +112,42 @@ export function BirthdaysScreen() {
     };
 
     return (
-        <View style={styles.container}>
-            <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-                    <ChevronLeft size={24} color="#1E2235" />
-                </TouchableOpacity>
-                <Text style={styles.title}>Birthdays</Text>
-                <View style={styles.headerRight} />
-            </View>
+        <>
+            <Stack.Screen options={{ headerShown: false }} />
+            <View style={styles.container}>
+                <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 24) }]} pointerEvents="box-none">
+                    <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+                    <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
+                    <View style={styles.headerContent}>
+                        <TouchableOpacity style={styles.headerCircle} onPress={() => router.back()} hitSlop={8}>
+                            <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
+                        </TouchableOpacity>
+                        <Text style={styles.headerTitle} numberOfLines={1}>Birthdays</Text>
+                        <View style={[styles.headerCircle, { backgroundColor: 'transparent', borderWidth: 0, elevation: 0 }]} />
+                    </View>
+                </View>
 
-            <ScrollView contentContainerStyle={styles.scrollContent}>
+            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                <View style={styles.heroBanner}>
+                    <LinearGradient
+                        colors={['#FF6B6B', '#FF8E53']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={StyleSheet.absoluteFill}
+                    />
+                    <View style={styles.heroOrb1} />
+                    <View style={styles.heroOrb2} />
+                    <View style={styles.heroContent}>
+                        <View style={styles.heroIconWrap}>
+                            <Gift size={24} color="#FF6B6B" />
+                        </View>
+                        <Text style={styles.heroTitle}>This Month</Text>
+                        <Text style={styles.heroSubtitle}>
+                            {thisMonthBirthdays.length + todayBirthdays.length} {thisMonthBirthdays.length + todayBirthdays.length === 1 ? 'member is' : 'members are'} celebrating!
+                        </Text>
+                    </View>
+                </View>
+
                 {membersLoading ? (
                     <View style={styles.placeholder}>
                         <Text style={styles.placeholderSubtitle}>Loading birthdays...</Text>
@@ -111,13 +159,14 @@ export function BirthdaysScreen() {
                     </View>
                 ) : (
                     <>
-                        {renderBirthdaySection("Today's Birthdays", todayBirthdays)}
+                        {renderBirthdaySection("Today's Birthdays", todayBirthdays, true)}
                         {renderBirthdaySection("This Month", thisMonthBirthdays)}
                         {renderBirthdaySection("Upcoming Birthdays", upcomingBirthdays)}
                     </>
                 )}
             </ScrollView>
         </View>
+        </>
     );
 }
 
@@ -126,60 +175,139 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#F9FAFB',
     },
-    header: {
+    headerContainer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 100,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(255,255,255,0.4)',
+        overflow: 'hidden',
+    },
+    headerContent: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 20,
-        paddingBottom: 16,
-        backgroundColor: '#FFFFFF',
-        borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        paddingBottom: 12,
     },
-    backBtn: {
+    headerCircle: {
         width: 40,
         height: 40,
+        borderRadius: 20,
+        backgroundColor: '#fff',
+        alignItems: 'center',
         justifyContent: 'center',
-        alignItems: 'flex-start',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+        elevation: 4,
+        borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.05)',
     },
-    title: {
-        fontSize: 20,
-        fontWeight: '800',
-        color: '#1E2235',
+    headerTitle: {
         flex: 1,
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#1a1a1a',
         textAlign: 'center',
-    },
-    headerRight: {
-        width: 40,
+        marginHorizontal: 12,
     },
     scrollContent: {
         paddingHorizontal: 20,
-        paddingTop: 24,
+        paddingTop: 110,
         paddingBottom: 40,
         gap: 24,
     },
+    heroBanner: {
+        borderRadius: 24,
+        overflow: 'hidden',
+        paddingVertical: 24,
+        paddingHorizontal: 24,
+        shadowColor: '#FF6B6B',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.25,
+        shadowRadius: 16,
+        elevation: 5,
+    },
+    heroOrb1: {
+        position: 'absolute',
+        top: -40,
+        right: -20,
+        width: 140,
+        height: 140,
+        borderRadius: 70,
+        backgroundColor: 'rgba(255,255,255,0.15)',
+    },
+    heroOrb2: {
+        position: 'absolute',
+        bottom: -30,
+        left: -20,
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+    },
+    heroContent: {
+        alignItems: 'center',
+    },
+    heroIconWrap: {
+        backgroundColor: '#FFFFFF',
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 12,
+        shadowColor: '#000',
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 2 },
+    },
+    heroTitle: {
+        fontSize: 22,
+        fontWeight: '900',
+        color: '#FFFFFF',
+        marginBottom: 4,
+    },
+    heroSubtitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: 'rgba(255,255,255,0.9)',
+    },
     birthdaySection: {
-        gap: 12,
+        gap: 16,
+    },
+    sectionHeaderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginLeft: 4,
     },
     birthdaySectionTitle: {
         fontSize: 18,
         fontWeight: '800',
         color: '#1E2235',
-        marginBottom: 4,
+        letterSpacing: -0.3,
     },
     card: {
         backgroundColor: '#FFFFFF',
-        borderRadius: 16,
+        borderRadius: 20,
         paddingHorizontal: 16,
         paddingVertical: 14,
         flexDirection: 'row',
         alignItems: 'center',
         gap: 14,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.03,
-        shadowRadius: 10,
+        shadowColor: '#8B5CF6',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.06,
+        shadowRadius: 16,
         elevation: 2,
+    },
+    avatarWrap: {
+        position: 'relative',
     },
     avatar: {
         width: 48,
@@ -189,40 +317,62 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: '#FFFFFF',
     },
+    onlineDotToday: {
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
+        width: 14,
+        height: 14,
+        borderRadius: 7,
+        backgroundColor: '#FF6B6B',
+        borderWidth: 2,
+        borderColor: '#FFFFFF',
+    },
     details: {
         flex: 1,
+        justifyContent: 'center',
+        gap: 4,
     },
     name: {
         fontSize: 16,
-        fontWeight: '700',
+        fontWeight: '800',
         color: '#1E2235',
-        marginBottom: 2,
+        letterSpacing: -0.2,
     },
     meta: {
         fontSize: 13,
         fontWeight: '600',
-        color: '#D97706',
+        color: '#79809B',
     },
-    ministryMeta: {
-        fontSize: 12,
-        color: '#9CA3AF',
-        marginTop: 2,
+    ministryBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        alignSelf: 'flex-start',
+        gap: 4,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 999,
+    },
+    ministryBadgeText: {
+        fontSize: 10,
+        fontWeight: '800',
+        color: '#6D28D9',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
     greetingBtn: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
-        backgroundColor: '#FFFBEB',
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: '#FEF3C7',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 999,
+        overflow: 'hidden',
     },
     greetingBtnText: {
         fontSize: 13,
-        fontWeight: '700',
-        color: '#D97706',
+        fontWeight: '800',
+        color: '#FFFFFF',
     },
     placeholder: {
         alignItems: 'center',
@@ -231,12 +381,13 @@ const styles = StyleSheet.create({
     },
     placeholderTitle: {
         fontSize: 18,
-        fontWeight: '700',
+        fontWeight: '800',
         color: '#1E2235',
         marginBottom: 8,
     },
     placeholderSubtitle: {
         fontSize: 14,
+        fontWeight: '500',
         color: '#6B7280',
         textAlign: 'center',
     },
