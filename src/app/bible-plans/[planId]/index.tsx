@@ -3,6 +3,7 @@ import PlanUpdateModal from '@/features/biblePlan/presentation/components/PlanUp
 import { useBiblePlanDetail } from '@/features/biblePlan/presentation/hooks/useBiblePlanDetail';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useBiblePlanStore } from '@/store/useBiblePlanStore';
+import { getSoftShadowStyle, getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
@@ -618,15 +619,11 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   headerCircle: {
+    ...getTopBarButtonShadowStyle(20),
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
   },
   headerTitle: {
     flex: 1,

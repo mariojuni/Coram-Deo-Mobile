@@ -58,6 +58,21 @@ export const getSoftShadowStyle = (borderRadius?: number): ViewStyle => {
   return baseStyle;
 };
 
+export const getTopBarButtonShadowStyle = (borderRadius?: number): ViewStyle => {
+  const baseStyle: ViewStyle = {
+    backgroundColor: '#FFFFFF',
+    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+  };
+  
+  if (borderRadius !== undefined) {
+    baseStyle.borderRadius = borderRadius;
+  }
+  
+  return baseStyle;
+};
+
 const styles = StyleSheet.create({
   outer: getSoftShadowStyle(20),
   inner: {

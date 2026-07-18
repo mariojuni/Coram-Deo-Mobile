@@ -2,6 +2,7 @@ import { useBibleReader } from '@/features/bible/presentation/hooks/useBibleRead
 import { useUIStore } from '@/store/useUIStore';
 import { ChevronLeft, ChevronRight, Copy, X } from 'lucide-react-native';
 import { useEffect, useMemo, useRef } from 'react';
+import { getSoftShadowStyle } from '@/components/ui/SoftCard';
 import { ActivityIndicator, Animated, NativeScrollEvent, NativeSyntheticEvent, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface BibleReaderProps {
@@ -306,15 +307,11 @@ const styles = StyleSheet.create({  container: { flex: 1, backgroundColor: '#faf
     zIndex: 1,
   },
   navBtn: {
+    ...getSoftShadowStyle(20),
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.92)',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0px 0px 10px rgba(0, 0, 0, 0.1)',
-    borderWidth: 1,
-    borderColor: '#e1e4e8'
   },
   actionToolbar: {
     position: 'absolute',

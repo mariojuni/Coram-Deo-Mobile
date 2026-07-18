@@ -1,6 +1,7 @@
 import { BlurView } from 'expo-blur';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 
 export interface TopNavBarProps {
   leftText: string;
@@ -51,14 +52,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   pillContainer: {
+    ...getTopBarButtonShadowStyle(30),
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 30,
     padding: 4,
-    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
   },
   bookBtn: {
     paddingVertical: 8,
