@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCachedImage } from '@/features/files/presentation/hooks/useCachedImage';
+import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 
 const ShimmerSkeleton = ({ width, height, style, borderRadius = 8 }: any) => {
   const animValue = useRef(new Animated.Value(0)).current;
@@ -59,11 +60,11 @@ export default function GivingCampaignDetailScreen() {
       <View style={styles.container}>
         <Stack.Screen options={{ headerShown: false }} />
         <LinearGradient colors={['#FFE8F1', '#F5F2FF', '#FAFAFA']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0.3 }} style={StyleSheet.absoluteFill} />
-        <View style={[styles.headerFloating, { paddingTop: insets.top + 10, zIndex: 10 }]}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <ChevronLeft size={24} color="#1a1a1a" />
-          </TouchableOpacity>
-        </View>
+        
+        <TouchableOpacity style={[styles.backBtn, { top: Math.max(insets.top, 24) }]} onPress={() => router.back()}>
+          <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
+        </TouchableOpacity>
+        
         <Animated.ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           <ShimmerSkeleton width="100%" height={280} borderRadius={0} />
           <View style={styles.detailsContainer}>
@@ -84,11 +85,11 @@ export default function GivingCampaignDetailScreen() {
       <View style={styles.container}>
         <Stack.Screen options={{ headerShown: false }} />
         <LinearGradient colors={['#FFE8F1', '#F9FAFB']} style={StyleSheet.absoluteFill} />
-        <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <ChevronLeft size={24} color="#1a1a1a" />
-          </TouchableOpacity>
-        </View>
+        
+        <TouchableOpacity style={[styles.backBtn, { top: Math.max(insets.top, 24) }]} onPress={() => router.back()}>
+          <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
+        </TouchableOpacity>
+        
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>Campaign not found</Text>
         </View>
@@ -129,15 +130,12 @@ export default function GivingCampaignDetailScreen() {
       <LinearGradient colors={['#FFE8F1', '#F5F2FF', '#FAFAFA']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0.3 }} style={StyleSheet.absoluteFill} />
       
       {/* Frosted Glass Header */}
-      <View style={[styles.headerFloating, { paddingTop: insets.top + 10, zIndex: 10 }]}>
+      <View style={[styles.headerFloating, { paddingTop: Math.max(insets.top, 24), zIndex: 10 }]}>
         <Animated.View style={[StyleSheet.absoluteFill, { opacity: headerOpacity }]}>
           <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
           <View style={[StyleSheet.absoluteFill, { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.3)' }]} />
         </Animated.View>
         <View style={styles.headerContent}>
-          <TouchableOpacity style={[styles.backBtn, { zIndex: 10 }]} onPress={() => router.back()}>
-            <ChevronLeft size={24} color="#1a1a1a" />
-          </TouchableOpacity>
           <Animated.Text 
             style={[styles.headerTitle, { opacity: headerOpacity, transform: [{ translateY: titleTranslateY }] }]}
             pointerEvents="none"
@@ -146,6 +144,10 @@ export default function GivingCampaignDetailScreen() {
           </Animated.Text>
         </View>
       </View>
+      
+      <TouchableOpacity style={[styles.backBtn, { top: Math.max(insets.top, 24) + 8 }]} onPress={() => router.back()}>
+        <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
+      </TouchableOpacity>
       
       <Animated.ScrollView 
         style={styles.content} 
@@ -253,7 +255,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     width: '100%',
-    paddingHorizontal: 16,
     paddingBottom: 16,
     zIndex: 10,
   },
@@ -261,7 +262,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
-    height: 40,
+    paddingHorizontal: 20,
+    marginTop: 8,
   },
   headerTitle: {
     fontSize: 18,
@@ -275,13 +277,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 60,
   },
   backBtn: { 
+    ...getTopBarButtonShadowStyle(20),
+    position: 'absolute',
+    left: 20,
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.7)',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 10,
+    zIndex: 100,
   },
   content: { flex: 1 },
   coverImage: {

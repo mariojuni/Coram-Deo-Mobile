@@ -2,7 +2,7 @@ import { useWorshipSetlist } from '@/features/worship/presentation/hooks/useWors
 import { useAuthStore } from '@/store/useAuthStore';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, FileText, Music, AlertCircle, ChevronRight, Hash, Clock } from 'lucide-react-native';
+import { ArrowLeft, FileText, Music, AlertCircle, ChevronRight, Hash, Clock, ChevronLeft } from 'lucide-react-native';
 import {
   ActivityIndicator,
   ScrollView,
@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getTopBarButtonShadowStyle, SoftCard } from '@/components/ui/SoftCard';
 
 export default function ServeWorshipSetlistScreen() {
   const { eventId, hideChords } = useLocalSearchParams<{ eventId: string; hideChords?: string }>();
@@ -37,8 +38,8 @@ export default function ServeWorshipSetlistScreen() {
     return (
       <View style={[styles.screen, { paddingTop: insets.top + 20 }]}>
         <Stack.Screen options={{ headerShown: false }} />
-        <TouchableOpacity style={[styles.fixedBackBtn, { top: Math.max(insets.top, 20) + 8 }]} onPress={() => router.back()}>
-          <ArrowLeft size={22} color="#1a1a1a" />
+        <TouchableOpacity style={[styles.fixedBackBtn, { top: Math.max(insets.top, 24) }]} onPress={() => router.back()}>
+          <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
         </TouchableOpacity>
         <View style={styles.notFound}>
           <View style={styles.notFoundIconContainer}>
@@ -58,11 +59,11 @@ export default function ServeWorshipSetlistScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       {/* Fixed Back Button */}
       <TouchableOpacity 
-        style={[styles.fixedBackBtn, { top: Math.max(insets.top, 20) + 8 }]} 
+        style={[styles.fixedBackBtn, { top: Math.max(insets.top, 24) }]} 
         onPress={() => router.back()}
         activeOpacity={0.8}
       >
-        <ArrowLeft size={22} color="#1a1a1a" />
+        <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
       </TouchableOpacity>
 
       {/* ─── Header ─── */}
@@ -99,49 +100,50 @@ export default function ServeWorshipSetlistScreen() {
           </View>
         ) : (
           items.map((item, index) => (
-            <TouchableOpacity
-              key={item.id}
-              style={styles.card}
-              activeOpacity={0.7}
-              onPress={() => router.push({ pathname: '/serve-song-lyrics', params: { songId: item.songId, hideChords, setlistItemId: item.id } } as any)}
-            >
-              <View style={styles.orderBadge}>
-                <Text style={styles.orderBadgeText}>{index + 1}</Text>
-              </View>
-              
-              <View style={styles.cardContent}>
-                <Text style={styles.cardTitle}>{item.song?.title || 'Unknown Song'}</Text>
-                {item.song?.artist && (
-                  <Text style={styles.artistText}>{item.song.artist}</Text>
-                )}
-                
-                <View style={styles.cardMetaRow}>
-                  {item.selectedKey ? (
-                    <View style={styles.metaBadge}>
-                      <Hash size={12} color="#FF6596" />
-                      <Text style={styles.metaBadgeText}>{item.selectedKey}</Text>
-                    </View>
-                  ) : item.song?.defaultKey ? (
-                    <View style={styles.metaBadge}>
-                      <Hash size={12} color="#FF6596" />
-                      <Text style={styles.metaBadgeText}>{item.song.defaultKey}</Text>
-                    </View>
-                  ) : null}
-                  
-                  {(item.tempoBpm || item.song?.tempoBpm) ? (
-                    <View style={[styles.metaBadge, { backgroundColor: '#F0FDF4' }]}>
-                      <Clock size={12} color="#16A34A" />
-                      <Text style={[styles.metaBadgeText, { color: '#16A34A' }]}>{item.tempoBpm || item.song?.tempoBpm} BPM</Text>
-                    </View>
-                  ) : null}
+            <SoftCard key={item.id} style={{ borderRadius: 24 }} innerStyle={{ borderRadius: 23 }}>
+              <TouchableOpacity
+                style={styles.card}
+                activeOpacity={0.7}
+                onPress={() => router.push({ pathname: '/serve-song-lyrics', params: { songId: item.songId, hideChords, setlistItemId: item.id } } as any)}
+              >
+                <View style={styles.orderBadge}>
+                  <Text style={styles.orderBadgeText}>{index + 1}</Text>
                 </View>
-              </View>
-              
-              <View style={styles.rightAction}>
-                <FileText size={18} color="#9CA3AF" />
-                <ChevronRight size={20} color="#D1D5DB" />
-              </View>
-            </TouchableOpacity>
+                
+                <View style={styles.cardContent}>
+                  <Text style={styles.cardTitle}>{item.song?.title || 'Unknown Song'}</Text>
+                  {item.song?.artist && (
+                    <Text style={styles.artistText}>{item.song.artist}</Text>
+                  )}
+                  
+                  <View style={styles.cardMetaRow}>
+                    {item.selectedKey ? (
+                      <View style={styles.metaBadge}>
+                        <Hash size={12} color="#FF6596" />
+                        <Text style={styles.metaBadgeText}>{item.selectedKey}</Text>
+                      </View>
+                    ) : item.song?.defaultKey ? (
+                      <View style={styles.metaBadge}>
+                        <Hash size={12} color="#FF6596" />
+                        <Text style={styles.metaBadgeText}>{item.song.defaultKey}</Text>
+                      </View>
+                    ) : null}
+                    
+                    {(item.tempoBpm || item.song?.tempoBpm) ? (
+                      <View style={[styles.metaBadge, { backgroundColor: '#F0FDF4' }]}>
+                        <Clock size={12} color="#16A34A" />
+                        <Text style={[styles.metaBadgeText, { color: '#16A34A' }]}>{item.tempoBpm || item.song?.tempoBpm} BPM</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+                
+                <View style={styles.rightAction}>
+                  <FileText size={18} color="#9CA3AF" />
+                  <ChevronRight size={20} color="#D1D5DB" />
+                </View>
+              </TouchableOpacity>
+            </SoftCard>
           ))
         )}
       </ScrollView>
@@ -157,20 +159,14 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   fixedBackBtn: {
+    ...getTopBarButtonShadowStyle(20),
     position: 'absolute',
-    left: 24,
+    left: 20,
     zIndex: 100,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#fff',
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
   },
   headerTitleContainer: {
     gap: 8,
@@ -201,16 +197,9 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 24,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 2,
   },
   orderBadge: {
     width: 40,

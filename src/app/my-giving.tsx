@@ -7,6 +7,7 @@ import { GivingRecord } from '@/features/giving/domain/giving.types';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 
 export default function MyGivingScreen() {
   const router = useRouter();
@@ -69,7 +70,7 @@ export default function MyGivingScreen() {
       <BlurView intensity={80} tint="light" style={[styles.header, { paddingTop: Math.max(insets.top, 24) }]} experimentalBlurMethod="dimezisBlurView">
         <View style={styles.headerInner}>
           <TouchableOpacity 
-            style={styles.backBtn} 
+            style={styles.backBtnCircle} 
             onPress={() => {
               if (fromSuccess) {
                 router.dismissAll();
@@ -78,13 +79,11 @@ export default function MyGivingScreen() {
               }
             }}
           >
-            <View style={styles.backBtnCircle}>
-              {fromSuccess ? (
-                <X size={24} color="#1a1a1a" />
-              ) : (
-                <ChevronLeft size={24} color="#1a1a1a" />
-              )}
-            </View>
+            {fromSuccess ? (
+              <X size={24} color="#1a1a1a" strokeWidth={2} />
+            ) : (
+              <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
+            )}
           </TouchableOpacity>
           <Text style={styles.headerTitle}>My Giving History</Text>
           <View style={{ width: 40 }} />
@@ -147,25 +146,17 @@ const styles = StyleSheet.create({
   header: { 
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.3)',
+    paddingBottom: 16,
   },
   headerInner: {
     flexDirection: 'row', 
     alignItems: 'center', 
     justifyContent: 'space-between',
-    paddingHorizontal: 16, 
-    paddingVertical: 12,
+    paddingHorizontal: 20, 
+    marginTop: 8,
   },
-  backBtn: { padding: 4 },
   backBtnCircle: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
-    borderRadius: 20,
+    ...getTopBarButtonShadowStyle(20),
     width: 40, height: 40,
     alignItems: 'center', justifyContent: 'center',
   },

@@ -4,6 +4,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useMinistryStore } from '@/store/useMinistryStore';
 import { useWorshipSetlist } from '@/features/worship/presentation/hooks/useWorshipSetlist';
 import { LinearGradient } from 'expo-linear-gradient';
+import { SoftCard, getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import {
@@ -17,7 +18,8 @@ import {
     User,
     X,
     Music,
-    ChevronRight
+    ChevronRight,
+    ChevronLeft
 } from 'lucide-react-native';
 import { useRef, useState } from 'react';
 import {
@@ -56,7 +58,7 @@ export default function ServeAssignmentDetailScreen() {
       <View style={[styles.screen, { backgroundColor: '#FAFAFA' }]}>
         <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <ArrowLeft size={22} color="#1a1a1a" />
+            <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
           </TouchableOpacity>
         </View>
         <View style={styles.notFound}>
@@ -171,7 +173,7 @@ export default function ServeAssignmentDetailScreen() {
       {/* ─── Animated Blur Header ─── */}
       <View style={[styles.header, { height: headerHeight }]} pointerEvents="box-none">
         <Animated.View style={[StyleSheet.absoluteFill, { opacity: headerOpacity }]} pointerEvents="none">
-          <BlurView intensity={90} tint="light" style={StyleSheet.absoluteFill} />
+          <BlurView intensity={90} tint="light" style={StyleSheet.absoluteFill} experimentalBlurMethod="dimezisBlurView" />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.75)' }]} />
           {/* Gradient accent line */}
           <View style={styles.accentLine}>
@@ -187,8 +189,8 @@ export default function ServeAssignmentDetailScreen() {
         </Animated.View>
 
         <View style={[styles.headerContent, { paddingTop: Math.max(insets.top, 20) }]}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.8}>
-            <ArrowLeft size={22} color="#1a1a1a" />
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.8} hitSlop={8}>
+            <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
           </TouchableOpacity>
         </View>
       </View>
@@ -252,8 +254,9 @@ export default function ServeAssignmentDetailScreen() {
         )}
 
         {/* ─── Info Section ─── */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Role Details</Text>
+        <SoftCard style={{ borderRadius: 28 }} innerStyle={{ borderRadius: 27 }}>
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Role Details</Text>
           
           <View style={styles.infoRow}>
             <View style={[styles.iconWrapper, { backgroundColor: '#F3EEFF' }]}>
@@ -298,45 +301,52 @@ export default function ServeAssignmentDetailScreen() {
               </View>
             </View>
           ) : null}
-        </View>
+          </View>
+        </SoftCard>
 
         {/* ─── Worship Setlist Link ─── */}
         {setlist && (
-          <TouchableOpacity 
-            style={styles.setlistLinkBtn}
-            onPress={() => router.push({ pathname: '/serve-worship-setlist', params: { eventId: assignment.eventId, hideChords: 'true' } } as any)}
-            activeOpacity={0.8}
-          >
-            <View style={styles.setlistLinkContent}>
-              <View style={styles.setlistIconWrap}>
-                <Music size={22} color="#fff" />
+          <SoftCard style={{ borderRadius: 28 }} innerStyle={{ borderRadius: 27 }}>
+            <TouchableOpacity 
+              style={styles.setlistLinkBtn}
+              onPress={() => router.push({ pathname: '/serve-worship-setlist', params: { eventId: assignment.eventId, hideChords: 'true' } } as any)}
+              activeOpacity={0.8}
+            >
+              <View style={styles.setlistLinkContent}>
+                <View style={styles.setlistIconWrap}>
+                  <Music size={22} color="#fff" />
+                </View>
+                <View style={styles.setlistTextWrap}>
+                  <Text style={styles.setlistLinkTitle}>Worship Setlist</Text>
+                  <Text style={styles.setlistLinkSub}>View songs for this event</Text>
+                </View>
               </View>
-              <View style={styles.setlistTextWrap}>
-                <Text style={styles.setlistLinkTitle}>Worship Setlist</Text>
-                <Text style={styles.setlistLinkSub}>View songs for this event</Text>
-              </View>
-            </View>
-            <ChevronRight size={20} color="#9CA3AF" />
-          </TouchableOpacity>
+              <ChevronRight size={20} color="#9CA3AF" />
+            </TouchableOpacity>
+          </SoftCard>
         )}
 
         {/* ─── Notes ─── */}
         {assignment.notes ? (
-          <View style={styles.notesCard}>
-            <View style={styles.notesHeader}>
-              <FileText size={18} color="#6B7280" />
-              <Text style={styles.sectionTitle}>Notes from Leader</Text>
+          <SoftCard style={{ borderRadius: 28 }} innerStyle={{ borderRadius: 27 }}>
+            <View style={styles.notesCard}>
+              <View style={styles.notesHeader}>
+                <FileText size={18} color="#6B7280" />
+                <Text style={styles.sectionTitle}>Notes from Leader</Text>
+              </View>
+              <Text style={styles.notesText}>{assignment.notes}</Text>
             </View>
-            <Text style={styles.notesText}>{assignment.notes}</Text>
-          </View>
+          </SoftCard>
         ) : null}
 
         {/* ─── Decline reason (if declined) ─── */}
         {isDeclined && assignment.declineReason ? (
-          <View style={[styles.card, styles.cardDeclined]}>
-            <Text style={[styles.sectionTitle, { color: '#991B1B', marginBottom: 8 }]}>Decline Reason</Text>
-            <Text style={styles.declinedText}>{assignment.declineReason}</Text>
-          </View>
+          <SoftCard style={{ borderRadius: 28 }} innerStyle={{ borderRadius: 27 }}>
+            <View style={[styles.card, styles.cardDeclined]}>
+              <Text style={[styles.sectionTitle, { color: '#991B1B', marginBottom: 8 }]}>Decline Reason</Text>
+              <Text style={styles.declinedText}>{assignment.declineReason}</Text>
+            </View>
+          </SoftCard>
         ) : null}
         
       </Animated.ScrollView>
@@ -344,7 +354,7 @@ export default function ServeAssignmentDetailScreen() {
       {/* ─── Sticky Footer Actions ─── */}
       {isOwnAssignment && isPending && !actionSuccess ? (
         <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20) }]}>
-          <BlurView intensity={90} tint="light" style={StyleSheet.absoluteFill} />
+          <BlurView intensity={90} tint="light" style={StyleSheet.absoluteFill} experimentalBlurMethod="dimezisBlurView" />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.85)' }]} pointerEvents="none" />
           <View style={styles.actions}>
             <TouchableOpacity
@@ -417,17 +427,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   backBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 3,
+    ...getTopBarButtonShadowStyle(20),
+    width: 40, height: 40,
+    alignItems: 'center', justifyContent: 'center',
   },
   
   content: {
@@ -535,21 +537,11 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     padding: 24,
     gap: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.04,
-    shadowRadius: 15,
-    elevation: 2,
   },
   notesCard: {
     backgroundColor: '#fff',
     borderRadius: 28,
     padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.04,
-    shadowRadius: 15,
-    elevation: 2,
   },
   sectionTitle: {
     fontSize: 12,
@@ -594,11 +586,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.04,
-    shadowRadius: 15,
-    elevation: 2,
   },
   setlistLinkContent: {
     flexDirection: 'row',

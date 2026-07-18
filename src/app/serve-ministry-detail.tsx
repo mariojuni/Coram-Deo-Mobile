@@ -3,9 +3,10 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useMinistryApplicationStore } from '@/store/useMinistryApplicationStore';
 import { useMinistryStore } from '@/store/useMinistryStore';
 import { LinearGradient } from 'expo-linear-gradient';
+import { SoftCard, getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
-import { AlertCircle, ArrowLeft, CalendarDays, CheckCircle2, Clock, HandHeart, Users, User, X, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { AlertCircle, ChevronLeft, CalendarDays, CheckCircle2, Clock, HandHeart, Users, User, X, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { useState, useRef } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -86,7 +87,7 @@ export default function ServeMinistryDetailScreen() {
       <View style={[styles.screen, { backgroundColor: '#FAFAFA' }]}>
         <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <ArrowLeft size={22} color="#1a1a1a" />
+            <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
           </TouchableOpacity>
         </View>
         <View style={styles.notFound}>
@@ -112,7 +113,7 @@ export default function ServeMinistryDetailScreen() {
       {/* ─── Animated Blur Header ─── */}
       <View style={[styles.header, { height: headerHeight }]} pointerEvents="box-none">
         <Animated.View style={[StyleSheet.absoluteFill, { opacity: headerOpacity }]} pointerEvents="none">
-          <BlurView intensity={90} tint="light" style={StyleSheet.absoluteFill} />
+          <BlurView intensity={90} tint="light" style={StyleSheet.absoluteFill} experimentalBlurMethod="dimezisBlurView" />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.75)' }]} />
           {/* Gradient accent line */}
           <View style={styles.accentLine}>
@@ -128,8 +129,8 @@ export default function ServeMinistryDetailScreen() {
         </Animated.View>
 
         <View style={[styles.headerContent, { paddingTop: Math.max(insets.top, 20) }]}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.8}>
-            <ArrowLeft size={22} color="#1a1a1a" />
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.8} hitSlop={8}>
+            <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
           </TouchableOpacity>
         </View>
       </View>
@@ -222,153 +223,165 @@ export default function ServeMinistryDetailScreen() {
 
         {/* ─── Overview ─── */}
         {ministry.description ? (
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>About</Text>
-            <Text style={styles.cardBody}>{ministry.description}</Text>
-          </View>
+          <SoftCard style={{ marginBottom: 0, borderRadius: 24 }} innerStyle={{ borderRadius: 23 }}>
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>About</Text>
+              <Text style={styles.cardBody}>{ministry.description}</Text>
+            </View>
+          </SoftCard>
         ) : null}
 
         {/* ─── Stats row ─── */}
         <View style={styles.statsRow}>
           {memberCount > 0 ? (
-            <View style={styles.statCard}>
-              <View style={[styles.iconWrapper, { backgroundColor: '#FFE8F0' }]}>
-                <Users size={20} color="#FF6596" />
+            <SoftCard style={{ flex: 1, marginBottom: 0, borderRadius: 24 }} innerStyle={{ borderRadius: 23 }}>
+              <View style={styles.statCard}>
+                <View style={[styles.iconWrapper, { backgroundColor: '#FFE8F0' }]}>
+                  <Users size={20} color="#FF6596" />
+                </View>
+                <Text style={styles.statValue}>{memberCount}</Text>
+                <Text style={styles.statLabel}>Total Members</Text>
               </View>
-              <Text style={styles.statValue}>{memberCount}</Text>
-              <Text style={styles.statLabel}>Total Members</Text>
-            </View>
+            </SoftCard>
           ) : null}
           {ministry.roles?.length > 0 ? (
-            <View style={styles.statCard}>
-              <View style={[styles.iconWrapper, { backgroundColor: '#F3EEFF' }]}>
-                <CalendarDays size={20} color="#8B6FE8" />
+            <SoftCard style={{ flex: 1, marginBottom: 0, borderRadius: 24 }} innerStyle={{ borderRadius: 23 }}>
+              <View style={styles.statCard}>
+                <View style={[styles.iconWrapper, { backgroundColor: '#F3EEFF' }]}>
+                  <CalendarDays size={20} color="#8B6FE8" />
+                </View>
+                <Text style={styles.statValue}>{ministry.roles.length}</Text>
+                <Text style={styles.statLabel}>Roles</Text>
               </View>
-              <Text style={styles.statValue}>{ministry.roles.length}</Text>
-              <Text style={styles.statLabel}>Roles</Text>
-            </View>
+            </SoftCard>
           ) : null}
         </View>
 
         {/* ─── Members ─── */}
         {ministry.members && ministry.members.length > 0 ? (
-          <View style={styles.card}>
-            <TouchableOpacity 
-              style={styles.collapsibleHeader} 
-              onPress={() => setMembersExpanded(!membersExpanded)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.sectionTitle}>Members</Text>
-              {membersExpanded ? (
-                <ChevronUp size={20} color="#9CA3AF" />
-              ) : (
-                <ChevronDown size={20} color="#9CA3AF" />
+          <SoftCard style={{ marginBottom: 0, borderRadius: 24 }} innerStyle={{ borderRadius: 23 }}>
+            <View style={styles.card}>
+              <TouchableOpacity 
+                style={styles.collapsibleHeader} 
+                onPress={() => setMembersExpanded(!membersExpanded)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.sectionTitle}>Members</Text>
+                {membersExpanded ? (
+                  <ChevronUp size={20} color="#9CA3AF" />
+                ) : (
+                  <ChevronDown size={20} color="#9CA3AF" />
+                )}
+              </TouchableOpacity>
+              
+              {membersExpanded && (
+                <View style={[styles.listContainer, { marginTop: 12 }]}>
+                  {ministry.members.map((member) => (
+                    <View key={member.memberId} style={styles.memberRow}>
+                      <View style={[styles.avatar, { backgroundColor: '#F3EEFF' }]}>
+                        <User size={18} color="#8B6FE8" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.memberName}>{member.memberName}</Text>
+                        {member.role ? (
+                          <Text style={styles.memberRole}>{member.role}</Text>
+                        ) : null}
+                      </View>
+                    </View>
+                  ))}
+                </View>
               )}
-            </TouchableOpacity>
-            
-            {membersExpanded && (
-              <View style={[styles.listContainer, { marginTop: 12 }]}>
-                {ministry.members.map((member) => (
-                  <View key={member.memberId} style={styles.memberRow}>
-                    <View style={[styles.avatar, { backgroundColor: '#F3EEFF' }]}>
-                      <User size={18} color="#8B6FE8" />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.memberName}>{member.memberName}</Text>
-                      {member.role ? (
-                        <Text style={styles.memberRole}>{member.role}</Text>
-                      ) : null}
-                    </View>
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
+            </View>
+          </SoftCard>
         ) : null}
 
         {/* ─── Roles ─── */}
         {ministry.roles?.length > 0 ? (
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Ministry Roles</Text>
-            <View style={styles.listContainer}>
-              {ministry.roles.map((role, i) => {
-                const roleLabel = typeof role === 'string' ? role : (role as any)?.name ?? String(role);
-                return (
-                  <View key={roleLabel || i} style={styles.infoRow}>
-                    <View style={[styles.smallIconWrapper, { backgroundColor: '#F3EEFF' }]}>
-                      <User size={16} color="#8B6FE8" />
+          <SoftCard style={{ marginBottom: 0, borderRadius: 24 }} innerStyle={{ borderRadius: 23 }}>
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>Ministry Roles</Text>
+              <View style={styles.listContainer}>
+                {ministry.roles.map((role, i) => {
+                  const roleLabel = typeof role === 'string' ? role : (role as any)?.name ?? String(role);
+                  return (
+                    <View key={roleLabel || i} style={styles.infoRow}>
+                      <View style={[styles.smallIconWrapper, { backgroundColor: '#F3EEFF' }]}>
+                        <User size={16} color="#8B6FE8" />
+                      </View>
+                      <Text style={styles.infoValue}>{roleLabel}</Text>
                     </View>
-                    <Text style={styles.infoValue}>{roleLabel}</Text>
-                  </View>
-                );
-              })}
+                  );
+                })}
+              </View>
             </View>
-          </View>
+          </SoftCard>
         ) : null}
 
         {/* ─── My upcoming assignments for this ministry ─── */}
         {upcomingAssignments.length > 0 ? (
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Your Upcoming Assignments</Text>            
-            <View style={styles.listContainer}>
-              {upcomingAssignments.map((a) => {
-                const formattedDate = (() => {
-                  try {
-                    const raw = a.eventDate;
-                    const d = raw?.length === 10 ? new Date(`${raw}T00:00:00`) : new Date(raw);
-                    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-                  } catch { return a.eventDate; }
-                })();
-                return (
-                  <View key={a.id} style={styles.assignmentRow}>
-                    <View style={[styles.smallIconWrapper, { backgroundColor: '#E8F0FF' }]}>
-                      <CalendarDays size={16} color="#4D8BFF" />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.assignmentEvent} numberOfLines={1}>{a.eventName}</Text>
-                      <Text style={styles.assignmentMeta}>{a.roleName} · {formattedDate}</Text>
-                    </View>
-                    <View
-                      style={[
-                        styles.assignmentStatus,
-                        {
-                          backgroundColor:
-                            (a.status ?? '').toLowerCase() === 'confirmed'
-                              ? '#ECFDF5'
-                              : (a.status ?? '').toLowerCase() === 'declined'
-                              ? '#FEF2F2'
-                              : '#FFF8E7',
-                        },
-                      ]}
-                    >
-                      <Text
+          <SoftCard style={{ marginBottom: 0, borderRadius: 24 }} innerStyle={{ borderRadius: 23 }}>
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>Your Upcoming Assignments</Text>            
+              <View style={styles.listContainer}>
+                {upcomingAssignments.map((a) => {
+                  const formattedDate = (() => {
+                    try {
+                      const raw = a.eventDate;
+                      const d = raw?.length === 10 ? new Date(`${raw}T00:00:00`) : new Date(raw);
+                      return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                    } catch { return a.eventDate; }
+                  })();
+                  return (
+                    <View key={a.id} style={styles.assignmentRow}>
+                      <View style={[styles.smallIconWrapper, { backgroundColor: '#E8F0FF' }]}>
+                        <CalendarDays size={16} color="#4D8BFF" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.assignmentEvent} numberOfLines={1}>{a.eventName}</Text>
+                        <Text style={styles.assignmentMeta}>{a.roleName} · {formattedDate}</Text>
+                      </View>
+                      <View
                         style={[
-                          styles.assignmentStatusText,
+                          styles.assignmentStatus,
                           {
-                            color:
+                            backgroundColor:
                               (a.status ?? '').toLowerCase() === 'confirmed'
-                                ? '#22C55E'
+                                ? '#ECFDF5'
                                 : (a.status ?? '').toLowerCase() === 'declined'
-                                ? '#EF4444'
-                                : '#F59E0B',
+                                ? '#FEF2F2'
+                                : '#FFF8E7',
                           },
                         ]}
                       >
-                        {a.status}
-                      </Text>
+                        <Text
+                          style={[
+                            styles.assignmentStatusText,
+                            {
+                              color:
+                                (a.status ?? '').toLowerCase() === 'confirmed'
+                                  ? '#22C55E'
+                                  : (a.status ?? '').toLowerCase() === 'declined'
+                                  ? '#EF4444'
+                                  : '#F59E0B',
+                            },
+                          ]}
+                        >
+                          {a.status}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                );
-              })}
+                  );
+                })}
+              </View>
             </View>
-          </View>
+          </SoftCard>
         ) : null}
       </Animated.ScrollView>
 
       {/* ─── Sticky Footer Actions ─── */}
       {hasStickyFooter && (
         <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20) }]}>
-          <BlurView intensity={90} tint="light" style={StyleSheet.absoluteFill} />
+          <BlurView intensity={90} tint="light" style={StyleSheet.absoluteFill} experimentalBlurMethod="dimezisBlurView" />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.85)' }]} pointerEvents="none" />
           
           <View style={styles.actions}>
@@ -435,17 +448,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   backBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 3,
+    ...getTopBarButtonShadowStyle(20),
+    width: 40, height: 40,
+    alignItems: 'center', justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 18,
@@ -526,11 +531,6 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: 24,
     gap: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.03,
-    shadowRadius: 10,
-    elevation: 2,
   },
   sectionTitle: {
     fontSize: 12,
@@ -557,17 +557,11 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   statCard: {
-    flex: 1,
     backgroundColor: '#fff',
     borderRadius: 24,
     padding: 20,
     alignItems: 'center',
     gap: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.03,
-    shadowRadius: 10,
-    elevation: 2,
   },
   statValue: {
     fontSize: 26,

@@ -10,7 +10,8 @@ import { useMemberStore } from '../../store/useMemberStore';
 import { useGiving } from '../../features/giving/presentation/hooks/useGiving';
 import { getPendingGivingRecords, approveGivingRecord, rejectGivingRecord } from '../../features/giving/data/financeAdmin.service';
 import { GivingRecord } from '../../features/giving/domain/giving.types';
-import { SoftCard } from '../../components/ui/SoftCard';
+import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
+import { SoftCard } from '@/components/ui/SoftCard';
 
 export default function PendingVerificationScreen() {
   const router = useRouter();
@@ -246,20 +247,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingBottom: 12,
+    marginTop: 8,
   },
   headerCircle: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
-    borderRadius: 20,
-    width: 40, height: 40,
-    alignItems: 'center', justifyContent: 'center',
+    ...getTopBarButtonShadowStyle(20),
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
     flex: 1,

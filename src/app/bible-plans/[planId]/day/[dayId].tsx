@@ -29,6 +29,7 @@ import {
     View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -433,15 +434,11 @@ const styles = StyleSheet.create({
     zIndex: 200,
   },
   backCircle: {
+    ...getTopBarButtonShadowStyle(20),
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
   },
 
   // ─── Bottom plan context bar

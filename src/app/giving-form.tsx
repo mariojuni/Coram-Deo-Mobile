@@ -9,6 +9,7 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
+import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 
 
 export default function GivingFormScreen() {
@@ -175,14 +176,14 @@ export default function GivingFormScreen() {
       <LinearGradient colors={['#FAFAFA', '#FAFAFA']} style={StyleSheet.absoluteFill} />
       <Stack.Screen options={{ headerShown: false }} />
       
-      <View style={[styles.header, { paddingTop: insets.top + 10, paddingBottom: 16, position: 'absolute', width: '100%', zIndex: 10 }]}>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, 24), paddingBottom: 16, position: 'absolute', width: '100%', zIndex: 10 }]}>
         <Animated.View style={[StyleSheet.absoluteFill, { opacity: headerOpacity }]}>
           <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} experimentalBlurMethod="dimezisBlurView" />
           <View style={[StyleSheet.absoluteFill, { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.5)' }]} />
         </Animated.View>
         <View style={styles.headerContent}>
           <TouchableOpacity style={styles.backBtn} onPress={withDebounce(() => router.back())}>
-            <ChevronLeft size={24} color="#1a1a1a" />
+            <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
           </TouchableOpacity>
           <Animated.Text style={[styles.headerTitleCenter, { opacity: headerOpacity }]}>
             Make a Gift
@@ -353,8 +354,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
-    height: 40,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
+    marginTop: 8,
   },
   headerTitleCenter: {
     fontSize: 18,
@@ -369,15 +370,7 @@ const styles = StyleSheet.create({
     pointerEvents: 'none',
   },
   backBtn: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
-    borderRadius: 20,
+    ...getTopBarButtonShadowStyle(20),
     width: 40, height: 40,
     alignItems: 'center', justifyContent: 'center',
     zIndex: 10,
