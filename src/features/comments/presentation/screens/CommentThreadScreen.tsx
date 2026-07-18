@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '@/store/useAuthStore';
+import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 import { useComments } from '../hooks/useComments';
 import { CommentItem } from '../components/CommentItem';
 import type { Comment, CommentTargetType } from '../../domain/comment.types';
@@ -470,15 +471,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
   },
   headerCircle: {
+    ...getTopBarButtonShadowStyle(20),
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.08)',
   },
   backBtn: {
     width: 40,

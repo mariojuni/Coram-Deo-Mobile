@@ -7,6 +7,7 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { PublicEventSetlist } from '@/components/Events/PublicEventSetlist';
 import type { Schedule } from '@/features/schedule/domain/schedule.types';
+import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 
 const isToday = (dateString?: string) => {
   if (!dateString) return false;
@@ -74,8 +75,6 @@ export function EventDetailsModal({
       containerStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}
     >
       <View style={styles.modalContainer}>
-        <LinearGradient colors={['#F3F9FF', '#FFFFFF']} style={StyleSheet.absoluteFill} />
-        
         {/* ─── Header ─────────────────────────────────────────────────────── */}
         <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
           <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
@@ -181,7 +180,7 @@ function RsvpButton({ active, label, icon, onPress, activeColor }: any) {
 }
 
 const styles = StyleSheet.create({
-  modalContainer: { backgroundColor: '#FFFFFF' },
+  modalContainer: { backgroundColor: '#FAFAFA' },
   scrollContent: { paddingBottom: 40 },
   headerContainer: {
     position: 'absolute',
@@ -209,15 +208,11 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   headerCircle: {
+    ...getTopBarButtonShadowStyle(20),
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
   },
   headerCirclePlaceholder: { width: 40, height: 40 },
   headerTitle: {

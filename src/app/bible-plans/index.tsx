@@ -5,15 +5,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { BookOpen, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SoftCard, getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 
 const PRIMARY = '#FF6596';
 const SECONDARY = '#B66DFF';
@@ -63,39 +57,41 @@ function MyPlanCard({
   const dayNumber = currentDayNumber && currentDayNumber > 0 ? currentDayNumber : 1;
 
   return (
-    <Pressable style={styles.myPlanCard} onPress={onPress}>
-      <LinearGradient colors={GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={styles.myPlanStripe} />
+    <Pressable style={{ marginBottom: 12 }} onPress={onPress}>
+      <SoftCard innerStyle={styles.myPlanCardInner}>
+        <LinearGradient colors={GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={styles.myPlanStripe} />
 
-      <View style={styles.myPlanContent}>
-        <View style={styles.myPlanHeaderRow}>
-          <View style={styles.myPlanTitleWrap}>
-            <Text style={styles.myPlanEyebrow}>MY PLAN</Text>
-            <Text style={styles.myPlanTitle} numberOfLines={1}>
-              {plan.title}
-            </Text>
-            <Text style={styles.myPlanDayText}>
-              Day {dayNumber} of {days}
-            </Text>
+        <View style={styles.myPlanContent}>
+          <View style={styles.myPlanHeaderRow}>
+            <View style={styles.myPlanTitleWrap}>
+              <Text style={styles.myPlanEyebrow}>MY PLAN</Text>
+              <Text style={styles.myPlanTitle} numberOfLines={1}>
+                {plan.title}
+              </Text>
+              <Text style={styles.myPlanDayText}>
+                Day {dayNumber} of {days}
+              </Text>
+            </View>
+
+            <View style={styles.myPlanButton}>
+              <Text style={styles.myPlanButtonText}>Continue Reading</Text>
+              <ChevronRight size={14} color={SECONDARY} strokeWidth={2.5} />
+            </View>
           </View>
 
-          <View style={styles.myPlanButton}>
-            <Text style={styles.myPlanButtonText}>Continue Reading</Text>
-            <ChevronRight size={14} color={SECONDARY} strokeWidth={2.5} />
+          <View style={styles.myPlanProgressRow}>
+            <View style={styles.progressTrackLarge}>
+              <LinearGradient
+                colors={GRADIENT}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={[styles.progressFillLarge, { width: `${Math.max(progress, 4)}%` }]}
+              />
+            </View>
+            <Text style={styles.myPlanPercent}>{progress}%</Text>
           </View>
         </View>
-
-        <View style={styles.myPlanProgressRow}>
-          <View style={styles.progressTrackLarge}>
-            <LinearGradient
-              colors={GRADIENT}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={[styles.progressFillLarge, { width: `${Math.max(progress, 4)}%` }]}
-            />
-          </View>
-          <Text style={styles.myPlanPercent}>{progress}%</Text>
-        </View>
-      </View>
+      </SoftCard>
     </Pressable>
   );
 }
@@ -113,69 +109,74 @@ function ExplorePlanCard({
   const dayNumber = currentDayNumber && currentDayNumber > 0 ? currentDayNumber : 1;
 
   return (
-    <Pressable style={[styles.exploreCard, isStarted && styles.exploreCardStarted]} onPress={onPress}>
-      <View style={styles.exploreCardTopRow}>
-        <LinearGradient colors={GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.iconBox}>
-          <BookOpen size={22} color="#FFFFFF" strokeWidth={2.25} />
-        </LinearGradient>
+    <Pressable style={{ marginBottom: 14 }} onPress={onPress}>
+      <SoftCard 
+        style={isStarted ? styles.exploreCardStarted : undefined}
+        innerStyle={styles.exploreCardInner}
+      >
+        <View style={styles.exploreCardTopRow}>
+          <LinearGradient colors={GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.iconBox}>
+            <BookOpen size={22} color="#FFFFFF" strokeWidth={2.25} />
+          </LinearGradient>
 
-        <View style={styles.exploreCardTextWrap}>
-          <Text style={styles.exploreCardTitle} numberOfLines={1}>
-            {plan.title}
-          </Text>
-          <Text style={styles.exploreCardDescription} numberOfLines={2}>
-            {getPlanDescription(plan)}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.badgesRow}>
-        <View style={styles.durationBadge}>
-          <Text style={styles.durationBadgeText}>{plan.durationDays} days</Text>
-        </View>
-        {plan.category ? (
-          <View style={styles.categoryBadge}>
-            <Text style={styles.categoryBadgeText} numberOfLines={1}>
-              {plan.category}
+          <View style={styles.exploreCardTextWrap}>
+            <Text style={styles.exploreCardTitle} numberOfLines={1}>
+              {plan.title}
+            </Text>
+            <Text style={styles.exploreCardDescription} numberOfLines={2}>
+              {getPlanDescription(plan)}
             </Text>
           </View>
-        ) : null}
+        </View>
+
+        <View style={styles.badgesRow}>
+          <View style={styles.durationBadge}>
+            <Text style={styles.durationBadgeText}>{plan.durationDays} days</Text>
+          </View>
+          {plan.category ? (
+            <View style={styles.categoryBadge}>
+              <Text style={styles.categoryBadgeText} numberOfLines={1}>
+                {plan.category}
+              </Text>
+            </View>
+          ) : null}
+          {isStarted ? (
+            <View style={styles.startedBadge}>
+              <Text style={styles.startedBadgeText}>In Progress</Text>
+            </View>
+          ) : null}
+        </View>
+
         {isStarted ? (
-          <View style={styles.startedBadge}>
-            <Text style={styles.startedBadgeText}>In Progress</Text>
-          </View>
+          <>
+            <View style={styles.progressMetaRow}>
+              <Text style={styles.dayLabel}>
+                Day {dayNumber} of {days}
+              </Text>
+              <Text style={styles.progressLabel}>{progress}%</Text>
+            </View>
+            <View style={styles.progressTrack}>
+              <LinearGradient
+                colors={GRADIENT}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={[styles.progressFill, { width: `${Math.max(progress, 4)}%` }]}
+              />
+            </View>
+          </>
         ) : null}
-      </View>
 
-      {isStarted ? (
-        <>
-          <View style={styles.progressMetaRow}>
-            <Text style={styles.dayLabel}>
-              Day {dayNumber} of {days}
-            </Text>
-            <Text style={styles.progressLabel}>{progress}%</Text>
-          </View>
-          <View style={styles.progressTrack}>
-            <LinearGradient
-              colors={GRADIENT}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={[styles.progressFill, { width: `${Math.max(progress, 4)}%` }]}
-            />
-          </View>
-        </>
-      ) : null}
-
-      <View style={styles.ctaRow}>
-        <Text style={[styles.ctaText, isStarted ? styles.ctaTextStarted : styles.ctaTextIdle]}>
-          {isStarted ? 'Continue' : 'Start'}
-        </Text>
-        <ChevronRight
-          size={16}
-          color={isStarted ? SECONDARY : PRIMARY}
-          strokeWidth={2.5}
-        />
-      </View>
+        <View style={styles.ctaRow}>
+          <Text style={[styles.ctaText, isStarted ? styles.ctaTextStarted : styles.ctaTextIdle]}>
+            {isStarted ? 'Continue' : 'Start'}
+          </Text>
+          <ChevronRight
+            size={16}
+            color={isStarted ? SECONDARY : PRIMARY}
+            strokeWidth={2.5}
+          />
+        </View>
+      </SoftCard>
     </Pressable>
   );
 }
@@ -205,13 +206,13 @@ export default function BiblePlansScreen() {
   );
 
   const renderEmptyState = (title: string, subtitle: string) => (
-    <View style={styles.stateCard}>
+    <SoftCard innerStyle={styles.stateCardInner}>
       <View style={styles.emptyIconWrap}>
         <BookOpen size={30} color="#B7BEC9" strokeWidth={2.2} />
       </View>
       <Text style={styles.stateTitle}>{title}</Text>
       <Text style={styles.stateSubtitle}>{subtitle}</Text>
-    </View>
+    </SoftCard>
   );
 
   return (
@@ -356,13 +357,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   backButton: {
+    ...getTopBarButtonShadowStyle(21),
     width: 42,
     height: 42,
-    borderRadius: 21,
-    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.12)',
   },
   heroTextWrap: {
     marginTop: 24,
@@ -449,13 +448,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#6B7280',
   },
-  myPlanCard: {
-    backgroundColor: '#FFFFFF',
+  myPlanCardInner: {
     borderRadius: 20,
     overflow: 'hidden',
     flexDirection: 'row',
-    boxShadow: '0px 6px 16px rgba(0, 0, 0, 0.06)',
-    marginBottom: 12,
   },
   myPlanStripe: {
     width: 8,
@@ -531,16 +527,12 @@ const styles = StyleSheet.create({
     color: SECONDARY,
     textAlign: 'right',
   },
-  exploreCard: {
-    backgroundColor: '#FFFFFF',
+  exploreCardInner: {
     borderRadius: 16,
     padding: 16,
-    marginBottom: 14,
-    boxShadow: '0px 5px 14px rgba(0, 0, 0, 0.05)',
-    borderWidth: 1,
-    borderColor: '#EEF0F5',
   },
   exploreCardStarted: {
+    borderWidth: 1,
     borderColor: 'rgba(182,109,255,0.18)',
   },
   exploreCardTopRow: {
@@ -659,15 +651,13 @@ const styles = StyleSheet.create({
   ctaTextIdle: {
     color: PRIMARY,
   },
-  stateCard: {
+  stateCardInner: {
     width: '100%',
     maxWidth: 360,
-    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     paddingHorizontal: 24,
     paddingVertical: 36,
     alignItems: 'center',
-    boxShadow: '0px 6px 14px rgba(0, 0, 0, 0.05)',
   },
   emptyIconWrap: {
     width: 68,

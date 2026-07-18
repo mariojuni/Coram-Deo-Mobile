@@ -528,7 +528,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingTop: 20,
+    paddingBottom: 12,
   },
   filterChip: {
     paddingHorizontal: 16,

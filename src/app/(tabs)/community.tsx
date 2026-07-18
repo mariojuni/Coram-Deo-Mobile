@@ -1241,7 +1241,7 @@ const placeholder = StyleSheet.create({
 const prayerStyles = StyleSheet.create({
   wrap: {
     paddingHorizontal: 20,
-    paddingTop: 18,
+    paddingTop: 20,
     gap: 14,
   },
   heroCompact: {
@@ -1372,7 +1372,7 @@ const prayerStyles = StyleSheet.create({
 const membersStyles = StyleSheet.create({
   wrap: {
     paddingHorizontal: 20,
-    paddingTop: 18,
+    paddingTop: 20,
     gap: 12,
     paddingBottom: 100,
   },
@@ -1570,7 +1570,7 @@ const membersStyles = StyleSheet.create({
 export const eventsStyles = StyleSheet.create({
   wrap: {
     paddingHorizontal: 20,
-    paddingTop: 18,
+    paddingTop: 20,
     gap: 12,
   },
   sectionHeadRow: {
@@ -1607,7 +1607,8 @@ export const eventsStyles = StyleSheet.create({
   },
   heroCarouselContent: {
     paddingHorizontal: 0,
-    paddingVertical: 12,
+    paddingTop: 0,
+    paddingBottom: 12,
   },
   heroSlide: {
     justifyContent: 'center',

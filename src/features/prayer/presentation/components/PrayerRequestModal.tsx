@@ -8,6 +8,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { prayerRepository } from '../../data/prayer.repository';
 import type { Prayer, PrayerCategory, PrayerVisibility, PrayerStatus } from '../../domain/prayer.types';
 import { LinearGradient } from 'expo-linear-gradient';
+import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 import { BlurView } from 'expo-blur';
 import { X } from 'lucide-react-native';
 
@@ -148,8 +149,6 @@ export default function PrayerRequestModal({ isOpen, onClose, initialData }: Pra
       containerStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}
     >
       <View style={styles.modalContainer}>
-        <LinearGradient colors={['#F3F9FF', '#FFFFFF']} style={StyleSheet.absoluteFill} />
-        
         {/* ─── Header ─────────────────────────────────────────────────────── */}
         <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
           <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
@@ -290,7 +289,13 @@ export default function PrayerRequestModal({ isOpen, onClose, initialData }: Pra
 }
 
 const styles = StyleSheet.create({
-  modalContainer: { backgroundColor: '#FFFFFF' },
+  modalContainer: {
+    backgroundColor: '#FAFAFA',
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
+  },
   headerContainer: {
     position: 'absolute',
     top: 0,
@@ -317,17 +322,12 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   headerCircle: {
+    ...getTopBarButtonShadowStyle(20),
     width: 40,
     height: 40,
-    borderRadius: 20,
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.05)',
   },
@@ -343,9 +343,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginHorizontal: 12,
   },
-  scrollContainer: {
-    paddingHorizontal: 20,
-  },
+
   subtitle: {
     fontSize: 15,
     color: '#6B7280',
