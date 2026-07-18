@@ -3,6 +3,7 @@ import { getTabIcon } from '@/features/navigation/presentation/tabNavigation';
 import { BlurView } from 'expo-blur';
 import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getSoftShadowStyle } from '@/components/ui/SoftCard';
 
 type TabRoute = {
   key: string;
@@ -103,29 +104,14 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   navContainer: {
+    ...getSoftShadowStyle(40),
     flex: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 40,
     backgroundColor: Platform.OS === 'android' ? 'rgba(255, 255, 255, 0.9)' : 'transparent',
-    borderColor: 'rgba(255,255,255,0.5)',
-    borderWidth: 1,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.1,
-        shadowRadius: 15,
-      },
-      android: {
-        elevation: 0,
-        borderTopWidth: 1,
-        borderTopColor: 'rgba(0,0,0,0.05)',
-      },
-    }),
   },
   navItem: {
     padding: 4,

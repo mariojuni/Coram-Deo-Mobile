@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react';
 import { Animated, StyleSheet, TouchableOpacity, View, Text, Platform } from 'react-native';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useUIStore } from '../../store/useUIStore';
+import { getSoftShadowStyle } from '@/components/ui/SoftCard';
 import { canSubmitGiving } from '../../permissions/mobilePermissions';
 
 interface FabMenuProps {
@@ -179,12 +180,11 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   subItemLabelWrap: {
-    backgroundColor: '#fff',
+    ...getSoftShadowStyle(8),
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 8,
     marginRight: 12,
-    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
+    boxShadow: '0px 6px 16px rgba(164, 164, 164, 0.12)', // Keep increased visibility
   },
   subItemLabel: {
     fontSize: 14,
@@ -192,12 +192,11 @@ const styles = StyleSheet.create({
     color: '#374151',
   },
   subItem: {
+    ...getSoftShadowStyle(24),
     width: 48,
     height: 48,
-    borderRadius: 24,
-    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0px 6px 8px rgba(0, 0, 0, 0.1)',
+    boxShadow: '0px 6px 16px rgba(164, 164, 164, 0.12)', // Keep increased visibility
   }
 });

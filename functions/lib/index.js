@@ -135,7 +135,7 @@ exports.syncUserNameOnUpdate = functions.firestore
             const updatedMembers = members.map((member) => {
                 if (member.memberId === userId) {
                     updated = true;
-                    return Object.assign(Object.assign(Object.assign({}, member), (nameChanged && { memberName: newName })), (photoChanged && { avatar: newPhotoUrl }));
+                    return Object.assign(Object.assign(Object.assign({}, member), (nameChanged && { membersName: newName })), (photoChanged && { avatar: newPhotoUrl }));
                 }
                 return member;
             });

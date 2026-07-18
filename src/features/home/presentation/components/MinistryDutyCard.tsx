@@ -48,6 +48,7 @@ import Animated, {
     withTiming,
 } from 'react-native-reanimated';
 import { PrayingHands } from '../../../../components/ui/icons/PrayingHands';
+import { getSoftShadowStyle } from '@/components/ui/SoftCard';
 import type { MinistryAssignment } from '../../../../features/ministry/domain/ministry.types';
 import type { Schedule } from '../../../../features/schedule/domain/schedule.types';
 import { useMinistryStore } from '../../../../store/useMinistryStore';
@@ -332,14 +333,8 @@ export function MinistryDutyCard({
 const cs = StyleSheet.create({
   // Card shell
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    ...getSoftShadowStyle(20),
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 3,
     overflow: 'hidden',
   },
   cardDeclined: {

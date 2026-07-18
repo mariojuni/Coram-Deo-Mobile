@@ -43,14 +43,23 @@ export const SoftCard = React.forwardRef<any, SoftCardProps>(({
   );
 });
 
-const styles = StyleSheet.create({
-  outer: {
-    borderRadius: 20,
+export const getSoftShadowStyle = (borderRadius?: number): ViewStyle => {
+  const baseStyle: ViewStyle = {
     backgroundColor: '#FFFFFF',
     boxShadow: '0px 4px 12px rgba(164, 164, 164, 0.04)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.8)',
-  },
+  };
+  
+  if (borderRadius !== undefined) {
+    baseStyle.borderRadius = borderRadius;
+  }
+  
+  return baseStyle;
+};
+
+const styles = StyleSheet.create({
+  outer: getSoftShadowStyle(20),
   inner: {
     borderRadius: 19,
     overflow: 'hidden',

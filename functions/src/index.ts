@@ -116,7 +116,7 @@ export const syncUserNameOnUpdate = functions.firestore
             updated = true;
             return {
               ...member,
-              ...(nameChanged && { memberName: newName }),
+              ...(nameChanged && { membersName: newName }),
               ...(photoChanged && { avatar: newPhotoUrl })
             };
           }
