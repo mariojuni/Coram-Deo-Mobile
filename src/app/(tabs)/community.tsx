@@ -1,69 +1,64 @@
+import { formatBirthday, formatMemberName, parseMemberDate } from '@/features/member/domain/member.utils';
+import { canModeratePrayerRequests } from '@/permissions/mobilePermissions';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGlobalSearchParams, useLocalSearchParams, useRouter } from 'expo-router';
 import {
-    CalendarDays,
-    CheckCircle2,
-    ChevronRight,
-    Clock,
-    Heart,
-    HeartHandshake,
-    HelpCircle,
-    MapPin,
-    PlayCircle,
-    Search,
-    Pencil,
-    Trash2,
-    MoreHorizontal,
-    User,
-    Users,
-    X,
-    Download,
-    Cake,
-    Send,
-    MessageCircle,
-    XCircle
+  Cake,
+  CalendarDays,
+  CheckCircle2,
+  ChevronRight,
+  Clock,
+  Download,
+  Heart,
+  HeartHandshake,
+  HelpCircle,
+  MapPin,
+  MoreHorizontal,
+  PlayCircle,
+  Search,
+  User,
+  Users,
+  X,
+  XCircle
 } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-
-    Animated,
-    Dimensions,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-    Alert,
-    ActionSheetIOS,
-    Platform,
-    Share,
+  ActionSheetIOS,
+  Alert,
+  Animated,
+  Dimensions,
+  Image,
+  Platform,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import AppModal from '../../components/ui/AppModal';
-import { SoftCard } from '../../components/ui/SoftCard';
 import { EventDetailsModal } from '../../components/Events/EventDetailsModal';
+import { BounceCard } from '../../components/ui/BounceCard';
+import { SoftCard } from '../../components/ui/SoftCard';
+import { CommentButton } from '../../features/comments/presentation/components/CommentButton';
+import type { Member } from '../../features/member/domain/member.types';
 import { formatPrayerTimeAgo, getFilteredPrayers } from '../../features/prayer/domain/prayer.selectors';
 import type { Prayer, PrayerFilter } from '../../features/prayer/domain/prayer.types';
 import { usePrayerFeed } from '../../features/prayer/presentation/hooks/usePrayerFeed';
-import { CommentButton } from '../../features/comments/presentation/components/CommentButton';
 import type { Schedule } from '../../features/schedule/domain/schedule.types';
 import { SermonsExperience } from '../../features/sermons/presentation/components/SermonsExperience';
 import { useAuthStore } from '../../store/useAuthStore';
-import { useUIStore } from '../../store/useUIStore';
 import { useMemberStore } from '../../store/useMemberStore';
-import type { Member } from '../../features/member/domain/member.types';
-import { formatMemberName, parseMemberDate, formatBirthday } from '@/features/member/domain/member.utils';
-import { canModeratePrayerRequests } from '@/permissions/mobilePermissions';
 import {
-    getUpcomingSchedules,
-    getUserRsvpStatus,
-    parseTimeTo24h,
-    updateRsvp,
-    useScheduleStore,
+  getUpcomingSchedules,
+  getUserRsvpStatus,
+  parseTimeTo24h,
+  updateRsvp,
+  useScheduleStore,
 } from '../../store/useScheduleStore';
+import { useUIStore } from '../../store/useUIStore';
 
 
 // ─── Sub-tab definitions ──────────────────────────────────────────────────────
@@ -116,118 +111,116 @@ function PrayerCardItem({ req, currentUser, handlePray, handleAnswered, openPray
   };
 
   return (
-    <Animated.View style={[prayerStyles.prayerCardOuter, { transform: [{ scale: scaleAnim }] }]}>
-      <TouchableOpacity activeOpacity={0.9} onPress={onPress}>
-        <View style={prayerStyles.prayerCardInner}>
-          <LinearGradient
-            colors={['#FF6596', '#B66DFF']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={prayerStyles.prayerGradientBorder}
-          />
-          <View style={prayerStyles.prayerRow}>
-            <View style={prayerStyles.prayerContent}>
-              <View style={prayerStyles.prayerTop}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center', marginRight: 10, overflow: 'hidden' }}>
-                    {req.userPhotoUrl ? (
-                      <Image source={{ uri: req.userPhotoUrl }} style={{ width: 36, height: 36 }} />
-                    ) : (
-                      <User size={20} color="#9CA3AF" />
+    <BounceCard onPress={onPress} style={{ marginBottom: 12 }}>
+      <SoftCard innerStyle={[prayerStyles.prayerCardInner, { marginBottom: 0 }]}>
+        <LinearGradient
+          colors={['#FF6596', '#B66DFF']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={prayerStyles.prayerGradientBorder}
+        />
+        <View style={prayerStyles.prayerRow}>
+          <View style={prayerStyles.prayerContent}>
+            <View style={prayerStyles.prayerTop}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center', marginRight: 10, overflow: 'hidden' }}>
+                  {req.userPhotoUrl ? (
+                    <Image source={{ uri: req.userPhotoUrl }} style={{ width: 36, height: 36 }} />
+                  ) : (
+                    <User size={20} color="#9CA3AF" />
+                  )}
+                </View>
+                <View style={{ flex: 1, justifyContent: 'center' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={prayerStyles.prayerName} numberOfLines={1}>{req.name}</Text>
+                    {(req.answered || req.status === 'answered') && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#ECFDF3', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10, gap: 4 }}>
+                        <CheckCircle2 size={10} color="#10B981" />
+                        <Text style={{ fontSize: 10, fontWeight: '700', color: '#10B981', textTransform: 'uppercase' }}>Answered</Text>
+                      </View>
                     )}
                   </View>
-                  <View style={{ flex: 1, justifyContent: 'center' }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={prayerStyles.prayerName} numberOfLines={1}>{req.name}</Text>
-                      {(req.answered || req.status === 'answered') && (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#ECFDF3', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10, gap: 4 }}>
-                          <CheckCircle2 size={10} color="#10B981" />
-                          <Text style={{ fontSize: 10, fontWeight: '700', color: '#10B981', textTransform: 'uppercase' }}>Answered</Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={prayerStyles.prayerTime}>{formatPrayerTimeAgo(req.createdAt)}</Text>
-                  </View>
-                  {(req.userId === currentUser?.uid || canModeratePrayerRequests(userProfile)) && (
-                    <TouchableOpacity
-                      onPress={() => {
-                        if (Platform.OS === 'ios') {
-                          ActionSheetIOS.showActionSheetWithOptions(
-                            {
-                              options: ['Cancel', 'Edit', 'Delete'],
-                              destructiveButtonIndex: 2,
-                              cancelButtonIndex: 0,
-                            },
-                            (buttonIndex) => {
-                              if (buttonIndex === 1) {
-                                openPrayerModal(req);
-                              } else if (buttonIndex === 2) {
-                                deletePrayer(req.id);
-                              }
-                            }
-                          );
-                        } else {
-                          Alert.alert('Manage Prayer Request', 'Choose an action', [
-                            { text: 'Cancel', style: 'cancel' },
-                            { text: 'Edit', onPress: () => openPrayerModal(req) },
-                            { text: 'Delete', style: 'destructive', onPress: () => deletePrayer(req.id) },
-                          ]);
-                        }
-                      }}
-                      style={{ padding: 4, alignSelf: 'flex-start' }}
-                    >
-                      <MoreHorizontal size={20} color="#6B7280" />
-                    </TouchableOpacity>
-                  )}
+                  <Text style={prayerStyles.prayerTime}>{formatPrayerTimeAgo(req.createdAt)}</Text>
                 </View>
-              </View>
-              <Text style={prayerStyles.prayerText}>
-                {req.title ? <Text style={{ fontWeight: '700', color: '#111827' }}>{req.title} — </Text> : null}
-                {req.request || req.content}
-              </Text>
-              
-              <View style={[prayerStyles.prayerBottomRow, { justifyContent: 'flex-end', marginTop: 12 }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  {(req.userId === currentUser?.uid || canModeratePrayerRequests(userProfile)) && (
-                      <TouchableOpacity
-                        style={[prayerStyles.prayIconButton, { marginRight: 10 }]}
-                        onPress={() => handleAnswered(req.id, req.answered || req.status === 'answered')}
-                        activeOpacity={0.7}
-                      >
-                        <CheckCircle2 size={18} color={(req.answered || req.status === 'answered') ? '#10B981' : '#9CA3AF'} />
-                      </TouchableOpacity>
-                  )}
-
-                  <View style={{ marginRight: 10 }}>
-                    <CommentButton 
-                      count={req.commentCount || 0} 
-                      variant="icon-only" 
-                      size={18} 
-                      color="#9CA3AF"
-                      onPress={() => router.push({ pathname: '/comment-thread', params: { targetType: 'prayer_request', targetId: req.id } })}
-                    />
-                  </View>
-
+                {(req.userId === currentUser?.uid || canModeratePrayerRequests(userProfile)) && (
                   <TouchableOpacity
-                    style={prayerStyles.prayIconButton}
-                    activeOpacity={0.7}
-                    onPress={() => handlePray(req.id)}
+                    onPress={() => {
+                      if (Platform.OS === 'ios') {
+                        ActionSheetIOS.showActionSheetWithOptions(
+                          {
+                            options: ['Cancel', 'Edit', 'Delete'],
+                            destructiveButtonIndex: 2,
+                            cancelButtonIndex: 0,
+                          },
+                          (buttonIndex) => {
+                            if (buttonIndex === 1) {
+                              openPrayerModal(req);
+                            } else if (buttonIndex === 2) {
+                              deletePrayer(req.id);
+                            }
+                          }
+                        );
+                      } else {
+                        Alert.alert('Manage Prayer Request', 'Choose an action', [
+                          { text: 'Cancel', style: 'cancel' },
+                          { text: 'Edit', onPress: () => openPrayerModal(req) },
+                          { text: 'Delete', style: 'destructive', onPress: () => deletePrayer(req.id) },
+                        ]);
+                      }
+                    }}
+                    style={{ padding: 4, alignSelf: 'flex-start' }}
                   >
-                    <HeartHandshake 
-                      size={18} 
-                      color={isLiked ? '#FF6596' : '#9CA3AF'} 
-                    />
-                    <Text style={[prayerStyles.prayIconCount, isLiked && { color: '#FF6596' }]}>
-                      {req.likes || 0}
-                    </Text>
+                    <MoreHorizontal size={20} color="#6B7280" />
                   </TouchableOpacity>
+                )}
+              </View>
+            </View>
+            <Text style={prayerStyles.prayerText}>
+              {req.title ? <Text style={{ fontWeight: '700', color: '#111827' }}>{req.title} — </Text> : null}
+              {req.request || req.content}
+            </Text>
+
+            <View style={[prayerStyles.prayerBottomRow, { justifyContent: 'flex-end', marginTop: 12 }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                {(req.userId === currentUser?.uid || canModeratePrayerRequests(userProfile)) && (
+                  <TouchableOpacity
+                    style={[prayerStyles.prayIconButton, { marginRight: 10 }]}
+                    onPress={() => handleAnswered(req.id, req.answered || req.status === 'answered')}
+                    activeOpacity={0.7}
+                  >
+                    <CheckCircle2 size={18} color={(req.answered || req.status === 'answered') ? '#10B981' : '#9CA3AF'} />
+                  </TouchableOpacity>
+                )}
+
+                <View style={{ marginRight: 10 }}>
+                  <CommentButton
+                    count={req.commentCount || 0}
+                    variant="icon-only"
+                    size={18}
+                    color="#9CA3AF"
+                    onPress={() => router.push({ pathname: '/comment-thread', params: { targetType: 'prayer_request', targetId: req.id } })}
+                  />
                 </View>
+
+                <TouchableOpacity
+                  style={prayerStyles.prayIconButton}
+                  activeOpacity={0.7}
+                  onPress={() => handlePray(req.id)}
+                >
+                  <HeartHandshake
+                    size={18}
+                    color={isLiked ? '#FF6596' : '#9CA3AF'}
+                  />
+                  <Text style={[prayerStyles.prayIconCount, isLiked && { color: '#FF6596' }]}>
+                    {req.likes || 0}
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
           </View>
         </View>
-      </TouchableOpacity>
-    </Animated.View>
+      </SoftCard>
+    </BounceCard>
   );
 }
 
@@ -241,7 +234,7 @@ function PrayersTab({ searchQuery }: SubScreenProps) {
   const handleAnswered = async (id: string, currentValue: boolean) => {
     try {
       await togglePrayerAnswered(id, currentValue);
-    } catch(err) {
+    } catch (err) {
       console.error(err);
     }
   };
@@ -328,12 +321,12 @@ function PrayersTab({ searchQuery }: SubScreenProps) {
         </View>
       ) : (
         filteredRequests.map((req: Prayer) => (
-          <PrayerCardItem 
-            key={req.id} 
-            req={req} 
-            currentUser={currentUser} 
-            handlePray={handlePray} 
-            handleAnswered={handleAnswered} 
+          <PrayerCardItem
+            key={req.id}
+            req={req}
+            currentUser={currentUser}
+            handlePray={handlePray}
+            handleAnswered={handleAnswered}
             openPrayerModal={openPrayerModal}
             deletePrayer={deletePrayer}
           />
@@ -473,11 +466,11 @@ function EventsTab({ searchQuery }: SubScreenProps) {
               setActiveTodaySlide(slide);
             }}
           >
-            {todaysEvents.map((todayEvent) => {
+{todaysEvents.map((todayEvent) => {
               const rsvpStatus = currentUser ? getUserRsvpStatus(todayEvent, currentUser.uid) : null;
               const dateParts = getEventDateParts(todayEvent);
               return (
-                <TouchableOpacity
+                <BounceCard
                   key={todayEvent.id}
                   activeOpacity={0.92}
                   onPress={() => setSelectedEvent(todayEvent)}
@@ -490,74 +483,74 @@ function EventsTab({ searchQuery }: SubScreenProps) {
                       end={{ x: 1, y: 1 }}
                       style={eventsStyles.heroCardInner}
                     >
-                    {/* Soft orb accents */}
-                    <View style={eventsStyles.heroOrb1} pointerEvents="none" />
-                    <View style={eventsStyles.heroOrb2} pointerEvents="none" />
+                      {/* Soft orb accents */}
+                      <View style={eventsStyles.heroOrb1} pointerEvents="none" />
+                      <View style={eventsStyles.heroOrb2} pointerEvents="none" />
 
-                    {/* TODAY badge */}
-                    <View>
-                      <View style={eventsStyles.livePill}>
-                        <CalendarDays size={10} color="#FFFFFF" />
-                        <Text style={eventsStyles.livePillText}>TODAY</Text>
+                      {/* TODAY badge */}
+                      <View>
+                        <View style={eventsStyles.livePill}>
+                          <CalendarDays size={10} color="#FFFFFF" />
+                          <Text style={eventsStyles.livePillText}>TODAY</Text>
+                        </View>
                       </View>
-                    </View>
 
-                    {/* Date stamp + event name */}
-                    <View>
-                      <Text style={eventsStyles.heroDateLabel}>
-                        {dateParts.weekday}, {dateParts.month} {dateParts.day}
-                      </Text>
-                      <Text style={eventsStyles.heroTitle} numberOfLines={2}>
-                        {todayEvent.title || 'Church Event'}
-                      </Text>
-                    </View>
-
-                    {/* Time + location */}
-                    <View style={eventsStyles.heroMetaStack}>
-                      <View style={eventsStyles.heroMetaRow}>
-                        <Clock size={12} color="rgba(255,255,255,0.75)" />
-                        <Text style={eventsStyles.heroMeta}>
-                          {todayEvent.time || '9:00 AM'}{todayEvent.endTime ? ` – ${todayEvent.endTime}` : ''}
+                      {/* Date stamp + event name */}
+                      <View>
+                        <Text style={eventsStyles.heroDateLabel}>
+                          {dateParts.weekday}, {dateParts.month} {dateParts.day}
+                        </Text>
+                        <Text style={eventsStyles.heroTitle} numberOfLines={2}>
+                          {todayEvent.title || 'Church Event'}
                         </Text>
                       </View>
-                      <View style={eventsStyles.heroMetaRow}>
-                        <MapPin size={12} color="rgba(255,255,255,0.75)" />
-                        <Text style={eventsStyles.heroMeta} numberOfLines={1}>
-                          {todayEvent.location || 'Main Sanctuary'}
-                        </Text>
+
+                      {/* Time + location */}
+                      <View style={eventsStyles.heroMetaStack}>
+                        <View style={eventsStyles.heroMetaRow}>
+                          <Clock size={12} color="rgba(255,255,255,0.75)" />
+                          <Text style={eventsStyles.heroMeta}>
+                            {todayEvent.time || '9:00 AM'}{todayEvent.endTime ? ` – ${todayEvent.endTime}` : ''}
+                          </Text>
+                        </View>
+                        <View style={eventsStyles.heroMetaRow}>
+                          <MapPin size={12} color="rgba(255,255,255,0.75)" />
+                          <Text style={eventsStyles.heroMeta} numberOfLines={1}>
+                            {todayEvent.location || 'Main Sanctuary'}
+                          </Text>
+                        </View>
                       </View>
-                    </View>
 
-                    {/* RSVP row */}
-                    <View style={eventsStyles.heroActionRow}>
-                      <TouchableOpacity
-                        style={[eventsStyles.rsvpBtn, rsvpStatus === 'going' && eventsStyles.rsvpBtnActive]}
-                        onPress={() => handleRsvp(todayEvent.id, 'going')}
-                      >
-                        <CheckCircle2 size={14} color={rsvpStatus === 'going' ? '#FF6596' : '#FFFFFF'} />
-                        <Text style={[eventsStyles.rsvpText, rsvpStatus === 'going' && eventsStyles.rsvpTextActive]}>Going</Text>
-                      </TouchableOpacity>
+                      {/* RSVP row */}
+                      <View style={eventsStyles.heroActionRow}>
+                        <TouchableOpacity
+                          style={[eventsStyles.rsvpBtn, rsvpStatus === 'going' && eventsStyles.rsvpBtnActive]}
+                          onPress={() => handleRsvp(todayEvent.id, 'going')}
+                        >
+                          <CheckCircle2 size={14} color={rsvpStatus === 'going' ? '#FF6596' : '#FFFFFF'} />
+                          <Text style={[eventsStyles.rsvpText, rsvpStatus === 'going' && eventsStyles.rsvpTextActive]}>Going</Text>
+                        </TouchableOpacity>
 
-                      <TouchableOpacity
-                        style={[eventsStyles.rsvpBtn, rsvpStatus === 'maybe' && eventsStyles.rsvpBtnActive]}
-                        onPress={() => handleRsvp(todayEvent.id, 'maybe')}
-                      >
-                        <HelpCircle size={14} color={rsvpStatus === 'maybe' ? '#F59E0B' : '#FFFFFF'} />
-                        <Text style={[eventsStyles.rsvpText, rsvpStatus === 'maybe' && { color: '#F59E0B' }]}>Maybe</Text>
-                      </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[eventsStyles.rsvpBtn, rsvpStatus === 'maybe' && eventsStyles.rsvpBtnActive]}
+                          onPress={() => handleRsvp(todayEvent.id, 'maybe')}
+                        >
+                          <HelpCircle size={14} color={rsvpStatus === 'maybe' ? '#F59E0B' : '#FFFFFF'} />
+                          <Text style={[eventsStyles.rsvpText, rsvpStatus === 'maybe' && { color: '#F59E0B' }]}>Maybe</Text>
+                        </TouchableOpacity>
 
-                      <TouchableOpacity
-                        style={[eventsStyles.rsvpBtn, rsvpStatus === 'not_going' && eventsStyles.rsvpBtnActive]}
-                        onPress={() => handleRsvp(todayEvent.id, 'not_going')}
-                      >
-                        <XCircle size={14} color={rsvpStatus === 'not_going' ? '#EF4444' : '#FFFFFF'} />
-                        <Text style={[eventsStyles.rsvpText, rsvpStatus === 'not_going' && { color: '#EF4444' }]}>Not Going</Text>
-                      </TouchableOpacity>
-                    </View>
+                        <TouchableOpacity
+                          style={[eventsStyles.rsvpBtn, rsvpStatus === 'not_going' && eventsStyles.rsvpBtnActive]}
+                          onPress={() => handleRsvp(todayEvent.id, 'not_going')}
+                        >
+                          <XCircle size={14} color={rsvpStatus === 'not_going' ? '#EF4444' : '#FFFFFF'} />
+                          <Text style={[eventsStyles.rsvpText, rsvpStatus === 'not_going' && { color: '#EF4444' }]}>Not Going</Text>
+                        </TouchableOpacity>
+                      </View>
 
-                  </LinearGradient>
+                    </LinearGradient>
                   </View>
-                </TouchableOpacity>
+                </BounceCard>
               );
             })}
           </ScrollView>
@@ -574,15 +567,17 @@ function EventsTab({ searchQuery }: SubScreenProps) {
           )}
         </View>
       ) : (
-        <SoftCard innerStyle={eventsStyles.emptyTodayCardInner}>
-          <View style={eventsStyles.emptyTodayIconRing}>
-            <CalendarDays size={26} color="#FF6596" />
-          </View>
-          <Text style={eventsStyles.emptyTodayTitle}>All clear for today</Text>
-          <Text style={eventsStyles.emptyTodaySubtitle}>
-            No events scheduled today.{'\n'}Check what&apos;s coming up below ↓
-          </Text>
-        </SoftCard>
+        <BounceCard activeOpacity={0.95}>
+          <SoftCard innerStyle={eventsStyles.emptyTodayCardInner}>
+            <View style={eventsStyles.emptyTodayIconRing}>
+              <CalendarDays size={26} color="#FF6596" />
+            </View>
+            <Text style={eventsStyles.emptyTodayTitle}>All clear for today</Text>
+            <Text style={eventsStyles.emptyTodaySubtitle}>
+              No events scheduled today.{'\n'}Check what&apos;s coming up below ↓
+            </Text>
+          </SoftCard>
+        </BounceCard>
       )}
 
       <View style={eventsStyles.sectionHeadRow}>
@@ -596,17 +591,21 @@ function EventsTab({ searchQuery }: SubScreenProps) {
       </View>
 
       {upcomingList.length === 0 ? (
-        <SoftCard innerStyle={eventsStyles.emptyTodayCardInner}>
-          <View style={eventsStyles.emptyTodayIconRing}>
-            <CalendarDays size={26} color="#FF6596" />
-          </View>
-          <Text style={eventsStyles.emptyTodayTitle}>Nothing found</Text>
-          <Text style={eventsStyles.emptyTodaySubtitle}>Try a different search term.</Text>
-        </SoftCard>
+        <BounceCard activeOpacity={0.95}>
+          <SoftCard innerStyle={eventsStyles.emptyTodayCardInner}>
+            <View style={eventsStyles.emptyTodayIconRing}>
+              <CalendarDays size={26} color="#FF6596" />
+            </View>
+            <Text style={eventsStyles.emptyTodayTitle}>No upcoming events</Text>
+            <Text style={eventsStyles.emptyTodaySubtitle}>
+              Check back later for more events.
+            </Text>
+          </SoftCard>
+        </BounceCard>
       ) : (
         upcomingList.map((event) => (
-          <TouchableOpacity key={event.id} activeOpacity={0.82} onPress={() => setSelectedEvent(event)}>
-            <SoftCard style={{ marginBottom: 16 }} innerStyle={eventsStyles.listCardInner}>
+          <BounceCard key={event.id} activeOpacity={0.82} onPress={() => setSelectedEvent(event)} style={{ marginBottom: 16 }}>
+            <SoftCard innerStyle={eventsStyles.listCardInner}>
               <View style={eventsStyles.listDateBlock}>
                 <Text style={eventsStyles.listDateMonth}>{getEventDateParts(event).month}</Text>
                 <Text style={eventsStyles.listDateDay}>
@@ -643,7 +642,7 @@ function EventsTab({ searchQuery }: SubScreenProps) {
                 <ChevronRight size={18} color="#C0C8D8" strokeWidth={2.5} />
               </View>
             </SoftCard>
-          </TouchableOpacity>
+          </BounceCard>
         ))
       )}
 
@@ -676,36 +675,36 @@ function MembersTab({ searchQuery }: SubScreenProps) {
     const canSeeLeadersOnly = userProfile?.role === 'pastor' || userProfile?.role === 'church_admin' || userProfile?.role === 'super_admin';
 
     const validMembers = members.filter(m => {
-        if (m.status === 'inactive') return false;
-        
-        const visibility = m.birthdayVisibility || 'members_only';
-        if (visibility === 'hidden') return false;
-        if (visibility === 'leaders_only' && !canSeeLeadersOnly) return false;
-        
-        return parseMemberDate(m) !== null;
+      if (m.status === 'inactive') return false;
+
+      const visibility = m.birthdayVisibility || 'members_only';
+      if (visibility === 'hidden') return false;
+      if (visibility === 'leaders_only' && !canSeeLeadersOnly) return false;
+
+      return parseMemberDate(m) !== null;
     });
 
     const parsedMembers = validMembers.map(m => {
-        const d = parseMemberDate(m)!;
-        return { ...m, parsedMonth: d.m, parsedDay: d.d } as Member & { parsedMonth: number, parsedDay: number };
+      const d = parseMemberDate(m)!;
+      return { ...m, parsedMonth: d.m, parsedDay: d.d } as Member & { parsedMonth: number, parsedDay: number };
     });
 
     const todayBirthdays = parsedMembers.filter(m => m.parsedMonth === curMonth && m.parsedDay === curDay);
-    
+
     const nextMonth = curMonth === 12 ? 1 : curMonth + 1;
     const allUpcoming = parsedMembers
-      .filter(m => 
-        (m.parsedMonth === curMonth && m.parsedDay > curDay) || 
+      .filter(m =>
+        (m.parsedMonth === curMonth && m.parsedDay > curDay) ||
         (m.parsedMonth === nextMonth)
       )
       .sort((a, b) => {
-          if (a.parsedMonth !== b.parsedMonth) return a.parsedMonth - b.parsedMonth;
-          return a.parsedDay - b.parsedDay;
+        if (a.parsedMonth !== b.parsedMonth) return a.parsedMonth - b.parsedMonth;
+        return a.parsedDay - b.parsedDay;
       });
 
-    return { 
-        todayBirthdays, 
-        upcomingBirthdays: allUpcoming.slice(0, 3) 
+    return {
+      todayBirthdays,
+      upcomingBirthdays: allUpcoming.slice(0, 3)
     };
   }, [members, userProfile]);
 
@@ -733,51 +732,51 @@ function MembersTab({ searchQuery }: SubScreenProps) {
   return (
     <View style={membersStyles.wrap}>
       {(todayBirthdays.length > 0 || upcomingBirthdays.length > 0) && (
-        <View style={membersStyles.birthdaySnapshotCard}>
-            <LinearGradient
-                colors={['#FFD1DF', '#E8D4FF', '#D4E4FF']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFill}
-            />
-            {/* Orbs */}
-            <View style={membersStyles.snapshotOrb1} />
-            <View style={membersStyles.snapshotOrb2} />
-            
-            <View style={membersStyles.birthdaySnapshotHeader}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <View style={membersStyles.cakeIconWrap}>
-                        <Cake size={16} color="#FF6596" />
-                    </View>
-                    <Text style={membersStyles.birthdaySnapshotTitle}>Celebrations</Text>
-                </View>
-                <TouchableOpacity onPress={() => router.push('/birthdays')} style={membersStyles.seeAllBtn} activeOpacity={0.7}>
-                    <Text style={membersStyles.seeAllText}>View All</Text>
-                    <ChevronRight size={14} color="#FF6596" />
-                </TouchableOpacity>
+        <SoftCard style={{ marginBottom: 16 }} innerStyle={membersStyles.birthdaySnapshotCard}>
+          <LinearGradient
+            colors={['#FFD1DF', '#E8D4FF', '#D4E4FF']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          {/* Orbs */}
+          <View style={membersStyles.snapshotOrb1} />
+          <View style={membersStyles.snapshotOrb2} />
+
+          <View style={membersStyles.birthdaySnapshotHeader}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={membersStyles.cakeIconWrap}>
+                <Cake size={16} color="#FF6596" />
+              </View>
+              <Text style={membersStyles.birthdaySnapshotTitle}>Celebrations</Text>
             </View>
-            
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={membersStyles.birthdaySnapshotList}>
-                {todayBirthdays.map(m => (
-                    <View key={`today-${m.id}`} style={membersStyles.birthdaySnapshotItem}>
-                        <View style={membersStyles.snapshotAvatarWrap}>
-                            <Image source={{ uri: m.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(formatMemberName(m))}&background=f0f0f0&color=999` }} style={membersStyles.snapshotAvatar} />
-                            <View style={membersStyles.snapshotBadgeToday}>
-                                <Text style={membersStyles.snapshotBadgeTodayText}>TODAY</Text>
-                            </View>
-                        </View>
-                        <Text style={membersStyles.snapshotName} numberOfLines={1}>{formatMemberName(m)}</Text>
-                    </View>
-                ))}
-                {upcomingBirthdays.map(m => (
-                    <View key={`up-${m.id}`} style={membersStyles.birthdaySnapshotItem}>
-                        <Image source={{ uri: m.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(formatMemberName(m))}&background=f0f0f0&color=999` }} style={membersStyles.snapshotAvatar} />
-                        <Text style={membersStyles.snapshotName} numberOfLines={1}>{formatMemberName(m)}</Text>
-                        <Text style={membersStyles.snapshotUpcomingDate}>{formatBirthday(m)}</Text>
-                    </View>
-                ))}
-            </ScrollView>
-        </View>
+            <TouchableOpacity onPress={() => router.push('/birthdays')} style={membersStyles.seeAllBtn} activeOpacity={0.7}>
+              <Text style={membersStyles.seeAllText}>View All</Text>
+              <ChevronRight size={14} color="#FF6596" />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={membersStyles.birthdaySnapshotList}>
+            {todayBirthdays.map(m => (
+              <View key={`today-${m.id}`} style={membersStyles.birthdaySnapshotItem}>
+                <View style={membersStyles.snapshotAvatarWrap}>
+                  <Image source={{ uri: m.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(formatMemberName(m))}&background=f0f0f0&color=999` }} style={membersStyles.snapshotAvatar} />
+                  <View style={membersStyles.snapshotBadgeToday}>
+                    <Text style={membersStyles.snapshotBadgeTodayText}>TODAY</Text>
+                  </View>
+                </View>
+                <Text style={membersStyles.snapshotName} numberOfLines={1}>{formatMemberName(m)}</Text>
+              </View>
+            ))}
+            {upcomingBirthdays.map(m => (
+              <View key={`up-${m.id}`} style={membersStyles.birthdaySnapshotItem}>
+                <Image source={{ uri: m.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(formatMemberName(m))}&background=f0f0f0&color=999` }} style={membersStyles.snapshotAvatar} />
+                <Text style={membersStyles.snapshotName} numberOfLines={1}>{formatMemberName(m)}</Text>
+                <Text style={membersStyles.snapshotUpcomingDate}>{formatBirthday(m)}</Text>
+              </View>
+            ))}
+          </ScrollView>
+        </SoftCard>
       )}
 
       {membersLoading ? (
@@ -785,31 +784,32 @@ function MembersTab({ searchQuery }: SubScreenProps) {
           <Text style={placeholder.subtitle}>Loading members...</Text>
         </View>
       ) : filteredMembers.length === 0 ? (
-          <View style={placeholder.wrap}>
-            <Text style={placeholder.title}>No members found</Text>
-            <Text style={placeholder.subtitle}>Try another search term.</Text>
-          </View>
+        <View style={placeholder.wrap}>
+          <Text style={placeholder.title}>No members found</Text>
+          <Text style={placeholder.subtitle}>Try another search term.</Text>
+        </View>
       ) : (
-          filteredMembers.map((member) => (
-            <View key={member.id} style={membersStyles.card}>
+        filteredMembers.map((member) => (
+          <BounceCard key={member.id} style={{ marginBottom: 12 }}>
+            <SoftCard innerStyle={membersStyles.card}>
               <View style={membersStyles.avatarWrap}>
-                  <Image
-                    source={{ uri: member.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(formatMemberName(member))}&background=f0f0f0&color=999` }}
-                    style={membersStyles.avatar}
-                  />
+                <Image
+                  source={{ uri: member.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(formatMemberName(member))}&background=f0f0f0&color=999` }}
+                  style={membersStyles.avatar}
+                />
               </View>
               <View style={membersStyles.details}>
                 <Text style={membersStyles.name}>{formatMemberName(member)}</Text>
                 {member.ministryIds && member.ministryIds.length > 0 && (
-                    <LinearGradient
-                        colors={['#F3E8FF', '#E0E7FF']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        style={membersStyles.ministryBadge}
-                    >
-                        <HeartHandshake size={10} color="#8B5CF6" />
-                        <Text style={membersStyles.ministryBadgeText}>Ministry</Text>
-                    </LinearGradient>
+                  <LinearGradient
+                    colors={['#F3E8FF', '#E0E7FF']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={membersStyles.ministryBadge}
+                  >
+                    <HeartHandshake size={10} color="#8B5CF6" />
+                    <Text style={membersStyles.ministryBadgeText}>Ministry</Text>
+                  </LinearGradient>
                 )}
               </View>
               <View style={[membersStyles.statusPill, member.status === 'inactive' && membersStyles.statusPillInactive]}>
@@ -817,8 +817,9 @@ function MembersTab({ searchQuery }: SubScreenProps) {
                   {member.status === 'inactive' ? 'Inactive' : 'Active'}
                 </Text>
               </View>
-            </View>
-          ))
+            </SoftCard>
+          </BounceCard>
+        ))
       )}
     </View>
   );
@@ -862,7 +863,7 @@ export default function CommunityScreen() {
     outputRange: [0, -60],
     extrapolate: 'clamp',
   });
-  
+
   const titleOpacity = scrollY.interpolate({
     inputRange: [0, 40],
     outputRange: [1, 0],
@@ -897,7 +898,7 @@ export default function CommunityScreen() {
         }),
       ]).start();
 
-      const centerOffsetX = layout.x + layout.width / 2 - screenWidth / 2;
+      const centerOffsetX = layout.x + layout.width / 2 - SCREEN_WIDTH / 2;
       scrollViewRef.current?.scrollTo({ x: Math.max(0, centerOffsetX), animated: true });
     }
     setActiveTab(index);
@@ -929,8 +930,8 @@ export default function CommunityScreen() {
       {/* ── Frosted sticky header ── */}
       <Animated.View
         style={[
-          styles.frostedHeader, 
-          { 
+          styles.frostedHeader,
+          {
             paddingTop: Math.max(insets.top, 24),
             transform: [{ translateY: headerTranslateY }]
           }
@@ -1383,11 +1384,6 @@ const membersStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-    shadowColor: '#8B5CF6',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 3,
   },
   avatarWrap: {
     position: 'relative',
@@ -1458,14 +1454,7 @@ const membersStyles = StyleSheet.create({
     color: '#9CA3AF',
   },
   birthdaySnapshotCard: {
-    borderRadius: 24,
-    marginBottom: 16,
     overflow: 'hidden',
-    shadowColor: '#FF6B6B',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 5,
   },
   snapshotOrb1: {
     position: 'absolute',
@@ -1588,6 +1577,7 @@ export const eventsStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginTop: -8,
   },
   sectionLabel: {
     fontSize: 13,
@@ -1604,6 +1594,7 @@ export const eventsStyles = StyleSheet.create({
   heroCardOuter: {
     borderRadius: 24,
     boxShadow: '0px 8px 24px rgba(182, 109, 255, 0.28)',
+    marginBottom: 10,
   },
   heroCardInner: {
     borderRadius: 24,

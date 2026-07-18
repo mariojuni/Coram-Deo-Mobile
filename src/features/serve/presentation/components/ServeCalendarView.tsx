@@ -1,4 +1,6 @@
+import { BounceCard } from '@/components/ui/BounceCard';
 import DebouncedTouchable from '@/components/DebouncedTouchable';
+import { SoftCard } from '@/components/ui/SoftCard';
 import type { MinistryAssignment } from '@/features/ministry/domain/ministry.types';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
@@ -267,7 +269,7 @@ export function ServeCalendarView({ assignments, onPressAssignment }: ServeCalen
       </View>
 
       {/* Selected day section */}
-      <View style={cs.sectionCard}>
+      <SoftCard style={{ marginTop: 4, marginBottom: 8 }} innerStyle={cs.sectionCard}>
         <LinearGradient
           colors={['#FF6596', '#B66DFF']}
           start={{ x: 0, y: 0 }}
@@ -299,16 +301,19 @@ export function ServeCalendarView({ assignments, onPressAssignment }: ServeCalen
             </LinearGradient>
           )}
         </View>
-      </View>
+      </SoftCard>
 
       <View style={cs.list}>
         {selectedAssignments.length === 0 ? (
-          <View style={cs.empty}>
-            <Text style={cs.emptyText}>No assignments on this day</Text>
-          </View>
+          <BounceCard activeOpacity={0.95} style={{ marginBottom: 8 }}>
+            <SoftCard innerStyle={cs.empty}>
+              <Text style={cs.emptyText}>No assignments on this day</Text>
+            </SoftCard>
+          </BounceCard>
         ) : (
           selectedAssignments.map(a => (
-            <DebouncedTouchable key={a.id} onPress={() => onPressAssignment(a)} style={cs.eventCard} activeOpacity={0.85}>
+            <BounceCard key={a.id} onPress={() => onPressAssignment(a)} activeOpacity={0.85} style={{ marginBottom: 8 }}>
+              <SoftCard innerStyle={cs.eventCard}>
               <View style={cs.accentBar}>
                 <LinearGradient
                   colors={['#FF6596', '#B66DFF']}
@@ -327,7 +332,8 @@ export function ServeCalendarView({ assignments, onPressAssignment }: ServeCalen
                   {normalizeStatus(a.status)}
                 </Text>
               </View>
-            </DebouncedTouchable>
+              </SoftCard>
+            </BounceCard>
           ))
         )}
         <View style={{ height: 20 }} />
@@ -388,7 +394,7 @@ const cs = StyleSheet.create({
   dotRow: { flexDirection: 'row', gap: 2, position: 'absolute', bottom: 3 },
   dot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#FF6596' },
   dotSel: { backgroundColor: 'rgba(255,255,255,0.9)' },
-  sectionCard: { marginTop: 4, marginBottom: 8, backgroundColor: '#fff', borderRadius: 14, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 1 },
+  sectionCard: { backgroundColor: '#fff' },
   sectionLine: { height: 3 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 10 },
   sectionOverline: { fontSize: 10, fontWeight: '800', color: '#FF6596', letterSpacing: 1.2, marginBottom: 2 },
@@ -396,9 +402,9 @@ const cs = StyleSheet.create({
   countPill: { borderRadius: 12, minWidth: 24, height: 24, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
   countText: { color: '#fff', fontSize: 11, fontWeight: '800' },
   list: { flex: 1 },
-  empty: { paddingVertical: 28, alignItems: 'center', backgroundColor: '#fff', borderRadius: 14, marginBottom: 8 },
+  empty: { paddingVertical: 28, alignItems: 'center', backgroundColor: '#fff' },
   emptyText: { fontSize: 13, color: '#9CA3AF' },
-  eventCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 14, marginBottom: 8, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
+  eventCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff' },
   accentBar: { width: 4, alignSelf: 'stretch' },
   eventInfo: { flex: 1, paddingVertical: 13, paddingHorizontal: 12 },
   eventTitle: { fontSize: 13, fontWeight: '700', color: '#1F2937' },

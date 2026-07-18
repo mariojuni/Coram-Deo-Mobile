@@ -1,4 +1,5 @@
-import DebouncedTouchable from '@/components/DebouncedTouchable';
+import { BounceCard } from '@/components/ui/BounceCard';
+import { SoftCard } from '@/components/ui/SoftCard';
 import { PrayingHands } from '@/components/ui/icons/PrayingHands';
 import type { MinistryAssignment } from '@/features/ministry/domain/ministry.types';
 import { useMinistryStore } from '@/store/useMinistryStore';
@@ -137,11 +138,6 @@ export function AssignmentCard({ assignment, onPress }: AssignmentCardProps) {
     iconNode = ROLE_ICONS[roleId] ?? <Users size={20} color="#999" />;
   }
 
-  const scale = useRef(new Animated.Value(1)).current;
-  const pressIn = () =>
-    Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, speed: 50, bounciness: 0 }).start();
-  const pressOut = () =>
-    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 15, bounciness: 12 }).start();
 
   const statusNorm = (assignment.status ?? '').toLowerCase();
   const isPending = statusNorm === 'pending';
@@ -193,8 +189,8 @@ export function AssignmentCard({ assignment, onPress }: AssignmentCardProps) {
   })();
 
   return (
-    <DebouncedTouchable onPress={onPress} activeOpacity={1} onPressIn={pressIn} onPressOut={pressOut}>
-      <Animated.View style={[cs.card, (isDeclined || isCancelled) && cs.cardMuted, { transform: [{ scale }] }]}>
+    <BounceCard onPress={onPress} activeOpacity={1} style={[{ marginBottom: 12 }, (isDeclined || isCancelled) && cs.cardMuted]}>
+      <SoftCard innerStyle={cs.card}>
       <LinearGradient
         colors={[`${color}18`, `${color}06`] as [string, string]}
         start={{ x: 0, y: 0 }}
@@ -254,22 +250,14 @@ export function AssignmentCard({ assignment, onPress }: AssignmentCardProps) {
           <Text style={cs.confirmedBannerText}>You confirmed this assignment</Text>
         </View>
       )}
-      </Animated.View>
-    </DebouncedTouchable>
+      </SoftCard>
+    </BounceCard>
   );
 }
 
 const cs = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 3,
-    overflow: 'hidden',
   },
   cardMuted: { opacity: 0.65 },
   header: {

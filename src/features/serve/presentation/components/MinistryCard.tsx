@@ -1,4 +1,5 @@
-import DebouncedTouchable from '@/components/DebouncedTouchable';
+import { BounceCard } from '@/components/ui/BounceCard';
+import { SoftCard } from '@/components/ui/SoftCard';
 import type { Ministry } from '@/features/ministry/domain/ministry.types';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronRight, Users } from 'lucide-react-native';
@@ -13,16 +14,10 @@ export interface MinistryCardProps {
 export function MinistryCard({ ministry, onPress }: MinistryCardProps) {
   const memberCount = ministry.memberCount ?? ministry.members?.length ?? 0;
   const roleCount = ministry.roles?.length ?? 0;
-  const scale = useRef(new Animated.Value(1)).current;
-
-  const pressIn = () =>
-    Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, speed: 50, bounciness: 0 }).start();
-  const pressOut = () =>
-    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 15, bounciness: 12 }).start();
 
   return (
-    <DebouncedTouchable onPress={onPress} activeOpacity={1} onPressIn={pressIn} onPressOut={pressOut}>
-      <Animated.View style={[cs.card, { transform: [{ scale }] }]}>
+    <BounceCard onPress={onPress} activeOpacity={1} style={{ marginBottom: 12 }}>
+      <SoftCard innerStyle={cs.card}>
         {/* Left gradient accent bar */}
         <View style={cs.accentBar}>
           <LinearGradient
@@ -78,22 +73,14 @@ export function MinistryCard({ ministry, onPress }: MinistryCardProps) {
             </View>
           ) : null}
         </View>
-      </Animated.View>
-    </DebouncedTouchable>
+      </SoftCard>
+    </BounceCard>
   );
 }
 
 const cs = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 3,
-    overflow: 'hidden',
     flexDirection: 'row',
   },
   accentBar: { width: 4 },
