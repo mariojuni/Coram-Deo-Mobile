@@ -1,6 +1,7 @@
 import type { BiblePlan, UserBiblePlan } from '@/features/biblePlan/domain/biblePlan.types';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useBiblePlanStore } from '@/store/useBiblePlanStore';
+import { SoftCard } from '@/components/ui/SoftCard';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { BookOpen, ChevronRight, Sparkles } from 'lucide-react-native';
@@ -49,24 +50,26 @@ export function BiblePlanProgressCard() {
     return (
       <TouchableOpacity
         activeOpacity={0.85}
-        style={styles.emptyCard}
+        style={styles.emptyCardContainer}
         onPress={() => router.push('/bible-plans')}
       >
-        <LinearGradient
-          colors={['#FFF0F5', '#F5F0FF']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.emptyGradient}
-        >
-          <View style={styles.emptyIconWrap}>
-            <Sparkles size={22} color="#C084FC" strokeWidth={2} />
-          </View>
-          <View style={styles.emptyText}>
-            <Text style={styles.emptyTitle}>Start a Bible Reading Plan</Text>
-            <Text style={styles.emptySubtitle}>Build a daily habit with guided plans</Text>
-          </View>
-          <ChevronRight size={18} color="#C9A8E0" strokeWidth={2.5} />
-        </LinearGradient>
+        <SoftCard innerStyle={styles.emptyCardInner}>
+          <LinearGradient
+            colors={['#FFF0F5', '#F5F0FF']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.emptyGradient}
+          >
+            <View style={styles.emptyIconWrap}>
+              <Sparkles size={22} color="#C084FC" strokeWidth={2} />
+            </View>
+            <View style={styles.emptyText}>
+              <Text style={styles.emptyTitle}>Start a Bible Reading Plan</Text>
+              <Text style={styles.emptySubtitle}>Build a daily habit with guided plans</Text>
+            </View>
+            <ChevronRight size={18} color="#C9A8E0" strokeWidth={2.5} />
+          </LinearGradient>
+        </SoftCard>
       </TouchableOpacity>
     );
   }
@@ -95,41 +98,41 @@ export function BiblePlanProgressCard() {
         onPressOut={() =>
           Animated.spring(cardScale, { toValue: 1, useNativeDriver: true, speed: 15, bounciness: 12 }).start()}
       >
-        <Animated.View style={[styles.card, { transform: [{ scale: cardScale }] }]}>
-          <LinearGradient
-            colors={['#FF6596', '#B66DFF']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={styles.stripe}
-          />
-          <View style={styles.iconWrap}>
+        <SoftCard isAnimated style={{ transform: [{ scale: cardScale }] }} innerStyle={styles.cardInner}>
             <LinearGradient
               colors={['#FF6596', '#B66DFF']}
               start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.iconGradient}
-            >
-              <BookOpen size={18} color="#fff" strokeWidth={2} />
-            </LinearGradient>
-          </View>
-          <View style={styles.content}>
-            <View style={styles.topRow}>
-              <Text style={styles.overline}>BIBLE PLAN</Text>
-              <Text style={styles.dayLabel}>{dayLabel}</Text>
-            </View>
-            <Text style={styles.title} numberOfLines={1}>{title}</Text>
-            <View style={styles.track}>
+              end={{ x: 0, y: 1 }}
+              style={styles.stripe}
+            />
+            <View style={styles.iconWrap}>
               <LinearGradient
-                colors={['#F9A8C9', '#D8B4FE']}
+                colors={['#FF6596', '#B66DFF']}
                 start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={[styles.fill, { width: `${progress}%` }]}
-              />
+                end={{ x: 1, y: 1 }}
+                style={styles.iconGradient}
+              >
+                <BookOpen size={18} color="#fff" strokeWidth={2} />
+              </LinearGradient>
             </View>
-            <Text style={styles.progressLabel}>{Math.round(progress)}% complete</Text>
-          </View>
-          <ChevronRight size={16} color="#C0C0C0" strokeWidth={2.5} style={styles.chevron} />
-        </Animated.View>
+            <View style={styles.content}>
+              <View style={styles.topRow}>
+                <Text style={styles.overline}>BIBLE PLAN</Text>
+                <Text style={styles.dayLabel}>{dayLabel}</Text>
+              </View>
+              <Text style={styles.title} numberOfLines={1}>{title}</Text>
+              <View style={styles.track}>
+                <LinearGradient
+                  colors={['#F9A8C9', '#D8B4FE']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={[styles.fill, { width: `${progress}%` }]}
+                />
+              </View>
+              <Text style={styles.progressLabel}>{Math.round(progress)}% complete</Text>
+            </View>
+            <ChevronRight size={16} color="#C0C0C0" strokeWidth={2.5} style={styles.chevron} />
+        </SoftCard>
       </TouchableOpacity>
 
       {hasMorePlans && (
@@ -154,15 +157,11 @@ const styles = StyleSheet.create({
   },
 
   // ── Empty state ──────────────────────────────────────────────────────────
-  emptyCard: {
+  emptyCardContainer: {
     marginBottom: 8,
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#FF6596',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 3,
+  },
+  emptyCardInner: {
+    flexDirection: 'column',
   },
   emptyGradient: {
     flexDirection: 'row',
@@ -187,17 +186,9 @@ const styles = StyleSheet.create({
   activeWrapper: {
     marginBottom: 8,
   },
-  card: {
+  cardInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 3,
     paddingRight: 14,
   },
   stripe: {

@@ -133,6 +133,7 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="walkthrough" options={{ headerShown: false }} />
             <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name="pending-access" options={{ headerShown: false }} />
             <Stack.Screen name="scanner" options={{ presentation: 'modal', headerShown: false }} />
             <Stack.Screen name="my-qr" options={{ presentation: 'modal', headerShown: false }} />
             <Stack.Screen name="more" options={{ headerShown: false }} />

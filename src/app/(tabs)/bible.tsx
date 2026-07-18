@@ -25,9 +25,9 @@ type BibleIndexResponse = {
 };
 
 const DEFAULT_PREFERENCES: BiblePreferencesWithHighlights = {
-  activeBook: '',
-  activeChapter: '',
-  activeTranslation: '',
+  activeBook: 'GEN',
+  activeChapter: '1',
+  activeTranslation: '2692',
   highlights: {},
 };
 

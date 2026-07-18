@@ -1,17 +1,27 @@
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import {
-    createUserWithEmailAndPassword,
-    GoogleAuthProvider,
-    onAuthStateChanged,
-    signInWithCredential,
-    signInWithEmailAndPassword,
-    signOut,
-    type User,
-} from 'firebase/auth';
-import { doc, getDoc, collection, query, where, getDocs, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '../../../firebase';
-import type { AuthCredentialResult, UserAccount } from '../domain/auth.types';
-import type { Member } from '../../member/domain/member.types';
+  createUserWithEmailAndPassword,
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  signInWithCredential,
+  signInWithEmailAndPassword,
+  signOut,
+  type User,
+} from "firebase/auth";
+import {
+  doc,
+  getDoc,
+  collection,
+  query,
+  where,
+  getDocs,
+  setDoc,
+  updateDoc,
+  serverTimestamp,
+} from "firebase/firestore";
+import { auth, db } from "../../../firebase";
+import type { AuthCredentialResult, UserAccount } from "../domain/auth.types";
+import type { Member } from "../../member/domain/member.types";
 
 export interface RegistrationPayload {
   email?: string;
@@ -27,23 +37,41 @@ export interface RegistrationPayload {
   username: string;
 }
 
-async function findMemberByEmailOrPhone(email?: string, phone?: string): Promise<Member | null> {
-  const usersRef = collection(db, 'users');
+async function findMemberByEmailOrPhone(
+  email?: string,
+  phone?: string
+): Promise<Member | null> {
+  const usersRef = collection(db, "users");
   let matchedDoc = null;
 
   if (email) {
-    const qEmail = query(usersRef, where('email', '==', email));
+    const cleanEmail = email.trim().toLowerCase();
+    const qEmail = query(usersRef, where("email", "==", cleanEmail));
     const snap = await getDocs(qEmail);
     if (!snap.empty) {
-      matchedDoc = snap.docs[0];
+      matchedDoc = snap.docs.find(d => d.data().churchId) || snap.docs[0];
+    } else {
+      // Fallback: search all users for case-insensitive and space-insensitive match
+      // In case the admin added the email with trailing spaces or uppercase
+      const allUsersSnap = await getDocs(usersRef);
+      const matches = allUsersSnap.docs.filter(d => {
+        const data = d.data();
+        return typeof data.email === 'string' && data.email.trim().toLowerCase() === cleanEmail;
+      });
+      if (matches.length > 0) {
+        const match = matches.find(d => d.data().churchId) || matches[0];
+        matchedDoc = match;
+        // Auto-fix the dirty data in Firestore
+        await updateDoc(doc(db, "users", match.id), { email: cleanEmail });
+      }
     }
   }
 
   if (!matchedDoc && phone) {
-    const qPhone = query(usersRef, where('phoneNumber', '==', phone));
+    const qPhone = query(usersRef, where("phoneNumber", "==", phone));
     const snap = await getDocs(qPhone);
     if (!snap.empty) {
-      matchedDoc = snap.docs[0];
+      matchedDoc = snap.docs.find(d => d.data().churchId) || snap.docs[0];
     }
   }
 
@@ -54,26 +82,28 @@ async function findMemberByEmailOrPhone(email?: string, phone?: string): Promise
 }
 
 async function checkUsernameTaken(username: string): Promise<boolean> {
-  const usersRef = collection(db, 'users');
-  const q = query(usersRef, where('username', '==', username));
+  const usersRef = collection(db, "users");
+  const q = query(usersRef, where("username", "==", username));
   const snap = await getDocs(q);
   return !snap.empty;
 }
 
 /** Normalise a raw Firestore role string to a valid SystemRole. */
-function normalizeLegacyRole(raw: string): import('../domain/auth.types').SystemRole {
-  const map: Record<string, import('../domain/auth.types').SystemRole> = {
-    member: 'viewer',
-    admin: 'church_admin',
-    churchAdmin: 'church_admin',
-    superAdmin: 'super_admin',
-    ministryLeader: 'ministry_leader',
-    financeAdmin: 'finance_admin',
+function normalizeLegacyRole(
+  raw: string
+): import("../domain/auth.types").SystemRole {
+  const map: Record<string, import("../domain/auth.types").SystemRole> = {
+    member: "viewer",
+    admin: "church_admin",
+    churchAdmin: "church_admin",
+    superAdmin: "super_admin",
+    ministryLeader: "ministry_leader",
+    financeAdmin: "finance_admin",
   };
-  return (map[raw] ?? raw) as import('../domain/auth.types').SystemRole;
+  return (map[raw] ?? raw) as import("../domain/auth.types").SystemRole;
 }
 
-async function fetchUserAccount(user: User): Promise<UserAccount | null> {
+export async function fetchUserAccount(user: User): Promise<UserAccount | null> {
   const profileDocRef = doc(db, 'users', user.uid);
   const profileSnapshot = await getDoc(profileDocRef);
   if (!profileSnapshot.exists()) return null;
@@ -81,24 +111,30 @@ async function fetchUserAccount(user: User): Promise<UserAccount | null> {
   const data = profileSnapshot.data() as Record<string, unknown>;
 
   // Ensure super admin can view the primary church details if they don't have one explicitly assigned
-  if (!data.churchId && (data.role === 'super_admin' || data.role === 'admin' || (Array.isArray(data.systemRoles) && (data.systemRoles as string[]).includes('super_admin')))) {
-    data.churchId = 'YmEc6C69Xz4DKRQaQZBV';
+  if (
+    !data.churchId &&
+    (data.role === "super_admin" ||
+      data.role === "admin" ||
+      (Array.isArray(data.systemRoles) &&
+        (data.systemRoles as string[]).includes("super_admin")))
+  ) {
+    data.churchId = "YmEc6C69Xz4DKRQaQZBV";
   }
 
-
   // Build systemRoles: prefer the stored array; fall back to migrating the legacy single role string.
-  let systemRoles: import('../domain/auth.types').SystemRole[];
+  let systemRoles: import("../domain/auth.types").SystemRole[];
   if (Array.isArray(data.systemRoles) && data.systemRoles.length > 0) {
     systemRoles = (data.systemRoles as string[]).map(normalizeLegacyRole);
-  } else if (data.role && typeof data.role === 'string') {
+  } else if (data.role && typeof data.role === "string") {
     systemRoles = [normalizeLegacyRole(data.role as string)];
   } else {
-    systemRoles = ['viewer'];
+    systemRoles = ["viewer"];
   }
 
   // Determine primaryRole: stored value wins; otherwise use the first item in systemRoles.
-  const primaryRole: import('../domain/auth.types').SystemRole =
-    (data.primaryRole as import('../domain/auth.types').SystemRole) ?? systemRoles[0];
+  const primaryRole: import("../domain/auth.types").SystemRole =
+    (data.primaryRole as import("../domain/auth.types").SystemRole) ??
+    systemRoles[0];
 
   // Keep legacy `role` in sync for any still-using callers (Firestore rules, etc.).
   const legacyRole = normalizeLegacyRole((data.role as string) ?? primaryRole);
@@ -113,77 +149,92 @@ async function fetchUserAccount(user: User): Promise<UserAccount | null> {
 }
 
 GoogleSignin.configure({
-  webClientId: '676505939287-eqsoa6bc8tkgkun3bmqtdmu2418hnu7m.apps.googleusercontent.com',
-  iosClientId: '676505939287-r3lac99rq77b0cg1n8bk69lict7mp1j0.apps.googleusercontent.com',
+  webClientId:
+    "676505939287-eqsoa6bc8tkgkun3bmqtdmu2418hnu7m.apps.googleusercontent.com",
+  iosClientId:
+    "676505939287-r3lac99rq77b0cg1n8bk69lict7mp1j0.apps.googleusercontent.com",
 });
 
 export const authRepository = {
   async signup(payload: RegistrationPayload): Promise<AuthCredentialResult> {
     if (!payload.email && !payload.phoneNumber) {
-      throw new Error('Email or phone number is required.');
+      throw new Error("Email or phone number is required.");
     }
     if (!payload.password) {
-      throw new Error('Password is required.');
+      throw new Error("Password is required.");
     }
 
     const isTaken = await checkUsernameTaken(payload.username);
     if (isTaken) {
-      throw new Error('Username is already taken.');
+      throw new Error("Username is already taken.");
     }
 
-    const matchedMember = await findMemberByEmailOrPhone(payload.email, payload.phoneNumber);
+    const matchedMember = await findMemberByEmailOrPhone(
+      payload.email,
+      payload.phoneNumber
+    );
 
     if (matchedMember && matchedMember.accountId) {
-      throw new Error('This email or phone number is already registered. Please log in instead.');
+      throw new Error(
+        "This email or phone number is already registered. Please log in instead."
+      );
     }
 
     // Create Firebase Auth User
-    const authCredential = await createUserWithEmailAndPassword(auth, payload.email || '', payload.password);
+    const authCredential = await createUserWithEmailAndPassword(
+      auth,
+      payload.email || "",
+      payload.password
+    );
     const user = authCredential.user;
 
-    let status: 'active' | 'pendingChurchLink' = 'pendingChurchLink';
+    let status: "active" | "pendingChurchLink" = "pendingChurchLink";
     let churchId = null;
 
     if (matchedMember) {
-      status = 'active';
+      status = "active";
       churchId = matchedMember.churchId;
 
       // Update Member
-      const memberRef = doc(db, 'users', matchedMember.id);
+      const memberRef = doc(db, "users", matchedMember.id);
       const updates: any = {
         accountId: user.uid,
         authUid: user.uid,
         updatedAt: serverTimestamp(),
       };
       if (!matchedMember.email && payload.email) updates.email = payload.email;
-      if (!matchedMember.phoneNumber && payload.phoneNumber) updates.phoneNumber = payload.phoneNumber;
-      if (!matchedMember.address && payload.address) updates.address = payload.address;
-      if (!matchedMember.birthday && payload.birthday) updates.birthday = payload.birthday;
-      if (!matchedMember.gender && payload.gender) updates.gender = payload.gender;
-      
+      if (!matchedMember.phoneNumber && payload.phoneNumber)
+        updates.phoneNumber = payload.phoneNumber;
+      if (!matchedMember.address && payload.address)
+        updates.address = payload.address;
+      if (!matchedMember.birthday && payload.birthday)
+        updates.birthday = payload.birthday;
+      if (!matchedMember.gender && payload.gender)
+        updates.gender = payload.gender;
+
       await updateDoc(memberRef, updates);
     }
 
     // Create UserAccount
-    const userAccount: Omit<UserAccount, 'uid'> = {
+    const userAccount: Omit<UserAccount, "uid"> = {
       firstName: payload.firstName,
-      middleName: payload.middleName || '',
+      middleName: payload.middleName || "",
       lastName: payload.lastName,
-      email: payload.email || '',
-      phoneNumber: payload.phoneNumber || '',
+      email: payload.email || "",
+      phoneNumber: payload.phoneNumber || "",
       username: payload.username,
-      authProvider: 'email',
+      authProvider: "email",
       status: status,
       churchId: churchId,
       memberId: matchedMember?.id || null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      systemRoles: ['viewer'] as import('../domain/auth.types').SystemRole[],
-      primaryRole: 'viewer' as import('../domain/auth.types').SystemRole,
-      role: 'viewer', // legacy compat
+      systemRoles: ["viewer"] as import("../domain/auth.types").SystemRole[],
+      primaryRole: "viewer" as import("../domain/auth.types").SystemRole,
+      role: "viewer", // legacy compat
     };
 
-    await setDoc(doc(db, 'users', user.uid), userAccount);
+    await setDoc(doc(db, "users", user.uid), userAccount);
 
     return authCredential;
   },
@@ -198,7 +249,7 @@ export const authRepository = {
     const idToken = response.data?.idToken;
 
     if (!idToken) {
-      throw new Error('No ID token found from Google Sign-In');
+      throw new Error("No ID token found from Google Sign-In");
     }
 
     const googleCredential = GoogleAuthProvider.credential(idToken);
@@ -206,17 +257,17 @@ export const authRepository = {
     const user = authCredential.user;
 
     // Check if user account already exists
-    const userDocRef = doc(db, 'users', user.uid);
+    const userDocRef = doc(db, "users", user.uid);
     const userDoc = await getDoc(userDocRef);
 
     if (!userDoc.exists()) {
       // New user from Google
       const email = user.email || undefined;
       const phoneNumber = user.phoneNumber || undefined;
-      
+
       const matchedMember = await findMemberByEmailOrPhone(email, phoneNumber);
 
-      let status: 'active' | 'pendingChurchLink' = 'pendingChurchLink';
+      let status: "active" | "pendingChurchLink" = "pendingChurchLink";
       let churchId = null;
 
       if (matchedMember) {
@@ -226,10 +277,10 @@ export const authRepository = {
           // In an ideal flow, we link accounts. For now, we will create the user account but leave unlinked
           // or link if not linked.
         } else {
-          status = 'active';
-          churchId = matchedMember.churchId;
+          status = "active";
+          churchId = matchedMember.churchId ?? null;
 
-          const memberRef = doc(db, 'users', matchedMember.id);
+          const memberRef = doc(db, "users", matchedMember.id);
           await updateDoc(memberRef, {
             accountId: user.uid,
             authUid: user.uid,
@@ -238,26 +289,27 @@ export const authRepository = {
         }
       }
 
-      const nameParts = (user.displayName || '').split(' ');
-      const firstName = nameParts[0] || '';
-      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+      const nameParts = (user.displayName || "").split(" ");
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
 
-      const userAccount: Omit<UserAccount, 'uid'> = {
+      const userAccount: Omit<UserAccount, "uid"> = {
         firstName,
         lastName,
-        email: email || '',
-        phoneNumber: phoneNumber || '',
-        photoUrl: user.photoURL || '',
-        username: email ? email.split('@')[0] : `user${Date.now()}`,
-        authProvider: 'google',
+        email: email || "",
+        phoneNumber: phoneNumber || "",
+        photoUrl: user.photoURL || "",
+        username: email ? email.split("@")[0] : `user${Date.now()}`,
+        authProvider: "google",
         status,
         churchId,
-        memberId: matchedMember && !matchedMember.accountId ? matchedMember.id : null,
+        memberId:
+          matchedMember && !matchedMember.accountId ? matchedMember.id : null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        systemRoles: ['viewer'] as import('../domain/auth.types').SystemRole[],
-        primaryRole: 'viewer' as import('../domain/auth.types').SystemRole,
-        role: 'viewer', // legacy compat
+        systemRoles: ["viewer"] as import("../domain/auth.types").SystemRole[],
+        primaryRole: "viewer" as import("../domain/auth.types").SystemRole,
+        role: "viewer", // legacy compat
       };
 
       await setDoc(userDocRef, userAccount);
@@ -265,16 +317,40 @@ export const authRepository = {
       // User doc already exists (e.g. manually created with same UID)
       const data = userDoc.data();
       const updates: any = {};
-      
+
+      // Retry linking if the user is still pending
+      if (data?.status === 'pendingChurchLink' || !data?.churchId) {
+        const email = user.email || data?.email;
+        const phoneNumber = user.phoneNumber || data?.phoneNumber;
+        const matchedMember = await findMemberByEmailOrPhone(email, phoneNumber);
+
+        if (matchedMember && (!matchedMember.accountId || matchedMember.accountId === user.uid)) {
+          updates.status = 'active';
+          updates.churchId = matchedMember.churchId ?? null;
+          updates.memberId = matchedMember.id ?? null;
+
+          const memberRef = doc(db, 'users', matchedMember.id);
+          await updateDoc(memberRef, {
+            accountId: user.uid,
+            authUid: user.uid,
+            updatedAt: serverTimestamp(),
+          });
+        } else if (matchedMember && matchedMember.accountId && matchedMember.accountId !== user.uid) {
+          throw new Error("This email is already linked to a different account. Please log in with the original account or contact your administrator.");
+        }
+      }
+
       if (!data?.accountId) updates.accountId = user.uid;
       if (!data?.authUid) updates.authUid = user.uid;
       if (!data?.photoUrl && user.photoURL) updates.photoUrl = user.photoURL;
       if (user.displayName) {
-        const nameParts = user.displayName.split(' ');
-        if (!data?.firstName) updates.firstName = nameParts[0] || '';
-        if (!data?.lastName) updates.lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+        const nameParts = user.displayName.split(" ");
+        if (!data?.firstName) updates.firstName = nameParts[0] || "";
+        if (!data?.lastName)
+          updates.lastName =
+            nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
       }
-      
+
       if (Object.keys(updates).length > 0) {
         updates.updatedAt = serverTimestamp();
         await updateDoc(userDocRef, updates);

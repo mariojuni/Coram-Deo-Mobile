@@ -175,12 +175,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#E5E7EB',
   },
   contentBubble: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#FFF',
     borderRadius: 18,
     paddingHorizontal: 14,
     paddingVertical: 10,
     flex: 1,
-    alignSelf: 'flex-start', // Fit to content instead of full width
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.06)',
   },
   nameRow: {
     flexDirection: 'row',

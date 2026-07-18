@@ -39,6 +39,7 @@ export const useWorshipSetlist = (churchId?: string, eventId?: string) => {
             unsubscribeItems();
           }
           unsubscribeItems = worshipRepository.subscribeToSetlistItems(
+            churchId,
             fetchedSetlist.id,
             (fetchedItems) => {
               if (isMounted) {

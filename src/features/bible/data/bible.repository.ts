@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../../firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { auth, db } from '../../../firebase';
 import { deleteOfflineBible, getBibleIndex, getChapter, saveBibleIndex, saveChapter } from './offlineDb.repository';
 
 const API_BASE = 'https://api.youversion.com/v1';
@@ -388,20 +388,58 @@ export const removeVersion = async (versionId: string | number) => {
   return newSaved;
 };
 
+const defaultPrefs = {
+  activeTranslation: '2692',
+  activeBook: 'GEN',
+  activeChapter: '1',
+  activePassageId: 'GEN.1',
+  highlights: {},
+};
+
 export const getUserPreferences = async () => {
-  const prefs = await AsyncStorage.getItem('bible_prefs');
-  if (prefs) return JSON.parse(prefs);
-  return {
-    activeTranslation: '2692',
-    activeBook: 'GEN',
-    activeChapter: '1',
-    activePassageId: 'GEN.1',
-    highlights: {},
-  };
+  let data = null;
+  
+  if (auth.currentUser) {
+    try {
+      const docRef = doc(db, 'users', auth.currentUser.uid, 'bible', 'preferences');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        data = docSnap.data();
+        await AsyncStorage.setItem('bible_prefs', JSON.stringify(data));
+      }
+    } catch (error) {
+      console.warn('Failed to load preferences from Firestore:', error);
+    }
+  }
+
+  if (!data) {
+    const prefs = await AsyncStorage.getItem('bible_prefs');
+    if (prefs) data = JSON.parse(prefs);
+  }
+
+  const merged = { ...defaultPrefs };
+  if (data) {
+    if (data.activeTranslation) merged.activeTranslation = data.activeTranslation;
+    if (data.activeBook) merged.activeBook = data.activeBook;
+    if (data.activeChapter) merged.activeChapter = data.activeChapter;
+    if (data.activePassageId) merged.activePassageId = data.activePassageId;
+    if (data.highlights) merged.highlights = data.highlights;
+  }
+
+  return merged;
 };
 
 export const saveUserPreferences = async (prefs: any) => {
   await AsyncStorage.setItem('bible_prefs', JSON.stringify(prefs));
+
+  if (auth.currentUser) {
+    try {
+      const docRef = doc(db, 'users', auth.currentUser.uid, 'bible', 'preferences');
+      await setDoc(docRef, prefs, { merge: true });
+    } catch (error) {
+      console.warn('Failed to save preferences to Firestore:', error);
+    }
+  }
 };
 
 export const fetchOrganization = async (orgId: string) => {

@@ -78,7 +78,7 @@ export const scheduleRepository = {
             try {
               const setlist = await worshipRepository.getSetlistForEvent(churchId, schedule.id);
               if (setlist) {
-                 const items = await worshipRepository.getSetlistItems(setlist.id);
+                 const items = await worshipRepository.getSetlistItems(churchId, setlist.id);
                  schedule.songList = items;
               }
             } catch(e) {

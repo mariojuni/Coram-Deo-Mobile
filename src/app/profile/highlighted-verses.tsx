@@ -1,13 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, ActivityIndicator, Share } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, ActivityIndicator, Share, Animated } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, BookOpen, Share as ShareIcon, Trash2 } from 'lucide-react-native';
-import { getUserPreferences, saveUserPreferences, fetchChapterData } from '@/utils/bibleApi';
+import { ChevronLeft, BookOpen, Share as ShareIcon, Trash2 } from 'lucide-react-native';
+import { getUserPreferences, saveUserPreferences, fetchChapterData } from '@/features/bible/data/bible.repository';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
+
+const BACKGROUND_GRADIENT = ['#F9FAFB', '#F3F4F6'] as const;
 
 export default function HighlightedVersesScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [highlights, setHighlights] = useState<any[]>([]);
 
@@ -119,86 +123,121 @@ export default function HighlightedVersesScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#FDF2F8', '#FFFFFF']} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={BACKGROUND_GRADIENT} style={StyleSheet.absoluteFill} />
       
-      <SafeAreaView style={{ flex: 1 }}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
-            <ArrowLeft size={24} color="#111827" />
+      {/* ─── Header ─────────────────────────────────────────────────────── */}
+      <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 24) }]} pointerEvents="box-none">
+        <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.7)' }]} pointerEvents="none" />
+        <View style={styles.headerContent}>
+          <TouchableOpacity style={styles.headerCircle} onPress={() => router.back()} hitSlop={8} activeOpacity={0.8}>
+            <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Highlighted Verses</Text>
-          <View style={{ width: 24 }} />
+          <Text style={styles.headerTitle} numberOfLines={1}>Highlighted Verses</Text>
+          <View style={[styles.headerCircle, { backgroundColor: 'transparent', borderWidth: 0, elevation: 0 }]} />
         </View>
+      </View>
 
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {loading ? (
-            <View style={{ padding: 40, alignItems: 'center' }}>
-              <ActivityIndicator color="#EC4899" size="large" />
-              <Text style={{ marginTop: 16, color: '#6B7280', fontWeight: '500' }}>Loading your highlights...</Text>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: Math.max(insets.top, 24) + 80 }]} showsVerticalScrollIndicator={false}>
+        {loading ? (
+          <View style={{ padding: 40, alignItems: 'center' }}>
+            <ActivityIndicator color="#007AFF" size="large" />
+            <Text style={{ marginTop: 16, color: '#6B7280', fontWeight: '500' }}>Loading your highlights...</Text>
+          </View>
+        ) : highlights.length === 0 ? (
+          <View style={styles.emptyState}>
+            <View style={styles.emptyIconWrapper}>
+              <BookOpen size={48} color="#007AFF" />
             </View>
-          ) : highlights.length === 0 ? (
-            <View style={styles.emptyState}>
-              <View style={styles.emptyIconWrapper}>
-                <BookOpen size={48} color="#F472B6" />
-              </View>
-              <Text style={styles.emptyTitle}>No Highlights Yet</Text>
-              <Text style={styles.emptySubtitle}>
-                Verses you highlight while reading the Bible will appear here for easy access.
-              </Text>
-              <TouchableOpacity style={styles.readBibleBtn} onPress={() => router.push('/(tabs)/bible')} activeOpacity={0.8}>
-                <LinearGradient colors={['#EC4899', '#DB2777']} style={styles.readBibleBtnGradient}>
-                  <Text style={styles.readBibleBtnText}>Read the Bible</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            highlights.map((h, i) => {
-              const reference = `${h.book} ${h.chapter}:${h.verseNumber}`;
-              return (
-                <View key={`${h.passageId}-${h.verseNumber}-${i}`} style={styles.card}>
-                  <View style={styles.cardHeader}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                      <View style={[styles.colorIndicator, { backgroundColor: getColorHex(h.color) }]} />
-                      <Text style={styles.reference}>{reference}</Text>
-                    </View>
-                    <View style={styles.cardActions}>
-                      <TouchableOpacity onPress={() => handleShare(reference, h.text)} style={styles.iconBtn} activeOpacity={0.7}>
-                        <ShareIcon size={18} color="#6B7280" />
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => handleRemove(h.passageId, h.verseNumber)} style={styles.iconBtn} activeOpacity={0.7}>
-                        <Trash2 size={18} color="#EF4444" />
-                      </TouchableOpacity>
-                    </View>
+            <Text style={styles.emptyTitle}>No Highlights Yet</Text>
+            <Text style={styles.emptySubtitle}>
+              Verses you highlight while reading the Bible will appear here for easy access.
+            </Text>
+            <TouchableOpacity style={styles.readBibleBtn} onPress={() => router.push('/(tabs)/bible')} activeOpacity={0.8}>
+              <LinearGradient colors={['#007AFF', '#0056b3']} style={styles.readBibleBtnGradient}>
+                <Text style={styles.readBibleBtnText}>Read the Bible</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          highlights.map((h, i) => {
+            const reference = `${h.book} ${h.chapter}:${h.verseNumber}`;
+            return (
+              <View key={`${h.passageId}-${h.verseNumber}-${i}`} style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <View style={[styles.colorIndicator, { backgroundColor: getColorHex(h.color) }]} />
+                    <Text style={styles.reference}>{reference}</Text>
                   </View>
-
-                  <Text style={styles.verseText}>"{h.text}"</Text>
-
-                  <TouchableOpacity style={styles.openBibleBtn} onPress={() => handleOpenBible(h.passageId)} activeOpacity={0.7}>
-                    <BookOpen size={14} color="#EC4899" />
-                    <Text style={styles.openBibleText}>Read Full Chapter</Text>
-                  </TouchableOpacity>
+                  <View style={styles.cardActions}>
+                    <TouchableOpacity onPress={() => handleShare(reference, h.text)} style={styles.iconBtn} activeOpacity={0.7}>
+                      <ShareIcon size={18} color="#6B7280" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleRemove(h.passageId, h.verseNumber)} style={styles.iconBtn} activeOpacity={0.7}>
+                      <Trash2 size={18} color="#EF4444" />
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              );
-            })
-          )}
-        </ScrollView>
-      </SafeAreaView>
+
+                <Text style={styles.verseText}>"{h.text}"</Text>
+
+                <TouchableOpacity style={styles.openBibleBtn} onPress={() => handleOpenBible(h.passageId)} activeOpacity={0.7}>
+                  <BookOpen size={14} color="#007AFF" />
+                  <Text style={styles.openBibleText}>Read Full Chapter</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })
+        )}
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
-  header: {
+  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  
+  headerContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.4)',
+    overflow: 'hidden',
+  },
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 16,
+    paddingBottom: 12,
   },
-  backBtn: { padding: 4, marginLeft: -4 },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: '#111827', letterSpacing: -0.5 },
+  headerCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+  },
+  headerTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    textAlign: 'center',
+    marginHorizontal: 12,
+  },
+
   scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
 
   card: {
@@ -230,16 +269,16 @@ const styles = StyleSheet.create({
   openBibleBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 16,
-    backgroundColor: '#FDF2F8', borderRadius: 100,
+    backgroundColor: '#F3F9FF', borderRadius: 100,
   },
-  openBibleText: { fontSize: 13, fontWeight: '700', color: '#DB2777' },
+  openBibleText: { fontSize: 13, fontWeight: '700', color: '#007AFF' },
 
   emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: 80 },
   emptyIconWrapper: {
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: '#FDF2F8',
+    backgroundColor: '#F3F9FF',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
@@ -247,7 +286,7 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 24, fontWeight: '800', color: '#111827', marginBottom: 12, letterSpacing: -0.5 },
   emptySubtitle: { fontSize: 16, color: '#6B7280', textAlign: 'center', paddingHorizontal: 32, lineHeight: 24, fontWeight: '500' },
   readBibleBtn: {
-    marginTop: 32, borderRadius: 100, shadowColor: '#EC4899', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
+    marginTop: 32, borderRadius: 100, shadowColor: '#007AFF', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
   },
   readBibleBtnGradient: {
     paddingVertical: 16, paddingHorizontal: 32, borderRadius: 100

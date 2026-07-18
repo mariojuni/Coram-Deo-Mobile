@@ -43,6 +43,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppModal from '../../components/ui/AppModal';
+import { SoftCard } from '../../components/ui/SoftCard';
 import { EventDetailsModal } from '../../components/Events/EventDetailsModal';
 import { formatPrayerTimeAgo, getFilteredPrayers } from '../../features/prayer/domain/prayer.selectors';
 import type { Prayer, PrayerFilter } from '../../features/prayer/domain/prayer.types';
@@ -482,12 +483,13 @@ function EventsTab({ searchQuery }: SubScreenProps) {
                   onPress={() => setSelectedEvent(todayEvent)}
                   style={[eventsStyles.heroSlide, { width: screenWidth }]}
                 >
-                  <LinearGradient
-                    colors={['#FF6596', '#B66DFF']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={[eventsStyles.heroCard, { marginHorizontal: heroCardHorizontalMargin }]}
-                  >
+                  <View style={[eventsStyles.heroCardOuter, { marginHorizontal: heroCardHorizontalMargin }]}>
+                    <LinearGradient
+                      colors={['#FF6596', '#B66DFF']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={eventsStyles.heroCardInner}
+                    >
                     {/* Soft orb accents */}
                     <View style={eventsStyles.heroOrb1} pointerEvents="none" />
                     <View style={eventsStyles.heroOrb2} pointerEvents="none" />
@@ -554,6 +556,7 @@ function EventsTab({ searchQuery }: SubScreenProps) {
                     </View>
 
                   </LinearGradient>
+                  </View>
                 </TouchableOpacity>
               );
             })}
@@ -571,7 +574,7 @@ function EventsTab({ searchQuery }: SubScreenProps) {
           )}
         </View>
       ) : (
-        <View style={eventsStyles.emptyTodayCard}>
+        <SoftCard innerStyle={eventsStyles.emptyTodayCardInner}>
           <View style={eventsStyles.emptyTodayIconRing}>
             <CalendarDays size={26} color="#FF6596" />
           </View>
@@ -579,7 +582,7 @@ function EventsTab({ searchQuery }: SubScreenProps) {
           <Text style={eventsStyles.emptyTodaySubtitle}>
             No events scheduled today.{'\n'}Check what&apos;s coming up below ↓
           </Text>
-        </View>
+        </SoftCard>
       )}
 
       <View style={eventsStyles.sectionHeadRow}>
@@ -593,17 +596,17 @@ function EventsTab({ searchQuery }: SubScreenProps) {
       </View>
 
       {upcomingList.length === 0 ? (
-        <View style={eventsStyles.emptyTodayCard}>
+        <SoftCard innerStyle={eventsStyles.emptyTodayCardInner}>
           <View style={eventsStyles.emptyTodayIconRing}>
             <CalendarDays size={26} color="#FF6596" />
           </View>
           <Text style={eventsStyles.emptyTodayTitle}>Nothing found</Text>
           <Text style={eventsStyles.emptyTodaySubtitle}>Try a different search term.</Text>
-        </View>
+        </SoftCard>
       ) : (
         upcomingList.map((event) => (
           <TouchableOpacity key={event.id} activeOpacity={0.82} onPress={() => setSelectedEvent(event)}>
-            <View style={eventsStyles.listCard}>
+            <SoftCard style={{ marginBottom: 16 }} innerStyle={eventsStyles.listCardInner}>
               <View style={eventsStyles.listDateBlock}>
                 <Text style={eventsStyles.listDateMonth}>{getEventDateParts(event).month}</Text>
                 <Text style={eventsStyles.listDateDay}>
@@ -637,9 +640,9 @@ function EventsTab({ searchQuery }: SubScreenProps) {
               </View>
 
               <View style={eventsStyles.listChevronWrap}>
-                <ChevronRight size={14} color="#9CA3AF" />
+                <ChevronRight size={18} color="#C0C8D8" strokeWidth={2.5} />
               </View>
-            </View>
+            </SoftCard>
           </TouchableOpacity>
         ))
       )}
@@ -851,7 +854,7 @@ export default function CommunityScreen() {
   const indicatorWidth = useMemo(() => new Animated.Value(0), []);
   const initialised = useRef(false);
   const scrollViewRef = useRef<ScrollView>(null);
-  const screenWidth = Dimensions.get('window').width;
+  const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const headerTranslateY = scrollY.interpolate({
@@ -1350,7 +1353,7 @@ const prayerStyles = StyleSheet.create({
     color: '#FFFFFF',
   },
   prayerCardOuter: { marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 3 },
-  prayerCardInner: { backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden', flexDirection: 'row' },
+  prayerCardInner: { flexDirection: 'row' },
   prayerGradientBorder: { width: 4, alignSelf: 'stretch' },
   prayerRow: { flex: 1, flexDirection: 'row', padding: 12, paddingLeft: 16 },
   prayerAvatar: { display: 'none' },
@@ -1598,16 +1601,15 @@ export const eventsStyles = StyleSheet.create({
     fontWeight: '600',
     color: '#7B8094',
   },
-  heroCard: {
+  heroCardOuter: {
+    borderRadius: 24,
+    boxShadow: '0px 8px 24px rgba(182, 109, 255, 0.28)',
+  },
+  heroCardInner: {
     borderRadius: 24,
     padding: 20,
     gap: 14,
     overflow: 'hidden',
-    shadowColor: '#B66DFF',
-    shadowOpacity: 0.28,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
   },
   heroCarousel: {
     marginHorizontal: -20,
@@ -1830,20 +1832,12 @@ export const eventsStyles = StyleSheet.create({
   heroStampWeekday: { fontSize: 12, fontWeight: '500', color: 'rgba(255,255,255,0.65)', letterSpacing: 0.2 },
   heroWatermark: { position: 'absolute', right: 12, top: -12, fontSize: 120, fontWeight: '900', color: 'rgba(255,255,255,0.06)', letterSpacing: -4 },
   // ── Empty today state ──
-  emptyTodayCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#EEF0F7',
+  emptyTodayCardInner: {
     paddingVertical: 36,
     paddingHorizontal: 24,
     alignItems: 'center',
+    flexDirection: 'column',
     gap: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
   },
   emptyTodayIconRing: {
     width: 64,
@@ -1905,20 +1899,9 @@ export const eventsStyles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
   },
-  // ── Event cards ──
-  listCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
+  listCardInner: {
     flexDirection: 'row',
     alignItems: 'stretch',
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#F5F6FA',
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
   },
   listCardStrip: {
     width: 4,

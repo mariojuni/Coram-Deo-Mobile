@@ -12,6 +12,8 @@ import { useSermonStore } from '@/store/useSermonStore';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { SoftCard } from '@/components/ui/SoftCard';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { CalendarDays, CheckCircle2, ChevronRight, Clock, HeartHandshake, HelpCircle, MapPin, Play, XCircle, Pencil, Trash2, MoreHorizontal, User, MessageCircle } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert, ActionSheetIOS, Platform } from 'react-native';
@@ -36,57 +38,19 @@ function isThisWeek(dateString: string) {
   return date >= startOfWeek && date <= endOfWeek;
 }
 
+function getTodayLabel() {
+  return new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+}
+
 function getGreeting() {
   const h = new Date().getHours();
   if (h < 12) return 'Good morning';
   if (h < 17) return 'Good afternoon';
   return 'Good evening';
 }
-
-function getTodayLabel() {
-  return new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-}
-
-function BounceCard({ children, style, onPress }: { children: any; style?: any; onPress?: () => void }) {
-  const scale = useRef(new Animated.Value(1)).current;
-  const lastPress = useRef(0);
-  const DEBOUNCE_MS = 400;
-
-  const pressIn = () => {
-    const now = Date.now();
-    if (now - lastPress.current < DEBOUNCE_MS) return;
-    lastPress.current = now;
-    Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, speed: 50, bounciness: 0 }).start();
-  };
-  const pressOut = () =>
-    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 15, bounciness: 12 }).start();
-
-  if (onPress) {
-    return (
-      <DebouncedTouchable activeOpacity={1} onPress={onPress} onPressIn={pressIn} onPressOut={pressOut}>
-        <Animated.View style={[style, { transform: [{ scale }] }]}>
-          {children}
-        </Animated.View>
-      </DebouncedTouchable>
-    );
-  }
-
-  return (
-    <Animated.View
-      style={[style, { transform: [{ scale }] }]}
-      onTouchStart={pressIn}
-      onTouchEnd={pressOut}
-      onTouchCancel={pressOut}
-    >
-      {children}
-    </Animated.View>
-  );
-}
-
-const INNER_EXPANDED = 92;
-const INNER_COLLAPSED = 48;
 const COLLAPSE_RANGE = 70;
-
+const INNER_EXPANDED = 120;
+const INNER_COLLAPSED = 52;
 export default function HomeScreen() {
   const router = useRouter();
   const [selectedEvent, setSelectedEvent] = useState<Schedule | null>(null);
@@ -352,66 +316,68 @@ export default function HomeScreen() {
                   return (
                     <View key={`hero-${event.id}`} style={{ width: cardWidth }}>
                       <BounceCard
-                        style={styles.todayCard}
+                        style={{ marginBottom: 0 }}
                         onPress={() => router.push({ pathname: '/(tabs)/community', params: { tab: 'events' } })}
                       >
-                        {/* Left — gradient calendar tile */}
-                        <LinearGradient
-                          colors={['#FF6596', '#B66DFF']}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                          style={styles.todayDateTile}
-                        >
-                          <Text style={styles.todayTileMonth}>{month}</Text>
-                          <Text style={styles.todayTileDay}>{day}</Text>
-                          <CalendarDays size={12} color="rgba(255,255,255,0.7)" />
-                        </LinearGradient>
+                        <SoftCard innerStyle={styles.todayCardInner}>
+                          {/* Left — gradient calendar tile */}
+                          <LinearGradient
+                            colors={['#FF6596', '#B66DFF']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                            style={styles.todayDateTile}
+                          >
+                            <Text style={styles.todayTileMonth}>{month}</Text>
+                            <Text style={styles.todayTileDay}>{day}</Text>
+                            <CalendarDays size={12} color="rgba(255,255,255,0.7)" />
+                          </LinearGradient>
 
-                        {/* Right — event info */}
-                        <View style={styles.todayCardContent}>
-                          <Text style={styles.todayEventTitle} numberOfLines={2}>
-                            {event.title || 'Church Event'}
-                          </Text>
-
-                          <View style={styles.todayMetaRow}>
-                            <Clock size={11} color="#9CA3AF" />
-                            <Text style={styles.todayMetaText}>
-                              {event.time || '9:00 AM'}{event.endTime ? ` – ${event.endTime}` : ''}
+                          {/* Right — event info */}
+                          <View style={styles.todayCardContent}>
+                            <Text style={styles.todayEventTitle} numberOfLines={2}>
+                              {event.title || 'Church Event'}
                             </Text>
-                            {event.location ? (
-                              <>
-                                <Text style={styles.todayMetaDot}>·</Text>
-                                <MapPin size={11} color="#9CA3AF" />
-                                <Text style={styles.todayMetaText} numberOfLines={1}>{event.location}</Text>
-                              </>
-                            ) : null}
-                          </View>
 
-                          {/* Compact RSVP pills */}
-                          <View style={styles.todayRsvpRow}>
+                            <View style={styles.todayMetaRow}>
+                              <Clock size={11} color="#9CA3AF" />
+                              <Text style={styles.todayMetaText}>
+                                {event.time || '9:00 AM'}{event.endTime ? ` – ${event.endTime}` : ''}
+                              </Text>
+                              {event.location ? (
+                                <>
+                                  <Text style={styles.todayMetaDot}>·</Text>
+                                  <MapPin size={11} color="#9CA3AF" />
+                                  <Text style={styles.todayMetaText} numberOfLines={1}>{event.location}</Text>
+                                </>
+                              ) : null}
+                            </View>
+
+                            {/* Compact RSVP pills */}
+                            <View style={styles.todayRsvpRow}>
                               <DebouncedTouchable
-                              style={[styles.todayRsvpPill, rsvpStatus === 'going' && styles.todayRsvpPillActive]}
-                              onPress={() => handleRsvp(event.id, 'going')}
-                            >
-                              <CheckCircle2 size={12} color={rsvpStatus === 'going' ? '#FF6596' : '#9CA3AF'} />
-                              <Text style={[styles.todayRsvpPillText, rsvpStatus === 'going' && styles.todayRsvpPillTextActive]}>Going</Text>
-                            </DebouncedTouchable>
-                            <DebouncedTouchable
-                              style={[styles.todayRsvpPill, rsvpStatus === 'maybe' && styles.todayRsvpPillMaybe]}
-                              onPress={() => handleRsvp(event.id, 'maybe')}
-                            >
-                              <HelpCircle size={12} color={rsvpStatus === 'maybe' ? '#F59E0B' : '#9CA3AF'} />
-                              <Text style={[styles.todayRsvpPillText, rsvpStatus === 'maybe' && { color: '#F59E0B' }]}>Maybe</Text>
-                            </DebouncedTouchable>
-                            <DebouncedTouchable
-                              style={[styles.todayRsvpPill, rsvpStatus === 'not_going' && styles.todayRsvpPillDecline]}
-                              onPress={() => handleRsvp(event.id, 'not_going')}
-                            >
-                              <XCircle size={12} color={rsvpStatus === 'not_going' ? '#EF4444' : '#9CA3AF'} />
-                              <Text style={[styles.todayRsvpPillText, rsvpStatus === 'not_going' && { color: '#EF4444' }]}>No</Text>
-                            </DebouncedTouchable>
+                                style={[styles.todayRsvpPill, rsvpStatus === 'going' && styles.todayRsvpPillActive]}
+                                onPress={() => handleRsvp(event.id, 'going')}
+                              >
+                                <CheckCircle2 size={12} color={rsvpStatus === 'going' ? '#FF6596' : '#9CA3AF'} />
+                                <Text style={[styles.todayRsvpPillText, rsvpStatus === 'going' && styles.todayRsvpPillTextActive]}>Going</Text>
+                              </DebouncedTouchable>
+                              <DebouncedTouchable
+                                style={[styles.todayRsvpPill, rsvpStatus === 'maybe' && styles.todayRsvpPillMaybe]}
+                                onPress={() => handleRsvp(event.id, 'maybe')}
+                              >
+                                <HelpCircle size={12} color={rsvpStatus === 'maybe' ? '#F59E0B' : '#9CA3AF'} />
+                                <Text style={[styles.todayRsvpPillText, rsvpStatus === 'maybe' && { color: '#F59E0B' }]}>Maybe</Text>
+                              </DebouncedTouchable>
+                              <DebouncedTouchable
+                                style={[styles.todayRsvpPill, rsvpStatus === 'not_going' && styles.todayRsvpPillDecline]}
+                                onPress={() => handleRsvp(event.id, 'not_going')}
+                              >
+                                <XCircle size={12} color={rsvpStatus === 'not_going' ? '#EF4444' : '#9CA3AF'} />
+                                <Text style={[styles.todayRsvpPillText, rsvpStatus === 'not_going' && { color: '#EF4444' }]}>No</Text>
+                              </DebouncedTouchable>
+                            </View>
                           </View>
-                        </View>
+                        </SoftCard>
                       </BounceCard>
                     </View>
                   );
@@ -502,10 +468,10 @@ export default function HomeScreen() {
             {prayers.slice(0, 3).map((prayer) => (
             <BounceCard 
               key={prayer.id}
-              style={[styles.prayerCardOuter, { marginBottom: 12 }]}
+              style={{ marginBottom: 12 }}
               onPress={() => router.push({ pathname: '/comment-thread', params: { targetType: 'prayer_request', targetId: prayer.id } })}
             >
-              <View style={styles.prayerCardInner}>
+              <SoftCard innerStyle={styles.prayerCardInner}>
                 <LinearGradient
                   colors={['#FF6596', '#B66DFF']}
                   start={{ x: 0, y: 0 }}
@@ -612,9 +578,9 @@ export default function HomeScreen() {
                         </DebouncedTouchable>
                       </View>
                     </View>
-                    </View>
                   </View>
                 </View>
+              </SoftCard>
             </BounceCard>
             ))}
 
@@ -710,9 +676,10 @@ export default function HomeScreen() {
               return (
                 <BounceCard 
                   key={event.id} 
-                  style={styles.eventListCard}
+                  style={{ marginBottom: 10 }}
                   onPress={() => setSelectedEvent(event)}
                 >
+                  <SoftCard innerStyle={styles.eventListCardInner}>
                   <View style={styles.eventDateBlock}>
                     <Text style={styles.eventDateMonth}>{month}</Text>
                     <Text style={styles.eventDateDay}>{day}</Text>
@@ -742,6 +709,7 @@ export default function HomeScreen() {
                   </View>
 
                   <ChevronRight size={14} color="#9CA3AF" />
+                  </SoftCard>
                 </BounceCard>
               );
             })}
@@ -871,17 +839,15 @@ const styles = StyleSheet.create({
   todayDot: { width: 7, height: 7, borderRadius: 99, backgroundColor: '#FF6596' },
   todayLabelText: { fontSize: 11, fontWeight: '800', color: '#FF6596', letterSpacing: 1.2, textTransform: 'uppercase' },
 
-  todayCard: {
+  todayCardOuter: {
+    borderRadius: 20,
+    boxShadow: '0px 4px 12px rgba(255, 101, 150, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.8)',
+  },
+  todayCardInner: {
     flexDirection: 'row',
     alignItems: 'stretch',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 3,
   },
   todayDateTile: {
     width: 64,
@@ -900,7 +866,7 @@ const styles = StyleSheet.create({
   todayMetaText: { fontSize: 11, color: '#9CA3AF', fontWeight: '500', flexShrink: 1 },
   todayMetaDot: { fontSize: 11, color: '#D1D5DB', fontWeight: '700' },
 
-  todayRsvpRow: { flexDirection: 'row', gap: 6 },
+  todayRsvpRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
   todayRsvpPill: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: '#F5F6FA', borderRadius: 999,
@@ -916,11 +882,7 @@ const styles = StyleSheet.create({
   todayEmptyCard: {
     borderRadius: 20,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 3,
+    boxShadow: '0px 2px 10px rgba(255, 101, 150, 0.04)',
   },
   todayEmptyGradient: {
     flexDirection: 'row',
@@ -954,8 +916,7 @@ const styles = StyleSheet.create({
   qaIconBox: {
     width: 58, height: 58, borderRadius: 20,
     alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.07, shadowRadius: 10, elevation: 3,
+    boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.07)',
   },
   qaLabel: { fontSize: 12, fontWeight: '700', color: '#374151', letterSpacing: 0.1 },
   qaSubLabel: { fontSize: 11, fontWeight: '500', color: '#9CA3AF' },
@@ -976,8 +937,7 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1a1a1a' },
   seeAll: { fontSize: 14, color: '#FF6596', fontWeight: '600' },
-  prayerCardOuter: { marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 3 },
-  prayerCardInner: { backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden', flexDirection: 'row' },
+  prayerCardInner: { flexDirection: 'row' },
   prayerGradientBorder: { width: 4, alignSelf: 'stretch' },
   prayerRow: { flex: 1, flexDirection: 'row', padding: 12, paddingLeft: 12 },
   prayerAvatar: { display: 'none' },
@@ -1041,19 +1001,11 @@ const styles = StyleSheet.create({
   sectionOverline: { fontSize: 11, fontWeight: '800', color: '#FF6596', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 2 },
   upcomingCountPill: { backgroundColor: '#FFF0F5', borderRadius: 999, width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
   upcomingCountText: { fontSize: 13, fontWeight: '800', color: '#FF6596' },
-  eventListCard: {
+  eventListCardInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 16,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
   },
   eventDateBlock: { alignItems: 'center', width: 44, gap: 1 },
   eventDateMonth: { fontSize: 10, fontWeight: '800', color: '#FF6596', textTransform: 'uppercase', letterSpacing: 0.5 },

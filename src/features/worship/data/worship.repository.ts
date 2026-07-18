@@ -106,9 +106,10 @@ export const worshipRepository = {
     );
   },
 
-  getSetlistItems: async (setlistId: string): Promise<WorshipSetlistItem[]> => {
+  getSetlistItems: async (churchId: string, setlistId: string): Promise<WorshipSetlistItem[]> => {
     const q = query(
       collection(db, 'worshipSetlistItems'),
+      where('churchId', '==', churchId),
       where('setlistId', '==', setlistId),
       orderBy('order', 'asc')
     );
@@ -128,9 +129,10 @@ export const worshipRepository = {
     return enrichedItems;
   },
 
-  subscribeToSetlistItems: (setlistId: string, onUpdate: (items: WorshipSetlistItem[]) => void, onError: (error: Error) => void) => {
+  subscribeToSetlistItems: (churchId: string, setlistId: string, onUpdate: (items: WorshipSetlistItem[]) => void, onError: (error: Error) => void) => {
     const q = query(
       collection(db, 'worshipSetlistItems'),
+      where('churchId', '==', churchId),
       where('setlistId', '==', setlistId),
       orderBy('order', 'asc')
     );

@@ -3,8 +3,9 @@ import { View, Text, StyleSheet, Image } from 'react-native';
 import { GivingCampaign } from '../../domain/giving.types';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronRight } from 'lucide-react-native';
-import DebouncedTouchable from '@/components/DebouncedTouchable';
 import { useCachedImage } from '../../../files/presentation/hooks/useCachedImage';
+import { SoftCard } from '@/components/ui/SoftCard';
+import { BounceCard } from '@/components/ui/BounceCard';
 
 interface CampaignCardProps {
   campaign: GivingCampaign;
@@ -21,7 +22,8 @@ export function CampaignCard({ campaign, onPress }: CampaignCardProps) {
   });
   
   return (
-    <DebouncedTouchable style={styles.card} onPress={onPress} activeOpacity={0.8}>
+    <BounceCard onPress={onPress} activeOpacity={0.8} style={styles.container}>
+      <SoftCard innerStyle={styles.cardInner}>
       <View style={styles.imageContainer}>
         {cachedUri ? (
           <Image source={{ uri: cachedUri }} style={styles.coverImage} resizeMode="cover" />
@@ -69,24 +71,18 @@ export function CampaignCard({ campaign, onPress }: CampaignCardProps) {
           </View>
         </View>
       </View>
-    </DebouncedTouchable>
+      </SoftCard>
+    </BounceCard>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 20,
-    padding: 12,
-    shadowColor: '#FF6596',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 3,
+  container: {
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.8)',
+  },
+  cardInner: {
+    flexDirection: 'row',
+    padding: 12,
     alignItems: 'center',
   },
   imageContainer: {

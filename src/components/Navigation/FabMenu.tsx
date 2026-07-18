@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { HandHeart, HeartHandshake, Plus } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { Animated, StyleSheet, TouchableOpacity, View, Text } from 'react-native';
+import { Animated, StyleSheet, TouchableOpacity, View, Text, Platform } from 'react-native';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useUIStore } from '../../store/useUIStore';
 import { canSubmitGiving } from '../../permissions/mobilePermissions';
@@ -154,14 +154,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.7)',
   },
   fabContainer: {
-    shadowColor: '#FF6596',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 15,
-    elevation: 8,
     borderRadius: 26,
     backgroundColor: 'transparent',
     zIndex: 10,
+    boxShadow: '0px 8px 15px rgba(255, 101, 150, 0.4)',
   },
   fab: {
     width: 52,
@@ -188,11 +184,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 8,
     marginRight: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
+    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
   },
   subItemLabel: {
     fontSize: 14,
@@ -206,10 +198,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 6,
+    boxShadow: '0px 6px 8px rgba(0, 0, 0, 0.1)',
   }
 });

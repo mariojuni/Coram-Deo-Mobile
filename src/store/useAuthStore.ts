@@ -1,6 +1,6 @@
 import type { User } from 'firebase/auth';
 import { create } from 'zustand';
-import { authRepository, RegistrationPayload } from '../features/auth/data/auth.repository';
+import { authRepository, RegistrationPayload, fetchUserAccount } from '../features/auth/data/auth.repository';
 import type { AuthCredentialResult, UserAccount } from '../features/auth/domain/auth.types';
 import { clearSensitiveCache } from '../features/files/services/fileCacheService';
 import { useMemberStore } from './useMemberStore';
@@ -29,7 +29,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: (email, password) => authRepository.login(email, password),
   loginWithGoogle: async () => {
     try {
-      return await authRepository.loginWithGoogle();
+      const result = await authRepository.loginWithGoogle();
+      if (result.user) {
+        const updatedProfile = await fetchUserAccount(result.user);
+        if (updatedProfile) {
+          set({ userProfile: updatedProfile });
+        }
+      }
+      return result;
     } catch (error) {
       console.error("Google Sign-In Error", error);
       throw error;
