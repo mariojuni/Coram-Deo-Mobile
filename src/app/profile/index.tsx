@@ -61,8 +61,7 @@ export default function ProfileScreen() {
     ]);
   };
 
-  const dbName = [userProfile?.firstName, userProfile?.lastName].filter(Boolean).join(' ');
-  const fullName = dbName || currentUser?.displayName || 'Member';
+  const fullName = [userProfile?.firstName, userProfile?.middleName, userProfile?.lastName].filter(Boolean).join(' ') || currentUser?.displayName || 'Member';
   const firstName = userProfile?.firstName || fullName.split(' ')[0] || 'U';
   const initials = firstName.charAt(0).toUpperCase();
   const photoUrl = userProfile?.photoUrl || currentUser?.photoURL;

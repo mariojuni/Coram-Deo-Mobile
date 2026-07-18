@@ -168,7 +168,7 @@ export default function HomeScreen() {
   const todayLabel = getTodayLabel();
 
   // Name: local DB name first, falling back to Firebase Auth displayName
-  const dbName = [userProfile?.firstName, userProfile?.lastName].filter(Boolean).join(' ');
+  const dbName = [userProfile?.firstName, userProfile?.middleName, userProfile?.lastName].filter(Boolean).join(' ');
   const fullName = dbName || currentUser?.displayName || displayName;
   const firstName = userProfile?.firstName || fullName.split(' ')[0] || 'U';
   const initials = (userProfile?.firstName?.charAt(0) ?? firstName.charAt(0)).toUpperCase();

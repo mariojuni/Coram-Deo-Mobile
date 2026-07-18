@@ -139,7 +139,7 @@ export default function EditProfileScreen() {
       <LinearGradient colors={['#F3F9FF', '#FFFFFF']} style={StyleSheet.absoluteFill} />
       
       {/* ─── Header ─────────────────────────────────────────────────────── */}
-      <View style={[styles.headerContainer, { paddingTop: insets.top + 12 }]} pointerEvents="box-none">
+      <View style={[styles.headerContainer, { paddingTop: Platform.OS === 'ios' ? 24 : insets.top + 12 }]} pointerEvents="box-none">
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
         <View style={styles.headerContent}>
@@ -154,7 +154,7 @@ export default function EditProfileScreen() {
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: Math.max(insets.top, 24) + 80 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: (Platform.OS === 'ios' ? 24 : insets.top + 12) + 70 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             
             <View style={styles.avatarSection}>
               <TouchableOpacity style={styles.avatarWrapper} onPress={handlePickImage} activeOpacity={0.8}>

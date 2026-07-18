@@ -77,6 +77,7 @@ export function CommentItem({
   const isDeleted = comment.status === 'deleted';
   const isHidden = comment.status === 'hidden';
 
+  if (isDeleted) return null;
   if (isHidden && !canModerate) return null;
 
   return (

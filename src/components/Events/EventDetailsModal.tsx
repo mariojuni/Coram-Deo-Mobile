@@ -1,7 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { CalendarDays, CheckCircle2, HelpCircle, XCircle } from 'lucide-react-native';
+import { CalendarDays, CheckCircle2, HelpCircle, XCircle, X } from 'lucide-react-native';
+import { Platform, ScrollView } from 'react-native';
 import AppModal from '@/components/ui/AppModal';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { PublicEventSetlist } from '@/components/Events/PublicEventSetlist';
 import type { Schedule } from '@/features/schedule/domain/schedule.types';
 
@@ -66,11 +69,29 @@ export function EventDetailsModal({
       isOpen={!!event}
       onClose={onClose}
       title={event.title || 'Event Details'}
-      headerLeft={<View style={styles.modalHeaderIcon}><CalendarDays size={16} color="#FF6596" /></View>}
-      headerTitleAlign="center"
-      containerStyle={styles.container}
+      hideHeader={true}
+      hideDragHandle={true}
+      containerStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}
     >
-      <View style={styles.contentWrap}>
+      <View style={styles.modalContainer}>
+        <LinearGradient colors={['#F3F9FF', '#FFFFFF']} style={StyleSheet.absoluteFill} />
+        
+        {/* ─── Header ─────────────────────────────────────────────────────── */}
+        <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
+          <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
+          <View style={styles.dragHandle} />
+          <View style={styles.headerContent}>
+            <View style={styles.headerCirclePlaceholder} />
+            <Text style={styles.headerTitle}>{event.title || 'Event Details'}</Text>
+            <TouchableOpacity style={styles.headerCircle} onPress={onClose} hitSlop={8} activeOpacity={0.8}>
+              <X size={24} color="#111827" strokeWidth={2} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: 70 }]} showsVerticalScrollIndicator={false}>
+          <View style={styles.contentWrap}>
         <View style={styles.titleBlock}>
           {event.description ? (
             <Text style={styles.eventDescription}>{event.description}</Text>
@@ -136,6 +157,8 @@ export function EventDetailsModal({
             />
           </View>
         </View>
+        </View>
+        </ScrollView>
       </View>
     </AppModal>
   );
@@ -158,8 +181,56 @@ function RsvpButton({ active, label, icon, onPress, activeColor }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    paddingBottom: 24,
+  modalContainer: { backgroundColor: '#FFFFFF' },
+  scrollContent: { paddingBottom: 40 },
+  headerContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.4)',
+    overflow: 'hidden',
+  },
+  dragHandle: {
+    width: 40,
+    height: 5,
+    backgroundColor: '#d1d5db',
+    borderRadius: 10,
+    alignSelf: 'center',
+    marginBottom: 4,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  headerCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+  },
+  headerCirclePlaceholder: { width: 40, height: 40 },
+  headerTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    textAlign: 'center',
+    marginHorizontal: 12,
   },
   modalHeaderIcon: {
     width: 32,

@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.syncUserNameOnUpdate = void 0;
+exports.deleteCommentsOnPrayerDelete = exports.syncUserNameOnUpdate = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 admin.initializeApp();
@@ -43,13 +43,15 @@ exports.syncUserNameOnUpdate = functions.firestore
     .onUpdate(async (change, context) => {
     const beforeData = change.before.data();
     const afterData = change.after.data();
-    const nameChanged = beforeData.firstName !== afterData.firstName || beforeData.lastName !== afterData.lastName;
+    const nameChanged = beforeData.firstName !== afterData.firstName ||
+        beforeData.middleName !== afterData.middleName ||
+        beforeData.lastName !== afterData.lastName;
     const photoChanged = beforeData.photoUrl !== afterData.photoUrl;
     // Check if either name or photo actually changed
     if (!nameChanged && !photoChanged) {
         return null;
     }
-    const newName = [afterData.firstName, afterData.lastName].filter(Boolean).join(' ');
+    const newName = [afterData.firstName, afterData.middleName, afterData.lastName].filter(Boolean).join(' ');
     const newPhotoUrl = afterData.photoUrl || null;
     const userId = context.params.userId;
     console.log(`User ${userId} changed profile. Syncing...`);
@@ -102,11 +104,77 @@ exports.syncUserNameOnUpdate = functions.firestore
                 updates.userPhotoUrl = newPhotoUrl;
             batch.update(doc.ref, updates);
         });
+        // 3. Update Giving Records
+        const givingSnapshot = await db
+            .collection('givingRecords')
+            .where('userId', '==', userId)
+            .get();
+        givingSnapshot.forEach((doc) => {
+            if (nameChanged)
+                batch.update(doc.ref, { donorName: newName });
+        });
+        // 4. Update Ministry Assignments
+        const assignmentSnapshot = await db
+            .collection('ministryAssignments')
+            .where('memberId', '==', userId)
+            .get();
+        assignmentSnapshot.forEach((doc) => {
+            if (nameChanged)
+                batch.update(doc.ref, { memberName: newName });
+        });
+        // 5. Update Ministries (Array of MinistryMembers)
+        // Firestore doesn't support querying by a partial object in an array, so we fetch all ministries for this church
+        const ministriesSnapshot = await db
+            .collection('ministries')
+            .where('churchId', '==', churchId)
+            .get();
+        ministriesSnapshot.forEach((doc) => {
+            const data = doc.data();
+            let updated = false;
+            const members = data.members || [];
+            const updatedMembers = members.map((member) => {
+                if (member.memberId === userId) {
+                    updated = true;
+                    return Object.assign(Object.assign(Object.assign({}, member), (nameChanged && { memberName: newName })), (photoChanged && { avatar: newPhotoUrl }));
+                }
+                return member;
+            });
+            if (updated) {
+                batch.update(doc.ref, { members: updatedMembers });
+            }
+        });
         await batch.commit();
         console.log(`Successfully synced name for user ${userId}`);
     }
     catch (error) {
         console.error('Error syncing user names:', error);
+    }
+    return null;
+});
+exports.deleteCommentsOnPrayerDelete = functions.firestore
+    .document('churches/{churchId}/prayer_requests/{prayerId}')
+    .onDelete(async (snap, context) => {
+    const prayerId = context.params.prayerId;
+    console.log(`Prayer request ${prayerId} deleted. Deleting associated comments...`);
+    try {
+        const commentsSnapshot = await db
+            .collection('comments')
+            .where('targetType', '==', 'prayer_request')
+            .where('targetId', '==', prayerId)
+            .get();
+        if (commentsSnapshot.empty) {
+            console.log('No comments found for this prayer request.');
+            return null;
+        }
+        const batch = db.batch();
+        commentsSnapshot.forEach((doc) => {
+            batch.delete(doc.ref);
+        });
+        await batch.commit();
+        console.log(`Successfully deleted ${commentsSnapshot.size} comments.`);
+    }
+    catch (error) {
+        console.error('Error deleting associated comments:', error);
     }
     return null;
 });

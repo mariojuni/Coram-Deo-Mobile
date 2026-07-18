@@ -12,9 +12,11 @@ interface AppModalProps {
   headerLeft?: ReactNode;
   headerRight?: ReactNode;
   headerTitleAlign?: 'left' | 'center';
+  hideHeader?: boolean;
+  hideDragHandle?: boolean;
 }
 
-export default function AppModal({ isOpen, onClose, title, children, containerStyle, headerLeft, headerRight, headerTitleAlign = 'center' }: AppModalProps) {
+export default function AppModal({ isOpen, onClose, title, children, containerStyle, headerLeft, headerRight, headerTitleAlign = 'center', hideHeader = false, hideDragHandle = false }: AppModalProps) {
   const slideAnim = useMemo(() => new Animated.Value(500), []);
 
   useEffect(() => {
@@ -37,25 +39,27 @@ export default function AppModal({ isOpen, onClose, title, children, containerSt
         </TouchableWithoutFeedback>
 
         <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}>
-          <View style={styles.dragHandle} />
+          {!hideDragHandle && <View style={styles.dragHandle} />}
 
           {/* Header */}
-          <View style={styles.header}>
-            <View style={[styles.headerSide, { alignItems: 'flex-start' }]}>
-              {headerLeft ? headerLeft : (headerTitleAlign === 'center' ? <View style={styles.iconBtnPlaceholder} /> : null)}
+          {!hideHeader && (
+            <View style={styles.header}>
+              <View style={[styles.headerSide, { alignItems: 'flex-start' }]}>
+                {headerLeft ? headerLeft : (headerTitleAlign === 'center' ? <View style={styles.iconBtnPlaceholder} /> : null)}
+              </View>
+              
+              <View style={styles.headerCenter}>
+                <Text style={[styles.title, { textAlign: headerTitleAlign }]}>{title}</Text>
+              </View>
+              
+              <View style={[styles.headerSide, { alignItems: 'flex-end', flexDirection: 'row', justifyContent: 'flex-end', gap: 16 }]}>
+                {headerRight}
+                <TouchableOpacity onPress={onClose} style={styles.iconBtn}>
+                  <X size={24} color="#1a1a1a" />
+                </TouchableOpacity>
+              </View>
             </View>
-            
-            <View style={styles.headerCenter}>
-              <Text style={[styles.title, { textAlign: headerTitleAlign }]}>{title}</Text>
-            </View>
-            
-            <View style={[styles.headerSide, { alignItems: 'flex-end', flexDirection: 'row', justifyContent: 'flex-end', gap: 16 }]}>
-              {headerRight}
-              <TouchableOpacity onPress={onClose} style={styles.iconBtn}>
-                <X size={24} color="#1a1a1a" />
-              </TouchableOpacity>
-            </View>
-          </View>
+          )}
 
           {/* Content */}
           <SafeAreaView edges={['bottom']} style={[styles.contentContainer, containerStyle]}>
@@ -85,6 +89,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '90%',
+    overflow: 'hidden',
   },
   dragHandle: {
     width: 40,

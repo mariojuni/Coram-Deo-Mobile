@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, Text, StyleSheet, TextInput, Switch, TouchableOpacity, 
-  ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform, Alert 
+  ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform, Alert, Keyboard 
 } from 'react-native';
 import AppModal from '@/components/ui/AppModal';
 import { useAuthStore } from '@/store/useAuthStore';
 import { prayerRepository } from '../../data/prayer.repository';
 import type { Prayer, PrayerCategory, PrayerVisibility, PrayerStatus } from '../../domain/prayer.types';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
+import { X } from 'lucide-react-native';
 
 interface PrayerRequestModalProps {
   isOpen: boolean;
@@ -137,9 +139,33 @@ export default function PrayerRequestModal({ isOpen, onClose, initialData }: Pra
   };
 
   return (
-    <AppModal isOpen={isOpen} onClose={handleClose} title={initialData ? "Edit Prayer Request" : "Submit Prayer Request"} headerTitleAlign="center">
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <ScrollView style={styles.scrollContainer} contentContainerStyle={{ paddingBottom: 40 }}>
+    <AppModal 
+      isOpen={isOpen} 
+      onClose={handleClose} 
+      title={initialData ? "Edit Prayer Request" : "Submit Prayer Request"}
+      hideHeader={true}
+      hideDragHandle={true}
+      containerStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}
+    >
+      <View style={styles.modalContainer}>
+        <LinearGradient colors={['#F3F9FF', '#FFFFFF']} style={StyleSheet.absoluteFill} />
+        
+        {/* ─── Header ─────────────────────────────────────────────────────── */}
+        <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
+          <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
+          <View style={styles.dragHandle} />
+          <View style={styles.headerContent}>
+            <View style={styles.headerCirclePlaceholder} />
+            <Text style={styles.headerTitle}>{initialData ? "Edit Prayer Request" : "Submit Prayer Request"}</Text>
+            <TouchableOpacity style={styles.headerCircle} onPress={handleClose} hitSlop={8} activeOpacity={0.8}>
+              <X size={24} color="#111827" strokeWidth={2} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <ScrollView style={styles.scrollContainer} contentContainerStyle={{ paddingTop: 90, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
           
           <Text style={styles.subtitle}>How can we pray for you?</Text>
 
@@ -234,9 +260,6 @@ export default function PrayerRequestModal({ isOpen, onClose, initialData }: Pra
           </View>
 
           <View style={styles.actionRow}>
-            <TouchableOpacity style={styles.cancelBtn} onPress={handleClose} disabled={isSubmitting}>
-              <Text style={styles.cancelBtnText}>Cancel</Text>
-            </TouchableOpacity>
 
             <TouchableOpacity 
               style={[styles.submitBtnContainer, isSubmitting && { opacity: 0.7 }]} 
@@ -245,7 +268,7 @@ export default function PrayerRequestModal({ isOpen, onClose, initialData }: Pra
               disabled={isSubmitting}
             >
               <LinearGradient
-                colors={['#FF6596', '#FF8AAB']}
+                colors={['#FF6596', '#C084FC']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.submitBtn}
@@ -259,16 +282,69 @@ export default function PrayerRequestModal({ isOpen, onClose, initialData }: Pra
             </TouchableOpacity>
           </View>
 
-        </ScrollView>
-      </KeyboardAvoidingView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
     </AppModal>
   );
 }
 
 const styles = StyleSheet.create({
+  modalContainer: { backgroundColor: '#FFFFFF' },
+  headerContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.4)',
+    overflow: 'hidden',
+  },
+  dragHandle: {
+    width: 40,
+    height: 5,
+    backgroundColor: '#d1d5db',
+    borderRadius: 10,
+    alignSelf: 'center',
+    marginBottom: 4,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  headerCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+  },
+  headerCirclePlaceholder: {
+    width: 40,
+    height: 40,
+  },
+  headerTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    textAlign: 'center',
+    marginHorizontal: 12,
+  },
   scrollContainer: {
     paddingHorizontal: 20,
-    paddingTop: 4,
   },
   subtitle: {
     fontSize: 15,
@@ -391,27 +467,15 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-  },
-  cancelBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 24,
-    backgroundColor: '#F3F4F6',
-    alignItems: 'center',
-  },
-  cancelBtnText: {
-    color: '#4B5563',
-    fontSize: 15,
-    fontWeight: '700',
+    gap: 12,
   },
   submitBtnContainer: {
-    flex: 2,
+    flex: 1,
     borderRadius: 24,
     overflow: 'hidden',
   },
   submitBtn: {
-    paddingVertical: 14,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -419,5 +483,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     fontWeight: '800',
+    letterSpacing: 0.3,
   },
 });

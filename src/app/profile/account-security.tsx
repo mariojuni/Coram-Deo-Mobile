@@ -88,7 +88,7 @@ export default function AccountSecurityScreen() {
       <LinearGradient colors={['#FFF5F5', '#FFFFFF']} style={StyleSheet.absoluteFill} />
       
       {/* ─── Header ─────────────────────────────────────────────────────── */}
-      <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 24) }]} pointerEvents="box-none">
+      <View style={[styles.headerContainer, { paddingTop: Platform.OS === 'ios' ? 24 : Math.max(insets.top, 24) }]} pointerEvents="box-none">
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
         <View style={styles.headerContent}>
@@ -103,7 +103,7 @@ export default function AccountSecurityScreen() {
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: Math.max(insets.top, 24) + 80 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: (Platform.OS === 'ios' ? 24 : Math.max(insets.top, 24)) + 70 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             
             <View style={styles.alertCard}>
               <View style={styles.alertIcon}>

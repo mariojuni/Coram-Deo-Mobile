@@ -85,12 +85,6 @@ async function fetchUserAccount(user: User): Promise<UserAccount | null> {
     data.churchId = 'YmEc6C69Xz4DKRQaQZBV';
   }
 
-  // Map legacy `name` to `firstName` and `lastName` if missing
-  if (data.name && typeof data.name === 'string') {
-    const parts = data.name.split(' ');
-    if (!data.firstName) data.firstName = parts[0] || '';
-    if (!data.lastName) data.lastName = parts.slice(1).join(' ') || '';
-  }
 
   // Build systemRoles: prefer the stored array; fall back to migrating the legacy single role string.
   let systemRoles: import('../domain/auth.types').SystemRole[];
