@@ -471,11 +471,11 @@ const styles = StyleSheet.create({
   },
   submitBtnContainer: {
     flex: 1,
-    borderRadius: 24,
+    borderRadius: 32,
     overflow: 'hidden',
   },
   submitBtn: {
-    height: 48,
+    height: 56,
     alignItems: 'center',
     justifyContent: 'center',
   },
