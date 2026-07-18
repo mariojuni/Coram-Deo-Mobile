@@ -6,6 +6,7 @@ import { db } from '../../firebase';
 import type { Schedule } from '../../features/schedule/domain/schedule.types';
 import CustomDatePicker from '../CustomDatePicker';
 import CustomTimePicker from '../CustomTimePicker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface AddScheduleModalProps {
   isOpen: boolean;
@@ -93,10 +94,12 @@ export default function AddScheduleModal({ isOpen, onClose, eventToEdit }: AddSc
     }
   };
 
+  const insets = useSafeAreaInsets();
+
   return (
     <Modal visible={isOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <View style={s.header}>
+        <View style={[s.header, { paddingTop: Math.max(insets.top, 16) }]}>
           <TouchableOpacity onPress={onClose} style={s.headerBtn}>
             <Text style={s.cancelText}>Cancel</Text>
           </TouchableOpacity>

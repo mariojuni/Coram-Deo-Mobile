@@ -15,7 +15,7 @@ export function TopNavBar({ leftText, onLeftPress, rightText, onRightPress }: To
 
   return (
     <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 24) }]} pointerEvents="box-none">
-      <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+      <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} experimentalBlurMethod="dimezisBlurView" />
       <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
 
       <View style={styles.content}>

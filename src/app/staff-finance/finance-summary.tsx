@@ -7,6 +7,7 @@ import { ArrowDownRight, ArrowUpRight, Clock, PieChart, Wallet, ChevronLeft, Tre
 import { useAuthStore } from '../../store/useAuthStore';
 import { getMonthlyFinanceSummary } from '../../features/giving/data/financeAdmin.service';
 import { GivingRecord, GivingExpense } from '../../features/giving/domain/giving.types';
+import { SoftCard } from '../../components/ui/SoftCard';
 
 export default function FinanceSummaryScreen() {
   const router = useRouter();
@@ -48,7 +49,7 @@ export default function FinanceSummaryScreen() {
   return (
     <View style={styles.container}>
       <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 24) }]} pointerEvents="box-none">
-        <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+        <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} experimentalBlurMethod="dimezisBlurView" />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
         <View style={styles.headerContent}>
           <TouchableOpacity style={styles.headerCircle} onPress={() => router.back()}>
@@ -73,37 +74,43 @@ export default function FinanceSummaryScreen() {
           </View>
 
           <View style={styles.row}>
-            <View style={styles.statCard}>
-              <View style={[styles.iconWrap, { backgroundColor: '#E0F2FE' }]}>
-                <TrendingUp size={24} color="#0284C7" />
+            <SoftCard style={{ flex: 1, borderRadius: 24 }} innerStyle={{ borderRadius: 23 }}>
+              <View style={styles.statCard}>
+                <View style={[styles.iconWrap, { backgroundColor: '#E0F2FE' }]}>
+                  <TrendingUp size={24} color="#0284C7" />
+                </View>
+                <Text style={styles.statLabel}>Total Income</Text>
+                <Text style={styles.statValue}>PHP {summary.totalGiving.toLocaleString(undefined, { minimumFractionDigits: 2 })}</Text>
               </View>
-              <Text style={styles.statLabel}>Total Income</Text>
-              <Text style={styles.statValue}>PHP {summary.totalGiving.toLocaleString(undefined, { minimumFractionDigits: 2 })}</Text>
-            </View>
+            </SoftCard>
 
-            <View style={styles.statCard}>
-              <View style={[styles.iconWrap, { backgroundColor: '#FEE2E2' }]}>
-                <TrendingDown size={24} color="#DC2626" />
+            <SoftCard style={{ flex: 1, borderRadius: 24 }} innerStyle={{ borderRadius: 23 }}>
+              <View style={styles.statCard}>
+                <View style={[styles.iconWrap, { backgroundColor: '#FEE2E2' }]}>
+                  <TrendingDown size={24} color="#DC2626" />
+                </View>
+                <Text style={styles.statLabel}>Total Expenses</Text>
+                <Text style={styles.statValue}>PHP {summary.totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 2 })}</Text>
               </View>
-              <Text style={styles.statLabel}>Total Expenses</Text>
-              <Text style={styles.statValue}>PHP {summary.totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 2 })}</Text>
-            </View>
+            </SoftCard>
           </View>
 
-          <TouchableOpacity 
-            style={styles.pendingCard} 
-            onPress={() => router.push('/staff-finance/pending-verification')}
-            activeOpacity={0.7}
-          >
-            <View style={styles.pendingContent}>
-              <Clock size={24} color="#B66DFF" />
-              <View style={{ marginLeft: 12 }}>
-                <Text style={styles.pendingLabel}>Pending Verifications</Text>
-                <Text style={styles.pendingSubText}>{summary.pendingCount} records need your attention</Text>
+          <SoftCard style={{ borderRadius: 24 }} innerStyle={{ borderRadius: 23 }}>
+            <TouchableOpacity 
+              style={styles.pendingCard} 
+              onPress={() => router.push('/staff-finance/pending-verification')}
+              activeOpacity={0.7}
+            >
+              <View style={styles.pendingContent}>
+                <Clock size={24} color="#B66DFF" />
+                <View style={{ marginLeft: 12 }}>
+                  <Text style={styles.pendingLabel}>Pending Verifications</Text>
+                  <Text style={styles.pendingSubText}>{summary.pendingCount} records need your attention</Text>
+                </View>
               </View>
-            </View>
-            <Text style={styles.pendingBadge}>{summary.pendingCount}</Text>
-          </TouchableOpacity>
+              <Text style={styles.pendingBadge}>{summary.pendingCount}</Text>
+            </TouchableOpacity>
+          </SoftCard>
 
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Recent Income</Text>
@@ -112,17 +119,19 @@ export default function FinanceSummaryScreen() {
             <Text style={styles.emptyListText}>No income records this month.</Text>
           ) : (
             summary.givingRecords.slice(0, 5).map(record => (
-              <View key={record.id} style={styles.listItem}>
-                <View style={styles.listItemLeft}>
-                  <Text style={[styles.listItemTitle, { textTransform: 'capitalize' }]} numberOfLines={1}>{record.donorName || 'Anonymous'}</Text>
-                  <Text style={[styles.listItemSub, { textTransform: 'capitalize' }]}>
-                    {new Date(record.date || record.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} • {record.fundType || 'Tithe'}
+              <SoftCard key={record.id} style={{ marginBottom: 8, borderRadius: 16 }} innerStyle={{ borderRadius: 15 }}>
+                <View style={styles.listItem}>
+                  <View style={styles.listItemLeft}>
+                    <Text style={[styles.listItemTitle, { textTransform: 'capitalize' }]} numberOfLines={1}>{record.donorName || 'Anonymous'}</Text>
+                    <Text style={[styles.listItemSub, { textTransform: 'capitalize' }]}>
+                      {new Date(record.date || record.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} • {record.fundType || 'Tithe'}
+                    </Text>
+                  </View>
+                  <Text style={styles.listItemAmountIncome}>
+                    +₱{record.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </Text>
                 </View>
-                <Text style={styles.listItemAmountIncome}>
-                  +₱{record.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                </Text>
-              </View>
+              </SoftCard>
             ))
           )}
 
@@ -133,17 +142,19 @@ export default function FinanceSummaryScreen() {
             <Text style={styles.emptyListText}>No expenses this month.</Text>
           ) : (
             summary.expenses.slice(0, 5).map(expense => (
-              <View key={expense.id} style={styles.listItem}>
-                <View style={styles.listItemLeft}>
-                  <Text style={[styles.listItemTitle, { textTransform: 'capitalize' }]} numberOfLines={1}>{expense.payee || 'Unknown'}</Text>
-                  <Text style={[styles.listItemSub, { textTransform: 'capitalize' }]}>
-                    {new Date(expense.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} • {(expense.category || '').replace(/_/g, ' ')}
+              <SoftCard key={expense.id} style={{ marginBottom: 8, borderRadius: 16 }} innerStyle={{ borderRadius: 15 }}>
+                <View style={styles.listItem}>
+                  <View style={styles.listItemLeft}>
+                    <Text style={[styles.listItemTitle, { textTransform: 'capitalize' }]} numberOfLines={1}>{expense.payee || 'Unknown'}</Text>
+                    <Text style={[styles.listItemSub, { textTransform: 'capitalize' }]}>
+                      {new Date(expense.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} • {(expense.category || '').replace(/_/g, ' ')}
+                    </Text>
+                  </View>
+                  <Text style={styles.listItemAmountExpense}>
+                    -₱{expense.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </Text>
                 </View>
-                <Text style={styles.listItemAmountExpense}>
-                  -₱{expense.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                </Text>
-              </View>
+              </SoftCard>
             ))
           )}
 
@@ -173,19 +184,17 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   headerCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.04,
     shadowRadius: 12,
-    elevation: 4,
+    elevation: 2,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.05)',
+    borderRadius: 20,
+    width: 40, height: 40,
+    alignItems: 'center', justifyContent: 'center',
   },
   headerTitle: {
     flex: 1,
@@ -217,14 +226,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
     padding: 20,
-    borderRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.04,
-    shadowRadius: 24,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.03)',
   },
   iconWrap: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   statLabel: { fontSize: 13, color: '#888', fontWeight: '500', marginBottom: 4 },
@@ -233,17 +234,9 @@ const styles = StyleSheet.create({
   pendingCard: {
     backgroundColor: '#fff',
     padding: 20,
-    borderRadius: 24,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.04,
-    shadowRadius: 24,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.03)',
   },
   pendingContent: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   pendingLabel: { fontSize: 16, fontWeight: '700', color: '#1a1a1a' },
@@ -279,15 +272,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     backgroundColor: '#fff',
     padding: 16,
-    borderRadius: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.02,
-    shadowRadius: 12,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.02)',
   },
   listItemLeft: {
     flex: 1,

@@ -5,6 +5,8 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useWorshipStore } from '../../store/useWorshipStore';
 
+import { SoftCard } from '@/components/ui/SoftCard';
+
 export default function WorshipTab() {
   const router = useRouter();
   const userProfile = useAuthStore(s => s.userProfile);
@@ -26,12 +28,16 @@ export default function WorshipTab() {
 
   if (setlists.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
-        <View style={styles.iconCircle}>
-          <Music size={32} color="#FF6596" />
-        </View>
-        <Text style={styles.emptyTitle}>No Setlists Found</Text>
-        <Text style={styles.emptyText}>Create setlists in the Web Admin portal to see them here.</Text>
+      <View>
+        <SoftCard style={{ borderRadius: 16 }} innerStyle={{ borderRadius: 15 }}>
+          <View style={styles.emptyContainer}>
+            <View style={styles.iconCircle}>
+              <Music size={32} color="#FF6596" />
+            </View>
+            <Text style={styles.emptyTitle}>No Setlists Found</Text>
+            <Text style={styles.emptyText}>Create setlists in the Web Admin portal to see them here.</Text>
+          </View>
+        </SoftCard>
       </View>
     );
   }
@@ -42,25 +48,27 @@ export default function WorshipTab() {
         data={setlists}
         keyExtractor={item => item.id}
         scrollEnabled={false}
-        contentContainerStyle={{ gap: 12 }}
+        contentContainerStyle={{ gap: 12, paddingHorizontal: 0 }}
         renderItem={({ item }) => (
-          <TouchableOpacity 
-            style={styles.card}
-            onPress={() => router.push({ pathname: '/serve-worship-setlist', params: { eventId: item.eventId } } as any)}
-          >
-            <View style={styles.cardHeader}>
-              <View>
-                <Text style={styles.title}>{item.title}</Text>
-                <View style={styles.dateRow}>
-                  <Calendar size={14} color="#666" style={{ marginRight: 4 }} />
-                  <Text style={styles.dateText}>
-                    {item.serviceDate ? new Date(item.serviceDate + 'T00:00:00').toLocaleDateString() : 'No date'}
-                  </Text>
+          <SoftCard style={{ borderRadius: 16 }} innerStyle={{ borderRadius: 15 }}>
+            <TouchableOpacity 
+              style={styles.card}
+              onPress={() => router.push({ pathname: '/serve-worship-setlist', params: { eventId: item.eventId } } as any)}
+            >
+              <View style={styles.cardHeader}>
+                <View>
+                  <Text style={styles.title}>{item.title}</Text>
+                  <View style={styles.dateRow}>
+                    <Calendar size={14} color="#666" style={{ marginRight: 4 }} />
+                    <Text style={styles.dateText}>
+                      {item.serviceDate ? new Date(item.serviceDate + 'T00:00:00').toLocaleDateString() : 'No date'}
+                    </Text>
+                  </View>
                 </View>
+                <ChevronRight size={20} color="#999" />
               </View>
-              <ChevronRight size={20} color="#999" />
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+          </SoftCard>
         )}
       />
     </View>
@@ -78,13 +86,8 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     backgroundColor: '#fff',
-    borderRadius: 16,
     padding: 32,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
   },
   iconCircle: {
     width: 64,
@@ -108,12 +111,7 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 16,
     padding: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
   },
   cardHeader: {
     flexDirection: 'row',

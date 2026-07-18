@@ -10,6 +10,7 @@ import { useMemberStore } from '../../store/useMemberStore';
 import { useGiving } from '../../features/giving/presentation/hooks/useGiving';
 import { getPendingGivingRecords, approveGivingRecord, rejectGivingRecord } from '../../features/giving/data/financeAdmin.service';
 import { GivingRecord } from '../../features/giving/domain/giving.types';
+import { SoftCard } from '../../components/ui/SoftCard';
 
 export default function PendingVerificationScreen() {
   const router = useRouter();
@@ -100,6 +101,7 @@ export default function PendingVerificationScreen() {
       : new Date(item.submittedAt || Date.now());
 
     return (
+    <SoftCard style={{ marginBottom: 16, borderRadius: 24 }} innerStyle={{ borderRadius: 23 }}>
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <View>
@@ -155,13 +157,14 @@ export default function PendingVerificationScreen() {
         </TouchableOpacity>
       </View>
     </View>
+    </SoftCard>
   );
 };
 
   return (
     <View style={styles.container}>
       <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 24) }]} pointerEvents="box-none">
-        <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+        <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} experimentalBlurMethod="dimezisBlurView" />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
         <View style={styles.headerContent}>
           <TouchableOpacity style={styles.headerCircle} onPress={() => router.back()}>
@@ -246,19 +249,17 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   headerCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.04,
     shadowRadius: 12,
-    elevation: 4,
+    elevation: 2,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.05)',
+    borderRadius: 20,
+    width: 40, height: 40,
+    alignItems: 'center', justifyContent: 'center',
   },
   headerTitle: {
     flex: 1,
@@ -275,16 +276,7 @@ const styles = StyleSheet.create({
   
   card: {
     backgroundColor: '#fff',
-    borderRadius: 24,
     padding: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.04,
-    shadowRadius: 24,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.03)',
   },
   cardHeader: {
     flexDirection: 'row',

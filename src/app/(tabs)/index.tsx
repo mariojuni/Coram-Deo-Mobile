@@ -191,7 +191,12 @@ export default function HomeScreen() {
         style={[styles.header, { paddingTop: Math.max(insets.top, 24) }]}
         pointerEvents="box-none"
       >
-        <BlurView intensity={90} tint="light" style={StyleSheet.absoluteFill} />
+        <BlurView 
+          intensity={90} 
+          tint="light" 
+          style={StyleSheet.absoluteFill} 
+          experimentalBlurMethod="dimezisBlurView"
+        />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.75)' }]} pointerEvents="none" />
 
         {/* Gradient accent line at top */}

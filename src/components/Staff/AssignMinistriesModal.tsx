@@ -16,6 +16,8 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { useMemberStore } from '../../store/useMemberStore';
 import { useMinistryStore } from '../../store/useMinistryStore';
 import { useScheduleStore } from '../../store/useScheduleStore';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SoftCard } from '@/components/ui/SoftCard';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type FilterTab = 'all' | 'unassigned' | 'assigned';
@@ -356,10 +358,11 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
     Alert.alert('Template Copy', 'Copying from templates is temporarily disabled while migrating to the new ministries API.');
   }, []);
 
+  const insets = useSafeAreaInsets();
 
   return (
     <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <View style={[ms.header, { paddingTop: 16 }]}>
+      <View style={[ms.header, { paddingTop: Math.max(insets.top, 16) }]}>
         <TouchableOpacity onPress={onClose} style={ms.backBtn}>
           <X size={20} color="#666" />
         </TouchableOpacity>
@@ -370,35 +373,39 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
       </View>
 
       <ScrollView style={{ flex: 1, backgroundColor: '#FAFAFA' }} contentContainerStyle={{ paddingBottom: 120 }}>
-        <View style={ms.eventCard}>
-          <View style={ms.eventIconBox}>
-            <Users size={28} color="#8B6FE8" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={ms.eventName} numberOfLines={1}>{liveSchedule.title}</Text>
-            <View style={ms.eventMeta}>
-              <Clock size={13} color="#888" />
-              <Text style={ms.eventMetaText}>{liveSchedule.time}{liveSchedule.endTime ? ` – ${liveSchedule.endTime}` : ''}</Text>
+        <SoftCard style={{ margin: 20, marginBottom: 16, borderRadius: 16 }} innerStyle={{ borderRadius: 15 }}>
+          <View style={[ms.eventCard, { margin: 0 }]}>
+            <View style={ms.eventIconBox}>
+              <Users size={28} color="#8B6FE8" />
             </View>
-            <View style={ms.eventMeta}>
-              <MapPin size={13} color="#888" />
-              <Text style={ms.eventMetaText}>{liveSchedule.location}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={ms.eventName} numberOfLines={1}>{liveSchedule.title}</Text>
+              <View style={ms.eventMeta}>
+                <Clock size={13} color="#888" />
+                <Text style={ms.eventMetaText}>{liveSchedule.time}{liveSchedule.endTime ? ` – ${liveSchedule.endTime}` : ''}</Text>
+              </View>
+              <View style={ms.eventMeta}>
+                <MapPin size={13} color="#888" />
+                <Text style={ms.eventMetaText}>{liveSchedule.location}</Text>
+              </View>
             </View>
           </View>
-        </View>
+        </SoftCard>
 
-        <View style={ms.progressCard}>
-          <View style={ms.progressRow}>
-            <Text style={ms.progressLabel}>{assignedCount} of {totalRoles} roles assigned</Text>
-            <TouchableOpacity onPress={handleUseTemplate} style={ms.templatePill}>
-              <Copy size={13} color="#4D8BFF" />
-              <Text style={ms.templatePillText}>Use Template</Text>
-            </TouchableOpacity>
+        <SoftCard style={{ marginHorizontal: 20, marginBottom: 24, borderRadius: 16 }} innerStyle={{ borderRadius: 15 }}>
+          <View style={[ms.progressCard, { marginHorizontal: 0, marginBottom: 0 }]}>
+            <View style={ms.progressRow}>
+              <Text style={ms.progressLabel}>{assignedCount} of {totalRoles} roles assigned</Text>
+              <TouchableOpacity onPress={handleUseTemplate} style={ms.templatePill}>
+                <Copy size={13} color="#4D8BFF" />
+                <Text style={ms.templatePillText}>Use Template</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={ms.progressTrack}>
+              <View style={[ms.progressFill, { width: totalRoles ? `${Math.round((assignedCount / totalRoles) * 100)}%` : '0%' }]} />
+            </View>
           </View>
-          <View style={ms.progressTrack}>
-            <View style={[ms.progressFill, { width: totalRoles ? `${Math.round((assignedCount / totalRoles) * 100)}%` : '0%' }]} />
-          </View>
-        </View>
+        </SoftCard>
 
         <View style={ms.filterRow}>
           {(['all', 'unassigned', 'assigned'] as FilterTab[]).map((tab) => (
@@ -428,19 +435,20 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
           const isExpanded = expandedGroups[ministry.id] !== false;
 
           return (
-            <View key={ministry.id} style={ms.groupCard}>
-              <TouchableOpacity style={ms.groupHeader} onPress={() => toggleGroup(ministry.id)} activeOpacity={0.7}>
-                <View style={{ flex: 1 }}>
-                  <Text style={ms.groupTitle}>{ministry.name}</Text>
-                  <Text style={ms.groupMeta}>{groupAssigned}/{(ministry.roles || []).length} assigned</Text>
-                </View>
-                <View style={[ms.groupBadge, groupAssigned === (ministry.roles || []).length ? ms.groupBadgeFull : ms.groupBadgePartial]}>
-                  <Text style={[ms.groupBadgeText, groupAssigned === (ministry.roles || []).length ? ms.groupBadgeTextFull : ms.groupBadgeTextPartial]}>
-                    {groupAssigned === (ministry.roles || []).length ? 'Complete' : `${(ministry.roles || []).length - groupAssigned} left`}
-                  </Text>
-                </View>
-                {isExpanded ? <ChevronUp size={18} color="#999" style={{ marginLeft: 8 }} /> : <ChevronDown size={18} color="#999" style={{ marginLeft: 8 }} />}
-              </TouchableOpacity>
+            <SoftCard key={ministry.id} style={{ marginHorizontal: 20, marginBottom: 16, borderRadius: 16 }} innerStyle={{ borderRadius: 15 }}>
+              <View style={[ms.groupCard, { marginHorizontal: 0, marginBottom: 0 }]}>
+                <TouchableOpacity style={ms.groupHeader} onPress={() => toggleGroup(ministry.id)} activeOpacity={0.7}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={ms.groupTitle}>{ministry.name}</Text>
+                    <Text style={ms.groupMeta}>{groupAssigned}/{(ministry.roles || []).length} assigned</Text>
+                  </View>
+                  <View style={[ms.groupBadge, groupAssigned === (ministry.roles || []).length ? ms.groupBadgeFull : ms.groupBadgePartial]}>
+                    <Text style={[ms.groupBadgeText, groupAssigned === (ministry.roles || []).length ? ms.groupBadgeTextFull : ms.groupBadgeTextPartial]}>
+                      {groupAssigned === (ministry.roles || []).length ? 'Complete' : `${(ministry.roles || []).length - groupAssigned} left`}
+                    </Text>
+                  </View>
+                  {isExpanded ? <ChevronUp size={18} color="#999" style={{ marginLeft: 8 }} /> : <ChevronDown size={18} color="#999" style={{ marginLeft: 8 }} />}
+                </TouchableOpacity>
 
               {isExpanded && visibleRoles.map((roleName, idx) => {
                 const assignKey = getAssignmentKey(ministry.id, roleName);
@@ -526,7 +534,8 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
                   </View>
                 );
               })}
-            </View>
+              </View>
+            </SoftCard>
           );
         })}
       </ScrollView>

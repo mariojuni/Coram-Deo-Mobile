@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { PlusCircle, CheckCircle, Receipt, PieChart } from 'lucide-react-native';
+import { SoftCard } from '../ui/SoftCard';
 
 export default function FinanceTab() {
   const router = useRouter();
@@ -44,18 +45,19 @@ export default function FinanceTab() {
         {financeTools.map((tool, index) => {
           const Icon = tool.icon;
           return (
-            <TouchableOpacity
-              key={index}
-              style={styles.card}
-              onPress={() => router.push(tool.route as any)}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.iconWrapper, { backgroundColor: `${tool.color}15` }]}>
-                <Icon size={28} color={tool.color} />
-              </View>
-              <Text style={styles.cardTitle}>{tool.title}</Text>
-              <Text style={styles.cardDesc}>{tool.description}</Text>
-            </TouchableOpacity>
+            <SoftCard key={index} style={{ width: '47%', marginBottom: 8, borderRadius: 16 }} innerStyle={{ borderRadius: 15 }}>
+              <TouchableOpacity
+                style={styles.card}
+                onPress={() => router.push(tool.route as any)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.iconWrapper, { backgroundColor: `${tool.color}15` }]}>
+                  <Icon size={28} color={tool.color} />
+                </View>
+                <Text style={styles.cardTitle}>{tool.title}</Text>
+                <Text style={styles.cardDesc}>{tool.description}</Text>
+              </TouchableOpacity>
+            </SoftCard>
           );
         })}
       </View>
@@ -80,16 +82,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   card: {
-    width: '47%',
     backgroundColor: '#fff',
-    borderRadius: 16,
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    marginBottom: 8,
   },
   iconWrapper: {
     width: 48,

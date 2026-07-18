@@ -6,11 +6,13 @@ import { useGiving } from '@/features/giving/presentation/hooks/useGiving';
 import { GivingRecord } from '@/features/giving/domain/giving.types';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function MyGivingScreen() {
   const router = useRouter();
   const { fromSuccess } = useLocalSearchParams();
   const { myRecords, funds, campaigns, isLoading, refreshRecords } = useGiving();
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     refreshRecords();
@@ -64,31 +66,29 @@ export default function MyGivingScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <LinearGradient colors={['#FFE8F1', '#F5F2FF', '#FAFAFA']} style={StyleSheet.absoluteFill} />
       
-      <BlurView intensity={80} tint="light" style={styles.header}>
-        <SafeAreaView>
-          <View style={styles.headerInner}>
-            <TouchableOpacity 
-              style={styles.backBtn} 
-              onPress={() => {
-                if (fromSuccess) {
-                  router.dismissAll();
-                } else {
-                  router.back();
-                }
-              }}
-            >
-              <View style={styles.backBtnCircle}>
-                {fromSuccess ? (
-                  <X size={24} color="#1a1a1a" />
-                ) : (
-                  <ChevronLeft size={24} color="#1a1a1a" />
-                )}
-              </View>
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>My Giving History</Text>
-            <View style={{ width: 40 }} />
-          </View>
-        </SafeAreaView>
+      <BlurView intensity={80} tint="light" style={[styles.header, { paddingTop: Math.max(insets.top, 24) }]} experimentalBlurMethod="dimezisBlurView">
+        <View style={styles.headerInner}>
+          <TouchableOpacity 
+            style={styles.backBtn} 
+            onPress={() => {
+              if (fromSuccess) {
+                router.dismissAll();
+              } else {
+                router.back();
+              }
+            }}
+          >
+            <View style={styles.backBtnCircle}>
+              {fromSuccess ? (
+                <X size={24} color="#1a1a1a" />
+              ) : (
+                <ChevronLeft size={24} color="#1a1a1a" />
+              )}
+            </View>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>My Giving History</Text>
+          <View style={{ width: 40 }} />
+        </View>
       </BlurView>
 
       {isLoading ? (
@@ -157,12 +157,17 @@ const styles = StyleSheet.create({
   },
   backBtn: { padding: 4 },
   backBtnCircle: {
-    width: 40,
-    height: 40,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 40, height: 40,
+    alignItems: 'center', justifyContent: 'center',
   },
   headerTitle: { fontSize: 22, fontWeight: '800', color: '#1a1a1a', letterSpacing: -0.5 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },

@@ -8,6 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import AppModal from '../../components/ui/AppModal';
 import CustomDatePicker from '../../components/CustomDatePicker';
 import { ModernDropdown, DropdownOption } from '../../components/ui/ModernDropdown';
+import { SoftCard } from '../../components/ui/SoftCard';
 import { useAuthStore } from '../../store/useAuthStore';
 import { getRecentExpenses, createExpense } from '../../features/giving/data/financeAdmin.service';
 import { GivingExpense, ExpenseCategory } from '../../features/giving/domain/giving.types';
@@ -100,34 +101,36 @@ export default function ExpenseTrackerScreen() {
     const vendorName = item.payee || 'Unknown';
     
     return (
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.expenseTitle} numberOfLines={1}>{vendorName}</Text>
-          <Text style={styles.subText}>
-            {new Date(expenseDate).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
-          </Text>
-        </View>
-        <Text style={styles.amount}>PHP {item.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
-      </View>
-      <View style={styles.badgeRow}>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{CATEGORY_OPTIONS.find(c => c.value === item.category)?.label || item.category}</Text>
-        </View>
-        {item.visibility === 'public_summary' && (
-          <View style={[styles.badge, { backgroundColor: '#E0F2FE' }]}>
-            <Text style={[styles.badgeText, { color: '#0369A1' }]}>Public</Text>
+    <SoftCard style={{ marginBottom: 16, borderRadius: 24 }} innerStyle={{ borderRadius: 23 }}>
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.expenseTitle} numberOfLines={1}>{vendorName}</Text>
+            <Text style={styles.subText}>
+              {new Date(expenseDate).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+            </Text>
           </View>
-        )}
+          <Text style={styles.amount}>PHP {item.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+        </View>
+        <View style={styles.badgeRow}>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{CATEGORY_OPTIONS.find(c => c.value === item.category)?.label || item.category}</Text>
+          </View>
+          {item.visibility === 'public_summary' && (
+            <View style={[styles.badge, { backgroundColor: '#E0F2FE' }]}>
+              <Text style={[styles.badgeText, { color: '#0369A1' }]}>Public</Text>
+            </View>
+          )}
+        </View>
       </View>
-    </View>
+    </SoftCard>
   );
   };
 
   return (
     <View style={styles.container}>
       <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 24) }]} pointerEvents="box-none">
-        <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+        <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} experimentalBlurMethod="dimezisBlurView" />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
         <View style={styles.headerContent}>
           <TouchableOpacity style={styles.headerCircle} onPress={() => router.back()}>
@@ -282,19 +285,17 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   headerCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.04,
     shadowRadius: 12,
-    elevation: 4,
+    elevation: 2,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.05)',
+    borderRadius: 20,
+    width: 40, height: 40,
+    alignItems: 'center', justifyContent: 'center',
   },
   headerTitle: {
     flex: 1,
@@ -312,16 +313,7 @@ const styles = StyleSheet.create({
   
   card: {
     backgroundColor: '#fff',
-    borderRadius: 24,
     padding: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.04,
-    shadowRadius: 24,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.03)',
   },
   cardHeader: {
     flexDirection: 'row',

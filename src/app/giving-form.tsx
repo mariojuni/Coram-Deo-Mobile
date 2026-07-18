@@ -177,7 +177,7 @@ export default function GivingFormScreen() {
       
       <View style={[styles.header, { paddingTop: insets.top + 10, paddingBottom: 16, position: 'absolute', width: '100%', zIndex: 10 }]}>
         <Animated.View style={[StyleSheet.absoluteFill, { opacity: headerOpacity }]}>
-          <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+          <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} experimentalBlurMethod="dimezisBlurView" />
           <View style={[StyleSheet.absoluteFill, { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.5)' }]} />
         </Animated.View>
         <View style={styles.headerContent}>
@@ -369,12 +369,17 @@ const styles = StyleSheet.create({
     pointerEvents: 'none',
   },
   backBtn: {
-    width: 40,
-    height: 40,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 40, height: 40,
+    alignItems: 'center', justifyContent: 'center',
     zIndex: 10,
   },
   content: { flex: 1, paddingHorizontal: 24 },

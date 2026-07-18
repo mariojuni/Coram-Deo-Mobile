@@ -8,6 +8,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SoftCard, getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 
 export default function GivingScreen() {
   const router = useRouter();
@@ -60,7 +61,7 @@ export default function GivingScreen() {
       
       <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 24) }]} pointerEvents="box-none">
         <Animated.View style={[StyleSheet.absoluteFill, { opacity: headerOpacity }]} pointerEvents="none">
-          <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+          <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} experimentalBlurMethod="dimezisBlurView" />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} />
         </Animated.View>
         <View style={styles.headerContent}>
@@ -87,33 +88,41 @@ export default function GivingScreen() {
         <View style={styles.quickGiveSection}>
           <Text style={styles.sectionTitle}>Support this Ministry</Text>
           <View style={styles.quickGiveGrid}>
-            <TouchableOpacity activeOpacity={0.8} style={styles.quickGiveCard} onPress={() => handleQuickGive('tithe')}>
-              <LinearGradient colors={['#FFF0F5', '#FFE8F1']} style={styles.quickGiveIconWrap}>
-                <Wallet size={20} color="#FF6596" />
-              </LinearGradient>
-              <Text style={styles.quickGiveText}>Tithe</Text>
-            </TouchableOpacity>
+            <SoftCard style={{ width: '48%', marginBottom: 12, borderRadius: 16 }} innerStyle={{ borderRadius: 15 }}>
+              <TouchableOpacity activeOpacity={0.8} style={styles.quickGiveCard} onPress={() => handleQuickGive('tithe')}>
+                <LinearGradient colors={['#FFF0F5', '#FFE8F1']} style={styles.quickGiveIconWrap}>
+                  <Wallet size={20} color="#FF6596" />
+                </LinearGradient>
+                <Text style={styles.quickGiveText}>Tithe</Text>
+              </TouchableOpacity>
+            </SoftCard>
             
-            <TouchableOpacity activeOpacity={0.8} style={styles.quickGiveCard} onPress={() => handleQuickGive('offering')}>
-              <LinearGradient colors={['#F0F5FF', '#E5EDFF']} style={styles.quickGiveIconWrap}>
-                <Heart size={20} color="#4D7FFF" />
-              </LinearGradient>
-              <Text style={styles.quickGiveText}>Offering</Text>
-            </TouchableOpacity>
+            <SoftCard style={{ width: '48%', marginBottom: 12, borderRadius: 16 }} innerStyle={{ borderRadius: 15 }}>
+              <TouchableOpacity activeOpacity={0.8} style={styles.quickGiveCard} onPress={() => handleQuickGive('offering')}>
+                <LinearGradient colors={['#F0F5FF', '#E5EDFF']} style={styles.quickGiveIconWrap}>
+                  <Heart size={20} color="#4D7FFF" />
+                </LinearGradient>
+                <Text style={styles.quickGiveText}>Offering</Text>
+              </TouchableOpacity>
+            </SoftCard>
             
-            <TouchableOpacity activeOpacity={0.8} style={styles.quickGiveCard} onPress={() => handleQuickGive('missions')}>
-              <LinearGradient colors={['#F5F0FF', '#EDE4FF']} style={styles.quickGiveIconWrap}>
-                <Globe size={20} color="#8B6FE8" />
-              </LinearGradient>
-              <Text style={styles.quickGiveText}>Missions</Text>
-            </TouchableOpacity>
+            <SoftCard style={{ width: '48%', marginBottom: 12, borderRadius: 16 }} innerStyle={{ borderRadius: 15 }}>
+              <TouchableOpacity activeOpacity={0.8} style={styles.quickGiveCard} onPress={() => handleQuickGive('missions')}>
+                <LinearGradient colors={['#F5F0FF', '#EDE4FF']} style={styles.quickGiveIconWrap}>
+                  <Globe size={20} color="#8B6FE8" />
+                </LinearGradient>
+                <Text style={styles.quickGiveText}>Missions</Text>
+              </TouchableOpacity>
+            </SoftCard>
             
-            <TouchableOpacity activeOpacity={0.8} style={styles.quickGiveCard} onPress={() => handleQuickGive('building')}>
-              <LinearGradient colors={['#F0FDF4', '#E1F9E8']} style={styles.quickGiveIconWrap}>
-                <Building2 size={20} color="#22C55E" />
-              </LinearGradient>
-              <Text style={styles.quickGiveText}>Building</Text>
-            </TouchableOpacity>
+            <SoftCard style={{ width: '48%', marginBottom: 12, borderRadius: 16 }} innerStyle={{ borderRadius: 15 }}>
+              <TouchableOpacity activeOpacity={0.8} style={styles.quickGiveCard} onPress={() => handleQuickGive('building')}>
+                <LinearGradient colors={['#F0FDF4', '#E1F9E8']} style={styles.quickGiveIconWrap}>
+                  <Building2 size={20} color="#22C55E" />
+                </LinearGradient>
+                <Text style={styles.quickGiveText}>Building</Text>
+              </TouchableOpacity>
+            </SoftCard>
           </View>
         </View>
 
@@ -160,11 +169,17 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   headerCircle: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+    borderRadius: 20,
+    width: 40, height: 40,
     alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3,
-    borderWidth: 1, borderColor: 'rgba(0,0,0,0.03)',
   },
   headerTitle: {
     fontSize: 18, fontWeight: '700', color: '#111827',
@@ -190,19 +205,11 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   quickGiveCard: {
-    width: '48%',
+    width: '100%',
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 16,
     paddingVertical: 12,
     paddingHorizontal: 12,
     alignItems: 'center',
-    shadowColor: '#FF6596',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.8)',
   },
   quickGiveIconWrap: {
     width: 40,
@@ -223,11 +230,6 @@ const styles = StyleSheet.create({
   },
   campaignWrapper: {
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 2,
   },
   emptyCampaigns: {
     padding: 32,
