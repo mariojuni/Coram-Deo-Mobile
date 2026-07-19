@@ -346,9 +346,6 @@ export default function GivingFormScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAFAFA' },
   header: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    paddingHorizontal: 16, 
   },
   headerContent: {
     flexDirection: 'row',

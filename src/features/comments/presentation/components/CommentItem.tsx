@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
-import { MoreHorizontal, User } from 'lucide-react-native';
+import { User } from 'lucide-react-native';
 import type { Comment } from '../../domain/comment.types';
 import { commentRepository } from '../../data/comment.repository';
 
@@ -93,44 +93,43 @@ export function CommentItem({
             <User size={16} color="#9CA3AF" />
           </View>
         )}
-        <View style={styles.contentBubble}>
+        <View style={styles.contentContainer}>
           <View style={styles.nameRow}>
             <Text style={styles.authorName}>{comment.authorDisplayName}</Text>
             {isHidden && <Text style={styles.hiddenBadge}>Hidden</Text>}
+            <Text style={styles.timeText}>· {getTimeAgo(comment.createdAt)}</Text>
           </View>
           <Text style={[styles.content, isDeleted && styles.deletedContent]}>
             {comment.content}
           </Text>
-        </View>
-      </View>
-      
-      <View style={styles.actionRow}>
-        <Text style={styles.timeText}>{getTimeAgo(comment.createdAt)}</Text>
-        
-        {!isDeleted && level === 0 && (
-          <TouchableOpacity onPress={() => onReply(comment)}>
-            <Text style={styles.actionText}>Reply</Text>
-          </TouchableOpacity>
-        )}
-        
-        {(!isDeleted && canDelete) && (
-          <TouchableOpacity onPress={() => onDelete(comment)}>
-            <Text style={styles.actionText}>Delete</Text>
-          </TouchableOpacity>
-        )}
+          
+          <View style={styles.actionRow}>
+            {!isDeleted && level === 0 && (
+              <TouchableOpacity onPress={() => onReply(comment)}>
+                <Text style={styles.actionText}>Reply</Text>
+              </TouchableOpacity>
+            )}
+            
+            {(!isDeleted && canDelete) && (
+              <TouchableOpacity onPress={() => onDelete(comment)}>
+                <Text style={styles.actionText}>Delete</Text>
+              </TouchableOpacity>
+            )}
 
-        {(!isDeleted && !isHidden && canModerate && onHide) && (
-          <TouchableOpacity onPress={() => onHide(comment)}>
-            <Text style={styles.actionText}>Hide</Text>
-          </TouchableOpacity>
-        )}
+            {(!isDeleted && !isHidden && canModerate && onHide) && (
+              <TouchableOpacity onPress={() => onHide(comment)}>
+                <Text style={styles.actionText}>Hide</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
       </View>
 
       {/* View Replies Button */}
       {comment.replyCount > 0 && level === 0 && (
         <TouchableOpacity style={styles.viewRepliesBtn} onPress={handleToggleReplies}>
           <Text style={styles.viewRepliesText}>
-            {showReplies ? 'Hide Replies' : `View ${comment.replyCount} ${comment.replyCount === 1 ? 'Reply' : 'Replies'}`}
+            {showReplies ? 'Hide replies' : `View ${comment.replyCount} ${comment.replyCount === 1 ? 'reply' : 'replies'}`}
           </Text>
         </TouchableOpacity>
       )}
@@ -168,31 +167,24 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    marginRight: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 8,
     backgroundColor: '#E5E7EB',
   },
-  contentBubble: {
-    backgroundColor: '#FFF',
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+  contentContainer: {
     flex: 1,
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
-    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.06)',
+    paddingTop: 2,
   },
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
-    gap: 6,
+    marginBottom: 2,
+    gap: 4,
   },
   authorName: {
-    fontWeight: '700',
+    fontWeight: '600',
     fontSize: 14,
     color: '#111827',
   },
@@ -205,10 +197,16 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     fontWeight: '600',
   },
+  timeText: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '400',
+  },
   content: {
     fontSize: 15,
     color: '#374151',
     lineHeight: 20,
+    marginBottom: 4,
   },
   deletedContent: {
     color: '#9CA3AF',
@@ -216,15 +214,9 @@ const styles = StyleSheet.create({
   },
   actionRow: {
     flexDirection: 'row',
-    marginLeft: 56, // avatar width (36) + margin (10) + some padding
-    marginTop: 4,
     gap: 16,
     alignItems: 'center',
-  },
-  timeText: {
-    fontSize: 13,
-    color: '#6B7280',
-    fontWeight: '500',
+    marginTop: 8,
   },
   actionText: {
     fontSize: 13,
@@ -232,19 +224,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   viewRepliesBtn: {
-    marginLeft: 56,
-    marginTop: 8,
+    marginLeft: 40,
+    marginTop: 4,
   },
   viewRepliesText: {
-    fontSize: 14,
-    color: '#4B5563',
-    fontWeight: '700',
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '600',
   },
   repliesContainer: {
     marginTop: 12,
   },
   loadingText: {
-    marginLeft: 56,
+    marginLeft: 40,
     fontSize: 13,
     color: '#9CA3AF',
   }

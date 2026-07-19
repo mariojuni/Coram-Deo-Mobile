@@ -14,11 +14,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "676505939287-958l4a2hlce405c945ms4o573schih5c.apps.googleusercontent.com",
+          "client_id": "676505939287-mtb6ts03c1iv04ue4lbt61mjli16p9a7.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.lifeconnect.church",
-            "certificate_hash": "fd9daa44f85fbc74cedc87c2fe7d31772c5bf0c8"
+            "certificate_hash": "281be4b2f07bfda22e05aa07f8ac1aa94d00b339"
           }
         },
         {

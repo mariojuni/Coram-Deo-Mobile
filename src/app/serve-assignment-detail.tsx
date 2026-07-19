@@ -39,8 +39,9 @@ export default function ServeAssignmentDetailScreen() {
   const insets = useSafeAreaInsets();
   const userProfile = useAuthStore((s) => s.userProfile);
   const memberAssignments = useMinistryStore((s) => s.memberAssignments);
+  const allAssignments = useMinistryStore((s) => s.assignments);
 
-  const assignment = memberAssignments.find((a) => a.id === id);
+  const assignment = memberAssignments.find((a) => a.id === id) || allAssignments.find((a) => a.id === id);
 
   const [confirmingSaving, setConfirmingSaving] = useState(false);
   const [declineModalOpen, setDeclineModalOpen] = useState(false);

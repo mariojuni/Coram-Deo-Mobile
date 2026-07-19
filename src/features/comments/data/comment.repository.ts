@@ -81,17 +81,25 @@ export const commentRepository = {
     };
 
     await runTransaction(db, async (transaction) => {
-      // If it's a reply, increment reply count on parent comment
+      let pDoc = null;
+      let parentCommentRef = null;
+
+      // 1. ALL READS FIRST
       if (data.parentCommentId) {
-        const parentCommentRef = doc(db, COMMENTS_COLLECTION, data.parentCommentId);
-        const pDoc = await transaction.get(parentCommentRef);
-        if (pDoc.exists()) {
-          transaction.update(parentCommentRef, { replyCount: (pDoc.data().replyCount || 0) + 1 });
-        }
+        parentCommentRef = doc(db, COMMENTS_COLLECTION, data.parentCommentId);
+        pDoc = await transaction.get(parentCommentRef);
       }
 
-      // Increment commentCount on parent target document (Sermon/PrayerRequest)
+      // Read parent target document (Sermon/PrayerRequest)
       const targetDoc = await transaction.get(parentDocRef);
+
+      // 2. ALL WRITES AFTER READS
+      // If it's a reply, increment reply count on parent comment
+      if (pDoc && pDoc.exists() && parentCommentRef) {
+        transaction.update(parentCommentRef, { replyCount: (pDoc.data().replyCount || 0) + 1 });
+      }
+
+      // Increment commentCount on parent target document
       if (targetDoc.exists()) {
         transaction.update(parentDocRef, { commentCount: (targetDoc.data().commentCount || 0) + 1 });
       }

@@ -2,7 +2,7 @@ import { useBibleReader } from '@/features/bible/presentation/hooks/useBibleRead
 import { useUIStore } from '@/store/useUIStore';
 import { ChevronLeft, ChevronRight, Copy, X } from 'lucide-react-native';
 import { useEffect, useMemo, useRef } from 'react';
-import { getSoftShadowStyle } from '@/components/ui/SoftCard';
+import { getSoftShadowStyle, getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 import { ActivityIndicator, Animated, NativeScrollEvent, NativeSyntheticEvent, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface BibleReaderProps {
@@ -314,19 +314,15 @@ const styles = StyleSheet.create({  container: { flex: 1, backgroundColor: '#faf
     justifyContent: 'center',
   },
   actionToolbar: {
+    ...getTopBarButtonShadowStyle(100),
     position: 'absolute',
     bottom: 100, // Above the floating tab bar
     alignSelf: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 100,
-    boxShadow: '0px 10px 20px rgba(0, 0, 0, 0.15)',
     padding: 8,
     paddingHorizontal: 16,
     zIndex: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e1e4e8',
   },
   copyBtn: {
     flexDirection: 'row',

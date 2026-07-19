@@ -139,7 +139,7 @@ export default function RootLayout() {
             <Stack.Screen name="more" options={{ headerShown: false }} />
             <Stack.Screen name="giving" options={{ headerShown: false }} />
             <Stack.Screen name="giving-campaign-detail" options={{ headerShown: false }} />
-            <Stack.Screen name="giving-form" options={{ presentation: 'modal', headerShown: false }} />
+            <Stack.Screen name="giving-form" options={{ headerShown: false }} />
             <Stack.Screen name="version-manager" options={{ presentation: 'modal', headerShown: false }} />
             <Stack.Screen name="audio-player" options={{ presentation: 'modal', headerShown: false }} />
             <Stack.Screen name="sermon-watch" options={{ headerShown: false }} />
