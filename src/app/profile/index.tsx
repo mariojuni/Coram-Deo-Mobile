@@ -3,6 +3,7 @@ import { ChevronRight, LogOut, Shield, User, BookOpen, Activity, Settings, Camer
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert, Dimensions, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
+import { getSoftShadowStyle, getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 import { useAuthStore } from '@/store/useAuthStore';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useRef } from 'react';
@@ -210,19 +211,11 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   headerCircle: {
+    ...getTopBarButtonShadowStyle(20),
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
   },
   headerTitle: {
     flex: 1,
@@ -234,16 +227,10 @@ const styles = StyleSheet.create({
   },
 
   profileCard: {
-    borderRadius: 24,
+    ...(getSoftShadowStyle(24) as any),
     padding: 24,
     alignItems: 'center',
     marginBottom: 32,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.05,
-    shadowRadius: 20,
-    elevation: 4,
-    borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.8)',
   },
   avatarContainer: {
@@ -296,16 +283,8 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 14, fontWeight: '700', color: '#6B7280', textTransform: 'uppercase', letterSpacing: 0.5 },
   
   cardGroup: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    ...(getSoftShadowStyle(20) as any),
     paddingVertical: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.03,
-    shadowRadius: 10,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.02)',
   },
   row: {
     flexDirection: 'row',

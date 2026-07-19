@@ -3,6 +3,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Play, Pause, Headphones, X } from 'lucide-react-native';
+import { getSoftShadowStyle } from '@/components/ui/SoftCard';
 import type { SermonPlaybackProgress } from '../../domain/sermon.types';
 import type { Sermon } from '../../domain/sermon.types';
 
@@ -99,12 +100,8 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   touchable: {
+    ...(getSoftShadowStyle(20) as any),
     width: '100%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 8,
   },
   card: {
     backgroundColor: 'rgba(255,255,255,0.65)',

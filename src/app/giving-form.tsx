@@ -9,7 +9,7 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
-import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
+import { getSoftShadowStyle, getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 
 
 export default function GivingFormScreen() {
@@ -410,18 +410,10 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   amountInputWrap: {
+    ...getSoftShadowStyle(20),
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
     paddingHorizontal: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.02,
-    shadowRadius: 8,
-    elevation: 1,
   },
   currencySymbol: {
     fontSize: 28,
@@ -437,18 +429,10 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   textInput: {
+    ...(getSoftShadowStyle(16) as any),
     fontSize: 16,
     color: '#1a1a1a',
-    backgroundColor: '#fff',
-    borderRadius: 16,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.02,
-    shadowRadius: 8,
-    elevation: 1,
   },
   textArea: {
     height: 120,
@@ -459,18 +443,10 @@ const styles = StyleSheet.create({
     overflow: 'visible',
   },
   pill: {
+    ...getSoftShadowStyle(24),
     paddingHorizontal: 20,
     paddingVertical: 14,
-    backgroundColor: '#fff',
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
     marginRight: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.02,
-    shadowRadius: 4,
-    elevation: 1,
   },
   pillActive: {
     borderColor: 'transparent',

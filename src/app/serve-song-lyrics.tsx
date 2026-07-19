@@ -18,7 +18,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getTopBarButtonShadowStyle, SoftCard } from '@/components/ui/SoftCard';
+import { getSoftShadowStyle, getTopBarButtonShadowStyle, SoftCard } from '@/components/ui/SoftCard';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -439,12 +439,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   activeTabButton: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    ...(getSoftShadowStyle(12) as any),
   },
   tabText: {
     fontSize: 15,
@@ -455,17 +450,13 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
   bodyContainer: {
+    ...(getSoftShadowStyle() as any),
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 36,
     borderTopRightRadius: 36,
     minHeight: SCREEN_HEIGHT,
     padding: 24,
     paddingTop: 32,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -8 },
-    shadowOpacity: 0.05,
-    shadowRadius: 16,
-    elevation: 10,
   },
   lyricsCard: {
     paddingHorizontal: 24,
