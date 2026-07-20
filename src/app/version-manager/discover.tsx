@@ -1,5 +1,6 @@
 
 import { fetchBiblesByLanguage } from '@/features/bible/data/bible.repository';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, ChevronRight, Cloud, Globe, Search } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
@@ -43,9 +44,9 @@ export default function DiscoverVersionsScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
       <View style={styles.modalHeader}>
         <View style={styles.headerLeftContainer}>
-          <TouchableOpacity onPress={() => router.back()} style={{ padding: 8 }}>
+          <BounceCard bounceScale={0.85} onPress={() => router.back()} style={{ padding: 8 }}>
             <ChevronLeft size={24} color="#1a1a1a" />
-          </TouchableOpacity>
+          </BounceCard>
         </View>
         <Text style={styles.modalTitle}>Discover Versions</Text>
         <View style={styles.headerRightContainer} />

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -87,13 +88,13 @@ export function DiscipleshipWeekScreen({ planId, weekId }: Props) {
         />
 
         <View style={styles.headerRow}>
-          <TouchableOpacity 
+          <BounceCard bounceScale={0.85} 
             style={styles.backButton} 
             onPress={() => router.back()}
             activeOpacity={0.7}
           >
             <ArrowLeft size={24} color="#1a1a1a" />
-          </TouchableOpacity>
+          </BounceCard>
           <Text style={styles.headerTitle}>Week {currentWeek.weekNumber}</Text>
           <View style={{ width: 44 }} />
         </View>

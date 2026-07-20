@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Animated } from 'react-native';
 import { ChevronLeft, History, Heart, Globe, Building2, Wallet } from 'lucide-react-native';
 import { useRouter, Stack } from 'expo-router';
@@ -24,9 +25,9 @@ export default function GivingScreen() {
         <LinearGradient colors={['#FFE8F1', '#F9FAFB']} style={StyleSheet.absoluteFill} />
         <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 24) }]}>
           <View style={styles.headerContent}>
-            <TouchableOpacity style={styles.headerCircle} onPress={() => router.back()}>
+            <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => router.back()}>
               <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
-            </TouchableOpacity>
+            </BounceCard>
             <Text style={styles.headerTitle} numberOfLines={1}>Giving</Text>
             <View style={[styles.headerCircle, { backgroundColor: 'transparent', borderWidth: 0, elevation: 0 }]} />
           </View>
@@ -65,9 +66,9 @@ export default function GivingScreen() {
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} />
         </Animated.View>
         <View style={styles.headerContent}>
-          <TouchableOpacity style={styles.headerCircle} onPress={() => router.back()}>
+          <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => router.back()}>
             <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
-          </TouchableOpacity>
+          </BounceCard>
           <Animated.Text style={[styles.headerTitle, { opacity: headerOpacity }]} numberOfLines={1}>
             Giving
           </Animated.Text>

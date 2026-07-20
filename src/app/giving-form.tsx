@@ -1,15 +1,16 @@
 import React, { useState, useRef } from 'react';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Animated } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { ChevronLeft, Upload, CheckCircle2 } from 'lucide-react-native';
-import { useAuthStore } from '@/store/useAuthStore';
-import { useGiving } from '@/features/giving/presentation/hooks/useGiving';
-import { submitGivingRecord, uploadProofOfPayment } from '@/features/giving/data/giving.repository';
+import { useAuthStore } from '../store/useAuthStore';
+import { useGiving } from '../features/giving/presentation/hooks/useGiving';
+import { submitGivingRecord, uploadProofOfPayment } from '../features/giving/data/giving.repository';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
-import { getSoftShadowStyle, getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
+import { getSoftShadowStyle, getTopBarButtonShadowStyle } from '../components/ui/SoftCard';
 
 
 export default function GivingFormScreen() {
@@ -34,7 +35,7 @@ export default function GivingFormScreen() {
 
   React.useEffect(() => {
     if (fundType && funds.length > 0 && !selectedFundId) {
-      const fund = funds.find(f => f.type === fundType || f.name.toLowerCase() === (fundType as string).toLowerCase());
+      const fund = funds.find((f: any) => f.type === fundType || f.name.toLowerCase() === (fundType as string).toLowerCase());
       if (fund) {
         setSelectedFundId(fund.id);
       }
@@ -45,7 +46,7 @@ export default function GivingFormScreen() {
   const userId = currentUser?.uid;
 
   const requiresProof = ['gcash', 'maya', 'bank_transfer'].includes(
-    paymentMethods.find(m => m.id === selectedPaymentMethod)?.type || ''
+    paymentMethods.find((m: any) => m.id === selectedPaymentMethod)?.type || ''
   );
 
   const pickImage = async () => {
@@ -112,7 +113,7 @@ export default function GivingFormScreen() {
         uploadedProofUrl = await uploadProofOfPayment(churchId, userId, proofUri);
       }
 
-      const method = paymentMethods.find(m => m.id === selectedPaymentMethod);
+      const method = paymentMethods.find((m: any) => m.id === selectedPaymentMethod);
 
       await submitGivingRecord({
         churchId,
@@ -162,7 +163,7 @@ export default function GivingFormScreen() {
     );
   }
 
-  const selectedCampaign = campaigns.find(c => c.id === campaignId);
+  const selectedCampaign = campaigns.find((c: any) => c.id === campaignId);
   const isCampaignInactive = Boolean(campaignId && !selectedCampaign);
 
   const headerOpacity = scrollY.interpolate({
@@ -182,9 +183,9 @@ export default function GivingFormScreen() {
           <View style={[StyleSheet.absoluteFill, { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.5)' }]} />
         </Animated.View>
         <View style={styles.headerContent}>
-          <TouchableOpacity style={styles.backBtn} onPress={withDebounce(() => router.back())}>
+          <BounceCard bounceScale={0.85} style={styles.backBtn} onPress={withDebounce(() => router.back())}>
             <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
-          </TouchableOpacity>
+          </BounceCard>
           <Animated.Text style={[styles.headerTitleCenter, { opacity: headerOpacity }]}>
             Make a Gift
           </Animated.Text>
@@ -232,7 +233,7 @@ export default function GivingFormScreen() {
         <View style={styles.formGroup}>
           <Text style={styles.label}>Fund</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-            {funds.map((fund) => {
+            {funds.map((fund: any) => {
               const isActive = selectedFundId === fund.id;
               return (
                 <TouchableOpacity
@@ -254,7 +255,7 @@ export default function GivingFormScreen() {
         <View style={styles.formGroup}>
           <Text style={styles.label}>Payment Method</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-            {paymentMethods.map((method) => {
+            {paymentMethods.map((method: any) => {
               const isActive = selectedPaymentMethod === method.id;
               return (
                 <TouchableOpacity

@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Share } from 'react-native';
 import { Image } from 'expo-image';
 import { Stack, useRouter } from 'expo-router';
@@ -119,9 +120,9 @@ export function BirthdaysScreen() {
                     <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
                     <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
                     <View style={styles.headerContent}>
-                        <TouchableOpacity style={styles.headerCircle} onPress={() => router.back()} hitSlop={8}>
+                        <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => router.back()} hitSlop={8}>
                             <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
-                        </TouchableOpacity>
+                        </BounceCard>
                         <Text style={styles.headerTitle} numberOfLines={1}>Birthdays</Text>
                         <View style={[styles.headerCircle, { backgroundColor: 'transparent', borderWidth: 0, elevation: 0 }]} />
                     </View>

@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useSermonStore } from '@/store/useSermonStore';
 import { useSermonPlaybackStore } from '@/store/useSermonPlaybackStore';
@@ -171,14 +172,14 @@ export function SermonsExperience({ searchQuery, showSearchInput = true }: Sermo
                   autoFocus
                   autoCorrect={false}
                 />
-                <TouchableOpacity
+                <BounceCard bounceScale={0.85}
                   onPress={() => {
                     setLocalSearch('');
                     setSearchOpen(false);
                   }}
                 >
                   <X size={18} color="#9CA3AF" />
-                </TouchableOpacity>
+                </BounceCard>
               </View>
             ) : (
               <TouchableOpacity

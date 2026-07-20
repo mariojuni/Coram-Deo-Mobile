@@ -1,5 +1,6 @@
 
 import { useRouter } from 'expo-router';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { Plus, Settings } from 'lucide-react-native';
 import { ActionSheetIOS, Alert, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -91,7 +92,7 @@ export default function MyVersionsScreen() {
               const abbr = String(version.local_abbreviation || version.abbreviation || version.id || '').replace(/(\d{2,})$/, '\n$1');
               
               return (
-                <TouchableOpacity
+                <BounceCard bounceScale={0.85}
                   key={version.id}
                   style={[
                     styles.myVersionsListItem,
@@ -116,7 +117,7 @@ export default function MyVersionsScreen() {
                       {version.title || version.local_title}
                     </Text>
                   </View>
-                </TouchableOpacity>
+                </BounceCard>
               );
             })
           )}

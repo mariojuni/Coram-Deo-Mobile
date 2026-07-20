@@ -1,4 +1,5 @@
 import type { BiblePlan } from '@/features/biblePlan/domain/biblePlan.types';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { useBiblePlans } from '@/features/biblePlan/presentation/hooks/useBiblePlans';
 import { useUserBiblePlans } from '@/features/biblePlan/presentation/hooks/useUserBiblePlans';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -219,9 +220,9 @@ export default function BiblePlansScreen() {
     <View style={styles.container}>
       <LinearGradient colors={GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
         <View style={[styles.heroContent, { paddingTop: Math.max(insets.top, 24) }]}>
-          <Pressable style={styles.backButton} onPress={() => router.back()}>
+          <BounceCard bounceScale={0.85} style={styles.backButton} onPress={() => router.back()}>
             <ChevronLeft size={22} color="#1F2937" strokeWidth={2.6} />
-          </Pressable>
+          </BounceCard>
 
           <View style={styles.heroTextWrap}>
             <Text style={styles.heroTitle}>Bible Plans</Text>

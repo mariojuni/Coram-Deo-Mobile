@@ -1,6 +1,7 @@
 import { sermonRepository } from "../../data/sermon.repository";
 
 import { useEffect, useState, useRef } from 'react';
+import { BounceCard } from '@/components/ui/BounceCard';
 import {
   View,
   Text,
@@ -177,12 +178,12 @@ export function SermonWatchScreen() {
         <Stack.Screen options={{ headerShown: false }} />
         {/* Black video area placeholder with back button */}
         <View style={[styles.playerWrapper, { paddingTop: insets.top, height: (insets.top + 220) }]}>
-          <TouchableOpacity
+          <BounceCard bounceScale={0.85}
             style={[styles.backBtn, { top: insets.top + 8 }]}
             onPress={() => router.back()}
           >
             <ArrowLeft size={20} color="#fff" />
-          </TouchableOpacity>
+          </BounceCard>
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             <ActivityIndicator size="large" color="#fff" />
           </View>
@@ -205,7 +206,7 @@ export function SermonWatchScreen() {
       {hasVideo ? (
         <View style={[styles.playerWrapper, { paddingTop: insets.top }]}>
           {/* Back button overlay */}
-          <TouchableOpacity
+          <BounceCard bounceScale={0.85}
             style={[styles.backBtn, { top: insets.top + 8 }]}
             onPress={() => {
               if (progressInterval.current) clearTimeout(progressInterval.current);
@@ -213,7 +214,7 @@ export function SermonWatchScreen() {
             }}
           >
             <ArrowLeft size={20} color="#fff" />
-          </TouchableOpacity>
+          </BounceCard>
 
           <SermonVideoPlayer
             sermon={currentSermon}
@@ -237,12 +238,12 @@ export function SermonWatchScreen() {
       ) : (
         // Audio-only: show back button in top bar
         <View style={[styles.audioHeader, { paddingTop: insets.top + 8 }]}>
-          <TouchableOpacity
+          <BounceCard bounceScale={0.85}
             style={styles.audioBackBtn}
             onPress={() => router.back()}
           >
             <ArrowLeft size={20} color={NAVY} />
-          </TouchableOpacity>
+          </BounceCard>
           <Text style={styles.audioHeaderTitle} numberOfLines={1}>
             {currentSermon.title}
           </Text>

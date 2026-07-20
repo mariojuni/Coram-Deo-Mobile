@@ -2,13 +2,17 @@ import { useCallback, useEffect, useState } from 'react';
 import { scheduleRepository } from '../../data/schedule.repository';
 import type { Rsvp, Schedule } from '../../domain/schedule.types';
 
+import { useAuthStore } from '@/store/useAuthStore';
+
 export function useScheduleFeed() {
+  const { userProfile } = useAuthStore();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [schedulesLoading, setSchedulesLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = scheduleRepository.subscribeToSchedules(
-      (nextSchedules) => {
+      userProfile?.churchId,
+      (nextSchedules: Schedule[]) => {
         setSchedules(nextSchedules);
         setSchedulesLoading(false);
       },
@@ -19,7 +23,7 @@ export function useScheduleFeed() {
     );
 
     return unsubscribe;
-  }, []);
+  }, [userProfile?.churchId]);
 
   const updateRsvp = useCallback(async (eventId: string, userId: string, status: Rsvp['status']) => {
     await scheduleRepository.updateRsvp(eventId, userId, status);

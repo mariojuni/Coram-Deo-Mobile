@@ -1,4 +1,5 @@
 import { X } from 'lucide-react-native';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { ReactNode, useEffect, useMemo } from 'react';
 import { Animated, Modal, StyleProp, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -54,9 +55,9 @@ export default function AppModal({ isOpen, onClose, title, children, containerSt
               
               <View style={[styles.headerSide, { alignItems: 'flex-end', flexDirection: 'row', justifyContent: 'flex-end', gap: 16 }]}>
                 {headerRight}
-                <TouchableOpacity onPress={onClose} style={styles.iconBtn}>
+                <BounceCard bounceScale={0.85} onPress={onClose} style={styles.iconBtn}>
                   <X size={24} color="#1a1a1a" />
-                </TouchableOpacity>
+                </BounceCard>
               </View>
             </View>
           )}

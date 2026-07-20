@@ -62,9 +62,13 @@ export default function GivingCampaignDetailScreen() {
         <Stack.Screen options={{ headerShown: false }} />
         <LinearGradient colors={['#FFE8F1', '#F5F2FF', '#FAFAFA']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0.3 }} style={StyleSheet.absoluteFill} />
         
-        <TouchableOpacity style={[styles.backBtn, { top: Math.max(insets.top, 24) }]} onPress={() => router.back()}>
-          <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
-        </TouchableOpacity>
+        <View style={[styles.headerFloating, { paddingTop: Math.max(insets.top, 24), zIndex: 10 }]}>
+          <View style={styles.headerContent}>
+            <BounceCard style={styles.backBtn} onPress={() => router.back()}>
+              <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
+            </BounceCard>
+          </View>
+        </View>
         
         <Animated.ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           <ShimmerSkeleton width="100%" height={280} borderRadius={0} />
@@ -87,9 +91,13 @@ export default function GivingCampaignDetailScreen() {
         <Stack.Screen options={{ headerShown: false }} />
         <LinearGradient colors={['#FFE8F1', '#F9FAFB']} style={StyleSheet.absoluteFill} />
         
-        <TouchableOpacity style={[styles.backBtn, { top: Math.max(insets.top, 24) }]} onPress={() => router.back()}>
-          <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
-        </TouchableOpacity>
+        <View style={[styles.headerFloating, { paddingTop: Math.max(insets.top, 24), zIndex: 10 }]}>
+          <View style={styles.headerContent}>
+            <BounceCard style={styles.backBtn} onPress={() => router.back()}>
+              <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
+            </BounceCard>
+          </View>
+        </View>
         
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>Campaign not found</Text>

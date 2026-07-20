@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { View, Text, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
 import { Play, Pause, X } from 'lucide-react-native';
 import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
@@ -80,7 +81,7 @@ export function MiniAudioPlayer({ onPlayPause, onClose }: MiniAudioPlayerProps) 
           </View>
         </View>
 
-        <Pressable 
+        <BounceCard bounceScale={0.85} 
           onPress={handleExpand}
           style={[styles.content, { backgroundColor: colorScheme === 'dark' ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.4)' }]}
         >
@@ -128,7 +129,7 @@ export function MiniAudioPlayer({ onPlayPause, onClose }: MiniAudioPlayerProps) 
               <X size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
-        </Pressable>
+        </BounceCard>
       </View>
     </Animated.View>
   );

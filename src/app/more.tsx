@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { BarChart2, BookOpen, ChevronLeft, ChevronRight, ListChecks, MessageCircle, Settings, Users, Wallet } from 'lucide-react-native';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuthStore } from '../store/useAuthStore';
@@ -23,10 +24,10 @@ export default function MoreScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+        <BounceCard bounceScale={0.85} style={styles.backBtn} onPress={() => router.back()}>
           <ChevronLeft size={24} color="#1a1a1a" />
           <Text style={styles.title}>More</Text>
-        </TouchableOpacity>
+        </BounceCard>
       </View>
       
       <ScrollView style={styles.content}>

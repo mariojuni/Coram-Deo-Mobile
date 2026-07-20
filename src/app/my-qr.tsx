@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { Save, X } from 'lucide-react-native';
 import { Image, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,9 +22,9 @@ export default function MyQRScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Check-in QR Pass</Text>
-        <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()}>
+        <BounceCard bounceScale={0.85} style={styles.closeBtn} onPress={() => router.back()}>
           <X size={20} color="#1a1a1a" />
-        </TouchableOpacity>
+        </BounceCard>
       </View>
 
       <Text style={styles.subtitle}>
@@ -42,9 +43,9 @@ export default function MyQRScreen() {
           <Save size={16} color="#007AFF" />
           <Text style={styles.saveBtnText}>Save to Gallery</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.doneBtn} onPress={() => router.back()}>
+        <BounceCard bounceScale={0.85} style={styles.doneBtn} onPress={() => router.back()}>
           <Text style={styles.doneBtnText}>Done</Text>
-        </TouchableOpacity>
+        </BounceCard>
       </View>
 
 

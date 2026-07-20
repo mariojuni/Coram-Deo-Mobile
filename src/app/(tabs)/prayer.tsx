@@ -1,4 +1,5 @@
 import { BlurView } from 'expo-blur';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { HeartHandshake, Search, X, Pencil, Trash2, MoreHorizontal, User, CheckCircle2, MessageCircle } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert, ActionSheetIOS, Platform, Image } from 'react-native';
@@ -61,12 +62,12 @@ export default function PrayerScreen() {
           <Text style={styles.title}>Prayers</Text>
         )}
 
-        <TouchableOpacity 
+        <BounceCard bounceScale={0.85} 
           style={styles.searchButton}
           onPress={() => setIsSearchOpen(!isSearchOpen)}
         >
           {isSearchOpen ? <X size={20} color="#1a1a1a" /> : <Search size={20} color="#1a1a1a" />}
-        </TouchableOpacity>
+        </BounceCard>
       </View>
 
       <View style={styles.filterContainer}>

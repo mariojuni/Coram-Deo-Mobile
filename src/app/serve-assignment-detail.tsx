@@ -1,4 +1,5 @@
 import { ministryRepository } from '@/features/ministry/data/ministry.repository';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { DeclineModal } from '@/features/serve/presentation/components/DeclineModal';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useMinistryStore } from '@/store/useMinistryStore';
@@ -58,9 +59,9 @@ export default function ServeAssignmentDetailScreen() {
     return (
       <View style={[styles.screen, { backgroundColor: '#FAFAFA' }]}>
         <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <BounceCard bounceScale={0.85} style={styles.backBtn} onPress={() => router.back()}>
             <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
-          </TouchableOpacity>
+          </BounceCard>
         </View>
         <View style={styles.notFound}>
           <AlertCircle size={48} color="#EF4444" />
@@ -190,9 +191,9 @@ export default function ServeAssignmentDetailScreen() {
         </Animated.View>
 
         <View style={[styles.headerContent, { paddingTop: Math.max(insets.top, 20) }]}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.8} hitSlop={8}>
+          <BounceCard bounceScale={0.85} style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.8} hitSlop={8}>
             <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
-          </TouchableOpacity>
+          </BounceCard>
         </View>
       </View>
 

@@ -1,4 +1,5 @@
 import React from 'react';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { CalendarDays, CheckCircle2, HelpCircle, XCircle, X } from 'lucide-react-native';
 import { Platform, ScrollView } from 'react-native';
@@ -83,9 +84,9 @@ export function EventDetailsModal({
           <View style={styles.headerContent}>
             <View style={styles.headerCirclePlaceholder} />
             <Text style={styles.headerTitle}>{event.title || 'Event Details'}</Text>
-            <TouchableOpacity style={styles.headerCircle} onPress={onClose} hitSlop={8} activeOpacity={0.8}>
+            <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={onClose} hitSlop={8} activeOpacity={0.8}>
               <X size={24} color="#111827" strokeWidth={2} />
-            </TouchableOpacity>
+            </BounceCard>
           </View>
         </View>
 

@@ -1,4 +1,5 @@
 import { DownloadsScreen } from '@/features/sermons/presentation/screens/DownloadsScreen';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { Stack, useRouter } from 'expo-router';
 import { View, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,9 +16,9 @@ export default function DownloadsRoute() {
         }} 
       />
       <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 5 }}>
-        <TouchableOpacity onPress={() => router.back()} style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <BounceCard bounceScale={0.85} onPress={() => router.back()} style={{ flexDirection: 'row', alignItems: 'center' }}>
           <ChevronLeft size={24} color="#1a1a1a" />
-        </TouchableOpacity>
+        </BounceCard>
       </View>
       <DownloadsScreen />
     </SafeAreaView>

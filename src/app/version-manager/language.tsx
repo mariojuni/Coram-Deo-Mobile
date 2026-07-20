@@ -1,5 +1,6 @@
 
 import { useVersionContext } from '@/features/bible/presentation/context/VersionManagerContext';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { styles } from '@/features/bible/presentation/version-manager/styles';
 import { useRouter } from 'expo-router';
 import { Check, ChevronLeft, Search } from 'lucide-react-native';
@@ -27,9 +28,9 @@ export default function LanguageSelectScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
       <View style={styles.modalHeader}>
         <View style={styles.headerLeftContainer}>
-          <TouchableOpacity onPress={() => router.back()} style={{ padding: 8 }}>
+          <BounceCard bounceScale={0.85} onPress={() => router.back()} style={{ padding: 8 }}>
             <ChevronLeft size={24} color="#1a1a1a" />
-          </TouchableOpacity>
+          </BounceCard>
         </View>
         <Text style={styles.modalTitle}>Languages</Text>
         <View style={styles.headerRightContainer} />

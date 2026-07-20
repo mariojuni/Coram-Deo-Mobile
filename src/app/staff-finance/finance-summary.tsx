@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, ScrollView } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -52,9 +53,9 @@ export default function FinanceSummaryScreen() {
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} experimentalBlurMethod="dimezisBlurView" />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
         <View style={styles.headerContent}>
-          <TouchableOpacity style={styles.headerCircle} onPress={() => router.back()}>
+          <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => router.back()}>
             <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
-          </TouchableOpacity>
+          </BounceCard>
           <Text style={styles.headerTitle} numberOfLines={1}>Finance Summary</Text>
           <View style={{ width: 40 }} />
         </View>

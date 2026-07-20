@@ -1,4 +1,5 @@
 import type { BiblePlanDay } from '@/features/biblePlan/domain/biblePlan.types';
+import { BounceCard } from '@/components/ui/BounceCard';
 import PlanUpdateModal from '@/features/biblePlan/presentation/components/PlanUpdateModal';
 import { useBiblePlanDetail } from '@/features/biblePlan/presentation/hooks/useBiblePlanDetail';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -354,9 +355,9 @@ export default function BiblePlanDetailScreen() {
           <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
           <View style={styles.headerContent}>
-            <Pressable style={styles.headerCircle} onPress={() => router.back()} hitSlop={8}>
+            <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => router.back()} hitSlop={8}>
               <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
-            </Pressable>
+            </BounceCard>
             <Text style={styles.headerTitle} numberOfLines={1}>Bible Plan</Text>
             {isStarted && !isCompleted && userBiblePlan ? (
               <Pressable style={styles.headerCircle} onPress={handlePlanOptions} hitSlop={8}>

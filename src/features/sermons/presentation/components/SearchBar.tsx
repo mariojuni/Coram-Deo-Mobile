@@ -1,4 +1,5 @@
 import { View, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { Search, X } from 'lucide-react-native';
 import { useTheme } from '@/hooks/use-theme';
 import { Spacing } from '@/constants/theme';
@@ -34,13 +35,13 @@ export function SearchBar({ value, onChangeText, onClear, placeholder = 'Search 
       />
 
       {value.length > 0 && (
-        <TouchableOpacity
+        <BounceCard bounceScale={0.85}
           onPress={onClear}
           style={styles.clearButton}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <X size={18} color={colors.textSecondary} />
-        </TouchableOpacity>
+        </BounceCard>
       )}
     </View>
   );

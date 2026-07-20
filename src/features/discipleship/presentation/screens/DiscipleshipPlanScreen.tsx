@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Image, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -59,13 +60,13 @@ export function DiscipleshipPlanScreen({ planId }: Props) {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity 
+      <BounceCard bounceScale={0.85} 
         style={[styles.backButton, { top: Math.max(insets.top, 20) }]}
         onPress={() => router.back()}
       >
         <BlurView intensity={60} tint="light" style={StyleSheet.absoluteFill} />
         <ArrowLeft size={24} color="#111827" />
-      </TouchableOpacity>
+      </BounceCard>
 
       <FlatList
         data={weeks}

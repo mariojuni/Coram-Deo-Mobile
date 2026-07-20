@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, ActivityIndicator, Share, Animated } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -130,9 +131,9 @@ export default function HighlightedVersesScreen() {
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.7)' }]} pointerEvents="none" />
         <View style={styles.headerContent}>
-          <TouchableOpacity style={styles.headerCircle} onPress={() => router.back()} hitSlop={8} activeOpacity={0.8}>
+          <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => router.back()} hitSlop={8} activeOpacity={0.8}>
             <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
-          </TouchableOpacity>
+          </BounceCard>
           <Text style={styles.headerTitle} numberOfLines={1}>Highlighted Verses</Text>
           <View style={[styles.headerCircle, { backgroundColor: 'transparent', borderWidth: 0, elevation: 0 }]} />
         </View>

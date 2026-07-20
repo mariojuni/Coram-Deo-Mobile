@@ -1,4 +1,5 @@
 import { useAuthStore } from '@/store/useAuthStore';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { useMinistryApplicationStore } from '@/store/useMinistryApplicationStore';
 import { useMinistryStore } from '@/store/useMinistryStore';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -122,9 +123,9 @@ export default function MinistryApplicationScreen() {
           <Text style={styles.successBody}>
             Your ministry application has been submitted.{'\n'}The ministry leader will review it shortly.
           </Text>
-          <TouchableOpacity style={styles.doneBtn} onPress={() => router.back()}>
+          <BounceCard bounceScale={0.85} style={styles.doneBtn} onPress={() => router.back()}>
             <Text style={styles.doneBtnText}>Done</Text>
-          </TouchableOpacity>
+          </BounceCard>
         </View>
       </View>
     );
@@ -142,9 +143,9 @@ export default function MinistryApplicationScreen() {
         end={{ x: 1, y: 1 }}
         style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}
       >
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+        <BounceCard bounceScale={0.85} style={styles.backBtn} onPress={() => router.back()}>
           <ArrowLeft size={22} color="#1a1a1a" />
-        </TouchableOpacity>
+        </BounceCard>
         <View style={styles.headerText}>
           <Text style={styles.headerTitle}>Apply to Join</Text>
           {ministry ? (

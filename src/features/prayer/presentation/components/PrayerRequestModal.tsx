@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { 
   View, Text, StyleSheet, TextInput, Switch, TouchableOpacity, 
   ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform, Alert, Keyboard 
@@ -157,9 +158,9 @@ export default function PrayerRequestModal({ isOpen, onClose, initialData }: Pra
           <View style={styles.headerContent}>
             <View style={styles.headerCirclePlaceholder} />
             <Text style={styles.headerTitle}>{initialData ? "Edit Prayer Request" : "Submit Prayer Request"}</Text>
-            <TouchableOpacity style={styles.headerCircle} onPress={handleClose} hitSlop={8} activeOpacity={0.8}>
+            <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={handleClose} hitSlop={8} activeOpacity={0.8}>
               <X size={24} color="#111827" strokeWidth={2} />
-            </TouchableOpacity>
+            </BounceCard>
           </View>
         </View>
 

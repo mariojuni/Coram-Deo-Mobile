@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, ActivityIndicator } from 'react-native';
 import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft, CheckCircle2, Clock, XCircle, FileText, X } from 'lucide-react-native';
@@ -69,7 +70,7 @@ export default function MyGivingScreen() {
       
       <BlurView intensity={80} tint="light" style={[styles.header, { paddingTop: Math.max(insets.top, 24) }]} experimentalBlurMethod="dimezisBlurView">
         <View style={styles.headerInner}>
-          <TouchableOpacity 
+          <BounceCard bounceScale={0.85} 
             style={styles.backBtnCircle} 
             onPress={() => {
               if (fromSuccess) {
@@ -84,7 +85,7 @@ export default function MyGivingScreen() {
             ) : (
               <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
             )}
-          </TouchableOpacity>
+          </BounceCard>
           <Text style={styles.headerTitle}>My Giving History</Text>
           <View style={{ width: 40 }} />
         </View>

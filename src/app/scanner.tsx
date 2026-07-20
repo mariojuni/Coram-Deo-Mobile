@@ -1,4 +1,5 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { useRouter } from 'expo-router';
 import { addDoc, collection, getDocs, query, serverTimestamp, where } from 'firebase/firestore';
 import { RefreshCw, X } from 'lucide-react-native';
@@ -101,9 +102,9 @@ export default function ScannerScreen() {
       
       <SafeAreaView style={styles.overlay}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
+          <BounceCard bounceScale={0.85} style={styles.closeButton} onPress={() => router.back()}>
             <X size={24} color="#fff" />
-          </TouchableOpacity>
+          </BounceCard>
         </View>
 
         <View style={styles.targetContainer}>

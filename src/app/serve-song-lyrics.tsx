@@ -1,4 +1,5 @@
 import { worshipRepository } from '@/features/worship/data/worship.repository';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { Song, WorshipSetlistItem } from '@/features/worship/domain/worship.types';
 import { transposeText, transposeChord, getStepsBetweenKeys } from '@/utils/chordTransposition';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -105,9 +106,9 @@ export default function ServeSongLyricsScreen() {
     return (
       <View style={[styles.screen, { paddingTop: insets.top + 20 }]}>
         <Stack.Screen options={{ headerShown: false }} />
-        <TouchableOpacity style={[styles.fixedBackBtn, { top: Math.max(insets.top, 24) }]} onPress={() => router.back()}>
+        <BounceCard bounceScale={0.85} style={[styles.fixedBackBtn, { top: Math.max(insets.top, 24) }]} onPress={() => router.back()}>
           <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
-        </TouchableOpacity>
+        </BounceCard>
         <View style={styles.notFound}>
           <Text style={styles.notFoundTitle}>Song not found</Text>
         </View>
@@ -221,13 +222,13 @@ export default function ServeSongLyricsScreen() {
       </Animated.View>
 
       {/* Fixed Back Button */}
-      <TouchableOpacity 
+      <BounceCard bounceScale={0.85} 
         style={[styles.fixedBackBtn, { top: Math.max(insets.top, 24) }]} 
         onPress={() => router.back()}
         activeOpacity={0.8}
       >
         <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
-      </TouchableOpacity>
+      </BounceCard>
 
       <Animated.ScrollView
         contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}

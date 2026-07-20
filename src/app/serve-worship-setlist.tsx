@@ -1,4 +1,5 @@
 import { useWorshipSetlist } from '@/features/worship/presentation/hooks/useWorshipSetlist';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { useAuthStore } from '@/store/useAuthStore';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -38,9 +39,9 @@ export default function ServeWorshipSetlistScreen() {
     return (
       <View style={[styles.screen, { paddingTop: insets.top + 20 }]}>
         <Stack.Screen options={{ headerShown: false }} />
-        <TouchableOpacity style={[styles.fixedBackBtn, { top: Math.max(insets.top, 24) }]} onPress={() => router.back()}>
+        <BounceCard bounceScale={0.85} style={[styles.fixedBackBtn, { top: Math.max(insets.top, 24) }]} onPress={() => router.back()}>
           <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
-        </TouchableOpacity>
+        </BounceCard>
         <View style={styles.notFound}>
           <View style={styles.notFoundIconContainer}>
             <AlertCircle size={40} color="#EF4444" strokeWidth={2.5} />
@@ -58,13 +59,13 @@ export default function ServeWorshipSetlistScreen() {
     <View style={[styles.screen, { backgroundColor: '#F7F8FC' }]}>
       <Stack.Screen options={{ headerShown: false }} />
       {/* Fixed Back Button */}
-      <TouchableOpacity 
+      <BounceCard bounceScale={0.85} 
         style={[styles.fixedBackBtn, { top: Math.max(insets.top, 24) }]} 
         onPress={() => router.back()}
         activeOpacity={0.8}
       >
         <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
-      </TouchableOpacity>
+      </BounceCard>
 
       {/* ─── Header ─── */}
       <LinearGradient

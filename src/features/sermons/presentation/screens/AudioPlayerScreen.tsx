@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { sermonRepository } from "../../data/sermon.repository";
 
 import { useState, useEffect } from 'react';
@@ -191,9 +192,9 @@ export function AudioPlayerScreen() {
     >
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+        <BounceCard bounceScale={0.85} onPress={handleClose} style={styles.closeButton}>
           <X size={24} color={colors.text} />
-        </TouchableOpacity>
+        </BounceCard>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Now Playing</Text>
         <View style={{ width: 40 }} />
       </View>

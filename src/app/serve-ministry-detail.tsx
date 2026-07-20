@@ -1,4 +1,5 @@
 import { useMinistryApplication } from '@/features/serve/presentation/hooks/useMinistryApplication';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useMinistryApplicationStore } from '@/store/useMinistryApplicationStore';
 import { useMinistryStore } from '@/store/useMinistryStore';
@@ -86,9 +87,9 @@ export default function ServeMinistryDetailScreen() {
     return (
       <View style={[styles.screen, { backgroundColor: '#FAFAFA' }]}>
         <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <BounceCard bounceScale={0.85} style={styles.backBtn} onPress={() => router.back()}>
             <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
-          </TouchableOpacity>
+          </BounceCard>
         </View>
         <View style={styles.notFound}>
           <AlertCircle size={48} color="#EF4444" />
@@ -129,9 +130,9 @@ export default function ServeMinistryDetailScreen() {
         </Animated.View>
 
         <View style={[styles.headerContent, { paddingTop: Math.max(insets.top, 20) }]}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.8} hitSlop={8}>
+          <BounceCard bounceScale={0.85} style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.8} hitSlop={8}>
             <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
-          </TouchableOpacity>
+          </BounceCard>
         </View>
       </View>
 

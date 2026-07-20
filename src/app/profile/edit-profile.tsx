@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Image, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -143,9 +144,9 @@ export default function EditProfileScreen() {
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
         <View style={styles.headerContent}>
-          <TouchableOpacity style={styles.headerCircle} onPress={() => router.back()} hitSlop={8} activeOpacity={0.8}>
+          <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => router.back()} hitSlop={8} activeOpacity={0.8}>
             <ArrowLeft size={24} color="#111827" strokeWidth={2} />
-          </TouchableOpacity>
+          </BounceCard>
           <Text style={styles.headerTitle}>Edit Profile</Text>
           <TouchableOpacity style={styles.headerCircle} onPress={handleSave} disabled={loading} activeOpacity={0.7} hitSlop={8}>
             {loading ? <ActivityIndicator size="small" color="#007AFF" /> : <Check size={20} color="#007AFF" strokeWidth={2.5} />}

@@ -1,4 +1,5 @@
 import { downloadBibleOffline, saveVersion } from '@/features/bible/data/bible.repository';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { CheckCircle, ChevronLeft, CloudDownload, Globe2, ShieldCheck } from 'lucide-react-native';
@@ -41,9 +42,9 @@ export default function VersionDetailScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FAFAFA', justifyContent: 'space-between' }} edges={['top', 'bottom']}>
       <View style={[styles.modalHeader, { backgroundColor: '#FAFAFA', borderBottomWidth: 0, zIndex: 10 }]}>
         <View style={styles.headerLeftContainer}>
-          <TouchableOpacity onPress={() => router.back()} style={{ padding: 8, backgroundColor: '#fff', borderRadius: 20, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, shadowOffset: { width: 0, height: 2 }, elevation: 2 }}>
+          <BounceCard bounceScale={0.85} onPress={() => router.back()} style={{ padding: 8, backgroundColor: '#fff', borderRadius: 20, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, shadowOffset: { width: 0, height: 2 }, elevation: 2 }}>
             <ChevronLeft size={24} color="#1a1a1a" />
-          </TouchableOpacity>
+          </BounceCard>
         </View>
         <Text style={[styles.modalTitle, { opacity: 0 }]}>Version Info</Text>
         <View style={styles.headerRightContainer} />

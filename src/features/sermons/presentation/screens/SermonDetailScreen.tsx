@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Share, Modal } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
@@ -106,13 +107,13 @@ export function SermonDetailScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       
       {/* Fixed Back Button */}
-      <TouchableOpacity 
+      <BounceCard bounceScale={0.85} 
         style={[styles.fixedBackBtn, { top: Math.max(insets.top, 20) + 8 }]} 
         onPress={() => router.back()}
         activeOpacity={0.8}
       >
         <ArrowLeft size={22} color="#1a1a1a" />
-      </TouchableOpacity>
+      </BounceCard>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
         {/* Hero Section */}

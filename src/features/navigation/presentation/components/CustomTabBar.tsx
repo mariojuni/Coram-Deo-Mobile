@@ -1,9 +1,10 @@
 import FabMenu from '@/components/Navigation/FabMenu';
 import { getTabIcon } from '@/features/navigation/presentation/tabNavigation';
 import { BlurView } from 'expo-blur';
-import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getSoftShadowStyle } from '@/components/ui/SoftCard';
+import { BounceCard } from '@/components/ui/BounceCard';
 
 type TabRoute = {
   key: string;
@@ -74,7 +75,7 @@ export function CustomTabBar({ tabBarProps, isStaff }: CustomTabBarProps) {
           const IconComponent = getTabIcon(route.name);
 
           return (
-            <TouchableOpacity
+            <BounceCard
               key={route.key}
               accessibilityRole="button"
               accessibilityState={isFocused ? { selected: true } : {}}
@@ -82,9 +83,10 @@ export function CustomTabBar({ tabBarProps, isStaff }: CustomTabBarProps) {
               testID={options.tabBarTestID}
               onPress={onPress}
               style={[styles.navItem, isFocused && styles.navItemActive]}
+              bounceScale={0.85}
             >
               <IconComponent size={24} color={color} />
-            </TouchableOpacity>
+            </BounceCard>
           );
         })}
       </View>

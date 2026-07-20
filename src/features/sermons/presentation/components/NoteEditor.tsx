@@ -1,4 +1,5 @@
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { useState, useEffect } from 'react';
 import { Save, X } from 'lucide-react-native';
 import { useTheme } from '@/hooks/use-theme';
@@ -67,9 +68,9 @@ export function NoteEditor({ note, sermonId, userId, timestamp, onSave, onClose 
     >
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+        <BounceCard bounceScale={0.85} onPress={onClose} style={styles.closeButton}>
           <X size={24} color={colors.text} />
-        </TouchableOpacity>
+        </BounceCard>
         <Text style={[styles.title, { color: colors.text }]}>
           {note ? 'Edit Note' : 'New Note'}
         </Text>

@@ -7,6 +7,7 @@ import { Animated, StyleSheet, TouchableOpacity, View, Text, Platform } from 're
 import { useAuthStore } from '../../store/useAuthStore';
 import { useUIStore } from '../../store/useUIStore';
 import { getSoftShadowStyle } from '@/components/ui/SoftCard';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { canSubmitGiving } from '../../permissions/mobilePermissions';
 
 interface FabMenuProps {
@@ -106,23 +107,25 @@ export default function FabMenu({ isStaff }: FabMenuProps) {
       {/* Sub Items */}
       {menuItems.map((item, index) => (
         <Animated.View key={item.key} style={[styles.subItemContainer, getSubItemStyle(index)]}>
-          <TouchableOpacity 
+          <BounceCard 
             style={styles.subItemRow} 
             onPress={() => handlePress(item.route)}
             activeOpacity={0.8}
+            bounceScale={0.85}
           >
             <View style={styles.subItem}>
               <item.icon size={20} color="#FF6596" />
             </View>
-          </TouchableOpacity>
+          </BounceCard>
         </Animated.View>
       ))}
 
       {/* Main FAB */}
-      <TouchableOpacity 
+      <BounceCard 
         style={styles.fabContainer}
         onPress={toggleMenu}
         activeOpacity={0.8}
+        bounceScale={0.9}
       >
         <LinearGradient
           colors={['#FF6596', '#B66DFF']}
@@ -134,7 +137,7 @@ export default function FabMenu({ isStaff }: FabMenuProps) {
             <Plus size={24} color="#fff" />
           </Animated.View>
         </LinearGradient>
-      </TouchableOpacity>
+      </BounceCard>
     </View>
   );
 }

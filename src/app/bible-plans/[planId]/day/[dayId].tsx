@@ -1,4 +1,5 @@
 import BibleReader from '@/components/Bible/BibleReader';
+import { BounceCard } from '@/components/ui/BounceCard';
 import BooksModal from '@/components/Bible/BooksModal';
 import TopNavBar from '@/components/Navigation/TopNavBar';
 import type { BibleBook, BiblePreferences, BibleVersion } from '@/features/bible/presentation/hooks/useBibleTopNav';
@@ -321,13 +322,13 @@ export default function BiblePlanDayScreen() {
 
       {/* ─── Back button overlaid top-left */}
       <View style={[styles.backBtn, { top: Math.max(insets.top, 24) }]} pointerEvents="box-none">
-        <TouchableOpacity
+        <BounceCard bounceScale={0.85}
           style={styles.backCircle}
           onPress={() => router.back()}
           hitSlop={8}
         >
           <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
-        </TouchableOpacity>
+        </BounceCard>
       </View>
 
       {/* ─── Bottom plan context bar */}

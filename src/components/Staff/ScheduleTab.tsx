@@ -40,7 +40,24 @@ export default function ScheduleTab({
   const memberById = useMemo(() => new Map(members.map((member) => [member.id, member])), [members]);
 
   const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
+    const normalizeDateToYmd = (value: string): string | null => {
+      if (!value) return null;
+      const ymd = value.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+      if (ymd) {
+        const [, y, m, d] = ymd;
+        return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+      }
+      const mdy = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (mdy) {
+        const [, m, d, y] = mdy;
+        return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+      }
+      return null;
+    };
+
+    const normalized = normalizeDateToYmd(dateStr);
+    const d = normalized ? new Date(`${normalized}T00:00:00`) : new Date(dateStr);
+
     return {
       month: d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
       day: d.getDate(),
