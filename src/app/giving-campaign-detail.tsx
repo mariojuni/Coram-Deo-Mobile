@@ -8,6 +8,7 @@ import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCachedImage } from '@/features/files/presentation/hooks/useCachedImage';
 import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
+import { BounceCard } from '@/components/ui/BounceCard';
 
 const ShimmerSkeleton = ({ width, height, style, borderRadius = 8 }: any) => {
   const animValue = useRef(new Animated.Value(0)).current;
@@ -136,6 +137,9 @@ export default function GivingCampaignDetailScreen() {
           <View style={[StyleSheet.absoluteFill, { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.3)' }]} />
         </Animated.View>
         <View style={styles.headerContent}>
+          <BounceCard style={styles.backBtn} onPress={() => router.back()}>
+            <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
+          </BounceCard>
           <Animated.Text 
             style={[styles.headerTitle, { opacity: headerOpacity, transform: [{ translateY: titleTranslateY }] }]}
             pointerEvents="none"
@@ -144,10 +148,6 @@ export default function GivingCampaignDetailScreen() {
           </Animated.Text>
         </View>
       </View>
-      
-      <TouchableOpacity style={[styles.backBtn, { top: Math.max(insets.top, 24) + 8 }]} onPress={() => router.back()}>
-        <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
-      </TouchableOpacity>
       
       <Animated.ScrollView 
         style={styles.content} 
@@ -264,6 +264,7 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingHorizontal: 20,
     marginTop: 8,
+    height: 40,
   },
   headerTitle: {
     fontSize: 18,
@@ -276,15 +277,13 @@ const styles = StyleSheet.create({
     zIndex: 1,
     paddingHorizontal: 60,
   },
-  backBtn: { 
+  backBtn: {
     ...getTopBarButtonShadowStyle(20),
-    position: 'absolute',
-    left: 20,
     width: 40,
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 100,
+    zIndex: 20,
   },
   content: { flex: 1 },
   coverImage: {
