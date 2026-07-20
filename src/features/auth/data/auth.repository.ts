@@ -136,12 +136,31 @@ export async function fetchUserAccount(user: User): Promise<UserAccount | null> 
     (data.primaryRole as import("../domain/auth.types").SystemRole) ??
     systemRoles[0];
 
+  let status = data.status as import("../domain/auth.types").UserAccount['status'];
+  if (status === 'pendingChurchLink') {
+    status = 'pending_church_link';
+  }
+
+  // Populate new fields if missing
+  const emailLowercase = data.emailLowercase || (typeof data.email === 'string' ? data.email.trim().toLowerCase() : undefined);
+  const authUid = data.authUid || user.uid;
+  let providers = data.providers as string[] | undefined;
+  if (!providers) {
+    providers = [];
+    if (data.authProvider === 'google') providers.push('google.com');
+    if (data.authProvider === 'email') providers.push('password');
+  }
+
   // Keep legacy `role` in sync for any still-using callers (Firestore rules, etc.).
   const legacyRole = normalizeLegacyRole((data.role as string) ?? primaryRole);
 
   return {
     uid: user.uid,
     ...data,
+    status,
+    emailLowercase,
+    authUid,
+    providers,
     role: legacyRole,
     systemRoles,
     primaryRole,
@@ -154,6 +173,28 @@ GoogleSignin.configure({
   iosClientId:
     "676505939287-r3lac99rq77b0cg1n8bk69lict7mp1j0.apps.googleusercontent.com",
 });
+
+async function findUserAccountByEmail(email: string) {
+  const cleanEmail = email.trim().toLowerCase();
+  const usersRef = collection(db, "users");
+  
+  // 1. Try emailLowercase
+  const q1 = query(usersRef, where("emailLowercase", "==", cleanEmail));
+  const snap1 = await getDocs(q1);
+  if (!snap1.empty) return snap1.docs[0];
+
+  // 2. Try legacy email
+  const q2 = query(usersRef, where("email", "==", cleanEmail));
+  const snap2 = await getDocs(q2);
+  if (!snap2.empty) return snap2.docs[0];
+
+  // 3. Fallback manual search
+  const all = await getDocs(usersRef);
+  return all.docs.find(d => {
+    const data = d.data();
+    return typeof data.email === 'string' && data.email.trim().toLowerCase() === cleanEmail;
+  }) || null;
+}
 
 export const authRepository = {
   async signup(payload: RegistrationPayload): Promise<AuthCredentialResult> {
@@ -168,6 +209,20 @@ export const authRepository = {
     if (isTaken) {
       throw new Error("Username is already taken.");
     }
+    
+    let cleanEmail = "";
+    if (payload.email) {
+      cleanEmail = payload.email.trim().toLowerCase();
+      // Check if duplicate user account exists
+      const existingUserDoc = await findUserAccountByEmail(cleanEmail);
+      if (existingUserDoc) {
+        const data = existingUserDoc.data();
+        if (data.authUid) {
+          throw new Error("An account with this email already exists. Please sign in instead.");
+        }
+        // If authUid is empty/null, we will link below.
+      }
+    }
 
     const matchedMember = await findMemberByEmailOrPhone(
       payload.email,
@@ -175,9 +230,12 @@ export const authRepository = {
     );
 
     if (matchedMember && matchedMember.accountId) {
-      throw new Error(
-        "This email or phone number is already registered. Please log in instead."
-      );
+      // If we are linking an unauthenticated existing account, it's fine.
+      // But if it's explicitly linked to a different auth account:
+      const existingUserDoc = await findUserAccountByEmail(cleanEmail);
+      if (!existingUserDoc || existingUserDoc.data()?.authUid) {
+         throw new Error("This email or phone number is already registered. Please log in instead.");
+      }
     }
 
     // Create Firebase Auth User
@@ -188,7 +246,7 @@ export const authRepository = {
     );
     const user = authCredential.user;
 
-    let status: "active" | "pendingChurchLink" = "pendingChurchLink";
+    let status: "active" | "pending_church_link" = "pending_church_link";
     let churchId = null;
 
     if (matchedMember) {
@@ -215,26 +273,47 @@ export const authRepository = {
       await updateDoc(memberRef, updates);
     }
 
-    // Create UserAccount
-    const userAccount: Omit<UserAccount, "uid"> = {
-      firstName: payload.firstName,
-      middleName: payload.middleName || "",
-      lastName: payload.lastName,
-      email: payload.email || "",
-      phoneNumber: payload.phoneNumber || "",
-      username: payload.username,
-      authProvider: "email",
-      status: status,
-      churchId: churchId,
-      memberId: matchedMember?.id || null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      systemRoles: ["viewer"] as import("../domain/auth.types").SystemRole[],
-      primaryRole: "viewer" as import("../domain/auth.types").SystemRole,
-      role: "viewer", // legacy compat
-    };
+    // Check if we are linking an existing UserAccount document (e.g. from a previous partial creation)
+    const existingDoc = cleanEmail ? await findUserAccountByEmail(cleanEmail) : null;
+    if (existingDoc && !existingDoc.data().authUid) {
+      // Link Firebase uid to existing userAccount
+      const updates = {
+        authUid: user.uid,
+        emailLowercase: cleanEmail,
+        providers: [...(existingDoc.data().providers || []), "password"],
+        status: status,
+        updatedAt: new Date().toISOString()
+      };
+      await updateDoc(existingDoc.ref, updates);
+      
+      // If existing doc ID is not the user.uid, this is a schema drift. 
+      // Ideally uid === authUid. We'll leave it as updating the existing doc for now.
+    } else {
+      // Create UserAccount
+      const userAccount: Omit<UserAccount, "uid"> = {
+        authUid: user.uid,
+        firstName: payload.firstName,
+        middleName: payload.middleName || "",
+        lastName: payload.lastName,
+        email: payload.email || "",
+        emailLowercase: cleanEmail,
+        phoneNumber: payload.phoneNumber || "",
+        username: payload.username,
+        authProvider: "email",
+        providers: ["password"],
+        status: status,
+        churchId: churchId,
+        memberId: matchedMember?.id || null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        lastLoginAt: new Date().toISOString(),
+        systemRoles: ["viewer"] as import("../domain/auth.types").SystemRole[],
+        primaryRole: "viewer" as import("../domain/auth.types").SystemRole,
+        role: "viewer", // legacy compat
+      };
 
-    await setDoc(doc(db, "users", user.uid), userAccount);
+      await setDoc(doc(db, "users", user.uid), userAccount);
+    }
 
     return authCredential;
   },
@@ -256,27 +335,82 @@ export const authRepository = {
     const authCredential = await signInWithCredential(auth, googleCredential);
     const user = authCredential.user;
 
-    // Check if user account already exists
-    const userDocRef = doc(db, "users", user.uid);
-    const userDoc = await getDoc(userDocRef);
+    const email = user.email || undefined;
+    const cleanEmail = email ? email.trim().toLowerCase() : undefined;
+    
+    // Check if user account already exists by email
+    const existingUserDoc = cleanEmail ? await findUserAccountByEmail(cleanEmail) : null;
+    const userDocRefByUid = doc(db, "users", user.uid);
+    const userDocByUid = await getDoc(userDocRefByUid);
 
-    if (!userDoc.exists()) {
+    if (existingUserDoc) {
+      const data = existingUserDoc.data();
+      
+      if (data.authUid && data.authUid !== user.uid) {
+        // Different authUid exists for this email
+        throw new Error("An account with this email already exists. Please sign in using your original login method, then link Google Sign-In from Profile settings.");
+      }
+
+      // Link to existing userAccount or just update login stats
+      const updates: any = {
+        lastLoginAt: new Date().toISOString(),
+      };
+      
+      if (!data.authUid) updates.authUid = user.uid;
+      if (!data.emailLowercase && cleanEmail) updates.emailLowercase = cleanEmail;
+      
+      const providers = data.providers || [];
+      if (!providers.includes("google.com")) {
+        updates.providers = [...providers, "google.com"];
+      }
+
+      if (!data.photoUrl && user.photoURL) updates.photoUrl = user.photoURL;
+      if (user.displayName) {
+        const nameParts = user.displayName.split(" ");
+        if (!data.firstName) updates.firstName = nameParts[0] || "";
+        if (!data.lastName)
+          updates.lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
+      }
+
+      // Retry linking if the user is still pending
+      if (data.status === 'pending_church_link' || data.status === 'pendingChurchLink' || !data.churchId) {
+        const phoneNumber = user.phoneNumber || data.phoneNumber;
+        const matchedMember = await findMemberByEmailOrPhone(email, phoneNumber);
+
+        if (matchedMember && (!matchedMember.accountId || matchedMember.accountId === user.uid)) {
+          updates.status = 'active';
+          updates.churchId = matchedMember.churchId ?? null;
+          updates.memberId = matchedMember.id ?? null;
+
+          const memberRef = doc(db, 'users', matchedMember.id);
+          await updateDoc(memberRef, {
+            accountId: user.uid,
+            authUid: user.uid,
+            updatedAt: serverTimestamp(),
+          });
+        }
+      }
+
+      if (Object.keys(updates).length > 0) {
+        updates.updatedAt = serverTimestamp();
+        await updateDoc(existingUserDoc.ref, updates);
+      }
+    } else if (userDocByUid.exists()) {
+      // UID exists but email is different (should be rare)
+      await updateDoc(userDocRefByUid, {
+        lastLoginAt: new Date().toISOString(),
+        updatedAt: serverTimestamp(),
+      });
+    } else {
       // New user from Google
-      const email = user.email || undefined;
       const phoneNumber = user.phoneNumber || undefined;
-
       const matchedMember = await findMemberByEmailOrPhone(email, phoneNumber);
 
-      let status: "active" | "pendingChurchLink" = "pendingChurchLink";
+      let status: "active" | "pending_church_link" = "pending_church_link";
       let churchId = null;
 
       if (matchedMember) {
-        if (matchedMember.accountId) {
-          // Member exists and already linked to another account?
-          // We can't block login if Firebase auth allowed it, but we shouldn't overwrite.
-          // In an ideal flow, we link accounts. For now, we will create the user account but leave unlinked
-          // or link if not linked.
-        } else {
+        if (!matchedMember.accountId) {
           status = "active";
           churchId = matchedMember.churchId ?? null;
 
@@ -294,67 +428,28 @@ export const authRepository = {
       const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
 
       const userAccount: Omit<UserAccount, "uid"> = {
+        authUid: user.uid,
         firstName,
         lastName,
         email: email || "",
+        emailLowercase: cleanEmail,
         phoneNumber: phoneNumber || "",
         photoUrl: user.photoURL || "",
         username: email ? email.split("@")[0] : `user${Date.now()}`,
         authProvider: "google",
+        providers: ["google.com"],
         status,
         churchId,
-        memberId:
-          matchedMember && !matchedMember.accountId ? matchedMember.id : null,
+        memberId: matchedMember && !matchedMember.accountId ? matchedMember.id : null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        lastLoginAt: new Date().toISOString(),
         systemRoles: ["viewer"] as import("../domain/auth.types").SystemRole[],
         primaryRole: "viewer" as import("../domain/auth.types").SystemRole,
         role: "viewer", // legacy compat
       };
 
-      await setDoc(userDocRef, userAccount);
-    } else {
-      // User doc already exists (e.g. manually created with same UID)
-      const data = userDoc.data();
-      const updates: any = {};
-
-      // Retry linking if the user is still pending
-      if (data?.status === 'pendingChurchLink' || !data?.churchId) {
-        const email = user.email || data?.email;
-        const phoneNumber = user.phoneNumber || data?.phoneNumber;
-        const matchedMember = await findMemberByEmailOrPhone(email, phoneNumber);
-
-        if (matchedMember && (!matchedMember.accountId || matchedMember.accountId === user.uid)) {
-          updates.status = 'active';
-          updates.churchId = matchedMember.churchId ?? null;
-          updates.memberId = matchedMember.id ?? null;
-
-          const memberRef = doc(db, 'users', matchedMember.id);
-          await updateDoc(memberRef, {
-            accountId: user.uid,
-            authUid: user.uid,
-            updatedAt: serverTimestamp(),
-          });
-        } else if (matchedMember && matchedMember.accountId && matchedMember.accountId !== user.uid) {
-          throw new Error("This email is already linked to a different account. Please log in with the original account or contact your administrator.");
-        }
-      }
-
-      if (!data?.accountId) updates.accountId = user.uid;
-      if (!data?.authUid) updates.authUid = user.uid;
-      if (!data?.photoUrl && user.photoURL) updates.photoUrl = user.photoURL;
-      if (user.displayName) {
-        const nameParts = user.displayName.split(" ");
-        if (!data?.firstName) updates.firstName = nameParts[0] || "";
-        if (!data?.lastName)
-          updates.lastName =
-            nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
-      }
-
-      if (Object.keys(updates).length > 0) {
-        updates.updatedAt = serverTimestamp();
-        await updateDoc(userDocRef, updates);
-      }
+      await setDoc(userDocRefByUid, userAccount);
     }
 
     return authCredential;

@@ -13,17 +13,20 @@ export type SystemRole =
 
 export interface UserAccount {
   uid: string; // The auth uid, also the document ID
+  authUid?: string;
   churchId?: string | null;
   memberId?: string | null;
   firstName: string;
   middleName?: string;
   lastName: string;
   email?: string;
+  emailLowercase?: string;
   phoneNumber?: string;
   photoUrl?: string;
   username: string;
   authProvider: string;
-  status: 'active' | 'pendingChurchLink' | 'disabled';
+  providers?: string[];
+  status: 'active' | 'pending_church_link' | 'pendingChurchLink' | 'disabled';
   /** Multi-role support: a user can hold more than one SystemRole simultaneously. */
   systemRoles?: SystemRole[];
   /** The primary role used for UI display (e.g. badge, profile card). */
@@ -34,6 +37,7 @@ export interface UserAccount {
   role?: SystemRole | string;
   createdAt: string;
   updatedAt: string;
+  lastLoginAt?: string;
   [key: string]: unknown;
 }
 

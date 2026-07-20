@@ -229,7 +229,9 @@ service cloud.firestore {
           request.resource.data.get('systemRoles', null) == resource.data.get('systemRoles', null) &&
           request.resource.data.get('primaryRole', null) == resource.data.get('primaryRole', null) &&
           request.resource.data.get('role', null) == resource.data.get('role', null) &&
-          request.resource.data.get('churchId', null) == resource.data.get('churchId', null)) ||
+          request.resource.data.get('churchId', null) == resource.data.get('churchId', null) &&
+          request.resource.data.get('status', null) == resource.data.get('status', null) &&
+          request.resource.data.get('memberId', null) == resource.data.get('memberId', null)) ||
 
         // super_admin can update any other user.
         (isSuperAdmin() && request.auth.uid != userId) ||

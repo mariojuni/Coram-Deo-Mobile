@@ -5,7 +5,7 @@ import { BlurView } from 'expo-blur';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Check, ShieldAlert } from 'lucide-react-native';
 import { auth, db } from '../../firebase';
-import { EmailAuthProvider, reauthenticateWithCredential, updateEmail, updatePassword } from 'firebase/auth';
+import { EmailAuthProvider, reauthenticateWithCredential, updateEmail, updatePassword, linkWithCredential } from 'firebase/auth';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,6 +14,7 @@ export default function AccountSecurityScreen() {
   const router = useRouter();
   const { type } = useLocalSearchParams();
   const isEmail = type === 'email';
+  const isSetPassword = type === 'set_password';
   
   const currentUser = useAuthStore((s) => s.currentUser);
   const userProfile = useAuthStore((s) => s.userProfile);
@@ -31,7 +32,7 @@ export default function AccountSecurityScreen() {
       return;
     }
 
-    if (!currentPassword) {
+    if (!isSetPassword && !currentPassword) {
       Alert.alert('Required', 'Please enter your current password to verify your identity.');
       return;
     }
@@ -48,25 +49,39 @@ export default function AccountSecurityScreen() {
 
     setLoading(true);
     try {
-      const credential = EmailAuthProvider.credential(currentUser.email, currentPassword);
-      await reauthenticateWithCredential(currentUser, credential);
-
-      if (isEmail) {
-        await updateEmail(currentUser, newValue);
+      if (isSetPassword) {
+        const credential = EmailAuthProvider.credential(currentUser.email, newValue);
+        await linkWithCredential(currentUser, credential);
         
         if (userProfile?.uid) {
-          const userRef = doc(db, 'users', userProfile.uid);
-          await updateDoc(userRef, { email: newValue, updatedAt: serverTimestamp() });
+           const userRef = doc(db, 'users', userProfile.uid);
+           const currentProviders = userProfile.providers || [];
+           if (!currentProviders.includes('password')) {
+             await updateDoc(userRef, { providers: [...currentProviders, 'password'], updatedAt: serverTimestamp() });
+           }
         }
-        if (userProfile?.memberId && userProfile.memberId !== userProfile.uid) {
-          const memberRef = doc(db, 'users', userProfile.memberId);
-          await updateDoc(memberRef, { email: newValue, updatedAt: serverTimestamp() });
-        }
-        
-        Alert.alert('Success', 'Email updated successfully.');
+        Alert.alert('Success', 'Password set successfully. You can now sign in using Google or email and password.');
       } else {
-        await updatePassword(currentUser, newValue);
-        Alert.alert('Success', 'Password updated successfully.');
+        const credential = EmailAuthProvider.credential(currentUser.email, currentPassword);
+        await reauthenticateWithCredential(currentUser, credential);
+
+        if (isEmail) {
+          await updateEmail(currentUser, newValue);
+          
+          if (userProfile?.uid) {
+            const userRef = doc(db, 'users', userProfile.uid);
+            await updateDoc(userRef, { email: newValue, updatedAt: serverTimestamp() });
+          }
+          if (userProfile?.memberId && userProfile.memberId !== userProfile.uid) {
+            const memberRef = doc(db, 'users', userProfile.memberId);
+            await updateDoc(memberRef, { email: newValue, updatedAt: serverTimestamp() });
+          }
+          
+          Alert.alert('Success', 'Email updated successfully.');
+        } else {
+          await updatePassword(currentUser, newValue);
+          Alert.alert('Success', 'Password updated successfully.');
+        }
       }
       
       router.back();
@@ -77,6 +92,7 @@ export default function AccountSecurityScreen() {
       if (error.code === 'auth/invalid-email') msg = 'The new email is invalid.';
       if (error.code === 'auth/email-already-in-use') msg = 'The new email is already in use.';
       if (error.code === 'auth/weak-password') msg = 'The new password is too weak.';
+      if (error.code === 'auth/credential-already-in-use') msg = 'This credential is already in use.';
       Alert.alert('Error', msg);
     } finally {
       setLoading(false);
@@ -95,7 +111,7 @@ export default function AccountSecurityScreen() {
           <TouchableOpacity style={styles.headerCircle} onPress={() => router.back()} hitSlop={8} activeOpacity={0.8}>
             <ArrowLeft size={24} color="#111827" strokeWidth={2} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{isEmail ? 'Change Email' : 'Change Password'}</Text>
+          <Text style={styles.headerTitle}>{isEmail ? 'Change Email' : (isSetPassword ? 'Set Password' : 'Change Password')}</Text>
           <TouchableOpacity style={styles.headerCircle} onPress={handleSave} disabled={loading} activeOpacity={0.7} hitSlop={8}>
             {loading ? <ActivityIndicator size="small" color="#EF4444" /> : <Check size={20} color="#EF4444" strokeWidth={2.5} />}
           </TouchableOpacity>
@@ -105,29 +121,33 @@ export default function AccountSecurityScreen() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: (Platform.OS === 'ios' ? 24 : Math.max(insets.top, 24)) + 70 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             
-            <View style={styles.alertCard}>
-              <View style={styles.alertIcon}>
-                <ShieldAlert size={24} color="#EF4444" />
-              </View>
-              <Text style={styles.description}>
-                For your security, please enter your current password to verify your identity before making this change.
-              </Text>
-            </View>
+            {!isSetPassword && (
+              <>
+                <View style={styles.alertCard}>
+                  <View style={styles.alertIcon}>
+                    <ShieldAlert size={24} color="#EF4444" />
+                  </View>
+                  <Text style={styles.description}>
+                    For your security, please enter your current password to verify your identity before making this change.
+                  </Text>
+                </View>
 
-            <View style={styles.cardGroup}>
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>Current Password</Text>
-                <TextInput
-                  style={styles.input}
-                  value={currentPassword}
-                  onChangeText={setCurrentPassword}
-                  placeholder="Enter current password"
-                  placeholderTextColor="#9CA3AF"
-                  secureTextEntry
-                  autoCapitalize="none"
-                />
-              </View>
-            </View>
+                <View style={styles.cardGroup}>
+                  <View style={styles.formGroup}>
+                    <Text style={styles.label}>Current Password</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={currentPassword}
+                      onChangeText={setCurrentPassword}
+                      placeholder="Enter current password"
+                      placeholderTextColor="#9CA3AF"
+                      secureTextEntry
+                      autoCapitalize="none"
+                    />
+                  </View>
+                </View>
+              </>
+            )}
 
             <View style={styles.cardGroup}>
               <View style={styles.formGroup}>
@@ -162,7 +182,7 @@ export default function AccountSecurityScreen() {
 
             <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={loading} activeOpacity={0.8}>
               <LinearGradient colors={['#EF4444', '#DC2626']} style={styles.saveBtnGradient}>
-                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Update {isEmail ? 'Email' : 'Password'}</Text>}
+                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>{isSetPassword ? 'Set Password' : `Update ${isEmail ? 'Email' : 'Password'}`}</Text>}
               </LinearGradient>
             </TouchableOpacity>
 

@@ -36,6 +36,11 @@ export function VerseOfTheDayCard() {
   const [reference, setReference] = useState('');
   const [passageId, setPassageId] = useState('');
   const [loading, setLoading] = useState(true);
+  const [cachedPrefs, setCachedPrefs] = useState<any>(null);
+
+  useEffect(() => {
+    getUserPreferences().then(setCachedPrefs).catch(console.error);
+  }, []);
 
   const scale = useSharedValue(1);
 
@@ -53,7 +58,7 @@ export function VerseOfTheDayCard() {
     scale.set(withTiming(1, { duration: 150 }));
   };
 
-  const handlePress = async () => {
+  const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     if (passageId) {
@@ -64,10 +69,12 @@ export function VerseOfTheDayCard() {
         const chapterNum = parts[1];
 
         try {
-          const currentPrefs: any = await getUserPreferences() || {};
-          currentPrefs.activeBook = bookId;
-          currentPrefs.activeChapter = chapterNum;
-          await saveUserPreferences(currentPrefs);
+          const prefs = { ...(cachedPrefs || {}) };
+          prefs.activeBook = bookId;
+          prefs.activeChapter = chapterNum;
+          
+          // Fire and forget save to avoid delaying navigation
+          saveUserPreferences(prefs).catch(e => console.error("Failed to save prefs", e));
 
           router.push('/(tabs)/bible');
         } catch (e) {

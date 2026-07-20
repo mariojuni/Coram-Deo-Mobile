@@ -148,15 +148,35 @@ export default function ProfileScreen() {
             <View style={styles.cardGroup}>
               <ModernRow 
                 icon={<Shield size={18} color="#10B981" />} 
-                label="Change Email" 
+                label="Update Email" 
                 onPress={() => router.push({ pathname: '/profile/account-security', params: { type: 'email' } })} 
               />
               <View style={styles.divider} />
-              <ModernRow 
-                icon={<Shield size={18} color="#F59E0B" />} 
-                label="Change Password" 
-                onPress={() => router.push({ pathname: '/profile/account-security', params: { type: 'password' } })} 
-              />
+              
+              {userProfile?.providers?.includes('google.com') && (
+                <>
+                  <ModernRow 
+                    icon={<LogOut size={18} color="#3B82F6" />} // Reusing an icon for Google
+                    label="Google: Connected" 
+                    onPress={() => {}} 
+                  />
+                  <View style={styles.divider} />
+                </>
+              )}
+              
+              {userProfile?.providers?.includes('password') ? (
+                <ModernRow 
+                  icon={<Shield size={18} color="#F59E0B" />} 
+                  label="Change Password" 
+                  onPress={() => router.push({ pathname: '/profile/account-security', params: { type: 'password' } })} 
+                />
+              ) : (
+                <ModernRow 
+                  icon={<Shield size={18} color="#EF4444" />} 
+                  label="Set Password" 
+                  onPress={() => router.push({ pathname: '/profile/account-security', params: { type: 'set_password' } })} 
+                />
+              )}
             </View>
           </View>
 

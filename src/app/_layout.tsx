@@ -87,24 +87,17 @@ export default function RootLayout() {
     if (!initialized || hasSeenWalkthrough === null) return;
 
     const inAuthGroup = segments[0] === '(auth)';
-    const inPendingScreen = segments[0] === 'pending-access';
+    const inPendingScreen = segments[0] === 'pending-church-link';
+    const inDisabledScreen = segments[0] === 'disabled-account';
     const inWalkthrough = segments[0] === 'walkthrough';
     
     // Using strict super_admin bypass — checks systemRoles array (multi-role compatible)
     const isSuperAdmin = Array.isArray(userProfile?.systemRoles)
       ? userProfile.systemRoles.includes('super_admin')
       : userProfile?.role === 'super_admin';
-    const isPending = !isSuperAdmin && (userProfile?.status === 'pendingChurchLink' || (!userProfile?.churchId && currentUser));
+    const isPending = !isSuperAdmin && (userProfile?.status === 'pending_church_link' || (!userProfile?.churchId && currentUser));
     
-    const isDisabled = currentUser && !canAccessMobileApp(userProfile);
-
-    if (currentUser && isDisabled) {
-      useAuthStore.getState().logout();
-      import('react-native').then(({ Alert }) => {
-        Alert.alert('Account Disabled', 'Your account has been disabled. Please contact your church admin.');
-      });
-      return;
-    }
+    const isDisabled = currentUser && (userProfile?.status === 'disabled' || !canAccessMobileApp(userProfile));
 
     if (!currentUser) {
       if (!hasSeenWalkthrough && !inWalkthrough && !inAuthGroup) {
@@ -112,10 +105,12 @@ export default function RootLayout() {
       } else if (hasSeenWalkthrough && !inAuthGroup && !inWalkthrough) {
         router.replace('/(auth)/login');
       }
-    } else if (currentUser && isPending && !inPendingScreen) {
+    } else if (isDisabled && !inDisabledScreen) {
+       router.replace('/disabled-account');
+    } else if (currentUser && !isDisabled && isPending && !inPendingScreen) {
       // Redirect to pending screen
-      router.replace('/pending-access');
-    } else if (currentUser && !isPending && !isDisabled && (inAuthGroup || inPendingScreen || inWalkthrough)) {
+      router.replace('/pending-church-link');
+    } else if (currentUser && !isPending && !isDisabled && (inAuthGroup || inPendingScreen || inDisabledScreen || inWalkthrough)) {
       // Redirect to main app
       router.replace('/(tabs)');
     }
@@ -133,7 +128,8 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="walkthrough" options={{ headerShown: false }} />
             <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-            <Stack.Screen name="pending-access" options={{ headerShown: false }} />
+            <Stack.Screen name="pending-church-link" options={{ headerShown: false }} />
+            <Stack.Screen name="disabled-account" options={{ headerShown: false }} />
             <Stack.Screen name="scanner" options={{ presentation: 'modal', headerShown: false }} />
             <Stack.Screen name="my-qr" options={{ presentation: 'modal', headerShown: false }} />
             <Stack.Screen name="more" options={{ headerShown: false }} />
