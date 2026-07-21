@@ -8,61 +8,44 @@ import { removeVersion } from '@/features/bible/data/bible.repository';
 import { useVersionContext } from '@/features/bible/presentation/context/VersionManagerContext';
 import { styles } from '@/features/bible/presentation/version-manager/styles';
 import { useBibleVersionStore } from '@/store/useBibleVersionStore';
+import { SoftCard } from '@/components/ui/SoftCard';
 
 export default function MyVersionsScreen() {
   const router = useRouter();
   const { savedVersions, activeTranslation, handleSelectVersion, publishers, refreshSavedVersions } = useVersionContext();
 
-  const handleRemove = async (id: string | number) => {
-    Alert.alert(
-      "Remove Version",
-      "Are you sure you want to remove this downloaded version?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Remove", 
-          style: "destructive",
-          onPress: async () => {
-            await removeVersion(id);
-            await refreshSavedVersions();
-            if (String(activeTranslation) === String(id) && savedVersions.length > 1) {
-               const remaining = savedVersions.filter((v: any) => String(v.id) !== String(id));
-               await handleSelectVersion(remaining[0].id);
-            }
-          }
-        }
-      ]
-    );
-  };
-
   const handleOptions = (version: any) => {
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          options: ['Cancel', 'Share', 'More Info', 'Remove from list'],
-          destructiveButtonIndex: 3,
+          options: ['Cancel', 'Remove from list', 'Share', 'More Info'],
           cancelButtonIndex: 0,
+          destructiveButtonIndex: 1,
         },
-        (buttonIndex) => {
+        async (buttonIndex) => {
           if (buttonIndex === 1) {
-            // Share
+            await removeVersion(version.id);
+            await refreshSavedVersions();
           } else if (buttonIndex === 2) {
-            router.push({ pathname: '/version-manager/detail', params: { bibleStr: JSON.stringify(version) } });
+            // Share logic
           } else if (buttonIndex === 3) {
-            handleRemove(version.id);
+            router.push({ pathname: '/version-manager/detail', params: { bibleStr: JSON.stringify(version) } });
           }
         }
       );
     } else {
       Alert.alert(
-        "Options",
-        version.title || version.local_title,
+        version.local_title || version.title,
+        'Options',
         [
           { text: "Share", onPress: () => {} },
           { text: "More Info", onPress: () => {
             router.push({ pathname: '/version-manager/detail', params: { bibleStr: JSON.stringify(version) } });
           }},
-          { text: "Remove from list", onPress: () => handleRemove(version.id), style: "destructive" },
+          { text: "Remove from list", onPress: async () => {
+            await removeVersion(version.id);
+            await refreshSavedVersions();
+          }, style: "destructive" },
           { text: "Cancel", style: "cancel" }
         ]
       );
@@ -70,7 +53,7 @@ export default function MyVersionsScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#fff' }}>
+    <View style={{ flex: 1, backgroundColor: '#FAFAFA' }}>
       <View style={[styles.headerContainer, { paddingTop: 21 }]} pointerEvents="box-none">
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
@@ -113,10 +96,6 @@ export default function MyVersionsScreen() {
               return (
                 <TouchableOpacity
                   key={version.id}
-                  style={[
-                    styles.myVersionsListItem,
-                    isActive && { backgroundColor: 'rgba(255, 101, 150, 0.04)', borderColor: '#FF6596', borderWidth: 1 }
-                  ]}
                   onPress={() => {
                     useBibleVersionStore.getState().setTranslation(version.id);
                     handleSelectVersion(version.id); // sync context too
@@ -125,18 +104,23 @@ export default function MyVersionsScreen() {
                   onLongPress={() => handleOptions(version)}
                   activeOpacity={0.7}
                 >
+                  <SoftCard 
+                    style={[styles.myVersionsListItemOuter, isActive && { borderColor: '#FF6596', borderWidth: 1 }]}
+                    innerStyle={[styles.myVersionsListItemInner, isActive && { backgroundColor: 'rgba(255, 101, 150, 0.04)' }]}
+                  >
                     <View style={[styles.myVersionsAbbrBox, isActive && { backgroundColor: 'transparent' }]}>
                       <Text style={[styles.discoverAbbrText, isActive && styles.textActive]}>{abbr}</Text>
                     </View>
 
-                  <View style={styles.versionInfo}>
-                    <Text style={[styles.publisherText, isActive && { color: '#FF6596' }]}>
-                      {publishers[version.organization_id] || (version.organization_id ? 'Loading...' : 'Public Domain')}
-                    </Text>
-                    <Text style={[styles.versionName, isActive && styles.textActive]}>
-                      {version.title || version.local_title}
-                    </Text>
-                  </View>
+                    <View style={styles.versionInfo}>
+                      <Text style={[styles.publisherText, isActive && { color: '#FF6596' }]}>
+                        {publishers[version.organization_id] || (version.organization_id ? 'Loading...' : 'Public Domain')}
+                      </Text>
+                      <Text style={[styles.versionName, isActive && styles.textActive]}>
+                        {version.title || version.local_title}
+                      </Text>
+                    </View>
+                  </SoftCard>
                 </TouchableOpacity>
               );
             })
