@@ -122,27 +122,33 @@ function MemberPickerSheet({ roleLabel, ministry, currentUserId, onSelect, onClo
 
   return (
     <View style={ps.sheet}>
-      <View style={ps.handle} />
-      <View style={ps.sheetHeader}>
-        <View>
-          <Text style={ps.sheetTitle}>Assign Member</Text>
-          <Text style={ps.sheetSubtitle}>{roleLabel}</Text>
+      <View style={[ms.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
+        <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
+        <View style={ms.dragHandle} />
+        <View style={ms.headerContent}>
+          <View style={{ width: 40 }} />
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <Text style={ms.headerTitle}>Assign Member</Text>
+            <Text style={ps.sheetSubtitle}>{roleLabel}</Text>
+          </View>
+          <BounceCard bounceScale={0.85} style={ms.headerCircle} onPress={onClose} hitSlop={8} activeOpacity={0.8}>
+            <X size={24} color="#111827" strokeWidth={2} />
+          </BounceCard>
         </View>
-        <TouchableOpacity onPress={onClose} style={ps.closeBtn}>
-          <X size={20} color="#666" />
-        </TouchableOpacity>
       </View>
 
-      <View style={ps.searchRow}>
-        <Search size={16} color="#aaa" />
-        <TextInput
-          style={ps.searchInput}
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Search by name or role…"
-          placeholderTextColor="#aaa"
-          autoFocus
-        />
+      <View style={{ paddingTop: 70 }}>
+        <View style={ps.searchRow}>
+          <Search size={16} color="#aaa" />
+          <TextInput
+            style={ps.searchInput}
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search by name or role…"
+            placeholderTextColor="#aaa"
+            autoFocus
+          />
         {query.length > 0 && (
           <TouchableOpacity onPress={() => setQuery('')}>
             <X size={14} color="#aaa" />
@@ -165,7 +171,6 @@ function MemberPickerSheet({ roleLabel, ministry, currentUserId, onSelect, onClo
       <FlatList
         data={filtered}
         keyExtractor={(item) => item.id}
-        style={{ flex: 1 }}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
         keyboardShouldPersistTaps="handled"
         renderItem={({ item }) => {
@@ -192,12 +197,13 @@ function MemberPickerSheet({ roleLabel, ministry, currentUserId, onSelect, onClo
           );
         }}
       />
+      </View>
     </View>
   );
 }
 
 const ps = StyleSheet.create({
-  sheet: { flex: 1, backgroundColor: '#fff' },
+  sheet: { backgroundColor: '#fff' },
   handle: { width: 40, height: 4, backgroundColor: '#E5E7EB', borderRadius: 2, alignSelf: 'center', marginTop: 10, marginBottom: 4 },
   sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', padding: 20, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
   sheetTitle: { fontSize: 17, fontWeight: '800', color: '#1a1a1a' },
@@ -370,11 +376,11 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
           <View style={ms.dragHandle} />
           <View style={ms.headerContent}>
+            <View style={{ width: 40 }} />
+            <Text style={ms.headerTitle}>Assign Ministries</Text>
             <BounceCard bounceScale={0.85} style={ms.headerCircle} onPress={onClose} hitSlop={8} activeOpacity={0.8}>
               <X size={24} color="#111827" strokeWidth={2} />
             </BounceCard>
-            <Text style={ms.headerTitle}>Assign Ministries</Text>
-            <View style={{ width: 40 }} />
           </View>
         </View>
 
@@ -542,7 +548,14 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
         })}
       </ScrollView>
 
-      <Modal visible={showPicker} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowPicker(false)}>
+      <AppModal
+        isOpen={showPicker}
+        onClose={() => { setShowPicker(false); setSelectingRoleKey(null); }}
+        title="Assign Member"
+        hideHeader={true}
+        hideDragHandle={true}
+        containerStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}
+      >
         {selectingRoleKey && (
           <MemberPickerSheet
             roleLabel={selectingRoleKey.roleName}
@@ -552,7 +565,7 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
             onClose={() => { setShowPicker(false); setSelectingRoleKey(null); }}
           />
         )}
-      </Modal>
+      </AppModal>
       </View>
     </AppModal>
   );

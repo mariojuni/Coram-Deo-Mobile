@@ -34,18 +34,33 @@ const DEFAULT_PREFERENCES: BiblePreferencesWithHighlights = {
 export default function BibleScreen() {
   const userProfile = useAuthStore((state) => state.userProfile);
   const setTranslation = useBibleVersionStore((state) => state.setTranslation);
+  const globalTranslation = useBibleVersionStore((state) => state.activeTranslation);
   const [preferences, setPreferences] = useState<BiblePreferencesWithHighlights | null>(null);
   const [savedVersions, setSavedVersions] = useState<BibleVersion[]>([]);
   const [books, setBooks] = useState<BibleBook[]>([]);
   const [isBooksModalOpen, setIsBooksModalOpen] = useState(false);
   const router = useRouter();
 
+  // Instantly sync active translation from global store
+  useEffect(() => {
+    if (globalTranslation && preferences && globalTranslation !== preferences.activeTranslation) {
+      setPreferences((prev) => (prev ? { ...prev, activeTranslation: globalTranslation as string } : prev));
+    }
+  }, [globalTranslation]);
+
   // Load initial preferences and versions
   useFocusEffect(
     React.useCallback(() => {
       const init = async () => {
         const prefs = (await getUserPreferences()) as BiblePreferencesWithHighlights;
-        setPreferences(prefs);
+        setPreferences((prev) => {
+          // If we already have a global translation (which updates instantly), don't let a slow storage read override it
+          const currentGlobal = useBibleVersionStore.getState().activeTranslation;
+          if (currentGlobal && currentGlobal !== prefs?.activeTranslation) {
+            return { ...prefs, activeTranslation: currentGlobal as string };
+          }
+          return prefs;
+        });
         const versions = (await getSavedVersions()) as BibleVersion[];
         setSavedVersions(versions);
       };

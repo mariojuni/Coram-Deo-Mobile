@@ -1,12 +1,13 @@
 
 import { useRouter } from 'expo-router';
 import { BounceCard } from '@/components/ui/BounceCard';
-import { Plus, Settings } from 'lucide-react-native';
-import { ActionSheetIOS, Alert, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Plus, X } from 'lucide-react-native';
+import { BlurView } from 'expo-blur';
+import { ActionSheetIOS, Alert, Platform, ScrollView, Text, TouchableOpacity, View, StyleSheet } from 'react-native';
 import { removeVersion } from '@/features/bible/data/bible.repository';
 import { useVersionContext } from '@/features/bible/presentation/context/VersionManagerContext';
 import { styles } from '@/features/bible/presentation/version-manager/styles';
+import { useBibleVersionStore } from '@/store/useBibleVersionStore';
 
 export default function MyVersionsScreen() {
   const router = useRouter();
@@ -69,20 +70,38 @@ export default function MyVersionsScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-      <View style={[styles.modalHeader, styles.modalHeaderLeftAligned]}>
-        <Text style={styles.modalTitleLeft}>My Versions</Text>
-        <View style={[styles.headerRightContainer, { flexDirection: 'row', alignItems: 'center', gap: 12, marginRight: 8 }]}>
-          <TouchableOpacity style={{ padding: 8 }}>
-            <Settings size={24} color="#1a1a1a" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/version-manager/discover')} style={{ padding: 8 }}>
-            <Plus size={26} color="#1a1a1a" />
-          </TouchableOpacity>
+    <View style={{ flex: 1, backgroundColor: '#fff' }}>
+      <View style={[styles.headerContainer, { paddingTop: 21 }]} pointerEvents="box-none">
+        <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
+        <View style={styles.headerContent}>
+          <View style={{ minWidth: 40, alignItems: 'flex-start' }}>
+            <TouchableOpacity onPress={() => router.push('/version-manager/discover')} style={{ padding: 4 }}>
+              <Plus size={26} color="#1a1a1a" />
+            </TouchableOpacity>
+          </View>
+          <Text style={[styles.modalTitle, { marginHorizontal: 12, fontSize: 16 }]}>My Versions</Text>
+          <View style={{ minWidth: 40, alignItems: 'flex-end' }}>
+            <BounceCard 
+              bounceScale={0.85} 
+              style={styles.headerCircle} 
+              onPress={() => {
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/(tabs)/bible');
+                }
+              }} 
+              hitSlop={8} 
+              activeOpacity={0.8}
+            >
+              <X size={24} color="#111827" strokeWidth={2} />
+            </BounceCard>
+          </View>
         </View>
       </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={{ paddingTop: 16 }}>
+      <ScrollView style={styles.content} contentContainerStyle={{ paddingTop: 95 }}>
         <View style={styles.discoverListContainer}>
           {savedVersions.length === 0 ? (
             <Text style={styles.emptyText}>No versions saved yet. Click + to find translations.</Text>
@@ -92,14 +111,15 @@ export default function MyVersionsScreen() {
               const abbr = String(version.local_abbreviation || version.abbreviation || version.id || '').replace(/(\d{2,})$/, '\n$1');
               
               return (
-                <BounceCard bounceScale={0.85}
+                <TouchableOpacity
                   key={version.id}
                   style={[
                     styles.myVersionsListItem,
                     isActive && { backgroundColor: 'rgba(255, 101, 150, 0.04)', borderColor: '#FF6596', borderWidth: 1 }
                   ]}
-                  onPress={async () => {
-                    await handleSelectVersion(version.id);
+                  onPress={() => {
+                    useBibleVersionStore.getState().setTranslation(version.id);
+                    handleSelectVersion(version.id); // sync context too
                     router.back();
                   }}
                   onLongPress={() => handleOptions(version)}
@@ -117,7 +137,7 @@ export default function MyVersionsScreen() {
                       {version.title || version.local_title}
                     </Text>
                   </View>
-                </BounceCard>
+                </TouchableOpacity>
               );
             })
           )}
@@ -133,6 +153,6 @@ export default function MyVersionsScreen() {
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

@@ -4,10 +4,11 @@ import { BounceCard } from '@/components/ui/BounceCard';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, ChevronRight, Cloud, Globe, Search } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useVersionContext } from '@/features/bible/presentation/context/VersionManagerContext';
 import { styles } from '@/features/bible/presentation/version-manager/styles';
+
+import { BlurView } from 'expo-blur';
 
 export default function DiscoverVersionsScreen() {
   const router = useRouter();
@@ -31,34 +32,48 @@ export default function DiscoverVersionsScreen() {
   }, [selectedLanguage]);
 
   let displayBibles = bibles;
-  
-  if (discoverSearch) {
-    const lower = discoverSearch.toLowerCase();
-    displayBibles = displayBibles.filter(b => 
+  if (discoverSearch.trim()) {
+    const lower = discoverSearch.toLowerCase().trim();
+    displayBibles = bibles.filter(b => 
       (b.title || b.localized_title || '').toLowerCase().includes(lower) ||
       (b.abbreviation || b.localized_abbreviation || '').toLowerCase().includes(lower)
     );
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-      <View style={styles.modalHeader}>
-        <View style={styles.headerLeftContainer}>
-          <BounceCard bounceScale={0.85} onPress={() => router.back()} style={{ padding: 8 }}>
-            <ChevronLeft size={24} color="#1a1a1a" />
+    <View style={{ flex: 1, backgroundColor: '#fff' }}>
+      <View style={[styles.headerContainer, { paddingTop: 21 }]} pointerEvents="box-none">
+        <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
+        <View style={styles.headerContent}>
+          <BounceCard 
+            bounceScale={0.85} 
+            style={styles.headerCircle} 
+            onPress={() => {
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.replace('/version-manager');
+              }
+            }} 
+            hitSlop={8} 
+            activeOpacity={0.8}
+          >
+            <ChevronLeft size={24} color="#111827" strokeWidth={2} />
           </BounceCard>
+          <Text style={[styles.modalTitle, { fontSize: 16, marginHorizontal: 12, flex: 1, textAlign: 'center' }]}>Discover Versions</Text>
+          <View style={{ width: 40 }} />
         </View>
-        <Text style={styles.modalTitle}>Discover Versions</Text>
-        <View style={styles.headerRightContainer} />
       </View>
 
-      <View style={styles.searchContainer}>
-        <Search size={18} color="#999" />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search Versions"
-          value={discoverSearch}
-          onChangeText={setDiscoverSearch}
+      <View style={{ flex: 1, paddingTop: 95 }}>
+        <View style={styles.searchContainer}>
+          <Search size={18} color="#999" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search Versions"
+            value={discoverSearch}
+            onChangeText={setDiscoverSearch}
           placeholderTextColor="#999"
           autoCapitalize="none"
         />
@@ -126,6 +141,7 @@ export default function DiscoverVersionsScreen() {
           </View>
         </ScrollView>
       )}
-    </SafeAreaView>
+      </View>
+    </View>
   );
 }

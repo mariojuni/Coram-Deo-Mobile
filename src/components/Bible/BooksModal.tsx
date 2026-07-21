@@ -1,4 +1,7 @@
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { X } from 'lucide-react-native';
+import { BounceCard } from '@/components/ui/BounceCard';
 import AppModal from '../ui/AppModal';
 import { useBooksModal } from '@/features/bible/presentation/hooks/useBooksModal';
 
@@ -36,9 +39,30 @@ export default function BooksModal({ isOpen, onClose, books, onSelectChapter }: 
   };
 
   return (
-    <AppModal isOpen={isOpen} onClose={onClose} title="Books">
-      {/* Book List */}
-      <ScrollView style={styles.content}>
+    <AppModal 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      title="Books"
+      hideHeader={true}
+      hideDragHandle={true}
+      containerStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}
+    >
+      <View style={styles.modalContainer}>
+        <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
+          <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
+          <View style={styles.dragHandle} />
+          <View style={styles.headerContent}>
+            <View style={{ width: 40 }} />
+            <Text style={styles.headerTitle}>Books</Text>
+            <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={onClose} hitSlop={8} activeOpacity={0.8}>
+              <X size={24} color="#111827" strokeWidth={2} />
+            </BounceCard>
+          </View>
+        </View>
+
+        {/* Book List */}
+        <ScrollView style={styles.content} contentContainerStyle={{ paddingTop: 70 }}>
         {sortedBooks.map((book) => {
           const isExpanded = expandedBook === String(book.id);
           return (
@@ -78,11 +102,27 @@ export default function BooksModal({ isOpen, onClose, books, onSelectChapter }: 
           </TouchableOpacity>
         </View>
       </View>
+      </View>
     </AppModal>
   );
 }
 
 const styles = StyleSheet.create({
+  modalContainer: { backgroundColor: '#fff' },
+  headerContainer: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 100, borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden' },
+  dragHandle: { width: 40, height: 4, backgroundColor: '#E5E7EB', borderRadius: 2, alignSelf: 'center', marginBottom: 12 },
+  headerContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 16 },
+  headerCircle: {
+    width: 40, height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: '#111827' },
   content: { flexShrink: 1, backgroundColor: '#fff' },
   bookItem: {
     paddingHorizontal: 24,

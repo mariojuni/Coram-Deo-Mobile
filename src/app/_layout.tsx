@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
+import { VersionProvider } from '@/features/bible/presentation/context/VersionManagerContext';
 import { AudioProvider } from '../features/sermons/presentation/context/AudioContext';
 import '../global.css';
 import { useAuthStore } from '../store/useAuthStore';
@@ -124,30 +125,32 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <AudioProvider>
-          <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="walkthrough" options={{ headerShown: false }} />
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-            <Stack.Screen name="pending-church-link" options={{ headerShown: false }} />
-            <Stack.Screen name="disabled-account" options={{ headerShown: false }} />
-            <Stack.Screen name="scanner" options={{ presentation: 'modal', headerShown: false }} />
-            <Stack.Screen name="my-qr" options={{ presentation: 'modal', headerShown: false }} />
-            <Stack.Screen name="more" options={{ headerShown: false }} />
-            <Stack.Screen name="giving" options={{ headerShown: false }} />
-            <Stack.Screen name="giving-campaign-detail" options={{ headerShown: false }} />
-            <Stack.Screen name="giving-form" options={{ headerShown: false }} />
-            <Stack.Screen name="version-manager" options={{ presentation: 'modal', headerShown: false }} />
-            <Stack.Screen name="audio-player" options={{ presentation: 'modal', headerShown: false }} />
-            <Stack.Screen name="sermon-watch" options={{ headerShown: false }} />
-            <Stack.Screen name="sermon-detail" options={{ headerShown: false }} />
-            <Stack.Screen name="serve-assignment-detail" options={{ headerShown: false }} />
-            <Stack.Screen name="serve-ministry-detail" options={{ headerShown: false }} />
-            <Stack.Screen name="ministry-application" options={{ presentation: 'modal', headerShown: false }} />
-            <Stack.Screen name="bible-plans" options={{ headerShown: false }} />
-            <Stack.Screen name="staff-finance" options={{ headerShown: false }} />
-            <Stack.Screen name="profile" options={{ headerShown: false }} />
-            <Stack.Screen name="+not-found" />
-          </Stack>
+          <VersionProvider>
+            <Stack>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="walkthrough" options={{ headerShown: false }} />
+              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+              <Stack.Screen name="pending-church-link" options={{ headerShown: false }} />
+              <Stack.Screen name="disabled-account" options={{ headerShown: false }} />
+              <Stack.Screen name="scanner" options={{ presentation: 'modal', headerShown: false }} />
+              <Stack.Screen name="my-qr" options={{ presentation: 'modal', headerShown: false }} />
+              <Stack.Screen name="more" options={{ headerShown: false }} />
+              <Stack.Screen name="giving" options={{ headerShown: false }} />
+              <Stack.Screen name="giving-campaign-detail" options={{ headerShown: false }} />
+              <Stack.Screen name="giving-form" options={{ headerShown: false }} />
+              <Stack.Screen name="version-manager" options={{ presentation: 'transparentModal', animation: 'none', headerShown: false }} />
+              <Stack.Screen name="audio-player" options={{ presentation: 'modal', headerShown: false }} />
+              <Stack.Screen name="sermon-watch" options={{ headerShown: false }} />
+              <Stack.Screen name="sermon-detail" options={{ headerShown: false }} />
+              <Stack.Screen name="serve-assignment-detail" options={{ headerShown: false }} />
+              <Stack.Screen name="serve-ministry-detail" options={{ headerShown: false }} />
+              <Stack.Screen name="ministry-application" options={{ presentation: 'modal', headerShown: false }} />
+              <Stack.Screen name="bible-plans" options={{ headerShown: false }} />
+              <Stack.Screen name="staff-finance" options={{ headerShown: false }} />
+              <Stack.Screen name="profile" options={{ headerShown: false }} />
+              <Stack.Screen name="+not-found" />
+            </Stack>
+          </VersionProvider>
           <PrayerRequestModal 
             isOpen={prayerModalOpen} 
             onClose={closePrayerModal} 
