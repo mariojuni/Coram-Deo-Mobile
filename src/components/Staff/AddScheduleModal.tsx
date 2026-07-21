@@ -1,12 +1,15 @@
 import { addDoc, collection, doc, serverTimestamp, updateDoc } from 'firebase/firestore';
-import { Calendar as CalendarIcon, Clock } from 'lucide-react-native';
+import { Calendar as CalendarIcon, Clock, X } from 'lucide-react-native';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { db } from '../../firebase';
 import type { Schedule } from '../../features/schedule/domain/schedule.types';
 import CustomDatePicker from '../CustomDatePicker';
 import CustomTimePicker from '../CustomTimePicker';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AppModal from '@/components/ui/AppModal';
+import { BlurView } from 'expo-blur';
+import { BounceCard } from '@/components/ui/BounceCard';
+import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 
 interface AddScheduleModalProps {
   isOpen: boolean;
@@ -94,104 +97,144 @@ export default function AddScheduleModal({ isOpen, onClose, eventToEdit }: AddSc
     }
   };
 
-  const insets = useSafeAreaInsets();
-
   return (
-    <Modal visible={isOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <View style={[s.header, { paddingTop: Math.max(insets.top, 16) }]}>
-          <TouchableOpacity onPress={onClose} style={s.headerBtn}>
-            <Text style={s.cancelText}>Cancel</Text>
-          </TouchableOpacity>
-          <Text style={s.headerTitle}>{eventToEdit ? 'Edit Event' : 'New Schedule'}</Text>
-          <TouchableOpacity onPress={handleSave} style={s.saveBtn} disabled={saving}>
-            <Text style={s.saveText}>{saving ? 'Saving…' : 'Save'}</Text>
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView style={{ flex: 1, backgroundColor: '#FAFAFA' }} contentContainerStyle={{ padding: 24, paddingBottom: 48 }}>
-          <Text style={s.sectionTitle}>Event Details</Text>
-
-          <Text style={s.label}>Event Title</Text>
-          <TextInput
-            style={s.input}
-            value={title}
-            onChangeText={setTitle}
-            placeholder="e.g. Sunday Worship Service"
-            placeholderTextColor="#aaa"
-          />
-
-          <Text style={s.label}>Date</Text>
-          <TouchableOpacity style={s.iconField} onPress={() => setShowDatePicker(true)}>
-            <CalendarIcon size={16} color="#888" />
-            <Text style={s.iconFieldText}>{fmtDateUI(date)}</Text>
-          </TouchableOpacity>
-
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <View style={{ flex: 1 }}>
-              <Text style={s.label}>Start Time</Text>
-              <TouchableOpacity style={s.iconField} onPress={() => setShowStartPicker(true)}>
-                <Clock size={16} color="#888" />
-                <Text style={s.iconFieldText}>{fmtTime(startTime)}</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.label}>End Time</Text>
-              <TouchableOpacity style={s.iconField} onPress={() => setShowEndPicker(true)}>
-                <Clock size={16} color="#888" />
-                <Text style={s.iconFieldText}>{fmtTime(endTime)}</Text>
+    <AppModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={eventToEdit ? 'Edit Event' : 'New Schedule'}
+      hideHeader={true}
+      hideDragHandle={true}
+      containerStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}
+    >
+      <View style={s.modalContainer}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={[s.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
+            <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
+            <View style={s.dragHandle} />
+            <View style={s.headerContent}>
+              <BounceCard bounceScale={0.85} style={s.headerCircle} onPress={onClose} hitSlop={8} activeOpacity={0.8}>
+                <X size={24} color="#111827" strokeWidth={2} />
+              </BounceCard>
+              <Text style={s.headerTitle}>{eventToEdit ? 'Edit Event' : 'New Schedule'}</Text>
+              <TouchableOpacity onPress={handleSave} style={s.saveBtn} disabled={saving}>
+                <Text style={s.saveText}>{saving ? 'Saving…' : 'Save'}</Text>
               </TouchableOpacity>
             </View>
           </View>
 
-          <Text style={s.label}>Location</Text>
-          <TextInput
-            style={s.input}
-            value={location}
-            onChangeText={setLocation}
-            placeholder="e.g. Main Sanctuary"
-            placeholderTextColor="#aaa"
-          />
-        </ScrollView>
+          <ScrollView contentContainerStyle={{ padding: 24, paddingTop: 70, paddingBottom: 48 }} showsVerticalScrollIndicator={false}>
+            <Text style={s.sectionTitle}>Event Details</Text>
 
-        <CustomDatePicker
-          visible={showDatePicker}
-          date={date}
-          onConfirm={(d) => { setDate(d); setShowDatePicker(false); }}
-          onCancel={() => setShowDatePicker(false)}
-        />
-        <CustomTimePicker
-          visible={showStartPicker}
-          time={startTime}
-          onConfirm={(t) => { setStartTime(t); setShowStartPicker(false); }}
-          onCancel={() => setShowStartPicker(false)}
-        />
-        <CustomTimePicker
-          visible={showEndPicker}
-          time={endTime}
-          onConfirm={(t) => { setEndTime(t); setShowEndPicker(false); }}
-          onCancel={() => setShowEndPicker(false)}
-        />
-      </KeyboardAvoidingView>
-    </Modal>
+            <Text style={s.label}>Event Title</Text>
+            <TextInput
+              style={s.input}
+              value={title}
+              onChangeText={setTitle}
+              placeholder="e.g. Sunday Worship Service"
+              placeholderTextColor="#aaa"
+            />
+
+            <Text style={s.label}>Date</Text>
+            <TouchableOpacity style={s.iconField} onPress={() => setShowDatePicker(true)}>
+              <CalendarIcon size={16} color="#888" />
+              <Text style={s.iconFieldText}>{fmtDateUI(date)}</Text>
+            </TouchableOpacity>
+
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.label}>Start Time</Text>
+                <TouchableOpacity style={s.iconField} onPress={() => setShowStartPicker(true)}>
+                  <Clock size={16} color="#888" />
+                  <Text style={s.iconFieldText}>{fmtTime(startTime)}</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.label}>End Time</Text>
+                <TouchableOpacity style={s.iconField} onPress={() => setShowEndPicker(true)}>
+                  <Clock size={16} color="#888" />
+                  <Text style={s.iconFieldText}>{fmtTime(endTime)}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <Text style={s.label}>Location</Text>
+            <TextInput
+              style={s.input}
+              value={location}
+              onChangeText={setLocation}
+              placeholder="e.g. Main Sanctuary"
+              placeholderTextColor="#aaa"
+            />
+          </ScrollView>
+
+          <CustomDatePicker
+            visible={showDatePicker}
+            date={date}
+            onConfirm={(d) => { setDate(d); setShowDatePicker(false); }}
+            onCancel={() => setShowDatePicker(false)}
+          />
+          <CustomTimePicker
+            visible={showStartPicker}
+            time={startTime}
+            onConfirm={(t) => { setStartTime(t); setShowStartPicker(false); }}
+            onCancel={() => setShowStartPicker(false)}
+          />
+          <CustomTimePicker
+            visible={showEndPicker}
+            time={endTime}
+            onConfirm={(t) => { setEndTime(t); setShowEndPicker(false); }}
+            onCancel={() => setShowEndPicker(false)}
+          />
+        </KeyboardAvoidingView>
+      </View>
+    </AppModal>
   );
 }
 
 const s = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 20 : 24,
-    paddingBottom: 16,
+  modalContainer: { backgroundColor: '#FAFAFA' },
+  headerContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    backgroundColor: '#fff',
+    borderBottomColor: 'rgba(255,255,255,0.4)',
+    overflow: 'hidden',
   },
-  headerBtn: { padding: 8, minWidth: 60 },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: '#1a1a1a' },
-  cancelText: { fontSize: 16, color: '#666' },
+  dragHandle: {
+    width: 40,
+    height: 5,
+    backgroundColor: '#d1d5db',
+    borderRadius: 10,
+    alignSelf: 'center',
+    marginBottom: 4,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  headerCircle: {
+    ...getTopBarButtonShadowStyle(20),
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    textAlign: 'center',
+    marginHorizontal: 12,
+  },
+
   saveBtn: {
     backgroundColor: '#FF6596',
     paddingHorizontal: 16,

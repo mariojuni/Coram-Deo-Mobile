@@ -58,15 +58,6 @@ export default function ServeWorshipSetlistScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: '#F7F8FC' }]}>
       <Stack.Screen options={{ headerShown: false }} />
-      {/* Fixed Back Button */}
-      <BounceCard bounceScale={0.85} 
-        style={[styles.fixedBackBtn, { top: Math.max(insets.top, 24) }]} 
-        onPress={() => router.back()}
-        activeOpacity={0.8}
-      >
-        <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
-      </BounceCard>
-
       {/* ─── Header ─── */}
       <LinearGradient
         colors={['#FFE8F1', '#F5F2FF']}
@@ -148,6 +139,15 @@ export default function ServeWorshipSetlistScreen() {
           ))
         )}
       </ScrollView>
+
+      {/* Fixed Back Button */}
+      <BounceCard bounceScale={0.85} 
+        style={[styles.fixedBackBtn, { top: Math.max(insets.top, 24) }]} 
+        onPress={() => router.back()}
+        activeOpacity={0.8}
+      >
+        <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
+      </BounceCard>
     </View>
   );
 }

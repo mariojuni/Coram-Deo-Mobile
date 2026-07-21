@@ -178,14 +178,16 @@ export function SermonWatchScreen() {
         <Stack.Screen options={{ headerShown: false }} />
         {/* Black video area placeholder with back button */}
         <View style={[styles.playerWrapper, { paddingTop: insets.top, height: (insets.top + 220) }]}>
-          <BounceCard bounceScale={0.85}
-            style={[styles.backBtn, { top: insets.top + 8 }]}
-            onPress={() => router.back()}
-          >
-            <ArrowLeft size={20} color="#fff" />
-          </BounceCard>
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             <ActivityIndicator size="large" color="#fff" />
+          </View>
+          <View style={[styles.backBtnWrapper, { top: insets.top + 12 }]}>
+            <BounceCard bounceScale={0.85}
+              style={styles.backBtnInner}
+              onPress={() => router.back()}
+            >
+              <ArrowLeft size={20} color="#fff" />
+            </BounceCard>
           </View>
         </View>
       </View>
@@ -205,17 +207,6 @@ export function SermonWatchScreen() {
       {/* ─── Video Player (sticky top) ─── */}
       {hasVideo ? (
         <View style={[styles.playerWrapper, { paddingTop: insets.top }]}>
-          {/* Back button overlay */}
-          <BounceCard bounceScale={0.85}
-            style={[styles.backBtn, { top: insets.top + 8 }]}
-            onPress={() => {
-              if (progressInterval.current) clearTimeout(progressInterval.current);
-              router.back();
-            }}
-          >
-            <ArrowLeft size={20} color="#fff" />
-          </BounceCard>
-
           <SermonVideoPlayer
             sermon={currentSermon}
             savedProgress={savedProgress}
@@ -234,6 +225,18 @@ export function SermonWatchScreen() {
             }}
             videoSource={hasVideo ? videoSource : null}
           />
+          {/* Back button overlay - Rendered after video so it stays on top */}
+          <View style={[styles.backBtnWrapper, { top: insets.top + 12 }]}>
+            <BounceCard bounceScale={0.85}
+              style={styles.backBtnInner}
+              onPress={() => {
+                if (progressInterval.current) clearTimeout(progressInterval.current);
+                router.back();
+              }}
+            >
+              <ArrowLeft size={20} color="#fff" />
+            </BounceCard>
+          </View>
         </View>
       ) : (
         // Audio-only: show back button in top bar
@@ -369,14 +372,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
     position: 'relative',
   },
-  backBtn: {
+  backBtnWrapper: {
     position: 'absolute',
     left: 12,
-    zIndex: 20,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    zIndex: 100,
+    elevation: 20, // Critical for Android to render above native video player
+  },
+  backBtnInner: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(0,0,0,0.6)',
     alignItems: 'center',
     justifyContent: 'center',
   },

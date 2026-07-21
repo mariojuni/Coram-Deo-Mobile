@@ -13,6 +13,9 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { SoftCard } from '@/components/ui/SoftCard';
+import NetworkErrorScreen from '@/components/ui/NetworkErrorScreen';
+import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
+import HomeScreenSkeleton from '@/components/ui/HomeScreenSkeleton';
 import { BounceCard } from '@/components/ui/BounceCard';
 import { CalendarDays, CheckCircle2, ChevronRight, Clock, HeartHandshake, HelpCircle, MapPin, Play, XCircle, Pencil, Trash2, MoreHorizontal, User, MessageCircle } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -71,6 +74,9 @@ export default function HomeScreen() {
     formatPrayerTimeAgo,
     displayName,
     assignments,
+    hasError,
+    clearError,
+    retry,
   } = useHomeScreenData();
   const { prayers, loading: prayersLoading, togglePrayerLike, deletePrayer } = usePrayerFeed();
   const openPrayerModal = useUIStore((state) => state.openPrayerModal);
@@ -183,6 +189,19 @@ export default function HomeScreen() {
   );
 
   const insets = useSafeAreaInsets();
+
+  // Error state handling
+  if (hasError) {
+    return <NetworkErrorScreen onRetry={retry} />;
+  }
+
+  // Loading state handling
+  const homeLoading = prayersLoading || sermonsLoading;
+  if (homeLoading) {
+    return (
+      <HomeScreenSkeleton />
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -742,6 +761,12 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAFAFA' },
+  // Additional styles for shimmer placeholders (reuse existing ones where possible)
+  shimmerHeader: { width: '100%', height: 80, marginBottom: 12 },
+  shimmerCarousel: { width: '100%', height: 150, marginBottom: 12 },
+  shimmerMinistry: { width: '100%', height: 100, marginBottom: 12 },
+  shimmerPrayer: { width: '100%', height: 120, marginBottom: 12 },
+  shimmerSermon: { width: '100%', height: 120, marginBottom: 12 },
   header: {
     position: 'absolute',
     top: 0,
@@ -1024,4 +1049,5 @@ const styles = StyleSheet.create({
   eventLocationText: { fontSize: 12, fontWeight: '400', color: '#B0B6C8', flex: 1 },
   seeAllEventsBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 8, marginTop: 8 },
   seeAllEventsBtnText: { fontSize: 12, fontWeight: '700', color: '#FF6596' },
+
 });

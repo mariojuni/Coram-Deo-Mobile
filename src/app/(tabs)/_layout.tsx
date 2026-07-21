@@ -16,7 +16,7 @@ import { useRouter, usePathname } from 'expo-router';
 import { useAudio } from '../../features/sermons/presentation/context/AudioContext';
 import { useShallow } from 'zustand/react/shallow';
 
-const AnimatedTabItem = ({ isFocused, route, options, onPress, IconComponent }: any) => {
+const AnimatedTabItem = ({ isFocused, route, options, onPress, IconComponent, showBadge }: any) => {
   const scale = useRef(new Animated.Value(isFocused ? 1.15 : 1)).current;
   const translateY = useRef(new Animated.Value(isFocused ? -4 : 0)).current;
 
@@ -50,6 +50,19 @@ const AnimatedTabItem = ({ isFocused, route, options, onPress, IconComponent }: 
     >
       <Animated.View style={{ transform: [{ scale }, { translateY }] }}>
         <IconComponent size={24} color={color} />
+        {showBadge && (
+          <View style={{
+            position: 'absolute',
+            top: -2,
+            right: -2,
+            width: 10,
+            height: 10,
+            borderRadius: 5,
+            backgroundColor: '#FF3B30',
+            borderWidth: 1.5,
+            borderColor: '#FFFFFF'
+          }} />
+        )}
       </Animated.View>
     </TouchableOpacity>
   );
@@ -58,6 +71,7 @@ const AnimatedTabItem = ({ isFocused, route, options, onPress, IconComponent }: 
 function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
   const insets = useSafeAreaInsets();
   const tabBarVisible = useUIStore((s) => s.tabBarVisible);
+  const hasNewAssignment = useMinistryStore((s) => s.hasNewAssignment);
   const slideAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -90,6 +104,9 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
             }
 
             const onPress = () => {
+              if (route.name === 'serve') {
+                useMinistryStore.getState().markAssignmentsViewed();
+              }
               const event = navigation.emit({
                 type: 'tabPress',
                 target: route.key,
@@ -121,6 +138,7 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
                 options={options}
                 onPress={onPress}
                 IconComponent={IconComponent}
+                showBadge={route.name === 'serve' && hasNewAssignment}
               />
             );
           })}
@@ -131,6 +149,10 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
 }
 
 export default function TabLayout() {
+  useEffect(() => {
+    useMinistryStore.getState().loadViewedAssignmentCount();
+  }, []);
+
   const syncToastMessage = useUIStore((s) => s.syncToastMessage);
   const { userProfile } = useAuthStore();
   

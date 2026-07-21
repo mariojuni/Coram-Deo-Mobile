@@ -4,11 +4,11 @@
  * Migrated to use dynamic Firebase ministries and ministryAssignments.
  */
 import {
-  BookOpen, Check, ChevronDown, ChevronUp, Clock, Copy, Drum, GraduationCap,
+  BookOpen, Check, ChevronDown, ChevronUp, Clock, Drum, GraduationCap,
   Guitar, HandCoins, MapPin, Mic, Monitor, Piano, Search, Users, X, Shield, Music, Heart, Star, Settings
 } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, FlatList, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal } from 'react-native';
 import { PrayingHands } from '../ui/icons/PrayingHands';
 import { ministryRepository } from '../../features/ministry/data/ministry.repository';
 import type { Schedule } from '../../features/schedule/domain/schedule.types';
@@ -16,8 +16,10 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { useMemberStore } from '../../store/useMemberStore';
 import { useMinistryStore } from '../../store/useMinistryStore';
 import { useScheduleStore } from '../../store/useScheduleStore';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SoftCard } from '@/components/ui/SoftCard';
+import { SoftCard, getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
+import AppModal from '@/components/ui/AppModal';
+import { BlurView } from 'expo-blur';
+import { BounceCard } from '@/components/ui/BounceCard';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type FilterTab = 'all' | 'unassigned' | 'assigned';
@@ -353,26 +355,30 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
     }
   };
 
-  // Use previous week's assignments as template (This requires fetching previous assignments, but for now we skip this or show a note)
-  const handleUseTemplate = useCallback(() => {
-    Alert.alert('Template Copy', 'Copying from templates is temporarily disabled while migrating to the new ministries API.');
-  }, []);
-
-  const insets = useSafeAreaInsets();
-
   return (
-    <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <View style={[ms.header, { paddingTop: Math.max(insets.top, 16) }]}>
-        <TouchableOpacity onPress={onClose} style={ms.backBtn}>
-          <X size={20} color="#666" />
-        </TouchableOpacity>
-        <Text style={ms.headerTitle}>Assign Ministries</Text>
-        <TouchableOpacity onPress={handleUseTemplate} style={ms.templateBtn}>
-          <Copy size={18} color="#4D8BFF" />
-        </TouchableOpacity>
-      </View>
+    <AppModal
+      isOpen={true}
+      onClose={onClose}
+      title="Assign Ministries"
+      hideHeader={true}
+      hideDragHandle={true}
+      containerStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}
+    >
+      <View style={ms.modalContainer}>
+        <View style={[ms.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
+          <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
+          <View style={ms.dragHandle} />
+          <View style={ms.headerContent}>
+            <BounceCard bounceScale={0.85} style={ms.headerCircle} onPress={onClose} hitSlop={8} activeOpacity={0.8}>
+              <X size={24} color="#111827" strokeWidth={2} />
+            </BounceCard>
+            <Text style={ms.headerTitle}>Assign Ministries</Text>
+            <View style={{ width: 40 }} />
+          </View>
+        </View>
 
-      <ScrollView style={{ flex: 1, backgroundColor: '#FAFAFA' }} contentContainerStyle={{ paddingBottom: 120 }}>
+        <ScrollView contentContainerStyle={{ paddingBottom: 120, paddingTop: 70 }} showsVerticalScrollIndicator={false}>
         <SoftCard style={{ margin: 20, marginBottom: 16, borderRadius: 16 }} innerStyle={{ borderRadius: 15 }}>
           <View style={[ms.eventCard, { margin: 0 }]}>
             <View style={ms.eventIconBox}>
@@ -396,10 +402,6 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
           <View style={[ms.progressCard, { marginHorizontal: 0, marginBottom: 0 }]}>
             <View style={ms.progressRow}>
               <Text style={ms.progressLabel}>{assignedCount} of {totalRoles} roles assigned</Text>
-              <TouchableOpacity onPress={handleUseTemplate} style={ms.templatePill}>
-                <Copy size={13} color="#4D8BFF" />
-                <Text style={ms.templatePillText}>Use Template</Text>
-              </TouchableOpacity>
             </View>
             <View style={ms.progressTrack}>
               <View style={[ms.progressFill, { width: totalRoles ? `${Math.round((assignedCount / totalRoles) * 100)}%` : '0%' }]} />
@@ -551,17 +553,53 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
           />
         )}
       </Modal>
-    </Modal>
+      </View>
+    </AppModal>
   );
 }
 
 const ms = StyleSheet.create({
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16,
-    paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#f0f0f0', backgroundColor: '#fff',
+  modalContainer: { backgroundColor: '#FAFAFA' },
+  headerContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.4)',
+    overflow: 'hidden',
   },
-  backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#f3f4f6', alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 17, fontWeight: '800', color: '#1a1a1a' },
+  dragHandle: {
+    width: 40,
+    height: 5,
+    backgroundColor: '#d1d5db',
+    borderRadius: 10,
+    alignSelf: 'center',
+    marginBottom: 4,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  headerCircle: {
+    ...getTopBarButtonShadowStyle(20),
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    textAlign: 'center',
+    marginHorizontal: 12,
+  },
   templateBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#EBF3FF', alignItems: 'center', justifyContent: 'center' },
   eventCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 14, backgroundColor: '#fff', margin: 16, marginBottom: 0, padding: 16, borderRadius: 16, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
   eventIconBox: { width: 48, height: 48, borderRadius: 14, backgroundColor: '#F3EEFF', alignItems: 'center', justifyContent: 'center' },
@@ -573,8 +611,6 @@ const ms = StyleSheet.create({
   progressLabel: { fontSize: 14, fontWeight: '700', color: '#1a1a1a' },
   progressTrack: { height: 6, backgroundColor: '#F3F4F6', borderRadius: 3, overflow: 'hidden' },
   progressFill: { height: 6, backgroundColor: '#22C55E', borderRadius: 3 },
-  templatePill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#EBF3FF', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
-  templatePillText: { fontSize: 12, fontWeight: '700', color: '#4D8BFF' },
   filterRow: { flexDirection: 'row', marginHorizontal: 16, marginVertical: 14, backgroundColor: '#F3F4F6', borderRadius: 12, padding: 4 },
   filterTab: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 10 },
   filterTabActive: { backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 },

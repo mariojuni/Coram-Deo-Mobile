@@ -22,6 +22,7 @@ export function useHomeScreenData() {
   const initializeSchedulesListener = useScheduleStore((state) => state.initializeSchedulesListener);
   const { assignments, initializeAssignmentsListener, fetchMinistries } = useMinistryStore();
   const [latestPrayer, setLatestPrayer] = useState<Prayer | null>(null);
+  const [hasError, setHasError] = useState<boolean>(false);
 
   const initializePlansListener = useBiblePlanStore((s) => s.initializePlansListener);
   const initializeUserBiblePlansListener = useBiblePlanStore((s) => s.initializeUserBiblePlansListener);
@@ -47,11 +48,12 @@ export function useHomeScreenData() {
       churchId,
       (prayer) => setLatestPrayer(prayer),
       (error) => {
-        console.error('Error loading latest prayer:', error);
+        console.error('Error fetching schedules:', error);
+        setHasError(true);
       }
     );
     return () => unsubscribe();
-  }, [userProfile?.churchId]);
+  }, [userProfile?.churchId, retryTrigger]);
 
   // Initialize bible plan listeners so BiblePlanProgressCard has data on home screen.
   // Use useFocusEffect so listeners are re-initialized when returning from plan detail
@@ -158,6 +160,14 @@ export function useHomeScreenData() {
     if (!currentUser?.uid) return;
     const newStatus = action === 'accept' ? 'Confirmed' : 'Declined';
     await ministryRepository.updateAssignment(assignmentId, { status: newStatus });
+    // No error handling needed here
+  };
+
+  const clearError = () => setHasError(false);
+  const [retryTrigger, setRetryTrigger] = useState(false);
+  const retry = () => {
+    clearError();
+    setRetryTrigger(prev => !prev);
   };
 
   return {
@@ -175,6 +185,9 @@ export function useHomeScreenData() {
     handleRsvp,
     handleAnswered,
     formatPrayerTimeAgo,
-    assignments, // Export assignments to use in home screen
+    assignments,
+    hasError,
+    clearError,
+    retry,
   };
 }

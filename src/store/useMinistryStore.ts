@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ministryRepository } from '../features/ministry/data/ministry.repository';
 import type { Ministry, MinistryAssignment } from '../features/ministry/domain/ministry.types';
 
@@ -14,6 +15,10 @@ interface MinistryStore {
   initializeMemberAssignmentsListener: (churchId: string, memberId: string) => () => void;
   getAssignmentsForEvent: (eventId: string) => MinistryAssignment[];
   getUserAssignments: (userId: string) => MinistryAssignment[];
+  hasNewAssignment: boolean;
+  lastViewedAssignmentCount: number;
+  markAssignmentsViewed: () => Promise<void>;
+  loadViewedAssignmentCount: () => Promise<void>;
 }
 
 let assignmentsUnsubscribe: (() => void) | null = null;
@@ -29,6 +34,29 @@ export const useMinistryStore = create<MinistryStore>((set, get) => ({
   assignmentsLoading: true,
   memberAssignments: [],
   memberAssignmentsLoading: false,
+  hasNewAssignment: false,
+  lastViewedAssignmentCount: 0,
+
+  loadViewedAssignmentCount: async () => {
+    try {
+      const stored = await AsyncStorage.getItem('lastViewedAssignmentCount');
+      if (stored) {
+        set({ lastViewedAssignmentCount: parseInt(stored, 10) });
+      }
+    } catch {
+      // ignore
+    }
+  },
+
+  markAssignmentsViewed: async () => {
+    const currentCount = get().memberAssignments.length;
+    set({ lastViewedAssignmentCount: currentCount, hasNewAssignment: false });
+    try {
+      await AsyncStorage.setItem('lastViewedAssignmentCount', currentCount.toString());
+    } catch {
+      // ignore
+    }
+  },
 
   fetchMinistries: async (churchId: string) => {
     set({ ministriesLoading: true });
@@ -66,7 +94,14 @@ export const useMinistryStore = create<MinistryStore>((set, get) => ({
         churchId,
         memberId,
         (data) => {
-          set({ memberAssignments: data, memberAssignmentsLoading: false });
+          set((state) => {
+            const hasNew = data.length > state.lastViewedAssignmentCount;
+            return {
+              memberAssignments: data,
+              memberAssignmentsLoading: false,
+              hasNewAssignment: state.hasNewAssignment || hasNew,
+            };
+          });
         }
       );
     }
