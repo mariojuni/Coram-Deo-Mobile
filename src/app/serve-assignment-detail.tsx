@@ -175,7 +175,7 @@ export default function ServeAssignmentDetailScreen() {
       {/* ─── Animated Blur Header ─── */}
       <View style={[styles.header, { height: headerHeight }]} pointerEvents="box-none">
         <Animated.View style={[StyleSheet.absoluteFill, { opacity: headerOpacity }]} pointerEvents="none">
-          <BlurView intensity={90} tint="light" style={StyleSheet.absoluteFill} experimentalBlurMethod="dimezisBlurView" />
+          <BlurView intensity={90} tint="light" style={StyleSheet.absoluteFill} />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.75)' }]} />
           {/* Gradient accent line */}
           <View style={styles.accentLine}>
@@ -356,7 +356,7 @@ export default function ServeAssignmentDetailScreen() {
       {/* ─── Sticky Footer Actions ─── */}
       {isOwnAssignment && isPending && !actionSuccess ? (
         <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20) }]}>
-          <BlurView intensity={90} tint="light" style={StyleSheet.absoluteFill} experimentalBlurMethod="dimezisBlurView" />
+          <BlurView intensity={90} tint="light" style={StyleSheet.absoluteFill} />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.85)' }]} pointerEvents="none" />
           <View style={styles.actions}>
             <TouchableOpacity

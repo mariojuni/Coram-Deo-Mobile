@@ -143,7 +143,7 @@ export default function ScheduleTab({
                 <View style={styles.timeRow}>
                   <Clock size={12} color="#888" style={styles.timeIcon} />
                   <Text style={styles.infoText}>
-                    {item.schedule.time}
+                    {item.schedule.time || '9:00 AM'}
                     {item.schedule.endTime ? ` - ${item.schedule.endTime}` : ''}
                   </Text>
                 </View>
@@ -151,7 +151,7 @@ export default function ScheduleTab({
 
               <View style={styles.infoRow}>
                 <MapPin size={14} color="#888" style={styles.locationIcon} />
-                <Text style={styles.infoText}>{item.schedule.location}</Text>
+                <Text style={styles.infoText}>{item.schedule.location || 'Main Sanctuary'}</Text>
               </View>
 
               {item.team.length > 0 && (

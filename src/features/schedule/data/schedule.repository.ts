@@ -49,7 +49,7 @@ function toSchedule(docId: string, data: Record<string, unknown>): Schedule {
     id: docId,
     title: typeof data.title === 'string' ? data.title : '',
     date: typeof data.date === 'string' ? data.date : docId,
-    time: typeof data.time === 'string' ? data.time : '',
+    time: typeof data.time === 'string' ? data.time : (typeof data.startTime === 'string' ? data.startTime : ''),
     endTime: typeof data.endTime === 'string' ? data.endTime : '',
     location: typeof data.location === 'string' ? data.location : '',
     duties,

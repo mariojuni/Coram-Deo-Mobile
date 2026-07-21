@@ -407,8 +407,12 @@ export const getUserPreferences = async () => {
         data = docSnap.data();
         await AsyncStorage.setItem('bible_prefs', JSON.stringify(data));
       }
-    } catch (error) {
-      console.warn('Failed to load preferences from Firestore:', error);
+    } catch (error: any) {
+      if (error?.message?.includes('offline') || error?.code === 'unavailable') {
+        console.log('Client offline, using local bible preferences.');
+      } else {
+        console.warn('Failed to load preferences from Firestore:', error);
+      }
     }
   }
 

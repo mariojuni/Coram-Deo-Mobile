@@ -1,24 +1,22 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { BounceCard } from '@/components/ui/BounceCard';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { RefreshCw, X } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { RefreshCw, X, CheckCircle } from 'lucide-react-native';
 import { useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useMemberStore } from '../store/useMemberStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { attendanceRepository } from '../features/attendance/data/attendance.repository';
+import { canSelfCheckIn } from '../permissions/attendancePermissions';
+import { getDoc, doc } from 'firebase/firestore';
+import { db } from '../firebase';
+import type { EventModel } from '../features/attendance/domain/attendance.types';
 
-export default function ScannerScreen() {
+export default function AttendanceCheckInScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanLoading, setScanLoading] = useState(false);
   const router = useRouter();
-  const members = useMemberStore((state) => state.members);
   const userProfile = useAuthStore((state) => state.userProfile);
-  
-  const params = useLocalSearchParams<{ eventId?: string; eventTitle?: string }>();
-  const eventId = params.eventId;
-  const eventTitle = params.eventTitle || 'Unknown Event';
 
   if (!permission) {
     return <View />;
@@ -35,10 +33,10 @@ export default function ScannerScreen() {
     );
   }
 
-  if (!eventId) {
+  if (!canSelfCheckIn(userProfile)) {
     return (
       <SafeAreaView style={styles.permissionContainer}>
-        <Text style={styles.permissionText}>Missing Event Context.</Text>
+        <Text style={styles.permissionText}>You do not have permission to self check-in.</Text>
         <TouchableOpacity style={styles.permissionButton} onPress={() => router.back()}>
           <Text style={styles.permissionButtonText}>Go Back</Text>
         </TouchableOpacity>
@@ -47,53 +45,103 @@ export default function ScannerScreen() {
   }
 
   const handleBarcodeScanned = async ({ type, data }: { type: string; data: string }) => {
-    if (scanLoading || !userProfile?.churchId) return;
+    if (scanLoading || !userProfile?.churchId || !userProfile.memberId) return;
     setScanLoading(true);
 
     try {
-      // Parse format qr-[id]
-      const match = data.match(/qr-([a-zA-Z0-9_-]+)/);
+      // Expected QR token format for events: maybe a JSON or a specific URI
+      // Let's assume the QR contains the eventId directly or a session token.
+      // For this implementation, let's assume it contains the eventId: `event-[eventId]`
+      // If it's a web token it might be `qr-event-[eventId]`
+      const match = data.match(/event-([a-zA-Z0-9_-]+)/i);
       if (!match || !match[1]) {
-        Alert.alert("Invalid QR", "Does not match system signature.");
+        Alert.alert("Invalid QR", "This QR code is not recognized as a valid Event Check-In code.");
         setTimeout(() => setScanLoading(false), 2000);
         return;
       }
       
-      const memberId = match[1];
-      const foundMember = members.find((m: any) => m.id === memberId);
-      
-      if (foundMember) {
-        try {
-          await attendanceRepository.createAttendanceRecord({
-            churchId: userProfile.churchId,
-            eventId: eventId,
-            eventTitle: eventTitle,
-            memberId: foundMember.id,
-            status: 'Present',
-            checkInMethod: 'staff_scan',
-            checkedInAt: new Date().toISOString(),
-            checkedInBy: userProfile.uid,
-            source: 'mobile',
-            memberName: foundMember.name || foundMember.firstName + (foundMember.lastName ? ' ' + foundMember.lastName : ''),
-            type: foundMember.status === 'new' ? 'Visitor' : (foundMember.role || 'Member'),
-          });
+      const eventId = match[1];
 
-          Alert.alert("Success", `🎉 ${foundMember.name || foundMember.firstName} checked in successfully!`);
-        } catch (e: any) {
-          if (e.message.includes('Already checked in')) {
-            Alert.alert("Notice", `⚠️ ${foundMember.name || foundMember.firstName} is already checked in for this event.`);
-          } else {
-            throw e;
-          }
+      // Fetch Event from events collection
+      const eventRef = doc(db, 'events', eventId);
+      const eventSnap = await getDoc(eventRef);
+      
+      if (!eventSnap.exists()) {
+        Alert.alert("Error", "Event not found.");
+        setTimeout(() => setScanLoading(false), 2000);
+        return;
+      }
+
+      const eventData = eventSnap.data() as EventModel;
+
+      // Validate Event
+      if (eventData.churchId !== userProfile.churchId) {
+        Alert.alert("Error", "This event belongs to a different church.");
+        setTimeout(() => setScanLoading(false), 2000);
+        return;
+      }
+
+      if (!eventData.attendanceEnabled) {
+        Alert.alert("Notice", "Attendance is not enabled for this event.");
+        setTimeout(() => setScanLoading(false), 2000);
+        return;
+      }
+
+      if (eventData.attendanceMode === 'manual' || eventData.attendanceMode === 'staff_scan') {
+        Alert.alert("Notice", "Self check-in is not allowed for this event.");
+        setTimeout(() => setScanLoading(false), 2000);
+        return;
+      }
+
+      // Check-in window validation
+      if (eventData.checkInWindowStart && eventData.checkInWindowEnd) {
+        const now = new Date().getTime();
+        const start = new Date(eventData.checkInWindowStart).getTime();
+        const end = new Date(eventData.checkInWindowEnd).getTime();
+        if (now < start) {
+          Alert.alert("Notice", "Check-in is not yet open for this event.");
+          setTimeout(() => setScanLoading(false), 2000);
+          return;
         }
-        setTimeout(() => setScanLoading(false), 3000);
-      } else {
-        Alert.alert("Not Found", "Member signature not found in system directory.");
-        setTimeout(() => setScanLoading(false), 3000);
+        if (now > end) {
+          Alert.alert("Notice", "Check-in is closed for this event.");
+          setTimeout(() => setScanLoading(false), 2000);
+          return;
+        }
+      }
+
+      // Record attendance
+      try {
+        await attendanceRepository.createAttendanceRecord({
+          churchId: userProfile.churchId,
+          eventId: eventId,
+          eventTitle: eventData.title,
+          memberId: userProfile.memberId,
+          status: 'Present',
+          checkInMethod: 'self_qr',
+          checkedInAt: new Date().toISOString(),
+          checkedInBy: 'self',
+          source: 'mobile',
+          memberName: `${userProfile.name || userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim(),
+          type: userProfile.role || 'Member',
+        });
+
+        Alert.alert("Success", "You are checked in. Thank you for attending!");
+        setTimeout(() => {
+          setScanLoading(false);
+          router.back();
+        }, 2000);
+      } catch (e: any) {
+        if (e.message.includes('Already checked in')) {
+          Alert.alert("Notice", "You are already checked in for this event.");
+        } else {
+          throw e;
+        }
+        setTimeout(() => setScanLoading(false), 2000);
       }
     } catch (err) {
-      console.error("Error decoding QR:", err);
-      Alert.alert("Error", "Error processing QR Code.");
+      console.error("Error processing QR:", err);
+      Alert.alert("Error", "Could not complete check-in.");
       setTimeout(() => setScanLoading(false), 3000);
     }
   };
@@ -126,6 +174,9 @@ export default function ScannerScreen() {
             </View>
           )}
         </View>
+        <View style={styles.footer}>
+           <Text style={styles.footerText}>Scan the Event QR Code to Check In</Text>
+        </View>
       </SafeAreaView>
     </View>
   );
@@ -148,5 +199,7 @@ const styles = StyleSheet.create({
   bottomRight: { bottom: -2, right: -2, borderBottomWidth: 4, borderRightWidth: 4, borderBottomRightRadius: 24 },
   loadingBox: { backgroundColor: 'rgba(0,0,0,0.6)', padding: 16, borderRadius: 16, alignItems: 'center' },
   spinner: { marginBottom: 8 },
-  loadingText: { color: '#fff', fontWeight: 'bold' }
+  loadingText: { color: '#fff', fontWeight: 'bold' },
+  footer: { padding: 24, alignItems: 'center' },
+  footerText: { color: '#fff', fontSize: 16, fontWeight: '600' }
 });

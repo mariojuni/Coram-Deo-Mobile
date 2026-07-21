@@ -1,8 +1,8 @@
 import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
-import { Book, Handshake, Home, Users } from 'lucide-react-native';
+import { Book, Handshake, Home, Users, CheckCircle } from 'lucide-react-native';
 import { useEffect, useRef } from 'react';
-import { Animated, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Animated, Platform, StyleSheet, TouchableOpacity, View, Text, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FabMenu from '../../components/Navigation/FabMenu';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -131,6 +131,7 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
 }
 
 export default function TabLayout() {
+  const syncToastMessage = useUIStore((s) => s.syncToastMessage);
   const { userProfile } = useAuthStore();
   
   // Get active ministries for the user to check staff/tool permissions
@@ -215,6 +216,18 @@ export default function TabLayout() {
           />
         </View>
       )}
+      {/* ── Global Sync Toast ── */}
+      {!!syncToastMessage && (
+        <View style={[styles.floatingToast, { bottom: Math.max(insets.bottom, 16) + 64 }]}>
+          {syncToastMessage.includes('Successfully') ? (
+            <CheckCircle size={18} color="#03543F" style={{ marginRight: 10 }} />
+          ) : (
+            <ActivityIndicator size="small" color="#03543F" style={{ marginRight: 10 }} />
+          )}
+          <Text style={styles.floatingToastText}>{syncToastMessage}</Text>
+        </View>
+      )}
+
     </View>
   );
 }
@@ -257,5 +270,30 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 100,
-  }
+  },
+  floatingToast: {
+    position: 'absolute',
+    left: 24,
+    right: 24,
+    zIndex: 200,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 40,
+    borderWidth: 1,
+    backgroundColor: '#DEF7EC',
+    borderColor: 'rgba(49,196,141,0.5)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  floatingToastText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#03543F',
+  },
 });

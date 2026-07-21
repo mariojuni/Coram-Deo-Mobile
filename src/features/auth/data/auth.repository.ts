@@ -474,8 +474,12 @@ export const authRepository = {
         try {
           const profile = await fetchUserAccount(user);
           onData({ user, profile });
-        } catch (error) {
-          onError(error as Error);
+        } catch (error: any) {
+          if (error?.message?.includes('offline') || error?.code === 'unavailable') {
+            console.log('Client offline, cannot fetch user account from Firestore right now.');
+          } else {
+            onError(error as Error);
+          }
           onData({ user, profile: null });
         }
       },

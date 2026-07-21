@@ -7,8 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AttendanceTab from '../../components/Staff/AttendanceTab';
 import ScheduleTab from '../../components/Staff/ScheduleTab';
-import { getAttendanceStats, getTodayStr } from '../../features/attendance/domain/attendance.selectors';
-import { useAttendanceByDate } from '../../features/attendance/presentation/hooks/useAttendanceByDate';
+import { getTodayStr } from '../../features/attendance/domain/attendance.selectors';
 import WorshipTab from '../../components/Staff/WorshipTab';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useMemberStore } from '../../store/useMemberStore';
@@ -109,11 +108,6 @@ export default function AttendanceScreen() {
       ]).start();
     }
   };
-  const { checkins: todayCheckins } = useAttendanceByDate(getTodayStr());
-  const { checkedInMembers, firstTimeVisitors, totalRegisteredMembers, checkedInRatio } = getAttendanceStats(
-    todayCheckins,
-    members.length
-  );
   const { assignments } = useMinistryStore();
   const unDismissedNotifications = getUndismissedNotificationCount(assignments);
 

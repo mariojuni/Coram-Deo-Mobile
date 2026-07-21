@@ -7,8 +7,10 @@ interface UIStore {
   setTabBarVisible: (visible: boolean) => void;
   prayerModalOpen: boolean;
   editingPrayer: Prayer | null;
+  syncToastMessage: string;
   openPrayerModal: (prayer?: Prayer) => void;
   closePrayerModal: () => void;
+  setSyncToastMessage: (msg: string) => void;
 }
 
 export const useUIStore = create<UIStore>((set) => ({
@@ -16,6 +18,8 @@ export const useUIStore = create<UIStore>((set) => ({
   setTabBarVisible: (visible) => set({ tabBarVisible: visible }),
   prayerModalOpen: false,
   editingPrayer: null,
+  syncToastMessage: '',
   openPrayerModal: (prayer) => set({ prayerModalOpen: true, editingPrayer: prayer || null }),
   closePrayerModal: () => set({ prayerModalOpen: false, editingPrayer: null }),
+  setSyncToastMessage: (msg) => set({ syncToastMessage: msg }),
 }));

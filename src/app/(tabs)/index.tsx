@@ -194,8 +194,7 @@ export default function HomeScreen() {
         <BlurView 
           intensity={90} 
           tint="light" 
-          style={StyleSheet.absoluteFill} 
-          experimentalBlurMethod="dimezisBlurView"
+          style={StyleSheet.absoluteFill}
         />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.75)' }]} pointerEvents="none" />
 

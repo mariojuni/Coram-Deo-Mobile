@@ -179,7 +179,7 @@ export default function GivingFormScreen() {
       
       <View style={[styles.header, { paddingTop: Math.max(insets.top, 24), paddingBottom: 16, position: 'absolute', width: '100%', zIndex: 10 }]}>
         <Animated.View style={[StyleSheet.absoluteFill, { opacity: headerOpacity }]}>
-          <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} experimentalBlurMethod="dimezisBlurView" />
+          <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
           <View style={[StyleSheet.absoluteFill, { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.5)' }]} />
         </Animated.View>
         <View style={styles.headerContent}>

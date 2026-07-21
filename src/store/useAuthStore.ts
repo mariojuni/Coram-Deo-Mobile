@@ -37,8 +37,16 @@ export const useAuthStore = create<AuthState>((set) => ({
         }
       }
       return result;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Google Sign-In Error", error);
+      const errorStr = String(error);
+      if (errorStr.includes('NETWORK_ERROR') || errorStr.includes('network-request-failed')) {
+        throw new Error('A network error occurred. Please check your internet connection and try again.');
+      } else if (errorStr.includes('DEVELOPER_ERROR')) {
+        throw new Error('Google Sign-In is misconfigured on this device.');
+      } else if (errorStr.includes('SIGN_IN_CANCELLED') || errorStr.includes('canceled')) {
+        throw new Error('Google Sign-In was canceled.');
+      }
       throw error;
     }
   },

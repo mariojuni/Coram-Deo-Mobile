@@ -1,7 +1,7 @@
 import { getFabMenuItems } from '@/features/navigation/presentation/fabMenuItems';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { HandHeart, HeartHandshake, Plus } from 'lucide-react-native';
+import { HandHeart, HeartHandshake, Plus, QrCode } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Animated, StyleSheet, TouchableOpacity, View, Text, Platform } from 'react-native';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -9,6 +9,7 @@ import { useUIStore } from '../../store/useUIStore';
 import { getSoftShadowStyle } from '@/components/ui/SoftCard';
 import { BounceCard } from '@/components/ui/BounceCard';
 import { canSubmitGiving } from '../../permissions/mobilePermissions';
+import { canSelfCheckIn } from '../../permissions/attendancePermissions';
 
 interface FabMenuProps {
   isStaff: boolean;
@@ -88,6 +89,10 @@ export default function FabMenu({ isStaff }: FabMenuProps) {
 
   if (canSubmitGiving(userProfile)) {
     baseItems.push({ icon: HandHeart, key: 'giving', title: 'Giving', route: '/giving' });
+  }
+
+  if (canSelfCheckIn(userProfile)) {
+    baseItems.push({ icon: QrCode, key: 'check-in', title: 'Check In', route: '/attendance-checkin' });
   }
 
   baseItems.push(...getFabMenuItems(isStaff));

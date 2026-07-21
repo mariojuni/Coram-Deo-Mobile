@@ -68,7 +68,7 @@ export default function MyGivingScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <LinearGradient colors={['#FFE8F1', '#F5F2FF', '#FAFAFA']} style={StyleSheet.absoluteFill} />
       
-      <BlurView intensity={80} tint="light" style={[styles.header, { paddingTop: Math.max(insets.top, 24) }]} experimentalBlurMethod="dimezisBlurView">
+      <BlurView intensity={80} tint="light" style={[styles.header, { paddingTop: Math.max(insets.top, 24) }]}>
         <View style={styles.headerInner}>
           <BounceCard bounceScale={0.85} 
             style={styles.backBtnCircle} 
