@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { BounceCard } from '@/components/ui/BounceCard';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, ActivityIndicator, Linking } from 'react-native';
 import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft, CheckCircle2, Clock, XCircle, FileText, X } from 'lucide-react-native';
 import { useGiving } from '@/features/giving/presentation/hooks/useGiving';
@@ -30,6 +30,7 @@ export default function MyGivingScreen() {
           </View>
         );
       case 'approved':
+      case 'completed':
         return (
           <View style={[styles.statusPill, { backgroundColor: '#D1FAE5' }]}>
             <CheckCircle2 size={12} color="#059669" />
@@ -123,14 +124,6 @@ export default function MyGivingScreen() {
                   <View style={styles.rejectionBox}>
                     <Text style={styles.rejectionText}>Reason: {record.rejectionReason}</Text>
                   </View>
-                )}
-
-                {record.status === 'approved' && record.receiptUrl && (
-                  <TouchableOpacity style={styles.receiptBtn}>
-                    <LinearGradient colors={['#FFF0F5', '#FFE8F1']} style={[StyleSheet.absoluteFill, { borderRadius: 12 }]} />
-                    <FileText size={16} color="#FF6596" />
-                    <Text style={styles.receiptBtnText}>View Receipt</Text>
-                  </TouchableOpacity>
                 )}
               </View>
             ))
