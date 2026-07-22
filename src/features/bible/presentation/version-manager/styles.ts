@@ -86,7 +86,7 @@ export const styles = StyleSheet.create({
     marginBottom: 12,
     marginHorizontal: 16,
     borderRadius: 20,
-    boxShadow: '0px 4px 12px rgba(255, 101, 150, 0.04)',
+    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.04)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.8)',
   },

@@ -106,9 +106,9 @@ export default function ServeSongLyricsScreen() {
     return (
       <View style={[styles.screen, { paddingTop: insets.top + 20 }]}>
         <Stack.Screen options={{ headerShown: false }} />
-        <BounceCard bounceScale={0.85} style={[styles.fixedBackBtn, { top: Math.max(insets.top, 24) }]} onPress={() => router.back()}>
+        <TouchableOpacity activeOpacity={0.8} style={[styles.fixedBackBtn, { top: Math.max(insets.top, 24) }]} onPress={() => router.back()}>
           <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
-        </BounceCard>
+        </TouchableOpacity>
         <View style={styles.notFound}>
           <Text style={styles.notFoundTitle}>Song not found</Text>
         </View>
@@ -222,13 +222,13 @@ export default function ServeSongLyricsScreen() {
       </Animated.View>
 
       {/* Fixed Back Button */}
-      <BounceCard bounceScale={0.85} 
+      <TouchableOpacity
         style={[styles.fixedBackBtn, { top: Math.max(insets.top, 24) }]} 
         onPress={() => router.back()}
         activeOpacity={0.8}
       >
         <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
-      </BounceCard>
+      </TouchableOpacity>
 
       <Animated.ScrollView
         contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}

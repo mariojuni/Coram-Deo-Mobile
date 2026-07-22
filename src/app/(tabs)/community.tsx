@@ -567,7 +567,7 @@ function EventsTab({ searchQuery }: SubScreenProps) {
           )}
         </View>
       ) : (
-        <BounceCard activeOpacity={0.95}>
+        <BounceCard activeOpacity={0.95} style={{ marginBottom: 10 }}>
           <SoftCard innerStyle={eventsStyles.emptyTodayCardInner}>
             <View style={eventsStyles.emptyTodayIconRing}>
               <CalendarDays size={26} color="#FF6596" />
@@ -590,21 +590,22 @@ function EventsTab({ searchQuery }: SubScreenProps) {
         </View>
       </View>
 
-      {upcomingList.length === 0 ? (
-        <BounceCard activeOpacity={0.95}>
-          <SoftCard innerStyle={eventsStyles.emptyTodayCardInner}>
-            <View style={eventsStyles.emptyTodayIconRing}>
-              <CalendarDays size={26} color="#FF6596" />
-            </View>
-            <Text style={eventsStyles.emptyTodayTitle}>No upcoming events</Text>
-            <Text style={eventsStyles.emptyTodaySubtitle}>
-              Check back later for more events.
-            </Text>
-          </SoftCard>
-        </BounceCard>
-      ) : (
-        upcomingList.map((event) => (
-          <BounceCard key={event.id} activeOpacity={0.82} onPress={() => setSelectedEvent(event)} style={{ marginBottom: 16 }}>
+      <View style={{ marginTop: 4 }}>
+        {upcomingList.length === 0 ? (
+          <BounceCard activeOpacity={0.95} style={{ marginBottom: 10 }}>
+            <SoftCard innerStyle={eventsStyles.emptyTodayCardInner}>
+              <View style={eventsStyles.emptyTodayIconRing}>
+                <CalendarDays size={26} color="#FF6596" />
+              </View>
+              <Text style={eventsStyles.emptyTodayTitle}>No upcoming events</Text>
+              <Text style={eventsStyles.emptyTodaySubtitle}>
+                Check back later for more events.
+              </Text>
+            </SoftCard>
+          </BounceCard>
+        ) : (
+          upcomingList.map((event) => (
+            <BounceCard key={event.id} activeOpacity={0.82} onPress={() => setSelectedEvent(event)} style={{ marginBottom: 10 }}>
             <SoftCard innerStyle={eventsStyles.listCardInner}>
               <View style={eventsStyles.listDateBlock}>
                 <Text style={eventsStyles.listDateMonth}>{getEventDateParts(event).month}</Text>
@@ -645,6 +646,7 @@ function EventsTab({ searchQuery }: SubScreenProps) {
           </BounceCard>
         ))
       )}
+      </View>
 
       <EventDetailsModal
         event={selectedEvent}
@@ -790,7 +792,7 @@ function MembersTab({ searchQuery }: SubScreenProps) {
         </View>
       ) : (
         filteredMembers.map((member) => (
-          <BounceCard key={member.id} style={{ marginBottom: 12 }}>
+          <BounceCard key={member.id} style={{ marginBottom: 8 }}>
             <SoftCard innerStyle={membersStyles.card}>
               <View style={membersStyles.avatarWrap}>
                 <Image
@@ -814,7 +816,7 @@ function MembersTab({ searchQuery }: SubScreenProps) {
               </View>
               <View style={[membersStyles.statusPill, member.status === 'inactive' && membersStyles.statusPillInactive]}>
                 <Text style={[membersStyles.statusText, member.status === 'inactive' && membersStyles.statusTextInactive]}>
-                  {member.status === 'inactive' ? 'Inactive' : 'Active'}
+                  {member.membershipStatus || (member.status === 'inactive' ? 'Inactive' : 'Active')}
                 </Text>
               </View>
             </SoftCard>

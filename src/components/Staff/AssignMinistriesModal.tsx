@@ -20,6 +20,7 @@ import { SoftCard, getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 import AppModal from '@/components/ui/AppModal';
 import { BlurView } from 'expo-blur';
 import { BounceCard } from '@/components/ui/BounceCard';
+import { formatMemberName } from '../../features/member/domain/member.utils';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type FilterTab = 'all' | 'unassigned' | 'assigned';
@@ -110,9 +111,9 @@ function MemberPickerSheet({ roleLabel, ministry, currentUserId, onSelect, onClo
       const globalMember = allMembers.find(g => g.id === m.memberId);
       return {
         id: m.memberId,
-        name: m.memberName,
+        name: formatMemberName(globalMember || m),
         role: m.role,
-        avatar: m.avatar || globalMember?.avatar
+        avatar: globalMember?.avatar || m.avatar
       };
     }) || [];
 
@@ -334,7 +335,7 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
           if (existing.memberId !== userId) {
             await ministryRepository.updateAssignment(existing.id, {
               memberId: userId,
-              memberName: member?.name || 'Unknown',
+              memberName: formatMemberName(member),
               status: 'Pending'
             });
           }
@@ -349,7 +350,7 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
             ministryName: ministry?.name || 'Unknown Ministry',
             roleName,
             memberId: userId,
-            memberName: member?.name || 'Unknown',
+            memberName: formatMemberName(member),
             status: 'Pending',
             createdAt: new Date().toISOString()
           });
@@ -529,7 +530,7 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
                               <Users size={12} color="#4D8BFF" />
                             </View>
                           )}
-                          <Text style={[ms.assignedName, { color: statusColor }]} numberOfLines={1}>{assignedMember.name ?? 'Member'}</Text>
+                          <Text style={[ms.assignedName, { color: statusColor }]} numberOfLines={1}>{assignedMember ? formatMemberName(assignedMember) : 'Member'}</Text>
                         </View>
                       ) : (
                         <View style={ms.unassignedRow}>

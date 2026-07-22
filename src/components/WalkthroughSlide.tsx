@@ -15,7 +15,7 @@ export default function WalkthroughSlide({ title, description, Icon }: Walkthrou
   return (
     <View style={[styles.container, { width }]}>
       <LinearGradient
-        colors={['#4D8BFF', '#7C3AED']}
+        colors={['#FF6596', '#C084FC']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.iconContainer}
@@ -42,7 +42,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 48,
-    shadowColor: '#7C3AED',
+    shadowColor: '#FF6596',
     shadowOffset: {
       width: 0,
       height: 8,

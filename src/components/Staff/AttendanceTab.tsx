@@ -43,28 +43,7 @@ const formatTime12Hr = (timeStr?: string) => {
   return `${h}:${minutes} ${ampm}`;
 };
 
-const formatMemberName = (m: any) => {
-  if (!m) return 'Unknown';
-  if (m.firstName && m.lastName) {
-    if (m.middleName) {
-      return `${m.firstName} ${m.middleName.charAt(0)}. ${m.lastName}`;
-    }
-    return `${m.firstName} ${m.lastName}`;
-  }
-  
-  if (m.name) {
-    const parts = m.name.split(' ').filter(Boolean);
-    if (parts.length >= 3) {
-      const first = parts[0];
-      const middle = parts[1];
-      const last = parts.slice(2).join(' ');
-      return `${first} ${middle.charAt(0)}. ${last}`;
-    }
-    return m.name;
-  }
-  
-  return m.firstName || 'Unknown';
-};
+import { formatMemberName } from '@/features/member/domain/member.utils';
 import AppModal from '../ui/AppModal';
 import { getTopBarButtonShadowStyle, getSoftShadowStyle } from '@/components/ui/SoftCard';
 import { BounceCard } from '@/components/ui/BounceCard';

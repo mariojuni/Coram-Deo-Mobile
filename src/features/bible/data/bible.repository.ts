@@ -36,11 +36,21 @@ export const fetchLanguages = async () => {
 };
 
 export const fetchVerseOfTheDay = async (translationId = '111') => {
-  try {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), 0, 0);
-    const dayOfYear = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 0);
+  const dayOfYear = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+  const cacheKey = `votd_${dayOfYear}_${translationId}`;
 
+  try {
+    const cached = await AsyncStorage.getItem(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+  } catch (e) {
+    // Ignore cache read error
+  }
+
+  try {
     const votdRes = await fetch(`${API_BASE}/verse_of_the_days/${dayOfYear}`, { headers: getHeaders() });
     if (!votdRes.ok) return null;
     const votdData = await votdRes.json();
@@ -53,13 +63,31 @@ export const fetchVerseOfTheDay = async (translationId = '111') => {
     if (!passageRes.ok) return null;
     const passageData = await passageRes.json();
 
-    return {
+    const result = {
       html: passageData.content || (passageData.data && passageData.data.content) || '',
       reference: passageData.reference || (passageData.data && passageData.data.reference),
       passageId,
     };
+
+    try {
+      await AsyncStorage.setItem(cacheKey, JSON.stringify(result));
+    } catch (e) {
+      // Ignore cache write error
+    }
+
+    return result;
   } catch (e) {
     console.error('Error fetching Verse of the Day:', e);
+    
+    // Fallback to previous day if current fails and not in cache
+    try {
+      const prevDayKey = `votd_${dayOfYear - 1}_${translationId}`;
+      const prevCached = await AsyncStorage.getItem(prevDayKey);
+      if (prevCached) {
+        return JSON.parse(prevCached);
+      }
+    } catch (cacheErr) {}
+
     return null;
   }
 };
@@ -222,59 +250,36 @@ export const fetchChapterData = async (translationId: string | number, passageId
   if (offlineChapterStr) {
     try {
       const parsed = JSON.parse(offlineChapterStr);
-      if (parsed.length === 1 && parsed[0].verseNumber === '1') {
-        const repaired = repairSingleVerseText(parsed[0].content, passageId);
-        if (repaired) {
-          sessionCache.set(cacheKey, repaired);
-          return repaired;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        if (parsed.length === 1 && parsed[0].verseNumber === '1') {
+          const repaired = repairSingleVerseText(parsed[0].content, passageId);
+          if (repaired) {
+            sessionCache.set(cacheKey, repaired);
+            return repaired;
+          }
         }
+        sessionCache.set(cacheKey, parsed);
+        return parsed;
       }
-      sessionCache.set(cacheKey, parsed);
-      return parsed;
     } catch {
       // Ignore parse error and fall back to online
     }
   }
 
   try {
-    const index = await fetchBibleIndex(translationId);
-    if (!index) throw new Error('Index not found');
+    const res = await fetch(`${API_BASE}/bibles/${translationId}/passages/${passageId}?format=html`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch chapter HTML from YouVersion');
+    const payload = await res.json();
+    const content = payload.content || (payload.data && payload.data.content) || '';
+    const validVerses = parseHTMLToJSON(content, passageId);
 
-    let verseIds: string[] = [];
-    for (const book of index.books) {
-      for (const chapter of book.chapters) {
-        if (chapter.passage_id === passageId) {
-          if (chapter.verses && chapter.verses.length > 0) {
-            verseIds = chapter.verses.map((v: any) => v.passage_id);
-          }
-          break;
-        }
+    if (validVerses.length > 0) {
+      sessionCache.set(cacheKey, validVerses);
+
+      const savedVersions = await getSavedVersions();
+      if (savedVersions.some((v: any) => String(v.id) === String(translationId))) {
+        await saveChapter(translationId, passageId, JSON.stringify(validVerses));
       }
-    }
-
-    if (verseIds.length === 0) {
-      throw new Error('Verses not found in index');
-    }
-
-    const versePromises = verseIds.map(async (vId) => {
-      const res = await fetch(`${API_BASE}/bibles/${translationId}/passages/${vId}`, { headers: getHeaders() });
-      if (res.ok) {
-        const data = await res.json();
-        const parts = data.id.split('.');
-        const vNum = parts[parts.length - 1];
-        return { id: data.id, verseNumber: vNum, content: data.content };
-      }
-      return null;
-    });
-
-    const results = await Promise.all(versePromises);
-    const validVerses = results.filter((v) => v !== null);
-
-    sessionCache.set(cacheKey, validVerses);
-
-    const savedVersions = await getSavedVersions();
-    if (savedVersions.some((v: any) => String(v.id) === String(translationId))) {
-      await saveChapter(translationId, passageId, JSON.stringify(validVerses));
     }
 
     return validVerses;
@@ -331,22 +336,25 @@ const startBackgroundDownload = async (translationId: string | number, passageId
     await Promise.allSettled(
       batch.map(async (passageId) => {
         const exists = await getChapter(translationId, passageId);
-        if (exists) return;
+        if (exists && exists !== '[]') return; // Skip if already downloaded
 
         try {
           const response = await fetch(`${API_BASE}/bibles/${translationId}/passages/${passageId}?format=html`, {
             headers: getHeaders(),
           });
           if (response.ok) {
-            const data = await response.json();
-            const parsedVerses = parseHTMLToJSON(data.content, passageId);
-            await saveChapter(translationId, passageId, JSON.stringify(parsedVerses));
+            const payload = await response.json();
+            const content = payload.content || (payload.data && payload.data.content) || '';
+            const parsedVerses = parseHTMLToJSON(content, passageId);
+            if (parsedVerses.length > 0) {
+              await saveChapter(translationId, passageId, JSON.stringify(parsedVerses));
+            }
           }
         } catch {}
       })
     );
 
-    await new Promise((res) => setTimeout(res, 200));
+    await new Promise((res) => setTimeout(res, 400)); // Increased delay to avoid rate limit
   }
 };
 

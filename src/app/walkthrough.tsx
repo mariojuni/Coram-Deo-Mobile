@@ -10,7 +10,7 @@ import { AuthGeometricHeader } from '../components/ui/AuthGeometricHeader';
 const SLIDES = [
   {
     id: '1',
-    title: 'Welcome to the Church App',
+    title: 'Welcome to Coram Deo',
     description: 'Stay connected with worship, sermons, events, prayer, and church updates.',
     Icon: Church,
   },
@@ -117,7 +117,7 @@ export default function WalkthroughScreen() {
               <View style={styles.authButtonsContainer}>
                 <TouchableOpacity onPress={() => handleComplete('/(auth)/register')} activeOpacity={0.8}>
                   <LinearGradient
-                    colors={['#4D8BFF', '#7C3AED']}
+                    colors={['#FF6596', '#C084FC']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={[styles.gradientButton, { marginBottom: 16 }]}
@@ -133,7 +133,7 @@ export default function WalkthroughScreen() {
             ) : (
               <TouchableOpacity onPress={handleNext} activeOpacity={0.8}>
                 <LinearGradient
-                  colors={['#4D8BFF', '#7C3AED']}
+                  colors={['#FF6596', '#C084FC']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.gradientButton}
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
   },
   dotActive: {
     width: 24,
-    backgroundColor: '#4D8BFF',
+    backgroundColor: '#FF6596',
   },
   actionContainer: {
     minHeight: 140, // To keep consistent height when changing to 2 buttons
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
-    shadowColor: '#4D8BFF',
+    shadowColor: '#FF6596',
     shadowOffset: {
       width: 0,
       height: 4,

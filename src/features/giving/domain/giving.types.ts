@@ -13,6 +13,7 @@ export interface GivingFund {
   description?: string;
   type: GivingFundType;
   isActive: boolean;
+  status?: 'active' | 'archived';
   visibility: VisibilityType;
   createdBy: string;
   createdAt: string;

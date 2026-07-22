@@ -45,12 +45,17 @@ export async function fetchGivingFunds(churchId: string): Promise<GivingFund[]> 
   try {
     const q = query(
       collection(db, 'givingFunds'),
-      where('churchId', '==', churchId),
-      where('isActive', '==', true)
+      where('churchId', '==', churchId)
     );
     const snapshot = await getDocs(q);
     if (snapshot.empty) return fallback;
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GivingFund));
+    
+    // Filter active funds in memory to avoid needing a composite index
+    const funds = snapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() } as GivingFund))
+      .filter(fund => fund.isActive !== false && fund.status !== 'archived'); // Support both isActive and status if web uses status
+      
+    return funds.length > 0 ? funds : fallback;
   } catch (err) {
     console.warn('Error fetching funds, using mock', err);
     return fallback;

@@ -77,9 +77,12 @@ export default function GivingInputScreen() {
 
     setLoading(true);
     try {
+      const selectedFund = funds.find(f => f.id === form.fundId);
+      
       await createManualGivingRecord(userProfile.churchId, {
         memberId: form.giverType === 'member' ? form.memberId : undefined,
         fundId: form.fundId,
+        fundType: selectedFund?.name || 'Others',
         campaignId: form.campaignId || undefined,
         amount: Number(form.amount),
         currency: 'PHP',

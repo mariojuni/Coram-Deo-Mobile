@@ -91,7 +91,7 @@ export default function MinistryApplicationScreen() {
         reasonForJoining: reasonForJoining.trim(),
         experience: experience.trim(),
         availability: availability.trim(),
-        note: note.trim() || undefined,
+        ...(note.trim() ? { note: note.trim() } : {}),
         status: 'pending',
         submittedAt: now,
         createdAt: now,

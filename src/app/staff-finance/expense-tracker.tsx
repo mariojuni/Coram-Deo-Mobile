@@ -14,6 +14,8 @@ import { SoftCard } from '@/components/ui/SoftCard';
 import { useAuthStore } from '../../store/useAuthStore';
 import { getRecentExpenses, createExpense } from '../../features/giving/data/financeAdmin.service';
 import { GivingExpense, ExpenseCategory } from '../../features/giving/domain/giving.types';
+import { useGiving } from '../../features/giving/presentation/hooks/useGiving';
+import { useMemo } from 'react';
 
 const CATEGORY_OPTIONS: DropdownOption<ExpenseCategory>[] = [
   { label: 'Utilities', value: 'utilities' },
@@ -28,7 +30,15 @@ const CATEGORY_OPTIONS: DropdownOption<ExpenseCategory>[] = [
 export default function ExpenseTrackerScreen() {
   const router = useRouter();
   const { userProfile } = useAuthStore();
+  const { funds } = useGiving();
   const insets = useSafeAreaInsets();
+  
+  const fundOptions: DropdownOption[] = useMemo(() => {
+    return funds.map(f => ({
+      label: f.name,
+      value: f.id
+    }));
+  }, [funds]);
   
   const [expenses, setExpenses] = useState<GivingExpense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,6 +53,7 @@ export default function ExpenseTrackerScreen() {
     vendorName: '',
     category: 'utilities' as ExpenseCategory,
     description: '',
+    fundId: '',
   });
 
   useEffect(() => {
@@ -80,6 +91,7 @@ export default function ExpenseTrackerScreen() {
         category: form.category,
         visibility: 'admin_only',
         date: form.date.toISOString().split('T')[0], // web compatibility
+        fundId: form.fundId || undefined,
       }, userProfile.uid);
       
       setAddModalVisible(false);
@@ -88,7 +100,8 @@ export default function ExpenseTrackerScreen() {
         date: new Date(), 
         vendorName: '', 
         category: 'utilities', 
-        description: '' 
+        description: '',
+        fundId: ''
       });
       fetchExpenses(); // refresh list
     } catch (error: any) {
@@ -204,6 +217,18 @@ export default function ExpenseTrackerScreen() {
                 placeholder="e.g. Meralco"
                 value={form.vendorName}
                 onChangeText={(text) => setForm({ ...form, vendorName: text })}
+              />
+            </View>
+
+            <View style={[styles.inputGroup, { zIndex: 1000 }]}>
+              <ModernDropdown
+                label="Fund (Optional)"
+                options={fundOptions}
+                value={form.fundId}
+                onSelect={(val) => setForm({ ...form, fundId: val || '' })}
+                placeholder="Select a fund"
+                searchable
+                clearable
               />
             </View>
 

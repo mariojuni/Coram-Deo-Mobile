@@ -123,7 +123,7 @@ export default function AddScheduleModal({ isOpen, onClose, eventToEdit }: AddSc
             </View>
           </View>
 
-          <ScrollView contentContainerStyle={{ padding: 24, paddingTop: 70, paddingBottom: 48 }} showsVerticalScrollIndicator={false}>
+          <ScrollView contentContainerStyle={{ padding: 24, paddingTop: 100, paddingBottom: 48 }} showsVerticalScrollIndicator={false}>
             <Text style={s.sectionTitle}>Event Details</Text>
 
             <Text style={s.label}>Event Title</Text>

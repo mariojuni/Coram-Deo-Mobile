@@ -39,9 +39,11 @@ export default function ServeWorshipSetlistScreen() {
     return (
       <View style={[styles.screen, { paddingTop: insets.top + 20 }]}>
         <Stack.Screen options={{ headerShown: false }} />
-        <BounceCard bounceScale={0.85} style={[styles.fixedBackBtn, { top: Math.max(insets.top, 24) }]} onPress={() => router.back()}>
-          <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
-        </BounceCard>
+        <View style={[styles.fixedBackBtnWrapper, { top: Math.max(insets.top, 24) }]}>
+          <BounceCard bounceScale={0.85} style={styles.fixedBackBtn} onPress={() => router.back()}>
+            <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
+          </BounceCard>
+        </View>
         <View style={styles.notFound}>
           <View style={styles.notFoundIconContainer}>
             <AlertCircle size={40} color="#EF4444" strokeWidth={2.5} />
@@ -141,13 +143,15 @@ export default function ServeWorshipSetlistScreen() {
       </ScrollView>
 
       {/* Fixed Back Button */}
-      <BounceCard bounceScale={0.85} 
-        style={[styles.fixedBackBtn, { top: Math.max(insets.top, 24) }]} 
-        onPress={() => router.back()}
-        activeOpacity={0.8}
-      >
-        <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
-      </BounceCard>
+      <View style={[styles.fixedBackBtnWrapper, { top: Math.max(insets.top, 24) }]}>
+        <BounceCard bounceScale={0.85} 
+          style={styles.fixedBackBtn} 
+          onPress={() => router.back()}
+          activeOpacity={0.8}
+        >
+          <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
+        </BounceCard>
+      </View>
     </View>
   );
 }
@@ -159,11 +163,13 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
     gap: 12,
   },
-  fixedBackBtn: {
-    ...getTopBarButtonShadowStyle(20),
+  fixedBackBtnWrapper: {
     position: 'absolute',
     left: 20,
     zIndex: 100,
+  },
+  fixedBackBtn: {
+    ...getTopBarButtonShadowStyle(20),
     width: 40,
     height: 40,
     alignItems: 'center',
