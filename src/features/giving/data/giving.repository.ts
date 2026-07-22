@@ -35,31 +35,39 @@ export function subscribeToActiveCampaigns(churchId: string, callback: (campaign
 }
 
 export async function fetchGivingFunds(churchId: string): Promise<GivingFund[]> {
-  const fallback: GivingFund[] = [
-    { id: 'fund_tithe', churchId, name: 'Tithes', description: 'General tithes', isActive: true, type: 'tithe', visibility: 'public', createdBy: 'admin', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'fund_offering', churchId, name: 'Offering', description: 'General offering', isActive: true, type: 'offering', visibility: 'public', createdBy: 'admin', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'fund_missions', churchId, name: 'Missions', description: 'Missions fund', isActive: true, type: 'missions', visibility: 'public', createdBy: 'admin', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-    { id: 'fund_building', churchId, name: 'Building', description: 'Building fund', isActive: true, type: 'building', visibility: 'public', createdBy: 'admin', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
-  ];
-  if (!churchId) return fallback;
+  if (!churchId) return [];
   try {
     const q = query(
       collection(db, 'givingFunds'),
       where('churchId', '==', churchId)
     );
     const snapshot = await getDocs(q);
-    if (snapshot.empty) return fallback;
     
-    // Filter active funds in memory to avoid needing a composite index
+    return snapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() } as GivingFund))
+      .filter(fund => fund.isActive !== false && fund.status !== 'archived');
+  } catch (err) {
+    console.warn('Error fetching funds:', err);
+    return [];
+  }
+}
+
+export function subscribeToGivingFunds(churchId: string, callback: (funds: GivingFund[]) => void): () => void {
+  if (!churchId) return () => {};
+  const q = query(
+    collection(db, 'givingFunds'),
+    where('churchId', '==', churchId)
+  );
+  return onSnapshot(q, (snapshot) => {
     const funds = snapshot.docs
       .map(doc => ({ id: doc.id, ...doc.data() } as GivingFund))
-      .filter(fund => fund.isActive !== false && fund.status !== 'archived'); // Support both isActive and status if web uses status
-      
-    return funds.length > 0 ? funds : fallback;
-  } catch (err) {
-    console.warn('Error fetching funds, using mock', err);
-    return fallback;
-  }
+      .filter(fund => fund.isActive !== false && fund.status !== 'archived');
+    console.log('[subscribeToGivingFunds] Fetched docs count:', snapshot.docs.length, 'Filtered funds count:', funds.length);
+    callback(funds);
+  }, (err) => {
+    console.warn('Error subscribing to giving funds:', err);
+    callback([]);
+  });
 }
 
 export async function fetchPaymentMethods(churchId: string): Promise<PaymentMethod[]> {

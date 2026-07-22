@@ -88,12 +88,15 @@ export async function getPendingGivingRecords(churchId: string): Promise<GivingR
   });
 
   try {
-    // Fetch users to map donor names correctly, just like web app
+    // Fetch users to map donor names correctly, just like finance summary
     const uq = query(collection(db, 'users'), where('churchId', '==', churchId));
     const usnap = await getDocs(uq);
     const usersMap: Record<string, string> = {};
     usnap.forEach(d => {
-      usersMap[d.id] = d.data().name || 'Anonymous';
+      const data = d.data();
+      const middleInitial = data.middleName ? `${data.middleName.charAt(0).toUpperCase()}.` : '';
+      const fullName = [data.firstName, middleInitial, data.lastName].filter(Boolean).join(' ').trim();
+      usersMap[d.id] = fullName || data.name || data.displayName || 'Anonymous';
     });
 
     records.forEach(r => {
@@ -120,8 +123,9 @@ export async function approveGivingRecord(
   await runTransaction(db, async (transaction) => {
     const recordSnap = await transaction.get(recordRef);
     if (!recordSnap.exists()) throw new Error("Record not found");
-    if (recordSnap.data().churchId !== churchId) throw new Error("Unauthorized");
-    if (recordSnap.data().status !== 'pending') throw new Error("Record is not pending");
+    const recordData = recordSnap.data();
+    if (recordData.churchId !== churchId) throw new Error("Unauthorized");
+    if (recordData.status !== 'pending') throw new Error("Record is not pending");
 
     if (campaignId) {
       const campaignRef = doc(db, CAMPAIGN_COLLECTION, campaignId);
@@ -135,39 +139,27 @@ export async function approveGivingRecord(
       }
     }
 
-    // Map fundId to human-readable fundType (web app legacy support)
-    const mapFundIdToName = (fid: string) => {
-      const lower = (fid || '').toLowerCase();
-      if (lower.includes('tithe')) return 'Tithe';
-      if (lower.includes('offering')) return 'Offering';
-      if (lower.includes('building')) return 'Building Fund';
-      if (lower.includes('mission')) return 'Missions';
-      return 'Others';
-    };
-
-    // Fetch the user to permanently save donorName
-    let donorName = 'Anonymous';
-    if (recordSnap.data().userId) {
-      const userRef = doc(db, 'users', recordSnap.data().userId);
-      const userSnap = await transaction.get(userRef);
-      if (userSnap.exists()) {
-        const d = userSnap.data();
-        donorName = `${d.firstName || ''} ${d.lastName || ''}`.trim() || d.name || d.displayName || 'Anonymous';
+    // Fetch actual fund name to populate fundType accurately
+    let fundType = 'Others';
+    const fundId = recordData.fundId;
+    if (fundId) {
+      try {
+        const fundRef = doc(db, 'givingFunds', fundId);
+        const fundSnap = await transaction.get(fundRef);
+        if (fundSnap.exists() && fundSnap.data().name) {
+          fundType = fundSnap.data().name;
+        }
+      } catch (err) {
+        console.warn('Failed to fetch fund name on approval', err);
       }
     }
 
     transaction.update(recordRef, {
       status: 'completed', // 'completed' is used by web app
-      reviewedBy: currentUserId,
-      reviewedAt: new Date().toISOString(),
-      approvedBy: currentUserId, // web app uses approvedBy
-      approvedAt: serverTimestamp(), // web app uses approvedAt
-      date: new Date().toISOString().split('T')[0], // web app uses YYYY-MM-DD string
-      donorName,
-      fundType: mapFundIdToName(recordSnap.data().fundId),
-      method: recordSnap.data().paymentMethod || 'cash',
-      notes: recordSnap.data().note || '',
-      proofUrl: recordSnap.data().proofOfPaymentUrl || '',
+      approvedBy: currentUserId,
+      approvedAt: serverTimestamp(),
+      date: new Date().toISOString().split('T')[0], // YYYY-MM-DD string
+      fundType,
       updatedAt: serverTimestamp()
     });
   });
@@ -186,8 +178,8 @@ export async function rejectGivingRecord(
   await updateDoc(recordRef, {
     status: 'rejected',
     rejectionReason: reason,
-    reviewedBy: currentUserId,
-    reviewedAt: new Date().toISOString(),
+    rejectedBy: currentUserId,
+    rejectedAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   });
 }
@@ -224,14 +216,15 @@ export async function getRecentExpenses(churchId: string, maxCount: number = 20)
   return snap.docs.map(d => ({ ...d.data(), id: d.id } as GivingExpense));
 }
 
-export async function getMonthlyFinanceSummary(churchId: string, startOfMonthIso: string): Promise<{ 
+export async function getMonthlyFinanceSummary(churchId: string, startOfMonthIso?: string): Promise<{ 
   totalGiving: number; 
   totalExpenses: number; 
   pendingCount: number;
   givingRecords: GivingRecord[];
   expenses: GivingExpense[];
 }> {
-  const startOfMonthDate = startOfMonthIso.split('T')[0];
+  const iso = startOfMonthIso || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+  const startOfMonthDate = iso.split('T')[0];
   
   // Fetch approved/completed giving for this month
   const givingQ = query(
@@ -277,7 +270,9 @@ export async function getMonthlyFinanceSummary(churchId: string, startOfMonthIso
       const uSnap = await getDocs(usersQ);
       uSnap.forEach(u => {
         const data = u.data();
-        usersMap.set(u.id, `${data.firstName || ''} ${data.lastName || ''}`.trim() || data.name || data.displayName || 'Anonymous');
+        const middleInitial = data.middleName ? `${data.middleName.charAt(0).toUpperCase()}.` : '';
+        const fullName = [data.firstName, middleInitial, data.lastName].filter(Boolean).join(' ').trim();
+        usersMap.set(u.id, fullName || data.name || data.displayName || 'Anonymous');
       });
     } catch (e) {
       console.warn('Failed to fetch users for finance summary', e);

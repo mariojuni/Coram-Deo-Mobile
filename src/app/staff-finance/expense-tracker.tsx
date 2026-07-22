@@ -27,6 +27,8 @@ const CATEGORY_OPTIONS: DropdownOption<ExpenseCategory>[] = [
   { label: 'Other', value: 'other' }
 ];
 
+import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
+
 export default function ExpenseTrackerScreen() {
   const router = useRouter();
   const { userProfile } = useAuthStore();
@@ -77,7 +79,11 @@ export default function ExpenseTrackerScreen() {
   const handleAddExpense = async () => {
     if (!userProfile?.churchId || !userProfile.uid) return;
     if (!form.vendorName.trim() || !form.amount || isNaN(Number(form.amount))) {
-      Alert.alert('Error', 'Please fill in amount and payee/vendor.');
+      Alert.alert('Validation Error', 'Please fill in amount and payee/vendor.');
+      return;
+    }
+    if (!form.fundId) {
+      Alert.alert('Validation Error', 'Please select a fund.');
       return;
     }
     
@@ -91,7 +97,7 @@ export default function ExpenseTrackerScreen() {
         category: form.category,
         visibility: 'admin_only',
         date: form.date.toISOString().split('T')[0], // web compatibility
-        fundId: form.fundId || undefined,
+        fundId: form.fundId,
       }, userProfile.uid);
       
       setAddModalVisible(false);
@@ -148,19 +154,32 @@ export default function ExpenseTrackerScreen() {
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
         <View style={styles.headerContent}>
-          <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => router.back()}>
+          <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => router.back()} hitSlop={8}>
             <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
           </BounceCard>
           <Text style={styles.headerTitle} numberOfLines={1}>Expense Tracker</Text>
-          <TouchableOpacity style={styles.headerAction} onPress={() => setAddModalVisible(true)}>
-            <Plus size={24} color="#1a1a1a" />
-          </TouchableOpacity>
+          <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => setAddModalVisible(true)} hitSlop={8}>
+            <Plus size={24} color="#1a1a1a" strokeWidth={2} />
+          </BounceCard>
         </View>
       </View>
 
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#FF6596" />
+        <View style={[styles.list, { paddingTop: Math.max(insets.top, 24) + 70 }]}>
+          {Array.from({ length: 4 }).map((_, index) => (
+            <SoftCard key={`skel-expense-${index}`} style={{ marginBottom: 16, borderRadius: 24 }} innerStyle={{ borderRadius: 23, padding: 20 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14 }}>
+                <View style={{ gap: 6 }}>
+                  <ShimmerSkeleton width={140} height={20} borderRadius={6} />
+                  <ShimmerSkeleton width={110} height={14} borderRadius={4} />
+                </View>
+                <ShimmerSkeleton width={90} height={22} borderRadius={6} />
+              </View>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <ShimmerSkeleton width={100} height={24} borderRadius={12} />
+              </View>
+            </SoftCard>
+          ))}
         </View>
       ) : expenses.length === 0 ? (
         <View style={styles.center}>
@@ -182,100 +201,118 @@ export default function ExpenseTrackerScreen() {
         isOpen={addModalVisible} 
         onClose={() => setAddModalVisible(false)} 
         title="Add Expense"
+        hideHeader={true}
+        hideDragHandle={true}
+        containerStyle={{ paddingHorizontal: 0, paddingBottom: 0, height: 600 }}
       >
-
-          <ScrollView style={styles.modalContent} contentContainerStyle={{ paddingBottom: 40 }}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Amount (₱) *</Text>
-              <TextInput 
-                style={styles.input}
-                placeholder="0.00"
-                keyboardType="decimal-pad"
-                value={form.amount}
-                onChangeText={(text) => setForm({ ...form, amount: text })}
-              />
+        <View style={styles.modalContainer}>
+          {/* Header matching Event Details style exactly */}
+          <View style={[styles.modalHeaderContainer, { paddingTop: 12 }]} pointerEvents="box-none">
+            <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
+            <View style={styles.modalDragHandle} />
+            <View style={styles.modalHeaderContent}>
+              <View style={styles.headerCirclePlaceholder} />
+              <Text style={styles.modalHeaderTitle} numberOfLines={1}>Add Expense</Text>
+              <BounceCard bounceScale={0.85} style={styles.modalCloseCircle} onPress={() => setAddModalVisible(false)} hitSlop={8} activeOpacity={0.8}>
+                <X size={24} color="#111827" strokeWidth={2} />
+              </BounceCard>
             </View>
+          </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Date *</Text>
+          <ScrollView contentContainerStyle={styles.modalScrollContent} showsVerticalScrollIndicator={false}>
+            <View style={styles.contentWrap}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Amount (₱) *</Text>
+                <TextInput 
+                  style={styles.input}
+                  placeholder="0.00"
+                  keyboardType="decimal-pad"
+                  value={form.amount}
+                  onChangeText={(text) => setForm({ ...form, amount: text })}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Date *</Text>
+                <TouchableOpacity 
+                  style={[styles.input, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]} 
+                  activeOpacity={0.7}
+                  onPress={() => setDatePickerVisible(true)}
+                >
+                  <Text style={{ fontSize: 16, color: form.date ? '#1a1a1a' : '#888' }}>
+                    {form.date ? form.date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : 'MM/DD/YYYY'}
+                  </Text>
+                  <Calendar size={20} color="#888" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Payee / Vendor *</Text>
+                <TextInput 
+                  style={styles.input}
+                  placeholder="e.g. Meralco"
+                  value={form.vendorName}
+                  onChangeText={(text) => setForm({ ...form, vendorName: text })}
+                />
+              </View>
+
+              <View style={[styles.inputGroup, { zIndex: 1000 }]}>
+                <ModernDropdown
+                  label="Fund *"
+                  options={fundOptions}
+                  value={form.fundId}
+                  onSelect={(val) => setForm({ ...form, fundId: val || '' })}
+                  placeholder="Select a fund"
+                  searchable
+                />
+              </View>
+
+              <View style={[styles.inputGroup, { zIndex: 900 }]}>
+                <ModernDropdown
+                  label="Category *"
+                  options={CATEGORY_OPTIONS}
+                  value={form.category}
+                  onSelect={(val) => setForm({ ...form, category: (val as ExpenseCategory) || 'utilities' })}
+                />
+              </View>
+
+              <Text style={styles.label}>Description</Text>
+              <TextInput 
+                style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
+                placeholder="What was this for?"
+                multiline
+                value={form.description}
+                onChangeText={(text) => setForm({ ...form, description: text })}
+              />
+
+              <Text style={styles.label}>Receipt Upload (Optional)</Text>
+              <TouchableOpacity style={styles.uploadBox} activeOpacity={0.7}>
+                <Upload size={24} color="#6B7280" style={{ marginBottom: 8 }} />
+                <Text style={styles.uploadTitle}>Upload Receipt</Text>
+                <Text style={styles.uploadSub}>PNG, JPG, PDF up to 5MB</Text>
+              </TouchableOpacity>
+
               <TouchableOpacity 
-                style={[styles.input, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]} 
-                activeOpacity={0.7}
-                onPress={() => setDatePickerVisible(true)}
+                style={[styles.submitBtnContainer, adding && styles.submitBtnDisabled]} 
+                onPress={handleAddExpense}
+                activeOpacity={0.8}
+                disabled={adding}
               >
-                <Text style={{ fontSize: 16, color: form.date ? '#1a1a1a' : '#888' }}>
-                  {form.date ? form.date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : 'MM/DD/YYYY'}
-                </Text>
-                <Calendar size={20} color="#888" />
+                <LinearGradient
+                  colors={['#FF6596', '#C084FC']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.submitBtn}
+                >
+                  {adding ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.submitBtnText}>Save Expense</Text>
+                  )}
+                </LinearGradient>
               </TouchableOpacity>
             </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Payee / Vendor *</Text>
-              <TextInput 
-                style={styles.input}
-                placeholder="e.g. Meralco"
-                value={form.vendorName}
-                onChangeText={(text) => setForm({ ...form, vendorName: text })}
-              />
-            </View>
-
-            <View style={[styles.inputGroup, { zIndex: 1000 }]}>
-              <ModernDropdown
-                label="Fund (Optional)"
-                options={fundOptions}
-                value={form.fundId}
-                onSelect={(val) => setForm({ ...form, fundId: val || '' })}
-                placeholder="Select a fund"
-                searchable
-                clearable
-              />
-            </View>
-
-            <View style={[styles.inputGroup, { zIndex: 900 }]}>
-              <ModernDropdown
-                label="Category *"
-                options={CATEGORY_OPTIONS}
-                value={form.category}
-                onSelect={(val) => setForm({ ...form, category: (val as ExpenseCategory) || 'utilities' })}
-              />
-            </View>
-
-            <Text style={styles.label}>Description</Text>
-            <TextInput 
-              style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
-              placeholder="What was this for?"
-              multiline
-              value={form.description}
-              onChangeText={(text) => setForm({ ...form, description: text })}
-            />
-
-            <Text style={styles.label}>Receipt Upload (Optional)</Text>
-            <TouchableOpacity style={styles.uploadBox} activeOpacity={0.7}>
-              <Upload size={24} color="#6B7280" style={{ marginBottom: 8 }} />
-              <Text style={styles.uploadTitle}>Upload Receipt</Text>
-              <Text style={styles.uploadSub}>PNG, JPG, PDF up to 5MB</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.submitBtnContainer, adding && styles.submitBtnDisabled]} 
-              onPress={handleAddExpense}
-              activeOpacity={0.8}
-              disabled={adding}
-            >
-              <LinearGradient
-                colors={['#FF6596', '#C084FC']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.submitBtn}
-              >
-                {adding ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.submitBtnText}>Save Expense</Text>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
           </ScrollView>
 
           <CustomDatePicker
@@ -287,6 +324,7 @@ export default function ExpenseTrackerScreen() {
             }}
             onCancel={() => setDatePickerVisible(false)}
           />
+        </View>
       </AppModal>
     </View>
   );
@@ -309,7 +347,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    marginTop: 8,
+    paddingBottom: 12,
   },
   headerCircle: {
     ...getTopBarButtonShadowStyle(20),
@@ -355,21 +393,69 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0,0,0,0.03)',
   },
   badgeText: { fontSize: 11, fontWeight: '700', color: '#666', textTransform: 'uppercase', letterSpacing: 0.5 },
-
-  // Modal
-  modalContainer: { flex: 1, backgroundColor: '#fff' },
-  modalHeader: {
+  modalContainer: { flex: 1, backgroundColor: '#FAFAFA' },
+  modalHeaderContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.4)',
+    overflow: 'hidden',
+  },
+  modalDragHandle: {
+    width: 40,
+    height: 5,
+    backgroundColor: '#d1d5db',
+    borderRadius: 10,
+    alignSelf: 'center',
+    marginBottom: 4,
+  },
+  modalHeaderContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
   },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#1a1a1a' },
-  closeText: { fontSize: 16, color: '#FF6596', fontWeight: '500' },
-  modalContent: { padding: 20 },
-  label: { fontSize: 14, fontWeight: '600', color: '#1a1a1a', marginBottom: 8, marginTop: 16 },
+  headerCirclePlaceholder: { width: 40, height: 40 },
+  modalCloseCircle: {
+    ...getTopBarButtonShadowStyle(20),
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalHeaderTitle: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1a1a1a',
+    textAlign: 'center',
+    marginHorizontal: 12,
+  },
+  modalScrollContent: {
+    paddingTop: 70,
+    paddingBottom: 40,
+  },
+  contentWrap: {
+    paddingHorizontal: 20,
+  },
+  formCardBlock: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.04)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    elevation: 2,
+    marginBottom: 20,
+  },
+  label: { fontSize: 14, fontWeight: '600', color: '#1a1a1a', marginBottom: 8, marginTop: 12 },
   inputGroup: { marginBottom: 4 },
   row: { flexDirection: 'row', alignItems: 'flex-start' },
   input: {
@@ -407,6 +493,6 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     alignItems: 'center',
   },
-  submitBtnDisabled: { opacity: 0.7 },
+  submitBtnDisabled: { opacity: 0.6 },
   submitBtnText: { color: '#fff', fontSize: 17, fontWeight: '800', letterSpacing: 0.3 },
 });

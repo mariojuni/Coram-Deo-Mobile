@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { BounceCard } from '@/components/ui/BounceCard';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, ScrollView } from 'react-native';
 import { BlurView } from 'expo-blur';
@@ -9,6 +9,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { getMonthlyFinanceSummary } from '../../features/giving/data/financeAdmin.service';
 import { GivingRecord, GivingExpense } from '../../features/giving/domain/giving.types';
 import { getTopBarButtonShadowStyle, SoftCard } from '@/components/ui/SoftCard';
+import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
 
 export default function FinanceSummaryScreen() {
   const router = useRouter();
@@ -23,20 +24,15 @@ export default function FinanceSummaryScreen() {
     expenses: GivingExpense[];
   }>({ totalGiving: 0, totalExpenses: 0, pendingCount: 0, givingRecords: [], expenses: [] });
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchSummary();
-    }, [userProfile?.churchId])
-  );
+  useEffect(() => {
+    fetchSummary();
+  }, [userProfile?.churchId]);
 
   const fetchSummary = async () => {
     if (!userProfile?.churchId) return;
     setLoading(true);
     try {
-      // Get the first day of the current month in ISO format
-      const date = new Date();
-      const firstDay = new Date(date.getFullYear(), date.getMonth(), 1).toISOString();
-      const data = await getMonthlyFinanceSummary(userProfile.churchId, firstDay);
+      const data = await getMonthlyFinanceSummary(userProfile.churchId);
       setSummary(data);
     } catch (error) {
       console.error(error);
@@ -53,18 +49,27 @@ export default function FinanceSummaryScreen() {
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
         <View style={styles.headerContent}>
-          <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => router.back()}>
+          <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => router.back()} hitSlop={8}>
             <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
           </BounceCard>
           <Text style={styles.headerTitle} numberOfLines={1}>Finance Summary</Text>
-          <View style={{ width: 40 }} />
+          <View style={[styles.headerCircle, { backgroundColor: 'transparent', borderWidth: 0, elevation: 0 }]} />
         </View>
       </View>
 
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#FFA177" />
-        </View>
+        <ScrollView contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 24) + 70 }]}>
+          <ShimmerSkeleton width={100} height={20} borderRadius={6} style={{ marginBottom: 12 }} />
+          <ShimmerSkeleton width="100%" height={90} borderRadius={20} style={{ marginBottom: 16 }} />
+          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+            <ShimmerSkeleton width="48%" height={90} borderRadius={20} />
+            <ShimmerSkeleton width="48%" height={90} borderRadius={20} />
+          </View>
+          <ShimmerSkeleton width="100%" height={70} borderRadius={20} style={{ marginBottom: 24 }} />
+          <ShimmerSkeleton width={120} height={18} borderRadius={6} style={{ marginBottom: 12 }} />
+          <ShimmerSkeleton width="100%" height={56} borderRadius={16} style={{ marginBottom: 8 }} />
+          <ShimmerSkeleton width="100%" height={56} borderRadius={16} style={{ marginBottom: 8 }} />
+        </ScrollView>
       ) : (
         <ScrollView contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 24) + 70 }]}>
           <Text style={styles.monthTitle}>This Month</Text>
@@ -182,7 +187,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    marginTop: 8,
+    paddingBottom: 12,
   },
   headerCircle: {
     ...getTopBarButtonShadowStyle(20),

@@ -52,6 +52,13 @@ export function useGiving() {
     });
   }, [churchId]);
 
+  useEffect(() => {
+    if (!churchId) return;
+    return givingRepo.subscribeToGivingFunds(churchId, (newFunds) => {
+      setFunds(newFunds);
+    });
+  }, [churchId]);
+
   const refreshRecords = useCallback(async () => {
     if (!userId) return;
     try {

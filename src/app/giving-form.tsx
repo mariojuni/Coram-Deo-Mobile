@@ -14,7 +14,7 @@ import { getSoftShadowStyle, getTopBarButtonShadowStyle } from '../components/ui
 
 
 export default function GivingFormScreen() {
-  const { campaignId, fundType } = useLocalSearchParams();
+  const { campaignId, fundType, fundId } = useLocalSearchParams();
   const router = useRouter();
   const { userProfile, currentUser } = useAuthStore();
   const { funds, paymentMethods, campaigns } = useGiving();
@@ -34,13 +34,15 @@ export default function GivingFormScreen() {
   const successOpacity = useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
-    if (fundType && funds.length > 0 && !selectedFundId) {
+    if (fundId && funds.some((f: any) => f.id === fundId)) {
+      setSelectedFundId(fundId as string);
+    } else if (fundType && funds.length > 0 && !selectedFundId) {
       const fund = funds.find((f: any) => f.type === fundType || f.name.toLowerCase() === (fundType as string).toLowerCase());
       if (fund) {
         setSelectedFundId(fund.id);
       }
     }
-  }, [fundType, funds]);
+  }, [fundId, fundType, funds]);
 
   const churchId = userProfile?.churchId;
   const userId = currentUser?.uid;
@@ -233,7 +235,7 @@ export default function GivingFormScreen() {
         <View style={styles.formGroup}>
           <Text style={styles.label}>Fund</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-            {funds.map((fund: any) => {
+            {funds.filter((f: any) => f.visibility !== 'admin_only' && f.visibility !== 'finance_only').map((fund: any) => {
               const isActive = selectedFundId === fund.id;
               return (
                 <TouchableOpacity

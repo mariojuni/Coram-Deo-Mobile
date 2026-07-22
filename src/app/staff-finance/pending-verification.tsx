@@ -13,6 +13,7 @@ import { getPendingGivingRecords, approveGivingRecord, rejectGivingRecord } from
 import { GivingRecord } from '../../features/giving/domain/giving.types';
 import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 import { SoftCard } from '@/components/ui/SoftCard';
+import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
 
 export default function PendingVerificationScreen() {
   const router = useRouter();
@@ -94,9 +95,10 @@ export default function PendingVerificationScreen() {
     const fund = funds.find(f => f.id === item.fundId);
     const campaign = campaigns.find(c => c.id === item.campaignId);
     
-    // userId is usually the auth UID, memberId might be the member record ID
-    const member = members.find(m => m.uid === item.userId || m.uid === item.memberId || m.id === item.memberId);
-    const giverName = item.donorName || (member ? `${member.firstName} ${member.lastName}` : (item.userId ? 'Unknown Member' : 'Anonymous'));
+    const member = members.find(m => m.uid === item.userId || m.uid === item.memberId || m.id === item.memberId || m.id === item.userId);
+    const middleInitial = member?.middleName ? `${member.middleName.charAt(0).toUpperCase()}.` : '';
+    const memberFullName = member ? [member.firstName, middleInitial, member.lastName].filter(Boolean).join(' ').trim() || member.name : null;
+    const giverName = item.donorName || memberFullName || 'Anonymous';
 
     const submittedDate = typeof (item.submittedAt as any)?.toDate === 'function' 
       ? (item.submittedAt as any).toDate() 
@@ -169,17 +171,36 @@ export default function PendingVerificationScreen() {
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
         <View style={styles.headerContent}>
-          <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => router.back()}>
+          <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => router.back()} hitSlop={8}>
             <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
           </BounceCard>
           <Text style={styles.headerTitle} numberOfLines={1}>Pending Verification</Text>
-          <View style={{ width: 40 }} />
+          <View style={[styles.headerCircle, { backgroundColor: 'transparent', borderWidth: 0, elevation: 0 }]} />
         </View>
       </View>
 
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#B66DFF" />
+        <View style={[styles.list, { paddingTop: Math.max(insets.top, 24) + 70 }]}>
+          {Array.from({ length: 3 }).map((_, index) => (
+            <SoftCard key={`skel-pending-${index}`} style={{ marginBottom: 16, borderRadius: 24 }} innerStyle={{ borderRadius: 23, padding: 20 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
+                <View style={{ gap: 6 }}>
+                  <ShimmerSkeleton width={120} height={22} borderRadius={6} />
+                  <ShimmerSkeleton width={160} height={14} borderRadius={4} />
+                </View>
+                <ShimmerSkeleton width={70} height={24} borderRadius={12} />
+              </View>
+              <View style={{ gap: 8, marginBottom: 16 }}>
+                <ShimmerSkeleton width="60%" height={14} borderRadius={4} />
+                <ShimmerSkeleton width="45%" height={14} borderRadius={4} />
+                <ShimmerSkeleton width="50%" height={14} borderRadius={4} />
+              </View>
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <ShimmerSkeleton width="48%" height={44} borderRadius={12} />
+                <ShimmerSkeleton width="48%" height={44} borderRadius={12} />
+              </View>
+            </SoftCard>
+          ))}
         </View>
       ) : records.length === 0 ? (
         <View style={styles.center}>
@@ -248,7 +269,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    marginTop: 8,
+    paddingBottom: 12,
   },
   headerCircle: {
     ...getTopBarButtonShadowStyle(20),
