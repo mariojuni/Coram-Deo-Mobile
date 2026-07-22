@@ -64,33 +64,34 @@ export default function DiscoverVersionsScreen() {
           <Text style={[styles.modalTitle, { fontSize: 16, marginHorizontal: 12, flex: 1, textAlign: 'center' }]}>Discover Versions</Text>
           <View style={{ width: 40 }} />
         </View>
-      </View>
 
-      <View style={{ flex: 1, paddingTop: 95 }}>
-        <View style={styles.searchContainer}>
+        <View style={[styles.searchContainer, { marginVertical: 8, backgroundColor: 'rgba(255,255,255,0.5)' }]} pointerEvents="auto">
           <Search size={18} color="#999" />
           <TextInput
             style={styles.searchInput}
             placeholder="Search Versions"
             value={discoverSearch}
             onChangeText={setDiscoverSearch}
-          placeholderTextColor="#999"
-          autoCapitalize="none"
-        />
+            placeholderTextColor="#999"
+            autoCapitalize="none"
+          />
+        </View>
+
+        <TouchableOpacity pointerEvents="auto" onPress={() => router.push('/version-manager/language')} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, marginHorizontal: 16, marginBottom: 16, backgroundColor: 'rgba(255,255,255,0.5)', borderRadius: 14 }} activeOpacity={0.7}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Globe size={18} color="#1a1a1a" />
+            <Text style={{ fontSize: 15, fontWeight: '600', color: '#1a1a1a' }}>{selectedLanguage.name}</Text>
+            {selectedLanguage.biblesCount && (
+              <View style={{ backgroundColor: 'rgba(0,0,0,0.06)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 }}>
+                <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#666' }}>{selectedLanguage.biblesCount}</Text>
+              </View>
+            )}
+            <ChevronRight size={16} color="#999" />
+          </View>
+        </TouchableOpacity>
       </View>
 
-      <TouchableOpacity onPress={() => router.push('/version-manager/language')} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, marginHorizontal: 16, marginBottom: 8, backgroundColor: '#fff' }} activeOpacity={0.7}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Globe size={18} color="#1a1a1a" />
-          <Text style={{ fontSize: 15, fontWeight: '600', color: '#1a1a1a' }}>{selectedLanguage.name}</Text>
-          {selectedLanguage.biblesCount && (
-            <View style={{ backgroundColor: 'rgba(0,0,0,0.06)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 }}>
-              <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#666' }}>{selectedLanguage.biblesCount}</Text>
-            </View>
-          )}
-          <ChevronRight size={16} color="#999" />
-        </View>
-      </TouchableOpacity>
+      <View style={{ flex: 1, paddingTop: 200 }}>
 
       {biblesLoading ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
