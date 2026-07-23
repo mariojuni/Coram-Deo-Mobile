@@ -31,13 +31,15 @@ export const commentRepository = {
     }
 
     const snapshot = await getDocs(q);
-    const comments = snapshot.docs.map(doc => ({
-      ...doc.data(),
-      id: doc.id,
-      createdAt: (doc.data().createdAt as Timestamp)?.toDate(),
-      updatedAt: (doc.data().updatedAt as Timestamp)?.toDate(),
-      deletedAt: doc.data().deletedAt ? (doc.data().deletedAt as Timestamp).toDate() : undefined,
-    })) as Comment[];
+    const comments = snapshot.docs
+      .map(doc => ({
+        ...doc.data(),
+        id: doc.id,
+        createdAt: (doc.data().createdAt as Timestamp)?.toDate(),
+        updatedAt: (doc.data().updatedAt as Timestamp)?.toDate(),
+        deletedAt: doc.data().deletedAt ? (doc.data().deletedAt as Timestamp).toDate() : undefined,
+      }))
+      .filter(doc => doc.status !== 'deleted') as Comment[];
 
     return { comments, lastDoc: snapshot.docs[snapshot.docs.length - 1] };
   },
@@ -59,13 +61,15 @@ export const commentRepository = {
     );
 
     return onSnapshot(q, (snapshot) => {
-      const replies = snapshot.docs.map(doc => ({
-        ...doc.data(),
-        id: doc.id,
-        createdAt: (doc.data().createdAt as Timestamp)?.toDate(),
-        updatedAt: (doc.data().updatedAt as Timestamp)?.toDate(),
-        deletedAt: doc.data().deletedAt ? (doc.data().deletedAt as Timestamp).toDate() : undefined,
-      })) as Comment[];
+      const replies = snapshot.docs
+        .map(doc => ({
+          ...doc.data(),
+          id: doc.id,
+          createdAt: (doc.data().createdAt as Timestamp)?.toDate(),
+          updatedAt: (doc.data().updatedAt as Timestamp)?.toDate(),
+          deletedAt: doc.data().deletedAt ? (doc.data().deletedAt as Timestamp).toDate() : undefined,
+        }))
+        .filter(doc => doc.status !== 'deleted') as Comment[];
       onUpdate(replies);
     });
   },
@@ -145,12 +149,14 @@ export const commentRepository = {
 
     await runTransaction(db, async (transaction) => {
       const cDoc = await transaction.get(commentRef);
-      if (!cDoc.exists()) return;
+      if (!cDoc.exists() || cDoc.data().status === 'deleted') return;
 
       const targetDoc = await transaction.get(parentDocRef);
+      const now = Timestamp.now();
 
-      // Total items being deleted: 1 (the comment itself) + count of nested replies
-      const totalDeletedCount = 1 + replySnapshots.length;
+      // Only count/delete active replies that haven't been soft-deleted already
+      const activeReplies = replySnapshots.filter((d) => d.data().status !== 'deleted');
+      const totalDeletedCount = 1 + activeReplies.length;
 
       // Decrement replyCount on parent comment if this is a reply
       if (parentCommentId) {
@@ -162,19 +168,27 @@ export const commentRepository = {
         }
       }
 
-      // Update parent target commentCount subtracting parent comment + all its replies
+      // Update parent target commentCount subtracting parent comment + all its active replies
       if (targetDoc.exists()) {
         const currentCount = targetDoc.data().commentCount || 0;
         transaction.update(parentDocRef, { commentCount: Math.max(0, currentCount - totalDeletedCount) });
       }
 
-      // Delete all nested replies
-      replySnapshots.forEach((rDoc) => {
-        transaction.delete(rDoc.ref);
+      // Soft delete all nested replies
+      activeReplies.forEach((rDoc) => {
+        transaction.update(rDoc.ref, {
+          status: 'deleted',
+          content: 'This comment has been deleted.',
+          deletedAt: now,
+        });
       });
 
-      // Hard delete main comment from Firestore
-      transaction.delete(commentRef);
+      // Soft delete main comment
+      transaction.update(commentRef, {
+        status: 'deleted',
+        content: 'This comment has been deleted.',
+        deletedAt: now,
+      });
     });
   },
 

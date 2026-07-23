@@ -31,6 +31,20 @@ export interface Ministry {
 
 export type ApplicationStatus = 'pending' | 'approved' | 'declined' | 'withdrawn';
 
+export interface MinistryMemberDoc {
+  id: string; // Document ID: `${ministryId}_${memberId}`
+  churchId: string;
+  ministryId: string;
+  memberId: string;
+  userId: string;
+  status: 'active' | 'inactive';
+  ministryRole: string;
+  joinedAt: string;
+  approvedBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface MinistryApplication {
   id: string;
   churchId: string;
@@ -38,6 +52,8 @@ export interface MinistryApplication {
   ministryName: string;
   memberId: string;
   userId: string;
+  applicantName?: string;
+  applicantPhotoUrl?: string;
   preferredRoleIds: string[];
   preferredRoleNames: string[];
   reasonForJoining: string;
@@ -48,6 +64,8 @@ export interface MinistryApplication {
   reviewedBy?: string;
   reviewedAt?: string;
   reviewNotes?: string;
+  reviewNote?: string;
+  declineReason?: string;
   submittedAt: string;
   withdrawnAt?: string;
   createdAt: string;

@@ -4,6 +4,7 @@ import { ServeCalendarView } from '@/features/serve/presentation/components/Serv
 import { ServeEmptyState } from '@/features/serve/presentation/components/ServeEmptyState';
 import { useMyAssignments } from '@/features/serve/presentation/hooks/useMyAssignments';
 import { useServeMinistries } from '@/features/serve/presentation/hooks/useServeMinistries';
+import { ministryRepository } from '@/features/ministry/data/ministry.repository';
 import { useAuthStore } from '@/store/useAuthStore';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -279,6 +280,29 @@ function MyScheduleTab({
   headerHeight: number;
   onScroll?: any;
 }) {
+  const [savingAssignmentId, setSavingAssignmentId] = useState<string | null>(null);
+
+  const handleConfirm = async (assignmentId: string) => {
+    setSavingAssignmentId(assignmentId);
+    try {
+      await ministryRepository.updateAssignment(assignmentId, { status: 'Confirmed' });
+    } finally {
+      setSavingAssignmentId(null);
+    }
+  };
+
+  const handleDecline = async (assignmentId: string, reason?: string) => {
+    setSavingAssignmentId(assignmentId);
+    try {
+      await ministryRepository.updateAssignment(assignmentId, {
+        status: 'Declined',
+        declineReason: reason ?? '',
+      });
+    } finally {
+      setSavingAssignmentId(null);
+    }
+  };
+
   if (loading) {
     return (
       <View style={[styles.centered, { paddingTop: headerHeight + 40 }]}>
@@ -325,7 +349,14 @@ function MyScheduleTab({
               </View>
             </View>
             {group.data.map((a) => (
-              <AssignmentCard key={a.id} assignment={a} onPress={() => onPressAssignment(a.id)} />
+              <AssignmentCard
+                key={a.id}
+                assignment={a}
+                onPress={() => onPressAssignment(a.id)}
+                saving={savingAssignmentId === a.id}
+                onConfirm={() => handleConfirm(a.id)}
+                onDecline={(reason) => handleDecline(a.id, reason)}
+              />
             ))}
           </View>
         );

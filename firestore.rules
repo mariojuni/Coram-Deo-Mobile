@@ -105,18 +105,19 @@ service cloud.firestore {
     // ── ministryApplications ─────────────────────────────────────────────────
     match /ministryApplications/{applicationId} {
 
-      // Any signed-in user (including admins/ministry leaders) can submit an
-      // application for their own userId/memberId/churchId.
+      // Any signed-in user can submit an application for their own userId/memberId/churchId.
       allow create: if isSignedIn()
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.churchId != null
         && request.resource.data.memberId != null
         && request.resource.data.status == 'pending';
 
-      // Applicant can read their own; admins can read all in their church.
+      // Applicant can read their own; full admins (super_admin, church_admin, pastor) can read all in their church.
+      // Ministry leaders can read applications for ministries in their managedMinistryIds.
       allow read: if isSignedIn()
         && (resource.data.userId == request.auth.uid
-            || isChurchAdmin(resource.data.churchId));
+            || isPastorOrAdmin(resource.data.churchId)
+            || isAssignedMinistryLeader(resource.data.churchId, resource.data.ministryId));
 
       // Applicant can withdraw their own pending application.
       allow update: if isSignedIn()
@@ -127,11 +128,23 @@ service cloud.firestore {
 
       // Admin/ministry leader can approve or decline — but NOT their own application
       // (prevents self-approval even when the applicant is an admin).
-      allow update: if isChurchAdmin(resource.data.churchId)
+      allow update: if (isPastorOrAdmin(resource.data.churchId)
+            || isAssignedMinistryLeader(resource.data.churchId, resource.data.ministryId))
         && resource.data.userId != request.auth.uid;
 
       // No deletes by clients.
       allow delete: if false;
+    }
+
+    // ── ministryMembers ──────────────────────────────────────────────────────
+    match /ministryMembers/{memberDocId} {
+      allow read: if isSignedIn()
+        && (resource.data.userId == request.auth.uid
+            || isPastorOrAdmin(resource.data.churchId)
+            || isAssignedMinistryLeader(resource.data.churchId, resource.data.ministryId));
+
+      allow write: if isPastorOrAdmin(request.resource.data.churchId)
+        || isAssignedMinistryLeader(request.resource.data.churchId, request.resource.data.ministryId);
     }
 
     // ── ministries ───────────────────────────────────────────────────────────

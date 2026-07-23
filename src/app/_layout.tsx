@@ -147,6 +147,8 @@ export default function RootLayout() {
               <Stack.Screen name="ministry-application" options={{ presentation: 'modal', headerShown: false }} />
               <Stack.Screen name="bible-plans" options={{ headerShown: false }} />
               <Stack.Screen name="staff-finance" options={{ headerShown: false }} />
+              <Stack.Screen name="staff-ministry-applications" options={{ headerShown: false }} />
+              <Stack.Screen name="staff-ministry-application-detail" options={{ headerShown: false }} />
               <Stack.Screen name="profile" options={{ headerShown: false }} />
               <Stack.Screen name="+not-found" />
             </Stack>

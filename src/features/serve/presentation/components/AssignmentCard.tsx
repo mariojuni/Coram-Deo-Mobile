@@ -2,13 +2,16 @@ import { BounceCard } from '@/components/ui/BounceCard';
 import { SoftCard } from '@/components/ui/SoftCard';
 import { PrayingHands } from '@/components/ui/icons/PrayingHands';
 import type { MinistryAssignment } from '@/features/ministry/domain/ministry.types';
+import { DeclineModal } from '@/features/serve/presentation/components/DeclineModal';
 import { useMinistryStore } from '@/store/useMinistryStore';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
     BookOpen,
     CalendarDays,
     Check,
+    ChevronDown,
     ChevronRight,
+    ChevronUp,
     Clock,
     Drum,
     GraduationCap,
@@ -25,9 +28,11 @@ import {
     Shield,
     Star,
     Users,
+    X,
 } from 'lucide-react-native';
-import { useRef } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 // ─── Role identity ────────────────────────────────────────────────────────────
 
@@ -115,9 +120,12 @@ const ICON_COLORS: Record<string, string> = {
 export interface AssignmentCardProps {
   assignment: MinistryAssignment;
   onPress: () => void;
+  onConfirm?: () => Promise<void>;
+  onDecline?: (reason?: string) => Promise<void>;
+  saving?: boolean;
 }
 
-export function AssignmentCard({ assignment, onPress }: AssignmentCardProps) {
+export function AssignmentCard({ assignment, onPress, onConfirm, onDecline, saving }: AssignmentCardProps) {
   const roleId = assignment.roleName.toLowerCase().replace(/[^a-z0-9]/g, '');
 
   // Look up ministry to get roleDetails — same approach as MinistryDutyCard
@@ -188,70 +196,147 @@ export function AssignmentCard({ assignment, onPress }: AssignmentCardProps) {
     }
   })();
 
+  const [expanded, setExpanded] = useState(isPending);
+  const collapseAnim = useSharedValue(isPending ? 1 : 0);
+
+  const toggleExpand = () => {
+    if (!isPending) return;
+    const next = !expanded;
+    setExpanded(next);
+    collapseAnim.value = withTiming(next ? 1 : 0, { duration: 220 });
+  };
+
+  const collapseStyle = useAnimatedStyle(() => ({
+    opacity: collapseAnim.value,
+    maxHeight: collapseAnim.value * 200,
+    overflow: 'hidden',
+  }));
+
+  const [declineModalOpen, setDeclineModalOpen] = useState(false);
+
+  const handleDeclineConfirm = async (reason?: string) => {
+    if (onDecline) {
+      await onDecline(reason);
+    }
+    setDeclineModalOpen(false);
+  };
+
   return (
-    <BounceCard onPress={onPress} activeOpacity={1} style={[{ marginBottom: 12 }, (isDeclined || isCancelled) && cs.cardMuted]}>
-      <SoftCard innerStyle={cs.card}>
-      <LinearGradient
-        colors={[`${color}18`, `${color}06`] as [string, string]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={cs.header}
-      >
-        <View style={[cs.iconBox, { backgroundColor: iconBg }]}>{iconNode}</View>
-        <View style={cs.headerInfo}>
-          <Text style={cs.roleLabel} numberOfLines={1}>
-            {assignment.roleName}
-          </Text>
-          <View style={[cs.statusPill, { backgroundColor: statusBg }]}>
-            <View style={[cs.statusDot, { backgroundColor: statusColor }]} />
-            <Text style={[cs.statusText, { color: statusColor }]}>{statusLabel}</Text>
+    <>
+      <BounceCard onPress={isPending ? toggleExpand : onPress} activeOpacity={isPending ? 0.8 : 1} style={[{ marginBottom: 12 }, (isDeclined || isCancelled) && cs.cardMuted]}>
+        <SoftCard innerStyle={cs.card}>
+        <LinearGradient
+          colors={[`${color}18`, `${color}06`] as [string, string]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={cs.header}
+        >
+          <View style={[cs.iconBox, { backgroundColor: iconBg }]}>{iconNode}</View>
+          <View style={cs.headerInfo}>
+            <Text style={cs.roleLabel} numberOfLines={1}>
+              {assignment.roleName}
+            </Text>
+            <View style={[cs.statusPill, { backgroundColor: statusBg }]}>
+              <View style={[cs.statusDot, { backgroundColor: statusColor }]} />
+              <Text style={[cs.statusText, { color: statusColor }]}>{statusLabel}</Text>
+            </View>
           </View>
-        </View>
-        {isPending && (
-          <View style={cs.pendingBadge}>
-            <Text style={cs.pendingBadgeText}>Action needed</Text>
+          {isPending ? (
+            <View style={cs.chevronWrap}>
+              {expanded ? (
+                <ChevronUp size={16} color="#9CA3AF" />
+              ) : (
+                <ChevronDown size={16} color="#9CA3AF" />
+              )}
+            </View>
+          ) : (
+            <ChevronRight size={16} color="#9CA3AF" />
+          )}
+        </LinearGradient>
+
+        <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
+          <View style={cs.body}>
+            <Text style={cs.eventName} numberOfLines={1}>
+              {assignment.eventName}
+            </Text>
+            <Text style={cs.ministryName} numberOfLines={1}>
+              {assignment.ministryName}
+            </Text>
+            <View style={cs.metaRow}>
+              <CalendarDays size={11} color="#9CA3AF" />
+              <Text style={cs.metaText}>{formattedDate}</Text>
+              {assignment.callTime ? (
+                <>
+                  <View style={cs.metaDot} />
+                  <Clock size={11} color="#9CA3AF" />
+                  <Text style={cs.metaText}>Call: {assignment.callTime}</Text>
+                </>
+              ) : null}
+              {assignment.eventLocation ? (
+                <>
+                  <View style={cs.metaDot} />
+                  <MapPin size={11} color="#9CA3AF" />
+                  <Text style={cs.metaText} numberOfLines={1}>
+                    {assignment.eventLocation}
+                  </Text>
+                </>
+              ) : null}
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        {isPending && (onConfirm || onDecline) && (
+          <Animated.View style={collapseStyle}>
+            <View style={cs.actionRow}>
+              {onDecline && (
+                <TouchableOpacity
+                  style={cs.declineBtn}
+                  onPress={() => setDeclineModalOpen(true)}
+                  disabled={saving}
+                  activeOpacity={0.7}
+                >
+                  <X size={13} color="#EF4444" strokeWidth={2.5} />
+                  <Text style={cs.declineBtnText}>Decline</Text>
+                </TouchableOpacity>
+              )}
+
+              {onConfirm && (
+                <TouchableOpacity
+                  style={[cs.confirmBtn, saving && cs.btnDisabled]}
+                  onPress={onConfirm}
+                  disabled={saving}
+                  activeOpacity={0.85}
+                >
+                  {saving ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <Check size={13} color="#fff" strokeWidth={2.5} />
+                      <Text style={cs.confirmBtnText}>Confirm</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
+            </View>
+          </Animated.View>
+        )}
+
+        {isConfirmed && (
+          <View style={cs.confirmedBanner}>
+            <Check size={12} color="#22C55E" strokeWidth={3} />
+            <Text style={cs.confirmedBannerText}>You confirmed this assignment</Text>
           </View>
         )}
-        <ChevronRight size={16} color="#9CA3AF" />
-      </LinearGradient>
+        </SoftCard>
+      </BounceCard>
 
-      <View style={cs.body}>
-        <Text style={cs.eventName} numberOfLines={1}>
-          {assignment.eventName}
-        </Text>
-        <Text style={cs.ministryName} numberOfLines={1}>
-          {assignment.ministryName}
-        </Text>
-        <View style={cs.metaRow}>
-          <CalendarDays size={11} color="#9CA3AF" />
-          <Text style={cs.metaText}>{formattedDate}</Text>
-          {assignment.callTime ? (
-            <>
-              <View style={cs.metaDot} />
-              <Clock size={11} color="#9CA3AF" />
-              <Text style={cs.metaText}>Call: {assignment.callTime}</Text>
-            </>
-          ) : null}
-          {assignment.eventLocation ? (
-            <>
-              <View style={cs.metaDot} />
-              <MapPin size={11} color="#9CA3AF" />
-              <Text style={cs.metaText} numberOfLines={1}>
-                {assignment.eventLocation}
-              </Text>
-            </>
-          ) : null}
-        </View>
-      </View>
-
-      {isConfirmed && (
-        <View style={cs.confirmedBanner}>
-          <Check size={12} color="#22C55E" strokeWidth={3} />
-          <Text style={cs.confirmedBannerText}>You confirmed this assignment</Text>
-        </View>
-      )}
-      </SoftCard>
-    </BounceCard>
+      <DeclineModal
+        isOpen={declineModalOpen}
+        onClose={() => setDeclineModalOpen(false)}
+        onConfirm={handleDeclineConfirm}
+        assignmentTitle={`${assignment.roleName} — ${assignment.eventName}`}
+      />
+    </>
   );
 }
 
@@ -300,6 +385,14 @@ const cs = StyleSheet.create({
     paddingVertical: 3,
   },
   pendingBadgeText: { fontSize: 9, fontWeight: '700', color: '#D97706' },
+  chevronWrap: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   body: {
     paddingHorizontal: 16,
     paddingTop: 10,
@@ -345,5 +438,48 @@ const cs = StyleSheet.create({
     fontSize: 11,
     color: '#16A34A',
     fontWeight: '600',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+    paddingTop: 2,
+  },
+  declineBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 9,
+    borderRadius: 10,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+  },
+  declineBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#EF4444',
+  },
+  confirmBtn: {
+    flex: 1.5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 9,
+    borderRadius: 10,
+    backgroundColor: '#22C55E',
+  },
+  confirmBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  btnDisabled: {
+    opacity: 0.6,
   },
 });

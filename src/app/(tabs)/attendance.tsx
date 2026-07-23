@@ -1,13 +1,12 @@
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
-import { Bell, QrCode, Shield } from 'lucide-react-native';
-import { useEffect, useState , useRef } from 'react';
+import { Bell, Inbox, Shield } from 'lucide-react-native';
+import { useEffect, useState, useRef } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AttendanceTab from '../../components/Staff/AttendanceTab';
 import ScheduleTab from '../../components/Staff/ScheduleTab';
-import { getTodayStr } from '../../features/attendance/domain/attendance.selectors';
 import WorshipTab from '../../components/Staff/WorshipTab';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useMemberStore } from '../../store/useMemberStore';
@@ -16,45 +15,44 @@ import { getUndismissedNotificationCount, useScheduleStore } from '../../store/u
 import { canViewStaffScreen, canViewWorshipTab, canViewServeTools } from '../../permissions/mobilePermissions';
 import { canAccessFinanceTools } from '../../permissions/financePermissions';
 import FinanceTab from '../../components/Staff/FinanceTab';
+import { canAccessMobileMinistryApplications } from '../../permissions/mobileMinistryApplicationPermissions';
+import { ministryApplicationService } from '../../features/ministry/services/ministryApplicationService';
 
 export default function AttendanceScreen() {
-  const members = useMemberStore((state) => state.members);
-  const userProfile = useAuthStore((state) => state.userProfile);
-  const schedules = useScheduleStore((state) => state.schedules);
-  const initializeSchedulesListener = useScheduleStore((state) => state.initializeSchedulesListener);
-  const userMinistries = useMinistryStore((state) => state.ministries).filter(m => m.members?.some(mem => mem.memberId === userProfile?.memberId));
-  const isStaff = canViewStaffScreen(userProfile, userMinistries);
-  
   const router = useRouter();
+  const userProfile = useAuthStore((s) => s.userProfile);
+  const currentUser = useAuthStore((s) => s.currentUser);
+  const userMinistries = useMinistryStore((state) => state.ministries).filter(m => m.members?.some(mem => mem.memberId === userProfile?.memberId));
   
-  // Build tabs dynamically
-  const TABS = [];
-  if (canAccessFinanceTools(userProfile) || isStaff) { 
-    // Usually Attendance/Events goes here if admin, or we can use another generic check
-    // Assuming attendance and events for anyone who is "staff" in the legacy sense or canViewServeTools
-    // Actually the user wants Serve Tools -> Events, Finance -> Attendance(just an example), etc.
-    // Let's keep Attendance and Events if canViewServeTools or canManageAnyMinistry
-  }
-  
-  // The exact requirements say:
-  // Show Worship tab if canViewWorshipTab is true
-  // Show Finance if canAccessFinanceTools (Attendance is not Finance, but maybe let's map Attendance to Finance or general staff?)
-  // Let's assume Attendance is part of admin/Serve. The requirements:
-  // - Show Worship tab/card if canViewWorshipTab is true.
-  // - Show Finance Tools if canAccessFinanceTools is true. (Wait, the existing tabs are Attendance, Events, Worship).
-  
-  if (canViewServeTools(userProfile, userMinistries)) {
-    TABS.push({ key: 'attendance', label: 'Attendance' });
-    TABS.push({ key: 'events', label: 'Events' });
-  }
-  if (canViewWorshipTab(userProfile, userMinistries)) {
-    TABS.push({ key: 'worship', label: 'Worship' });
-  }
-  if (canAccessFinanceTools(userProfile)) {
-    TABS.push({ key: 'finance', label: 'Finance' });
-  }
+  const isStaff = canViewStaffScreen(userProfile, userMinistries);
+  const canWorship = canViewWorshipTab(userProfile, userMinistries);
+  const canFinance = canAccessFinanceTools(userProfile);
+  const canApplications = canAccessMobileMinistryApplications(userProfile);
 
+  const [pendingAppsCount, setPendingAppsCount] = useState(0);
+
+  useEffect(() => {
+    if (!userProfile || !canApplications) return;
+    const unsubscribe = ministryApplicationService.subscribeToStaffMinistryApplications(
+      userProfile,
+      (apps) => {
+        const count = apps.filter((a) => a.status === 'pending').length;
+        setPendingAppsCount(count);
+      }
+    );
+    return () => unsubscribe();
+  }, [userProfile, canApplications]);
+
+  const { members } = useMemberStore();
+  const { initializeSchedulesListener } = useScheduleStore();
   const [activeTab, setActiveTab] = useState(0);
+
+  const TABS = [
+    { key: 'attendance', label: 'Attendance' },
+    ...(canViewServeTools(userProfile, userMinistries) ? [{ key: 'events', label: 'Events' }] : []),
+    ...(canWorship ? [{ key: 'worship', label: 'Worship' }] : []),
+    ...(canFinance ? [{ key: 'finance', label: 'Finance' }] : []),
+  ];
 
   const scrollViewRef = useRef<ScrollView>(null);
   const tabLayouts = useRef<{ x: number; width: number }[]>([]);
@@ -111,8 +109,6 @@ export default function AttendanceScreen() {
   const { assignments } = useMinistryStore();
   const unDismissedNotifications = getUndismissedNotificationCount(assignments);
 
-  // Keep the real-time schedule listener alive for the entire Staff tab session,
-  // regardless of which sub-tab (Attendance / Events / Reports) is active.
   useEffect(() => {
     const unsubscribe = initializeSchedulesListener();
     return () => unsubscribe();
@@ -129,7 +125,6 @@ export default function AttendanceScreen() {
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.6)' }]} pointerEvents="none" />
 
-        {/* Gradient accent line */}
         <View style={styles.accentLine}>
           <LinearGradient
             colors={['#FF6596', '#B66DFF', '#6DC8FF']}
@@ -158,6 +153,19 @@ export default function AttendanceScreen() {
           </View>
 
           <View style={styles.headerRight}>
+            {canApplications && (
+              <TouchableOpacity 
+                style={styles.iconBtn} 
+                onPress={() => router.push('/staff-ministry-applications' as any)}
+              >
+                <Inbox size={20} color="#1a1a1a" />
+                {pendingAppsCount > 0 && (
+                  <View style={styles.countBadge}>
+                    <Text style={styles.countBadgeText}>{pendingAppsCount}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            )}
             <TouchableOpacity 
               style={styles.iconBtn} 
               onPress={() => router.push('/staff-notifications')}
@@ -166,9 +174,6 @@ export default function AttendanceScreen() {
               {unDismissedNotifications > 0 && (
                 <View style={styles.badge} />
               )}
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.iconBtn} onPress={() => router.push('/scanner')}>
-              <QrCode size={20} color="#1a1a1a" />
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -330,6 +335,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#EF4444',
     borderWidth: 1.5,
     borderColor: '#fff',
+  },
+  countBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#FF6596',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: '#fff',
+  },
+  countBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '800',
   },
 
   tabBarWrapper: {
