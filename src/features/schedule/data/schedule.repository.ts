@@ -1,6 +1,7 @@
-import { addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, runTransaction, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, runTransaction, serverTimestamp, updateDoc, where } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import { worshipRepository } from '../../worship/data/worship.repository';
+import type { WorshipSetlistItem } from '../../worship/domain/worship.types';
 import type { Duty, Rsvp, Schedule } from '../domain/schedule.types';
 
 type SchedulesListener = (schedules: Schedule[]) => void;
@@ -63,42 +64,85 @@ export const scheduleRepository = {
   subscribeToSchedules(churchId: string | undefined, onData: SchedulesListener, onError: ErrorListener): () => void {
     const scheduleQuery = query(collection(db, 'events'), orderBy('date', 'asc'));
 
-    return onSnapshot(
+    let setlistUnsubscribers: (() => void)[] = [];
+
+    const cleanupSubscribers = () => {
+      setlistUnsubscribers.forEach((unsub) => unsub());
+      setlistUnsubscribers = [];
+    };
+
+    const unsubEvents = onSnapshot(
       scheduleQuery,
-      async (snapshot) => {
-        const baseSchedules = snapshot.docs.map((docSnap) => {
+      (snapshot) => {
+        cleanupSubscribers();
+
+        const currentSchedules = snapshot.docs.map((docSnap) => {
           const sched = toSchedule(docSnap.id, docSnap.data() as Record<string, unknown>);
-          if (!sched.songList) sched.songList = [];
+          sched.songList = [];
           return sched;
         });
-        
-        // Emit initial schedules immediately so modal and event cards render instantly
-        onData(baseSchedules);
 
-        if (!churchId) {
-           return;
-        }
+        // Emit initial schedules immediately
+        onData([...currentSchedules]);
 
-        // Fetch setlist items in background and update schedules in real time
-        const enriched = await Promise.all(
-          baseSchedules.map(async (schedule) => {
-            const copy = { ...schedule, songList: [] as any[] };
-            try {
-              const setlist = await worshipRepository.getSetlistForEvent(churchId, schedule.id);
-              if (setlist) {
-                 const items = await worshipRepository.getSetlistItems(churchId, setlist.id);
-                 copy.songList = items;
+        if (!churchId) return;
+
+        // Set up real-time listener for setlists of these events
+        const setlistsQuery = query(collection(db, 'worshipSetlists'), where('churchId', '==', churchId));
+        const unsubSetlists = onSnapshot(
+          setlistsQuery,
+          (setlistsSnap) => {
+            const setlistMap: Record<string, string> = {}; // eventId -> setlistId
+            setlistsSnap.docs.forEach((d) => {
+              const data = d.data();
+              if (data.eventId && data.status === 'published') {
+                setlistMap[data.eventId] = d.id;
               }
-            } catch(e) {
-               console.error("Failed to fetch setlist for event", schedule.id, e);
-            }
-            return copy;
-          })
+            });
+
+            // Set up real-time listener for all worshipSetlistItems
+            const setlistItemsQuery = query(collection(db, 'worshipSetlistItems'), where('churchId', '==', churchId), orderBy('order', 'asc'));
+            const unsubItems = onSnapshot(
+              setlistItemsQuery,
+              async (itemsSnap) => {
+                const items = itemsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as WorshipSetlistItem));
+
+                // Group items by setlistId
+                const itemsBySetlist: Record<string, WorshipSetlistItem[]> = {};
+                items.forEach((it) => {
+                  if (!itemsBySetlist[it.setlistId]) itemsBySetlist[it.setlistId] = [];
+                  itemsBySetlist[it.setlistId].push(it);
+                });
+
+                // Attach items to their respective event schedule
+                const updatedSchedules = currentSchedules.map((schedule) => {
+                  const setlistId = setlistMap[schedule.id];
+                  const setlistItems = setlistId ? (itemsBySetlist[setlistId] || []) : [];
+                  return {
+                    ...schedule,
+                    songList: setlistItems,
+                  };
+                });
+
+                onData(updatedSchedules);
+              },
+              (err) => console.error('Error listening to setlist items:', err)
+            );
+
+            setlistUnsubscribers.push(unsubItems);
+          },
+          (err) => console.error('Error listening to worship setlists:', err)
         );
-        onData(enriched);
+
+        setlistUnsubscribers.push(unsubSetlists);
       },
       (error) => onError(error)
     );
+
+    return () => {
+      cleanupSubscribers();
+      unsubEvents();
+    };
   },
 
   async updateRsvp(eventId: string, userId: string, status: Rsvp['status']): Promise<void> {
