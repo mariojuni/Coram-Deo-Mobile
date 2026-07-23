@@ -66,7 +66,11 @@ export const scheduleRepository = {
     return onSnapshot(
       scheduleQuery,
       async (snapshot) => {
-        const baseSchedules = snapshot.docs.map((docSnap) => toSchedule(docSnap.id, docSnap.data() as Record<string, unknown>));
+        const baseSchedules = snapshot.docs.map((docSnap) => {
+          const sched = toSchedule(docSnap.id, docSnap.data() as Record<string, unknown>);
+          if (!sched.songList) sched.songList = [];
+          return sched;
+        });
         
         if (!churchId) {
            onData(baseSchedules);
@@ -75,6 +79,7 @@ export const scheduleRepository = {
 
         const enriched = await Promise.all(
           baseSchedules.map(async (schedule) => {
+            schedule.songList = [];
             try {
               const setlist = await worshipRepository.getSetlistForEvent(churchId, schedule.id);
               if (setlist) {
