@@ -1,7 +1,7 @@
 import { db } from '@/firebase';
 import { 
   collection, doc, getDoc, getDocs, query, where, orderBy, 
-  limit, startAfter, runTransaction, Timestamp, DocumentData, QueryDocumentSnapshot 
+  limit, startAfter, runTransaction, Timestamp, DocumentData, QueryDocumentSnapshot, onSnapshot 
 } from 'firebase/firestore';
 import type { Comment, CommentTargetType, CommentStatus } from '../domain/comment.types';
 
@@ -42,7 +42,13 @@ export const commentRepository = {
     return { comments, lastDoc: snapshot.docs[snapshot.docs.length - 1] };
   },
 
-  async getReplies(churchId: string, targetType: CommentTargetType, targetId: string, parentCommentId: string) {
+  subscribeReplies(
+    churchId: string, 
+    targetType: CommentTargetType, 
+    targetId: string, 
+    parentCommentId: string,
+    onUpdate: (replies: Comment[]) => void
+  ) {
     const q = query(
       collection(db, COMMENTS_COLLECTION),
       where('churchId', '==', churchId),
@@ -52,14 +58,16 @@ export const commentRepository = {
       orderBy('createdAt', 'asc')
     );
 
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({
-      ...doc.data(),
-      id: doc.id,
-      createdAt: (doc.data().createdAt as Timestamp)?.toDate(),
-      updatedAt: (doc.data().updatedAt as Timestamp)?.toDate(),
-      deletedAt: doc.data().deletedAt ? (doc.data().deletedAt as Timestamp).toDate() : undefined,
-    })) as Comment[];
+    return onSnapshot(q, (snapshot) => {
+      const replies = snapshot.docs.map(doc => ({
+        ...doc.data(),
+        id: doc.id,
+        createdAt: (doc.data().createdAt as Timestamp)?.toDate(),
+        updatedAt: (doc.data().updatedAt as Timestamp)?.toDate(),
+        deletedAt: doc.data().deletedAt ? (doc.data().deletedAt as Timestamp).toDate() : undefined,
+      })) as Comment[];
+      onUpdate(replies);
+    });
   },
 
   async addComment(
@@ -121,26 +129,52 @@ export const commentRepository = {
     const parentCollection = targetType === 'prayer_request' ? 'prayer_requests' : 'sermons';
     const parentDocRef = doc(db, 'churches', churchId, parentCollection, targetId);
 
+    // If deleting a parent comment, query all nested replies to delete them as well
+    let replySnapshots: QueryDocumentSnapshot<DocumentData>[] = [];
+    if (!parentCommentId) {
+      const repliesQuery = query(
+        collection(db, COMMENTS_COLLECTION),
+        where('churchId', '==', churchId),
+        where('targetType', '==', targetType),
+        where('targetId', '==', targetId),
+        where('parentCommentId', '==', commentId)
+      );
+      const res = await getDocs(repliesQuery);
+      replySnapshots = res.docs;
+    }
+
     await runTransaction(db, async (transaction) => {
       const cDoc = await transaction.get(commentRef);
-      if (!cDoc.exists() || cDoc.data().status === 'deleted') return;
+      if (!cDoc.exists()) return;
 
       const targetDoc = await transaction.get(parentDocRef);
 
-      // Soft delete
-      transaction.update(commentRef, { 
-        status: 'deleted', 
-        content: 'This comment has been deleted.',
-        deletedAt: Timestamp.now() 
-      });
+      // Total items being deleted: 1 (the comment itself) + count of nested replies
+      const totalDeletedCount = 1 + replySnapshots.length;
 
-      // Update parent target commentCount (we'll decrement it since it's deleted)
-      if (targetDoc.exists()) {
-        const currentCount = targetDoc.data().commentCount || 0;
-        transaction.update(parentDocRef, { commentCount: Math.max(0, currentCount - 1) });
+      // Decrement replyCount on parent comment if this is a reply
+      if (parentCommentId) {
+        const parentCommentRef = doc(db, COMMENTS_COLLECTION, parentCommentId);
+        const pDoc = await transaction.get(parentCommentRef);
+        if (pDoc.exists() && parentCommentRef) {
+          const currentReplies = pDoc.data().replyCount || 0;
+          transaction.update(parentCommentRef, { replyCount: Math.max(0, currentReplies - 1) });
+        }
       }
 
-      // Note: we don't decrement replyCount on parentComment because the reply still exists as "deleted"
+      // Update parent target commentCount subtracting parent comment + all its replies
+      if (targetDoc.exists()) {
+        const currentCount = targetDoc.data().commentCount || 0;
+        transaction.update(parentDocRef, { commentCount: Math.max(0, currentCount - totalDeletedCount) });
+      }
+
+      // Delete all nested replies
+      replySnapshots.forEach((rDoc) => {
+        transaction.delete(rDoc.ref);
+      });
+
+      // Hard delete main comment from Firestore
+      transaction.delete(commentRef);
     });
   },
 

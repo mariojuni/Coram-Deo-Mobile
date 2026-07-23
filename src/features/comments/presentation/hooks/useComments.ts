@@ -15,7 +15,6 @@ export function useComments(churchId: string, targetType: CommentTargetType, tar
 
     if (refresh) {
       setLoading(true);
-      setComments([]);
       setLastDoc(undefined);
       setHasMore(true);
     } else {
@@ -90,13 +89,13 @@ export function useComments(churchId: string, targetType: CommentTargetType, tar
   const deleteComment = async (commentId: string, parentCommentId: string | null) => {
     try {
       await commentRepository.deleteComment(churchId, targetType, targetId, commentId, parentCommentId);
-      // Optimistic update
-      setComments(prev => prev.map(c => {
-        if (c.id === commentId) {
-          return { ...c, status: 'deleted', content: 'This comment has been deleted.' };
-        }
-        return c;
-      }));
+      // Remove comment completely from list
+      setComments(prev => prev.filter(c => c.id !== commentId));
+      if (parentCommentId) {
+        setComments(prev => prev.map(c => 
+          c.id === parentCommentId ? { ...c, replyCount: Math.max(0, c.replyCount - 1) } : c
+        ));
+      }
     } catch (err) {
       console.error('Error deleting comment:', err);
       throw err;

@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import { User } from 'lucide-react-native';
-import type { Comment } from '../../domain/comment.types';
+import { useEffect, useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { commentRepository } from '../../data/comment.repository';
+import type { Comment } from '../../domain/comment.types';
 
-import { useAuthStore } from '@/store/useAuthStore';
 import { canModerateComments } from '@/permissions/mobilePermissions';
+import { useAuthStore } from '@/store/useAuthStore';
 
 interface CommentItemProps {
   comment: Comment;
@@ -17,11 +17,11 @@ interface CommentItemProps {
   level?: number;
 }
 
-export function CommentItem({ 
-  comment, 
+export function CommentItem({
+  comment,
   churchId,
-  onReply, 
-  onDelete, 
+  onReply,
+  onDelete,
   onHide,
   level = 0
 }: CommentItemProps) {
@@ -32,8 +32,37 @@ export function CommentItem({
   const [replies, setReplies] = useState<Comment[]>([]);
   const [loadingReplies, setLoadingReplies] = useState(false);
   const [showReplies, setShowReplies] = useState(false);
-  
-  // Format "time ago"
+  const [showReplyButton, setShowReplyButton] = useState(true);
+  const [lastReplyY, setLastReplyY] = useState(0);
+  const [viewReplyY, setViewReplyY] = useState(0);
+
+  // Real-time Firestore subscription for nested replies
+  useEffect(() => {
+    if (!showReplies) return;
+
+    setLoadingReplies(true);
+    const unsubscribe = commentRepository.subscribeReplies(
+      churchId,
+      comment.targetType,
+      comment.targetId,
+      comment.id,
+      (fetchedReplies) => {
+        setReplies(fetchedReplies);
+        setLoadingReplies(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [showReplies, churchId, comment.targetType, comment.targetId, comment.id]);
+
+  // Reset state when screen re-enters
+  useEffect(() => {
+    setShowReplyButton(true);
+    setShowReplies(false);
+    setLastReplyY(0);
+    setViewReplyY(0);
+  }, []);
+
   const getTimeAgo = (date: Date) => {
     const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
     let interval = seconds / 31536000;
@@ -49,29 +78,14 @@ export function CommentItem({
     return Math.floor(seconds) + 's';
   };
 
-  const handleToggleReplies = async () => {
+  const handleToggleReplies = () => {
     if (showReplies) {
       setShowReplies(false);
-      return;
+      setShowReplyButton(true);
+    } else {
+      setShowReplyButton(false);
+      setShowReplies(true);
     }
-    
-    if (replies.length === 0) {
-      setLoadingReplies(true);
-      try {
-        const fetched = await commentRepository.getReplies(
-          churchId,
-          comment.targetType,
-          comment.targetId,
-          comment.id
-        );
-        setReplies(fetched);
-      } catch (err) {
-        console.error('Error fetching replies:', err);
-      } finally {
-        setLoadingReplies(false);
-      }
-    }
-    setShowReplies(true);
   };
 
   const isDeleted = comment.status === 'deleted';
@@ -80,20 +94,35 @@ export function CommentItem({
   if (isDeleted) return null;
   if (isHidden && !canModerate) return null;
 
+  // Only top-level comments show the threading UI
+  const hasReplies = comment.replyCount > 0 && level === 0;
+
   return (
-    <View style={[styles.container, { marginLeft: level * 30 }]}>
-      <View style={styles.headerRow}>
-        {comment.authorPhotoUrl ? (
-          <Image 
-            source={{ uri: comment.authorPhotoUrl }} 
-            style={styles.avatar} 
-          />
-        ) : (
-          <View style={[styles.avatar, { backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' }]}>
-            <User size={16} color="#9CA3AF" />
-          </View>
-        )}
-        <View style={styles.contentContainer}>
+    <View style={[styles.container, { marginLeft: level > 0 ? 28 : 0 }]}>
+
+      {/* ── Comment body row ── */}
+      <View style={styles.commentBody}>
+
+        {/* Left column: avatar + thread line (grows with content via flex:1) */}
+        <View style={styles.leftColumn}>
+          {comment.authorPhotoUrl ? (
+            <Image source={{ uri: comment.authorPhotoUrl }} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatar, styles.avatarPlaceholder]}>
+              <User size={16} color="#9CA3AF" />
+            </View>
+          )}
+          {/*
+            threadLineVertical uses flex:1 so it fills leftColumn height
+            after the avatar. leftColumn stretches to match contentColumn
+            height (flex row default alignItems:'stretch'), so the line
+            automatically covers the full comment content — no measurement needed.
+          */}
+          {hasReplies && (showReplies || showReplyButton) && <View style={styles.threadLineVertical} />}
+        </View>
+
+        {/* Right column: comment content */}
+        <View style={styles.contentColumn}>
           <View style={styles.nameRow}>
             <Text style={styles.authorName}>{comment.authorDisplayName}</Text>
             {isHidden && <Text style={styles.hiddenBadge}>Hidden</Text>}
@@ -102,21 +131,18 @@ export function CommentItem({
           <Text style={[styles.content, isDeleted && styles.deletedContent]}>
             {comment.content}
           </Text>
-          
           <View style={styles.actionRow}>
             {!isDeleted && level === 0 && (
               <TouchableOpacity onPress={() => onReply(comment)}>
                 <Text style={styles.actionText}>Reply</Text>
               </TouchableOpacity>
             )}
-            
-            {(!isDeleted && canDelete) && (
+            {!isDeleted && canDelete && (
               <TouchableOpacity onPress={() => onDelete(comment)}>
                 <Text style={styles.actionText}>Delete</Text>
               </TouchableOpacity>
             )}
-
-            {(!isDeleted && !isHidden && canModerate && onHide) && (
+            {!isDeleted && !isHidden && canModerate && onHide && (
               <TouchableOpacity onPress={() => onHide(comment)}>
                 <Text style={styles.actionText}>Hide</Text>
               </TouchableOpacity>
@@ -125,32 +151,55 @@ export function CommentItem({
         </View>
       </View>
 
-      {/* View Replies Button */}
-      {comment.replyCount > 0 && level === 0 && (
-        <TouchableOpacity style={styles.viewRepliesBtn} onPress={handleToggleReplies}>
-          <Text style={styles.viewRepliesText}>
-            {showReplies ? 'Hide replies' : `View ${comment.replyCount} ${comment.replyCount === 1 ? 'reply' : 'replies'}`}
-          </Text>
-        </TouchableOpacity>
+      {/* ── View replies button & curve ── */}
+      {hasReplies && showReplyButton && (
+        <View style={styles.viewRepliesContainer}>
+          <View style={styles.viewReplyCurve} />
+          <TouchableOpacity style={styles.viewRepliesBtn} onPress={handleToggleReplies}>
+            <Text style={styles.viewRepliesText}>
+              {`View ${comment.replyCount} ${comment.replyCount === 1 ? 'reply' : 'replies'}`}
+            </Text>
+          </TouchableOpacity>
+        </View>
       )}
 
-      {/* Render Replies */}
+      {/* ── Replies ──
+          repliesSection starts flush below commentBody (no margin-top).
+          continuationLine (top:0 bottom:0) spans its full height,
+          connecting seamlessly to threadLineVertical above. */}
       {showReplies && (
-        <View style={styles.repliesContainer}>
+        <View style={styles.repliesSection}>
+          {/* Continuous parent thread line dynamically calculated down to the last nested comment's curve */}
+          {lastReplyY > 0 && <View style={[styles.parentThreadLine, { height: lastReplyY }]} />}
           {loadingReplies ? (
             <Text style={styles.loadingText}>Loading replies...</Text>
           ) : (
-            replies.map(reply => (
-              <CommentItem 
-                key={reply.id} 
-                comment={reply} 
-                churchId={churchId}
-                onReply={onReply}
-                onDelete={onDelete}
-                onHide={onHide}
-                level={level + 1} 
-              />
-            ))
+            replies.map((reply, index) => {
+              const isLast = index === replies.length - 1;
+              return (
+                <View
+                  key={reply.id}
+                  style={styles.replyRowItem}
+                  onLayout={(e) => {
+                    if (isLast) {
+                      const y = e.nativeEvent.layout.y;
+                      setLastReplyY(y + 8);
+                    }
+                  }}
+                >
+                  {/* Branch curve from the parent line to this reply's avatar */}
+                  <View style={styles.replyBranchCurve} />
+                  <CommentItem
+                    comment={reply}
+                    churchId={churchId}
+                    onReply={onReply}
+                    onDelete={onDelete}
+                    onHide={onHide}
+                    level={level + 1}
+                  />
+                </View>
+              );
+            })
           )}
         </View>
       )}
@@ -162,21 +211,47 @@ const styles = StyleSheet.create({
   container: {
     marginBottom: 16,
   },
-  headerRow: {
+
+  // ── Comment body ──────────────────────────────────────────────────────────
+  commentBody: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    // Default alignItems:'stretch' makes leftColumn stretch to contentColumn height,
+    // so threadLineVertical (flex:1) fills the correct space automatically.
+  },
+  leftColumn: {
+    width: 32,
+    alignItems: 'center',
+    marginRight: 8,
   },
   avatar: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    marginRight: 8,
     backgroundColor: '#E5E7EB',
   },
-  contentContainer: {
+  avatarPlaceholder: {
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  /**
+   * Thread line: flex:1 fills the remaining height of leftColumn after
+   * the avatar (32 px). leftColumn height == commentBody height ==
+   * contentColumn height, so the line always ends exactly at the bottom
+   * of the comment content — regardless of how many lines the text has.
+   */
+  threadLineVertical: {
+    width: 2,
+    flex: 1,
+    backgroundColor: '#D1D5DB',
+    marginTop: 4,
+  },
+  contentColumn: {
     flex: 1,
     paddingTop: 2,
   },
+
+  // ── Name / content / actions ──────────────────────────────────────────────
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -223,21 +298,91 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontWeight: '600',
   },
+
+  // ── View replies button ───────────────────────────────────────────────────
+  viewRepliesContainer: {
+    position: 'relative',
+    marginBottom: 8,
+  },
+  /**
+   * Curve: borderLeft aligns with threadLineVertical center (leftColumn
+   * is 32 px wide, 2 px line centered → left edge at X=15).
+   * top: -4 overlaps slightly with the thread line tail so the join
+   * is visually seamless.
+   */
+  viewReplyCurve: {
+    position: 'absolute',
+    left: 15,
+    top: 0,
+    width: 20,
+    height: 12,
+    borderLeftWidth: 2,
+    borderBottomWidth: 2,
+    borderColor: '#D1D5DB',
+    borderBottomLeftRadius: 12,
+    zIndex: 2,
+  },
   viewRepliesBtn: {
-    marginLeft: 40,
+    marginLeft: 44,
     marginTop: 4,
+    paddingVertical: 2,
   },
   viewRepliesText: {
     fontSize: 13,
     color: '#6B7280',
     fontWeight: '600',
   },
-  repliesContainer: {
-    marginTop: 12,
+
+  // ── Replies section ───────────────────────────────────────────────────────
+  repliesSection: {
+    position: 'relative',
+    marginTop: 8,
+  },
+  /**
+   * continuationLine: spans the full height of repliesSection via
+   * top:0 / bottom:0. Positioned at the same X as threadLineVertical,
+   * creating one unbroken thread from avatar through all replies.
+   */
+  replyLineSegment: {
+    position: 'absolute',
+    left: 15,
+    top: 0,
+    bottom: 0,
+    width: 2,
+    backgroundColor: '#D1D5DB',
+    zIndex: 1,
+  },
+  parentThreadLine: {
+    position: 'absolute',
+    left: 15,
+    top: -8,
+    width: 2,
+    backgroundColor: '#D1D5DB',
+    zIndex: 1,
+  },
+  replyRowItem: {
+    position: 'relative',
+    marginBottom: 4,
+  },
+  /**
+   * Branch curve: connects the continuationLine (at X=15) to the
+   * nested reply's avatar (which starts at X=28 due to level>0 marginLeft).
+   */
+  replyBranchCurve: {
+    position: 'absolute',
+    left: 15,
+    top: 0,
+    width: 13,
+    height: 12,
+    borderLeftWidth: 2,
+    borderBottomWidth: 2,
+    borderColor: '#D1D5DB',
+    borderBottomLeftRadius: 12,
+    zIndex: 2,
   },
   loadingText: {
     marginLeft: 40,
     fontSize: 13,
     color: '#9CA3AF',
-  }
+  },
 });

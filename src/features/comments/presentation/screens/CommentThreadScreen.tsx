@@ -22,7 +22,7 @@ import { useUIStore } from '@/store/useUIStore';
 import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
 
 import { db } from '@/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, DocumentSnapshot, DocumentData } from 'firebase/firestore';
 
 export function CommentThreadScreen() {
   const { targetType, targetId } = useExpoSearchParams<{ targetType: CommentTargetType, targetId: string }>();
@@ -60,7 +60,6 @@ export function CommentThreadScreen() {
   useFocusEffect(
     React.useCallback(() => {
       if (churchId && targetType && targetId) {
-        loadParentData();
         fetchComments(true);
       } else {
         setLoadingParent(false);
@@ -68,28 +67,29 @@ export function CommentThreadScreen() {
     }, [churchId, targetType, targetId])
   );
 
-  const loadParentData = async () => {
-    try {
-      setLoadingParent(true);
-      if (targetType === 'prayer_request') {
-        const docRef = doc(db, 'churches', churchId!, 'prayer_requests', targetId);
-        const snapshot = await getDoc(docRef);
-        if (snapshot.exists()) {
-          setParentData({ id: snapshot.id, ...snapshot.data() });
-        }
-      } else if (targetType === 'sermon') {
-        const docRef = doc(db, 'churches', churchId!, 'sermons', targetId);
-        const snapshot = await getDoc(docRef);
-        if (snapshot.exists()) {
-          setParentData({ id: snapshot.id, ...snapshot.data() });
-        }
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
+  // Real-time listener for parent document (prayer request / sermon)
+  useEffect(() => {
+    if (!churchId || !targetType || !targetId) {
       setLoadingParent(false);
+      return;
     }
-  };
+
+    setLoadingParent(true);
+    const parentCollection = targetType === 'prayer_request' ? 'prayer_requests' : 'sermons';
+    const docRef = doc(db, 'churches', churchId, parentCollection, targetId);
+
+    const unsubscribe = onSnapshot(docRef, (snapshot: DocumentSnapshot<DocumentData>) => {
+      if (snapshot.exists()) {
+        setParentData({ id: snapshot.id, ...snapshot.data() });
+      }
+      setLoadingParent(false);
+    }, (err: Error) => {
+      console.error('Error listening to parent doc:', err);
+      setLoadingParent(false);
+    });
+
+    return () => unsubscribe();
+  }, [churchId, targetType, targetId]);
 
   const handlePray = async () => {
     if (!churchId || !parentData || !currentUser?.uid || targetType !== 'prayer_request') return;
@@ -188,6 +188,8 @@ export function CommentThreadScreen() {
       setInputText('');
       setReplyingTo(null);
       Keyboard.dismiss();
+      // Refetch comments so reply counts update instantly
+      fetchComments(true);
     } catch (err) {
       Alert.alert('Error', 'Could not post comment.');
     } finally {
@@ -204,7 +206,14 @@ export function CommentThreadScreen() {
   const handleDelete = (comment: Comment) => {
     Alert.alert('Delete Comment', 'Are you sure you want to delete this comment?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteComment(comment.id, comment.parentCommentId) }
+      { 
+        text: 'Delete', 
+        style: 'destructive', 
+        onPress: async () => {
+          await deleteComment(comment.id, comment.parentCommentId);
+          fetchComments(true);
+        }
+      }
     ]);
   };
 
