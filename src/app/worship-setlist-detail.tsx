@@ -1,40 +1,46 @@
-import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
-  ScrollView,
-} from 'react-native';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AppModal from '@/components/ui/AppModal';
+import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import {
-  ChevronLeft,
-  Music,
-  Calendar,
-  User,
-  Users,
   AlertCircle,
-  ChevronRight,
-  Hash,
-  Clock,
-  FileText,
   BookOpen,
+  Calendar,
+  ChevronLeft,
+  Clock,
+  Edit2,
+  FileText,
+  Hash,
+  Music,
+  Plus,
+  Trash2,
+  X
 } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useAuthStore } from '@/store/useAuthStore';
-import { useMinistryStore } from '@/store/useMinistryStore';
+import { BounceCard } from '@/components/ui/BounceCard';
+import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
+import { SoftCard, getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
+import type { Song, WorshipSetlist, WorshipSetlistItem } from '@/features/worship/domain/worship.types';
 import { worshipSetlistService } from '@/features/worship/services/worshipSetlistService';
 import {
+  canManageMobileWorshipSetlist,
   canViewMobileWorshipSetlist,
 } from '@/permissions/mobileWorshipPermissions';
-import type { WorshipSetlist, WorshipSetlistItem } from '@/features/worship/domain/worship.types';
-import { SoftCard, getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
-import { BounceCard } from '@/components/ui/BounceCard';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useMinistryStore } from '@/store/useMinistryStore';
 import { useWorshipStore } from '@/store/useWorshipStore';
-import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
 
 export default function WorshipSetlistDetailScreen() {
   const { setlistId } = useLocalSearchParams<{ setlistId: string }>();
@@ -50,68 +56,161 @@ export default function WorshipSetlistDetailScreen() {
 
   const [setlist, setSetlist] = useState<WorshipSetlist | null>(null);
   const [items, setItems] = useState<WorshipSetlistItem[]>([]);
+  const [availableSongs, setAvailableSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  // Edit Setlist Modal
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDate, setEditDate] = useState('');
+  const [editStatus, setEditStatus] = useState<'draft' | 'published' | 'archived'>('published');
+
+  const [savingSetlist, setSavingSetlist] = useState(false);
+
+  // Add Song Modal
+  const [addSongModalVisible, setAddSongModalVisible] = useState(false);
+  const [songSearch, setSongSearch] = useState('');
+  const [selectedSongKey, setSelectedSongKey] = useState('');
+  const [addingSongId, setAddingSongId] = useState<string | null>(null);
+
+  const canManage = canManageMobileWorshipSetlist(userProfile, setlist, userMinistries);
+
+  const loadData = async () => {
     if (!setlistId || !userProfile?.churchId) {
       setLoading(false);
       return;
     }
 
-    let isMounted = true;
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+    try {
+      setLoading(true);
+      setError(null);
 
-        const fetchedSetlist = await worshipSetlistService.getWorshipSetlistById(
-          userProfile.churchId,
-          setlistId
-        );
+      const fetchedSetlist = await worshipSetlistService.getWorshipSetlistById(
+        userProfile.churchId,
+        setlistId
+      );
 
-        if (!fetchedSetlist) {
-          if (isMounted) {
-            setError('Worship setlist not found or access denied.');
-            setLoading(false);
-          }
-          return;
-        }
-
-        const canView = canViewMobileWorshipSetlist(userProfile, fetchedSetlist, userMinistries);
-        if (!canView) {
-          if (isMounted) {
-            setError('You do not have permission to view this setlist.');
-            setLoading(false);
-          }
-          return;
-        }
-
-        const fetchedItems = await worshipSetlistService.getWorshipSetlistItems(
-          userProfile.churchId,
-          setlistId
-        );
-
-        if (isMounted) {
-          setSetlist(fetchedSetlist);
-          setItems(fetchedItems);
-          setActiveSetlistItems(fetchedItems);
-          setLoading(false);
-        }
-      } catch (err) {
-        console.error(err);
-        if (isMounted) {
-          setError('We could not load the worship setlist. Please try again.');
-          setLoading(false);
-        }
+      if (!fetchedSetlist) {
+        setError('Worship setlist not found or access denied.');
+        setLoading(false);
+        return;
       }
-    };
 
+      const canView = canViewMobileWorshipSetlist(userProfile, fetchedSetlist, userMinistries);
+      if (!canView) {
+        setError('You do not have permission to view this setlist.');
+        setLoading(false);
+        return;
+      }
+
+      const fetchedItems = await worshipSetlistService.getWorshipSetlistItems(
+        userProfile.churchId,
+        setlistId
+      );
+
+      const songs = await worshipSetlistService.getAllSongs(userProfile.churchId);
+
+      setSetlist(fetchedSetlist);
+      setEditTitle(fetchedSetlist.title || '');
+      setEditDate(fetchedSetlist.serviceDate || '');
+      setEditStatus(fetchedSetlist.status || 'published');
+      setItems(fetchedItems);
+      setAvailableSongs(songs);
+      setActiveSetlistItems(fetchedItems);
+      setLoading(false);
+    } catch (err) {
+      console.error(err);
+      setError('We could not load the worship setlist. Please try again.');
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadData();
-    return () => {
-      isMounted = false;
-    };
-  }, [setlistId, userProfile, setActiveSetlistItems]);
+  }, [setlistId, userProfile]);
+
+  const handleUpdateSetlist = async () => {
+    if (!setlist || !setlistId) return;
+    try {
+      setSavingSetlist(true);
+      await worshipSetlistService.updateWorshipSetlist(setlistId, {
+        title: editTitle.trim(),
+        serviceDate: editDate,
+        status: editStatus,
+      });
+      setEditModalVisible(false);
+      loadData();
+    } catch (err) {
+      console.error('Failed to update setlist:', err);
+      Alert.alert('Error', 'Failed to update setlist.');
+    } finally {
+      setSavingSetlist(false);
+    }
+  };
+
+  const handleDeleteSetlist = async () => {
+    if (!setlist || !setlistId) return;
+    Alert.alert('Delete Setlist', 'Are you sure you want to delete this setlist?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await worshipSetlistService.deleteWorshipSetlist(setlistId);
+            router.back();
+          } catch (err) {
+            console.error('Failed to delete setlist:', err);
+            Alert.alert('Error', 'Failed to delete setlist.');
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleAddSong = async (song: Song) => {
+    if (!setlist || !userProfile?.churchId) return;
+    try {
+      setAddingSongId(song.id);
+      await worshipSetlistService.createWorshipSetlistItem({
+        churchId: userProfile.churchId,
+        setlistId: setlist.id,
+        songId: song.id,
+        order: items.length + 1,
+        selectedKey: selectedSongKey || song.defaultKey || '',
+        tempoBpm: song.tempoBpm,
+      });
+
+      setAddSongModalVisible(false);
+      setSelectedSongKey('');
+      loadData();
+    } catch (err) {
+      console.error('Failed to add song to setlist:', err);
+      Alert.alert('Error', 'Failed to add song.');
+    } finally {
+      setAddingSongId(null);
+    }
+  };
+
+  const handleDeleteItem = async (itemId: string) => {
+    Alert.alert('Remove Song', 'Remove this song from the setlist?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await worshipSetlistService.deleteWorshipSetlistItem(itemId);
+            loadData();
+          } catch (err) {
+            console.error('Failed to delete item:', err);
+            Alert.alert('Error', 'Failed to remove song.');
+          }
+        },
+      },
+    ]);
+  };
 
   const canChords = true;
 
@@ -125,14 +224,11 @@ export default function WorshipSetlistDetailScreen() {
     return (
       <View style={[styles.screen, { backgroundColor: '#F7F8FC' }]}>
         <Stack.Screen options={{ headerShown: false }} />
-        {/* Header Shimmer */}
         <View style={{ paddingHorizontal: 20, paddingTop: Math.max(insets.top, 20) + 60, paddingBottom: 24, gap: 12 }}>
           <ShimmerSkeleton width={140} height={20} borderRadius={10} />
           <ShimmerSkeleton width="75%" height={32} borderRadius={10} />
           <ShimmerSkeleton width={180} height={18} borderRadius={6} />
         </View>
-
-        {/* Song Card Shimmers */}
         <View style={{ paddingHorizontal: 20, gap: 16 }}>
           {[1, 2, 3].map((key) => (
             <SoftCard key={key} style={{ borderRadius: 24 }} innerStyle={{ borderRadius: 23 }}>
@@ -177,12 +273,18 @@ export default function WorshipSetlistDetailScreen() {
 
   const dateStr = setlist.serviceDate
     ? new Date(setlist.serviceDate + 'T00:00:00').toLocaleDateString('en-US', {
-        weekday: 'long',
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-      })
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    })
     : 'No date set';
+
+  const filteredSongs = availableSongs.filter(
+    (s) =>
+      s.title.toLowerCase().includes(songSearch.toLowerCase()) ||
+      (s.artist && s.artist.toLowerCase().includes(songSearch.toLowerCase()))
+  );
 
   return (
     <View style={[styles.screen, { backgroundColor: '#F7F8FC' }]}>
@@ -221,6 +323,26 @@ export default function WorshipSetlistDetailScreen() {
             <Calendar size={14} color="#6B7280" />
             <Text style={styles.dateMetaText}>{dateStr}</Text>
           </View>
+
+          {/* Leader Action Buttons */}
+          {canManage && (
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+              <TouchableOpacity
+                style={styles.leaderEditBtn}
+                onPress={() => setEditModalVisible(true)}
+              >
+                <Edit2 size={14} color="#FF6596" />
+                <Text style={styles.leaderEditBtnText}>Edit Setlist</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.leaderAddSongBtn}
+                onPress={() => setAddSongModalVisible(true)}
+              >
+                <Plus size={14} color="#FFF" />
+                <Text style={styles.leaderAddSongBtnText}>Add Song</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </LinearGradient>
 
@@ -234,6 +356,15 @@ export default function WorshipSetlistDetailScreen() {
             <Music size={40} color="#9CA3AF" />
             <Text style={styles.emptyStateTitle}>No songs added yet</Text>
             <Text style={styles.emptyStateText}>No songs in this setlist yet.</Text>
+            {canManage && (
+              <TouchableOpacity
+                style={[styles.actionBtn, styles.actionBtnPrimary, { marginTop: 14, alignSelf: 'center' }]}
+                onPress={() => setAddSongModalVisible(true)}
+              >
+                <Plus size={16} color="#FFF" />
+                <Text style={[styles.actionBtnText, styles.actionBtnTextPrimary]}>Add Song</Text>
+              </TouchableOpacity>
+            )}
           </View>
         ) : (
           items.map((item, index) => {
@@ -254,6 +385,15 @@ export default function WorshipSetlistDetailScreen() {
                         <Text style={styles.artistText}>{item.song.artist}</Text>
                       )}
                     </View>
+                    {canManage && (
+                      <TouchableOpacity
+                        onPress={() => handleDeleteItem(item.id)}
+                        hitSlop={8}
+                        style={{ padding: 4 }}
+                      >
+                        <Trash2 size={18} color="#EF4444" />
+                      </TouchableOpacity>
+                    )}
                   </View>
 
                   {/* Badges: Key, Capo, Tempo, Section */}
@@ -366,6 +506,174 @@ export default function WorshipSetlistDetailScreen() {
           <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
         </BounceCard>
       </View>
+
+      {/* Edit Setlist Modal */}
+      <AppModal
+        isOpen={editModalVisible}
+        onClose={() => setEditModalVisible(false)}
+        title="Edit Setlist Details"
+        hideHeader={true}
+        hideDragHandle={true}
+        containerStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}
+      >
+        <View style={styles.modalContainer}>
+          {/* Header with Frosted Glass */}
+          <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
+            <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
+            <View style={styles.dragHandle} />
+            <View style={styles.headerContent}>
+              <View style={styles.headerCirclePlaceholder} />
+              <Text style={styles.headerTitle}>Edit Setlist Details</Text>
+              <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => setEditModalVisible(false)} hitSlop={8} activeOpacity={0.8}>
+                <X size={24} color="#111827" strokeWidth={2} />
+              </BounceCard>
+            </View>
+          </View>
+
+          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            <View style={{ gap: 16, paddingTop: 24 }}>
+              <View>
+
+                <Text style={styles.inputLabel}>Title</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={editTitle}
+                  onChangeText={setEditTitle}
+                />
+              </View>
+
+              <View>
+                <Text style={styles.inputLabel}>Service Date (YYYY-MM-DD)</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={editDate}
+                  onChangeText={setEditDate}
+                />
+              </View>
+
+              <View>
+                <Text style={styles.inputLabel}>Status</Text>
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <TouchableOpacity
+                    style={[styles.statusOption, editStatus === 'published' && styles.statusOptionSelected]}
+                    onPress={() => setEditStatus('published')}
+                  >
+                    <Text style={[styles.statusOptionText, editStatus === 'published' && styles.statusOptionTextSelected]}>Published</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.statusOption, editStatus === 'draft' && styles.statusOptionSelected]}
+                    onPress={() => setEditStatus('draft')}
+                  >
+                    <Text style={[styles.statusOptionText, editStatus === 'draft' && styles.statusOptionTextSelected]}>Draft</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={styles.deleteDangerBtn}
+                onPress={() => {
+                  setEditModalVisible(false);
+                  handleDeleteSetlist();
+                }}
+              >
+                <Trash2 size={16} color="#EF4444" />
+                <Text style={styles.deleteDangerBtnText}>Delete Setlist</Text>
+              </TouchableOpacity>
+
+              <View style={styles.modalFooter}>
+                <TouchableOpacity
+                  style={styles.cancelBtn}
+                  onPress={() => setEditModalVisible(false)}
+                >
+                  <Text style={styles.cancelBtnText}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.submitBtn, savingSetlist && { opacity: 0.6 }]}
+                  disabled={savingSetlist}
+                  onPress={handleUpdateSetlist}
+                >
+                  {savingSetlist ? (
+                    <ActivityIndicator size="small" color="#FFF" />
+                  ) : (
+                    <Text style={styles.submitBtnText}>Save Changes</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+      </AppModal>
+
+      {/* Add Song Modal */}
+      <AppModal
+        isOpen={addSongModalVisible}
+        onClose={() => setAddSongModalVisible(false)}
+        title="Add Song to Setlist"
+        hideHeader={true}
+        hideDragHandle={true}
+        containerStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}
+      >
+        <View style={styles.modalContainer}>
+          {/* Header with Frosted Glass */}
+          <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
+            <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
+            <View style={styles.dragHandle} />
+            <View style={styles.headerContent}>
+              <View style={styles.headerCirclePlaceholder} />
+              <Text style={styles.headerTitle}>Add Song to Setlist</Text>
+              <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => setAddSongModalVisible(false)} hitSlop={8} activeOpacity={0.8}>
+                <X size={24} color="#111827" strokeWidth={2} />
+              </BounceCard>
+            </View>
+          </View>
+
+          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            <View style={{ gap: 12, paddingTop: 24 }}>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Search songs by title or artist..."
+                placeholderTextColor="#9CA3AF"
+                value={songSearch}
+                onChangeText={setSongSearch}
+              />
+
+
+
+
+              {filteredSongs.length === 0 ? (
+                <Text style={{ textAlign: 'center', color: '#9CA3AF', marginVertical: 20 }}>
+                  No matching songs found.
+                </Text>
+              ) : (
+                filteredSongs.map((song) => (
+                  <TouchableOpacity
+                    key={song.id}
+                    style={styles.songSelectItem}
+                    disabled={addingSongId === song.id}
+                    onPress={() => handleAddSong(song)}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.songSelectTitle}>{song.title}</Text>
+                      <Text style={styles.songSelectSub}>
+                        {song.artist ? `${song.artist} • ` : ''}Default Key: {song.defaultKey || 'N/A'}
+                      </Text>
+                    </View>
+                    {addingSongId === song.id ? (
+                      <ActivityIndicator size="small" color="#FF6596" />
+                    ) : (
+                      <Plus size={20} color="#FF6596" />
+                    )}
+                  </TouchableOpacity>
+                ))
+              )}
+            </View>
+          </ScrollView>
+        </View>
+      </AppModal>
+
     </View>
   );
 }
@@ -399,18 +707,17 @@ const styles = StyleSheet.create({
   },
   ministryBadge: {
     fontSize: 11,
-    fontWeight: '800',
-    color: '#8B6FE8',
+    fontWeight: '700',
+    color: '#6B7280',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 10,
+    borderRadius: 8,
   },
   statusPublished: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#DCFCE7',
   },
   statusDraft: {
     backgroundColor: '#FEF3C7',
@@ -420,14 +727,14 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   statusTextPublished: {
-    color: '#10B981',
+    color: '#15803D',
   },
   statusTextDraft: {
-    color: '#F59E0B',
+    color: '#B45309',
   },
   screenTitle: {
-    fontSize: 26,
-    fontWeight: '900',
+    fontSize: 24,
+    fontWeight: '800',
     color: '#111827',
     letterSpacing: -0.5,
   },
@@ -437,84 +744,90 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   dateMetaText: {
-    fontSize: 14,
-    color: '#4B5563',
-    fontWeight: '600',
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  leaderEditBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: '#FFE8F0',
+  },
+  leaderEditBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FF6596',
+  },
+  leaderAddSongBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: '#FF6596',
+  },
+  leaderAddSongBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFF',
   },
   content: {
-    padding: 24,
+    paddingHorizontal: 20,
+    paddingTop: 16,
     gap: 16,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  notFound: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 40,
-    gap: 16,
-  },
-  notFoundTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#111827',
-  },
-  notFoundText: {
-    fontSize: 15,
-    color: '#6B7280',
-    textAlign: 'center',
   },
   emptyState: {
+    padding: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60,
-    gap: 12,
+    gap: 8,
   },
   emptyStateTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111827',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#374151',
   },
   emptyStateText: {
-    fontSize: 14,
-    color: '#6B7280',
+    fontSize: 13,
+    color: '#9CA3AF',
+    textAlign: 'center',
   },
   songCard: {
-    padding: 20,
     backgroundColor: '#FFF',
+    padding: 20,
     gap: 12,
   },
   songHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: 12,
   },
   orderBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#FFF0F5',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FFE8F0',
     alignItems: 'center',
     justifyContent: 'center',
   },
   orderText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '800',
     color: '#FF6596',
   },
   songTitle: {
     fontSize: 17,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#111827',
-    letterSpacing: -0.3,
   },
   artistText: {
     fontSize: 13,
     color: '#6B7280',
-    fontWeight: '500',
   },
   badgeRow: {
     flexDirection: 'row',
@@ -525,38 +838,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#FFF1F2',
+    backgroundColor: '#FFF0F5',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 10,
   },
   badgeText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: '#FF6596',
   },
   notesBox: {
     backgroundColor: '#F9FAFB',
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
+    padding: 10,
+    borderRadius: 10,
     gap: 2,
   },
   notesLabel: {
     fontSize: 11,
-    fontWeight: '800',
-    color: '#9CA3AF',
-    textTransform: 'uppercase',
+    fontWeight: '700',
+    color: '#6B7280',
   },
   notesContent: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#374151',
-    lineHeight: 18,
   },
   actionRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
     marginTop: 4,
   },
   actionBtn: {
@@ -573,11 +882,199 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF6596',
   },
   actionBtnText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: '#4B5563',
   },
   actionBtnTextPrimary: {
-    color: '#FFFFFF',
+    color: '#FFF',
+  },
+  notFound: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+    gap: 12,
+  },
+  notFoundTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  notFoundText: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#374151',
+    marginBottom: 6,
+  },
+  textInput: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: '#111827',
+  },
+  statusOption: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+  },
+  statusOptionSelected: {
+    borderColor: '#FF6596',
+    backgroundColor: '#FFE8F0',
+  },
+  statusOptionText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  statusOptionTextSelected: {
+    color: '#FF6596',
+    fontWeight: '800',
+  },
+  deleteDangerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: '#FEF2F2',
+    marginTop: 8,
+  },
+  deleteDangerBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#EF4444',
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 20,
+  },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+  },
+  cancelBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+  submitBtn: {
+    flex: 1,
+    backgroundColor: '#FF6596',
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+  },
+  submitBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFF',
+  },
+  modalContainer: { backgroundColor: '#FAFAFA' },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 70, paddingBottom: 30 },
+  headerContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.4)',
+    overflow: 'hidden',
+  },
+  dragHandle: {
+    width: 40,
+    height: 5,
+    backgroundColor: '#d1d5db',
+    borderRadius: 10,
+    alignSelf: 'center',
+    marginBottom: 8,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111827',
+    textAlign: 'center',
+    flex: 1,
+  },
+  headerCirclePlaceholder: {
+    width: 40,
+  },
+  headerCircle: {
+    ...getTopBarButtonShadowStyle(20),
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  songSelectItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  songSelectTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  songSelectSub: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
   },
 });
+

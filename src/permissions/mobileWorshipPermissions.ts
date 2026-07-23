@@ -217,21 +217,51 @@ export function canViewMobileWorshipSetlist(
 }
 
 /**
- * Checks whether a user can manage (edit/save official setlist) a specific worship setlist.
+ * Checks whether a user can create new worship setlists.
  */
-export function canManageMobileWorshipSetlist(
-  user: UserAccount | null | undefined,
-  setlist: WorshipSetlist | null | undefined
+export function canCreateMobileWorshipSetlists(
+  user?: UserAccount | null,
+  userMinistries?: Ministry[]
 ): boolean {
-  if (!user || !setlist) return false;
-  if (!hasChurchAccess(user) || setlist.churchId !== user.churchId) return false;
+  if (!hasChurchAccess(user)) return false;
+  if (hasAnyRole(user, ['super_admin', 'church_admin', 'pastor'])) return true;
+  if (hasRole(user, 'ministry_leader')) return true;
 
-  if (hasAnyRole(user, ['super_admin', 'church_admin'])) return true;
-
-  if (hasRole(user, 'ministry_leader') && setlist.ministryId) {
-    return Array.isArray(user.managedMinistryIds) && user.managedMinistryIds.includes(setlist.ministryId);
+  if (userMinistries && userMinistries.length > 0) {
+    return userMinistries.some((m) => {
+      const isMinistryActive = m.status?.toLowerCase() === 'active';
+      return isMinistryActive && m.features?.songListEnabled === true;
+    });
   }
 
   return false;
 }
+
+/**
+ * Checks whether a user can manage (edit/save official setlist) a specific worship setlist.
+ */
+export function canManageMobileWorshipSetlist(
+  user: UserAccount | null | undefined,
+  setlist: WorshipSetlist | null | undefined,
+  userMinistries?: Ministry[]
+): boolean {
+  if (!user || !setlist) return false;
+  if (!hasChurchAccess(user) || setlist.churchId !== user.churchId) return false;
+
+  if (hasAnyRole(user, ['super_admin', 'church_admin', 'pastor'])) return true;
+
+  if (hasRole(user, 'ministry_leader')) {
+    if (setlist.ministryId && Array.isArray(user.managedMinistryIds) && user.managedMinistryIds.includes(setlist.ministryId)) {
+      return true;
+    }
+    // Fallback: if user leads any active worship ministry
+    if (userMinistries && userMinistries.length > 0) {
+      return userMinistries.some(m => m.status?.toLowerCase() === 'active' && m.features?.songListEnabled === true);
+    }
+    return true;
+  }
+
+  return false;
+}
+
 

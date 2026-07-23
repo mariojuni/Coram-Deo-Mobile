@@ -127,4 +127,99 @@ export const worshipSetlistService = {
     if (!snap.exists()) return null;
     return { id: snap.id, ...snap.data() } as SongVersion;
   },
+
+  /**
+   * Fetches all songs for a church.
+   */
+  getAllSongs: async (churchId: string): Promise<Song[]> => {
+    if (!churchId) return [];
+    const q = query(
+      collection(db, 'songs'),
+      where('churchId', '==', churchId)
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Song));
+  },
+
+  /**
+   * Creates a new worship setlist.
+   */
+  createWorshipSetlist: async (data: Omit<WorshipSetlist, 'id'>): Promise<string> => {
+    const { addDoc } = await import('firebase/firestore');
+    const docRef = await addDoc(collection(db, 'worshipSetlists'), {
+      ...data,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    return docRef.id;
+  },
+
+  /**
+   * Updates an existing worship setlist.
+   */
+  updateWorshipSetlist: async (setlistId: string, data: Partial<WorshipSetlist>): Promise<void> => {
+    const { updateDoc } = await import('firebase/firestore');
+    const docRef = doc(db, 'worshipSetlists', setlistId);
+    await updateDoc(docRef, {
+      ...data,
+      updatedAt: new Date().toISOString(),
+    });
+  },
+
+  /**
+   * Deletes a worship setlist and its items.
+   */
+  deleteWorshipSetlist: async (setlistId: string): Promise<void> => {
+    const { writeBatch, deleteDoc } = await import('firebase/firestore');
+    const batch = writeBatch(db);
+
+    const setlistRef = doc(db, 'worshipSetlists', setlistId);
+    batch.delete(setlistRef);
+
+    const itemsQuery = query(
+      collection(db, 'worshipSetlistItems'),
+      where('setlistId', '==', setlistId)
+    );
+    const itemsSnapshot = await getDocs(itemsQuery);
+    itemsSnapshot.docs.forEach((itemDoc) => {
+      batch.delete(itemDoc.ref);
+    });
+
+    await batch.commit();
+  },
+
+  /**
+   * Creates a setlist item (song in setlist).
+   */
+  createWorshipSetlistItem: async (itemData: Omit<WorshipSetlistItem, 'id'>): Promise<string> => {
+    const { addDoc } = await import('firebase/firestore');
+    const docRef = await addDoc(collection(db, 'worshipSetlistItems'), {
+      ...itemData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    return docRef.id;
+  },
+
+  /**
+   * Updates a setlist item.
+   */
+  updateWorshipSetlistItem: async (itemId: string, itemData: Partial<WorshipSetlistItem>): Promise<void> => {
+    const { updateDoc } = await import('firebase/firestore');
+    const docRef = doc(db, 'worshipSetlistItems', itemId);
+    await updateDoc(docRef, {
+      ...itemData,
+      updatedAt: new Date().toISOString(),
+    });
+  },
+
+  /**
+   * Deletes a setlist item.
+   */
+  deleteWorshipSetlistItem: async (itemId: string): Promise<void> => {
+    const { deleteDoc } = await import('firebase/firestore');
+    const docRef = doc(db, 'worshipSetlistItems', itemId);
+    await deleteDoc(docRef);
+  },
 };
+

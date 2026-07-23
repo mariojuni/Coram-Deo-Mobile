@@ -149,7 +149,6 @@ function MemberPickerSheet({ roleLabel, ministry, currentUserId, onSelect, onClo
             onChangeText={setQuery}
             placeholder="Search by name or role…"
             placeholderTextColor="#aaa"
-            autoFocus
           />
         {query.length > 0 && (
           <TouchableOpacity onPress={() => setQuery('')}>
@@ -264,6 +263,7 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
 
   const isStaff = ['super_admin', 'church_admin', 'ministry_leader'].includes((userProfile?.role ?? '').toLowerCase());
 
+  const [isMainModalOpen, setIsMainModalOpen] = useState(true);
   const [assignments, setAssignments] = useState<AssignmentsMap>({});
   const [filterTab, setFilterTab] = useState<FilterTab>('all');
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
@@ -305,7 +305,10 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
       return;
     }
     setSelectingRoleKey({ ministryId, roleName });
-    setShowPicker(true);
+    setIsMainModalOpen(false);
+    setTimeout(() => {
+      setShowPicker(true);
+    }, 300);
   }, [isStaff]);
 
   const handleSelect = async (userId: string | null) => {
@@ -322,7 +325,10 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
     });
 
     setShowPicker(false);
-    setSelectingRoleKey(null);
+    setTimeout(() => {
+      setSelectingRoleKey(null);
+      setIsMainModalOpen(true);
+    }, 300);
 
     // API Update
     try {
@@ -365,15 +371,17 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
   };
 
   return (
-    <AppModal
-      isOpen={true}
-      onClose={onClose}
-      title="Assign Ministries"
+    <>
+      <AppModal
+        isOpen={isMainModalOpen}
+        onClose={onClose}
+        title="Assign Ministries"
       hideHeader={true}
       hideDragHandle={true}
-      containerStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}
+      containerStyle={{ paddingHorizontal: 0, paddingBottom: 0, backgroundColor: '#FAFAFA' }}
+      heightRatio={0.80}
     >
-      <View style={ms.modalContainer}>
+      <View style={[ms.modalContainer, { flex: 1 }]}>
         <View style={[ms.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
           <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
@@ -550,14 +558,23 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
           );
         })}
       </ScrollView>
+      </View>
+    </AppModal>
 
       <AppModal
         isOpen={showPicker}
-        onClose={() => { setShowPicker(false); setSelectingRoleKey(null); }}
+        onClose={() => {
+          setShowPicker(false);
+          setTimeout(() => {
+            setSelectingRoleKey(null);
+            setIsMainModalOpen(true);
+          }, 300);
+        }}
         title="Assign Member"
         hideHeader={true}
         hideDragHandle={true}
         containerStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}
+        heightRatio={0.55}
       >
         {selectingRoleKey && (
           <MemberPickerSheet
@@ -565,12 +582,17 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
             ministry={ministries.find(m => m.id === selectingRoleKey.ministryId)}
             currentUserId={selectingRoleKey ? (assignments[getAssignmentKey(selectingRoleKey.ministryId, selectingRoleKey.roleName)] ?? null) : null}
             onSelect={handleSelect}
-            onClose={() => { setShowPicker(false); setSelectingRoleKey(null); }}
+            onClose={() => {
+              setShowPicker(false);
+              setTimeout(() => {
+                setSelectingRoleKey(null);
+                setIsMainModalOpen(true);
+              }, 300);
+            }}
           />
         )}
       </AppModal>
-      </View>
-    </AppModal>
+    </>
   );
 }
 

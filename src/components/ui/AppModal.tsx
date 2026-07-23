@@ -1,7 +1,10 @@
-import { X } from 'lucide-react-native';
 import { BounceCard } from '@/components/ui/BounceCard';
-import { ReactNode, useEffect, useMemo } from 'react';
-import { Animated, Modal, StyleProp, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View, ViewStyle } from 'react-native';
+import { X } from 'lucide-react-native';
+import { ReactNode, useEffect, useMemo, useState } from 'react';
+import { Animated, Dimensions, Keyboard, KeyboardAvoidingView, Modal, Platform, StyleProp, StyleSheet, Text, TouchableWithoutFeedback, View, ViewStyle } from 'react-native';
+
+
+
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface AppModalProps {
@@ -15,22 +18,44 @@ interface AppModalProps {
   headerTitleAlign?: 'left' | 'center';
   hideHeader?: boolean;
   hideDragHandle?: boolean;
+  heightRatio?: number;
+  dynamicHeight?: boolean;
 }
 
-export default function AppModal({ isOpen, onClose, title, children, containerStyle, headerLeft, headerRight, headerTitleAlign = 'center', hideHeader = false, hideDragHandle = false }: AppModalProps) {
-  const slideAnim = useMemo(() => new Animated.Value(500), []);
+export default function AppModal({ isOpen, onClose, title, children, containerStyle, headerLeft, headerRight, headerTitleAlign = 'center', hideHeader = false, hideDragHandle = false, heightRatio = 0.5, dynamicHeight = false }: AppModalProps) {
+  const slideAnim = useMemo(() => new Animated.Value(600), []);
+
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  // Compute dynamic max height for the modal sheet
+  const windowHeight = Dimensions.get('window').height;
+  const maxSheetHeight = Math.min(windowHeight * heightRatio, windowHeight - keyboardHeight - 20);
+
+  useEffect(() => {
+    const showListener = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      showListener.remove();
+      hideListener.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
       Animated.timing(slideAnim, {
         toValue: 0,
-        duration: 220,
+        duration: 250,
         useNativeDriver: true,
       }).start();
     } else {
-      slideAnim.setValue(500); // reset when closed
+      slideAnim.setValue(600); // reset when closed
     }
   }, [isOpen, slideAnim]);
+
 
   return (
     <Modal visible={isOpen} animationType="none" transparent={true} onRequestClose={onClose}>
@@ -39,7 +64,7 @@ export default function AppModal({ isOpen, onClose, title, children, containerSt
           <View style={styles.backdrop} />
         </TouchableWithoutFeedback>
 
-        <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}>
+        <Animated.View style={[styles.sheet, dynamicHeight && { flex: undefined }, { transform: [{ translateY: slideAnim }], maxHeight: maxSheetHeight, marginBottom: keyboardHeight }]}>
           {!hideDragHandle && <View style={styles.dragHandle} />}
 
           {/* Header */}
@@ -48,11 +73,11 @@ export default function AppModal({ isOpen, onClose, title, children, containerSt
               <View style={[styles.headerSide, { alignItems: 'flex-start' }]}>
                 {headerLeft ? headerLeft : (headerTitleAlign === 'center' ? <View style={styles.iconBtnPlaceholder} /> : null)}
               </View>
-              
+
               <View style={styles.headerCenter}>
                 <Text style={[styles.title, { textAlign: headerTitleAlign }]}>{title}</Text>
               </View>
-              
+
               <View style={[styles.headerSide, { alignItems: 'flex-end', flexDirection: 'row', justifyContent: 'flex-end', gap: 16 }]}>
                 {headerRight}
                 <BounceCard bounceScale={0.85} onPress={onClose} style={styles.iconBtn}>
@@ -63,7 +88,7 @@ export default function AppModal({ isOpen, onClose, title, children, containerSt
           )}
 
           {/* Content */}
-          <SafeAreaView edges={['bottom']} style={[styles.contentContainer, containerStyle]}>
+          <SafeAreaView edges={keyboardHeight > 0 ? [] : ['bottom']} style={[styles.contentContainer, dynamicHeight && { flex: undefined }, containerStyle]}>
             {children}
           </SafeAreaView>
         </Animated.View>
@@ -86,10 +111,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
   sheet: {
+    flex: 1,
+    width: '100%',
+    maxHeight: '75%',
     backgroundColor: '#fff',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: '90%',
     overflow: 'hidden',
   },
   dragHandle: {
@@ -102,6 +129,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   contentContainer: {
+    flex: 1,
     flexShrink: 1,
     paddingBottom: 16,
   },
@@ -123,14 +151,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '700',
+    maxHeight: '100%',
     color: '#1a1a1a',
   },
   iconBtnPlaceholder: {
-    width: 40, 
+    width: 40,
   },
   iconBtn: {
     padding: 8,
-    marginRight: -8, 
+    marginRight: -8,
   },
 });

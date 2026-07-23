@@ -73,7 +73,9 @@ export function EventDetailsModal({
       title={event.title || 'Event Details'}
       hideHeader={true}
       hideDragHandle={true}
-      containerStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}
+      containerStyle={{ paddingHorizontal: 0, paddingBottom: 0, backgroundColor: '#FAFAFA' }}
+      heightRatio={0.85}
+      dynamicHeight={true}
     >
       <View style={styles.modalContainer}>
         {/* ─── Header ─────────────────────────────────────────────────────── */}

@@ -382,9 +382,9 @@ export default function AttendanceTab({ members, showStaffFeatures }: Attendance
         title="Select Event"
         hideHeader={true}
         hideDragHandle={true}
-        containerStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}
+        containerStyle={{ flex: 1, backgroundColor: '#FAFAFA', paddingHorizontal: 0, paddingBottom: 0 }}
       >
-        <View style={styles.modalContainer}>
+        <View style={[styles.modalContainer, { flex: 1 }]}>
           <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
             <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
             <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
@@ -545,9 +545,9 @@ export default function AttendanceTab({ members, showStaffFeatures }: Attendance
         title="Manual Check-in"
         hideHeader={true}
         hideDragHandle={true}
-        containerStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}
+        containerStyle={{ flex: 1, backgroundColor: '#FAFAFA', paddingHorizontal: 0, paddingBottom: 0 }}
       >
-        <View style={styles.modalContainer}>
+        <View style={[styles.modalContainer, { flex: 1 }]}>
           <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
             <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
             <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
@@ -624,9 +624,9 @@ export default function AttendanceTab({ members, showStaffFeatures }: Attendance
         title="Check-in Details"
         hideHeader={true}
         hideDragHandle={true}
-        containerStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}
+        containerStyle={{ flex: 1, backgroundColor: '#FAFAFA', paddingHorizontal: 0, paddingBottom: 0 }}
       >
-        <View style={styles.modalContainer}>
+        <View style={[styles.modalContainer, { flex: 1 }]}>
           <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
             <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
             <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />

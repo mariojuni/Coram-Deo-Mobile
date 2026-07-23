@@ -227,12 +227,14 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    flex: 1,
     fontSize: 16,
     fontWeight: '700',
     color: '#1a1a1a',
     textAlign: 'center',
-    marginHorizontal: 12,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    transform: [{ translateY: -8 }],
   },
 
   saveBtn: {
