@@ -1,4 +1,4 @@
-import { addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, runTransaction, serverTimestamp, updateDoc, where } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, getDoc, onSnapshot, orderBy, query, runTransaction, serverTimestamp, updateDoc, where } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import { worshipRepository } from '../../worship/data/worship.repository';
 import type { WorshipSetlistItem } from '../../worship/domain/worship.types';
@@ -105,11 +105,28 @@ export const scheduleRepository = {
             const unsubItems = onSnapshot(
               setlistItemsQuery,
               async (itemsSnap) => {
-                const items = itemsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as WorshipSetlistItem));
+                const rawItems = itemsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as WorshipSetlistItem));
+
+                // Enrich setlist items with song document data
+                const enrichedItems = await Promise.all(
+                  rawItems.map(async (item) => {
+                    if (item.songId) {
+                      try {
+                        const songDoc = await getDoc(doc(db, 'songs', item.songId));
+                        if (songDoc.exists()) {
+                          item.song = { id: songDoc.id, ...songDoc.data() } as any;
+                        }
+                      } catch (err) {
+                        console.error('Error fetching song for setlist item:', err);
+                      }
+                    }
+                    return item;
+                  })
+                );
 
                 // Group items by setlistId
                 const itemsBySetlist: Record<string, WorshipSetlistItem[]> = {};
-                items.forEach((it) => {
+                enrichedItems.forEach((it) => {
                   if (!itemsBySetlist[it.setlistId]) itemsBySetlist[it.setlistId] = [];
                   itemsBySetlist[it.setlistId].push(it);
                 });

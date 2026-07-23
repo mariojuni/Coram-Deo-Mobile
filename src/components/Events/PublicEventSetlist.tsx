@@ -99,7 +99,9 @@ export function PublicEventSetlist({
     userProfile &&
     canViewMobileWorshipSetlist(userProfile, setlist, userMinistries);
 
-  const publicItems = items.filter((i) => isStaff || i.song?.allowPublicLyrics);
+  const publicItems = Array.isArray(preloadedSongList)
+    ? items
+    : items.filter((i) => isStaff || i.song?.allowPublicLyrics);
 
   if (publicItems.length === 0) return null;
 
