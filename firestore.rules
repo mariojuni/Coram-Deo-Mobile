@@ -237,6 +237,14 @@ service cloud.firestore {
                       isWorshipAdmin(resource.data.churchId, resource.data.get('ministryId', null));
     }
 
+    match /personalWorshipArrangements/{arrangementId} {
+      allow read, write: if isSignedIn()
+        && (resource == null || resource.data.userId == request.auth.uid || resource.data.memberId == userDoc().memberId)
+        && (request.resource == null || request.resource.data.userId == request.auth.uid || request.resource.data.memberId == userDoc().memberId)
+        && (request.resource == null || request.resource.data.churchId == userDoc().churchId);
+    }
+
+
     // ── Users ────────────────────────────────────────────────────────────────
     match /users/{userId} {
       allow read: if isSignedIn();

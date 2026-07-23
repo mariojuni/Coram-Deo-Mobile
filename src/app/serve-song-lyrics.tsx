@@ -116,9 +116,10 @@ export default function ServeSongLyricsScreen() {
     );
   }
 
-  const showTabs = isStaff && (!!song.chordChart || !!song.lyricsWithChords) && hideChords !== 'true';
+  const showTabs = hideChords !== 'true' && (!!setlistItem?.chordOverride || !!song.chordChart || !!song.lyricsWithChords);
 
-  const sourceText = song.lyricsWithChords || song.chordChart || '';
+  const sourceText = setlistItem?.chordOverride || song.lyricsWithChords || song.chordChart || '';
+  const lyricsContent = setlistItem?.lyricsOverride || song.lyrics || '';
 
   const transposedChordChart = showTabs && sourceText 
     ? transposeText(sourceText, transposeSteps - capo, preferFlats) 
@@ -273,8 +274,8 @@ export default function ServeSongLyricsScreen() {
           {(!showTabs || activeTab === 'lyrics') && (
             <SoftCard style={{ marginBottom: 24, borderRadius: 24 }} innerStyle={{ borderRadius: 23 }}>
               <View style={styles.lyricsCard}>
-                {song.lyrics ? (
-                  <Text style={styles.lyricsText}>{song.lyrics}</Text>
+                {lyricsContent ? (
+                  <Text style={styles.lyricsText}>{lyricsContent}</Text>
                 ) : (
                   <View style={styles.emptyState}>
                     <Music size={32} color="#CBD5E1" />

@@ -163,14 +163,10 @@ export function canViewLeadersOnlyPrayer(
 
 // ─── Staff Management & Tool Visibility ──────────────────────────────────────
 
+import { canViewMobileWorshipSetlists } from './mobileWorshipPermissions';
+
 export function canViewWorshipTab(user?: UserAccount | null, userMinistries?: Ministry[]): boolean {
-  if (hasAnyRole(user, ['super_admin', 'church_admin', 'pastor'])) return true;
-  if (!hasMemberAccess(user)) return false;
-  
-  if (userMinistries && userMinistries.length > 0) {
-    return userMinistries.some(m => m.status === 'Active' && m.features?.worshipTabEnabled === true);
-  }
-  return false;
+  return canViewMobileWorshipSetlists(user, userMinistries);
 }
 
 export function canManageWorship(user?: UserAccount | null, ministryId?: string): boolean {
@@ -190,7 +186,7 @@ export function canViewServeTools(user?: UserAccount | null, userMinistries?: Mi
   if (hasAnyRole(user, ['super_admin', 'church_admin', 'pastor', 'ministry_leader'])) return true;
   if (!hasMemberAccess(user)) return false;
   if (userMinistries && userMinistries.length > 0) {
-    return userMinistries.some(m => m.status === 'Active' && m.features?.serveSchedulingEnabled === true);
+    return userMinistries.some(m => m.status === 'Active');
   }
   return false;
 }

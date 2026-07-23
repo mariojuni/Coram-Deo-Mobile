@@ -8,6 +8,7 @@ export interface MinistryMember {
 export interface Ministry {
   id: string;
   name: string;
+  type?: string;
   description?: string;
   leaderId?: string;
   leaderName?: string;
@@ -16,12 +17,7 @@ export interface Ministry {
   roleDetails?: Record<string, { icon: string; color: string }>;
   members?: MinistryMember[];
   features?: {
-    staffScreenEnabled?: boolean;
-    worshipTabEnabled?: boolean;
-    serveSchedulingEnabled?: boolean;
-    songLibraryEnabled?: boolean;
-    setlistEnabled?: boolean;
-    chordChartEnabled?: boolean;
+    songListEnabled?: boolean;
   };
   churchId: string;
   status: string;
@@ -81,6 +77,7 @@ export interface MinistryAssignment {
   eventLocation?: string;
   ministryId: string;
   ministryName: string;
+  ministryType?: string;
   roleId?: string;
   roleName: string;
   memberId: string;
@@ -89,6 +86,7 @@ export interface MinistryAssignment {
   callTime?: string;
   notes?: string;
   status: 'Pending' | 'Confirmed' | 'Declined' | 'Completed' | 'Cancelled' | string;
+  canViewSongList?: boolean;
   confirmedAt?: string;
   confirmedBy?: string;
   declinedAt?: string;

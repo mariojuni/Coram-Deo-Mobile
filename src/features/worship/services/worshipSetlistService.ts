@@ -1,0 +1,130 @@
+import { collection, doc, getDoc, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { db } from '../../../firebase';
+import type { Song, SongVersion, WorshipSetlist, WorshipSetlistItem } from '../domain/worship.types';
+import type { UserAccount } from '../../auth/domain/auth.types';
+import type { Ministry } from '../../ministry/domain/ministry.types';
+import { canViewMobileWorshipSetlist } from '../../../permissions/mobileWorshipPermissions';
+
+export const worshipSetlistService = {
+  /**
+   * Fetches setlists for the active churchId and filters according to the user's permissions.
+   */
+  getUpcomingWorshipSetlistsForUser: async (
+    user: UserAccount | null | undefined,
+    userMinistries?: Ministry[]
+  ): Promise<WorshipSetlist[]> => {
+    if (!user?.churchId) return [];
+
+    const q = query(
+      collection(db, 'worshipSetlists'),
+      where('churchId', '==', user.churchId)
+    );
+    const snapshot = await getDocs(q);
+    const allSetlists = snapshot.docs.map(
+      (d) => ({ id: d.id, ...d.data() } as WorshipSetlist)
+    );
+
+    // Filter setlists that user is authorized to view
+    const allowed = allSetlists.filter((setlist) =>
+      canViewMobileWorshipSetlist(user, setlist, userMinistries)
+    );
+
+    // Sort by serviceDate descending
+    return allowed.sort((a, b) => {
+      const dateA = a.serviceDate ? new Date(a.serviceDate).getTime() : 0;
+      const dateB = b.serviceDate ? new Date(b.serviceDate).getTime() : 0;
+      return dateB - dateA;
+    });
+  },
+
+  /**
+   * Fetches a single setlist by ID with churchId check.
+   */
+  getWorshipSetlistById: async (
+    churchId: string | null | undefined,
+    setlistId: string
+  ): Promise<WorshipSetlist | null> => {
+    if (!churchId || !setlistId) return null;
+    const docRef = doc(db, 'worshipSetlists', setlistId);
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) return null;
+    const data = { id: snap.id, ...snap.data() } as WorshipSetlist;
+    if (data.churchId !== churchId) return null;
+    return data;
+  },
+
+  /**
+   * Fetches a setlist by eventId with churchId check.
+   */
+  getWorshipSetlistByEventId: async (
+    churchId: string | null | undefined,
+    eventId: string
+  ): Promise<WorshipSetlist | null> => {
+    if (!churchId || !eventId) return null;
+    const q = query(
+      collection(db, 'worshipSetlists'),
+      where('churchId', '==', churchId),
+      where('eventId', '==', eventId)
+    );
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return null;
+    return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as WorshipSetlist;
+  },
+
+  /**
+   * Fetches setlist items ordered by order, enriched with song data.
+   */
+  getWorshipSetlistItems: async (
+    churchId: string | null | undefined,
+    setlistId: string
+  ): Promise<WorshipSetlistItem[]> => {
+    if (!churchId || !setlistId) return [];
+    const q = query(
+      collection(db, 'worshipSetlistItems'),
+      where('churchId', '==', churchId),
+      where('setlistId', '==', setlistId),
+      orderBy('order', 'asc')
+    );
+    const snapshot = await getDocs(q);
+    const items = snapshot.docs.map(
+      (d) => ({ id: d.id, ...d.data() } as WorshipSetlistItem)
+    );
+
+    const enriched = await Promise.all(
+      items.map(async (item) => {
+        if (item.songId) {
+          const songDocRef = doc(db, 'songs', item.songId);
+          const songDoc = await getDoc(songDocRef);
+          if (songDoc.exists()) {
+            item.song = { id: songDoc.id, ...songDoc.data() } as Song;
+          }
+        }
+        return item;
+      })
+    );
+
+    return enriched;
+  },
+
+  /**
+   * Fetches a song by ID.
+   */
+  getSongById: async (songId: string): Promise<Song | null> => {
+    if (!songId) return null;
+    const docRef = doc(db, 'songs', songId);
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) return null;
+    return { id: snap.id, ...snap.data() } as Song;
+  },
+
+  /**
+   * Fetches a song version by ID.
+   */
+  getSongVersionById: async (songVersionId: string): Promise<SongVersion | null> => {
+    if (!songVersionId) return null;
+    const docRef = doc(db, 'songVersions', songVersionId);
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) return null;
+    return { id: snap.id, ...snap.data() } as SongVersion;
+  },
+};

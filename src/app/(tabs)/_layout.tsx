@@ -72,6 +72,12 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
   const insets = useSafeAreaInsets();
   const tabBarVisible = useUIStore((s) => s.tabBarVisible);
   const hasNewAssignment = useMinistryStore((s) => s.hasNewAssignment);
+  const memberAssignments = useMinistryStore((s) => s.memberAssignments);
+  
+  const hasAwaitingAssignment = memberAssignments.some(
+    (a) => (a.status || '').toLowerCase() === 'pending'
+  );
+
   const slideAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -138,7 +144,7 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
                 options={options}
                 onPress={onPress}
                 IconComponent={IconComponent}
-                showBadge={route.name === 'serve' && hasNewAssignment}
+                showBadge={route.name === 'serve' && hasNewAssignment && hasAwaitingAssignment}
               />
             );
           })}
@@ -149,12 +155,25 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
 }
 
 export default function TabLayout() {
+  const { userProfile, currentUser } = useAuthStore();
+  const initializeMemberAssignmentsListener = useMinistryStore(
+    (s) => s.initializeMemberAssignmentsListener
+  );
+
   useEffect(() => {
     useMinistryStore.getState().loadViewedAssignmentCount();
   }, []);
 
+  useEffect(() => {
+    const churchId = userProfile?.churchId;
+    const memberId = userProfile?.memberId ?? currentUser?.uid;
+    if (!churchId || !memberId) return;
+
+    const unsub = initializeMemberAssignmentsListener(churchId, memberId);
+    return () => unsub();
+  }, [userProfile?.churchId, userProfile?.memberId, currentUser?.uid, initializeMemberAssignmentsListener]);
+
   const syncToastMessage = useUIStore((s) => s.syncToastMessage);
-  const { userProfile } = useAuthStore();
   
   // Get active ministries for the user to check staff/tool permissions
   const userMinistries = useMinistryStore((state) => state.ministries).filter(

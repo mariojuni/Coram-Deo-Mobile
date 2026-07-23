@@ -22,7 +22,7 @@ import {
     ChevronRight,
     ChevronLeft
 } from 'lucide-react-native';
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -33,6 +33,7 @@ import {
     View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { canViewSongListFromAssignment } from '@/permissions/mobileWorshipPermissions';
 
 export default function ServeAssignmentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -41,19 +42,56 @@ export default function ServeAssignmentDetailScreen() {
   const userProfile = useAuthStore((s) => s.userProfile);
   const memberAssignments = useMinistryStore((s) => s.memberAssignments);
   const allAssignments = useMinistryStore((s) => s.assignments);
+  const ministries = useMinistryStore((s) => s.ministries);
+  const fetchMinistries = useMinistryStore((s) => s.fetchMinistries);
+
+  useEffect(() => {
+    if (userProfile?.churchId) {
+      fetchMinistries(userProfile.churchId);
+    }
+  }, [userProfile?.churchId, fetchMinistries]);
 
   const assignment = memberAssignments.find((a) => a.id === id) || allAssignments.find((a) => a.id === id);
+  const ministry = ministries.find((m) => m.id === assignment?.ministryId);
 
   const [confirmingSaving, setConfirmingSaving] = useState(false);
   const [declineModalOpen, setDeclineModalOpen] = useState(false);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   
   const scrollY = useRef(new Animated.Value(0)).current;
+  const lastNavTimeRef = useRef<number>(0);
 
   const { setlist } = useWorshipSetlist(
     userProfile?.churchId || undefined,
     assignment?.eventId || undefined
   );
+
+  const showWorshipResources = canViewSongListFromAssignment(userProfile, {
+    assignment: assignment ? {
+      memberId: assignment.memberId,
+      userId: assignment.userId,
+      status: assignment.status,
+      ministryType: assignment.ministryType,
+      ministryName: assignment.ministryName,
+      canViewSongList: assignment.canViewSongList,
+      churchId: assignment.churchId,
+    } : null,
+    ministry: ministry ? {
+      name: ministry.name,
+      churchId: ministry.churchId,
+      type: ministry.type,
+      features: ministry.features,
+    } : null,
+    event: assignment ? {
+      churchId: assignment.churchId,
+      status: 'published',
+      date: assignment.eventDate,
+    } : null,
+    setlist: setlist ? {
+      churchId: setlist.churchId,
+      status: setlist.status,
+    } : null,
+  });
 
   if (!assignment) {
     return (
@@ -307,25 +345,38 @@ export default function ServeAssignmentDetailScreen() {
         </SoftCard>
 
         {/* ─── Worship Setlist Link ─── */}
-        {setlist && (
-          <SoftCard style={{ borderRadius: 28 }} innerStyle={{ borderRadius: 27 }}>
-            <TouchableOpacity 
-              style={styles.setlistLinkBtn}
-              onPress={() => router.push({ pathname: '/serve-worship-setlist', params: { eventId: assignment.eventId, hideChords: 'true' } } as any)}
-              activeOpacity={0.8}
-            >
-              <View style={styles.setlistLinkContent}>
-                <View style={styles.setlistIconWrap}>
-                  <Music size={22} color="#fff" />
+        {showWorshipResources && (
+          <BounceCard 
+            bounceScale={0.96}
+            style={{ borderRadius: 28 }}
+            onPress={() => {
+              const now = Date.now();
+              if (now - lastNavTimeRef.current < 800) return;
+              lastNavTimeRef.current = now;
+              if (setlist) {
+                router.push({ pathname: '/worship-setlist-detail', params: { setlistId: setlist.id } } as any);
+              } else {
+                router.push({ pathname: '/worship-setlists' } as any);
+              }
+            }}
+          >
+            <SoftCard style={{ borderRadius: 28 }} innerStyle={{ borderRadius: 27 }}>
+              <View style={styles.setlistLinkBtn}>
+                <View style={styles.setlistLinkContent}>
+                  <View style={styles.setlistIconWrap}>
+                    <Music size={22} color="#fff" />
+                  </View>
+                  <View style={styles.setlistTextWrap}>
+                    <Text style={styles.setlistLinkTitle}>Worship Setlist</Text>
+                    <Text style={styles.setlistLinkSub}>
+                      {setlist ? 'View songs, keys, lyrics, and chords' : 'View worship setlists'}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.setlistTextWrap}>
-                  <Text style={styles.setlistLinkTitle}>Worship Setlist</Text>
-                  <Text style={styles.setlistLinkSub}>View songs for this event</Text>
-                </View>
+                <ChevronRight size={22} color="#FF6596" strokeWidth={2.5} />
               </View>
-              <ChevronRight size={20} color="#9CA3AF" />
-            </TouchableOpacity>
-          </SoftCard>
+            </SoftCard>
+          </BounceCard>
         )}
 
         {/* ─── Notes ─── */}
