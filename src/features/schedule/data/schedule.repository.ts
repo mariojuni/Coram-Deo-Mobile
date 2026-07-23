@@ -72,24 +72,27 @@ export const scheduleRepository = {
           return sched;
         });
         
+        // Emit initial schedules immediately so modal and event cards render instantly
+        onData(baseSchedules);
+
         if (!churchId) {
-           onData(baseSchedules);
            return;
         }
 
+        // Fetch setlist items in background and update schedules in real time
         const enriched = await Promise.all(
           baseSchedules.map(async (schedule) => {
-            schedule.songList = [];
+            const copy = { ...schedule, songList: [] as any[] };
             try {
               const setlist = await worshipRepository.getSetlistForEvent(churchId, schedule.id);
               if (setlist) {
                  const items = await worshipRepository.getSetlistItems(churchId, setlist.id);
-                 schedule.songList = items;
+                 copy.songList = items;
               }
             } catch(e) {
                console.error("Failed to fetch setlist for event", schedule.id, e);
             }
-            return schedule;
+            return copy;
           })
         );
         onData(enriched);
