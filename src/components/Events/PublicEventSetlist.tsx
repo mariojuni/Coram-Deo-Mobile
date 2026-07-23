@@ -34,8 +34,9 @@ export function PublicEventSetlist({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (preloadedSongList && preloadedSongList.length > 0) {
+    if (Array.isArray(preloadedSongList)) {
       setItems(preloadedSongList);
+      setLoading(false);
       return;
     }
 
