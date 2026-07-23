@@ -92,13 +92,14 @@ export const ministryApplicationService = {
     const now = new Date().toISOString();
     const memberDocId = `${application.ministryId}_${application.memberId}`;
     const applicationRef = doc(db, 'ministryApplications', application.id);
-    const memberRef = doc(db, 'members', application.memberId);
+    const memberRef = application.memberId ? doc(db, 'members', application.memberId) : null;
     const ministryMemberRef = doc(db, 'ministryMembers', memberDocId);
     const userRef = application.userId ? doc(db, 'users', application.userId) : null;
 
     const assignedRole = payload.assignedRole || (application.preferredRoleNames?.[0] || 'Member');
 
     await runTransaction(db, async (transaction) => {
+      // 1. ALL READS FIRST
       const appSnap = await transaction.get(applicationRef);
       if (!appSnap.exists()) {
         throw new Error('Application document not found.');
@@ -108,7 +109,11 @@ export const ministryApplicationService = {
         throw new Error('Application is no longer pending.');
       }
 
-      // 1. Update application status
+      const memberSnap = memberRef ? await transaction.get(memberRef) : null;
+      const userSnap = userRef ? await transaction.get(userRef) : null;
+
+      // 2. ALL WRITES AFTER READS
+      // Update application status
       transaction.update(applicationRef, {
         status: 'approved',
         reviewedBy: payload.reviewedBy,
@@ -117,7 +122,7 @@ export const ministryApplicationService = {
         updatedAt: now,
       });
 
-      // 2. Set/update ministryMembers record
+      // Set/update ministryMembers record
       const ministryMemberData: Omit<MinistryMemberDoc, 'id'> = {
         churchId: application.churchId,
         ministryId: application.ministryId,
@@ -132,24 +137,20 @@ export const ministryApplicationService = {
       };
       transaction.set(ministryMemberRef, ministryMemberData, { merge: true });
 
-      // 3. Update member.ministryIds array if member doc exists
-      const memberSnap = await transaction.get(memberRef);
-      if (memberSnap.exists()) {
+      // Update member.ministryIds array if member doc exists
+      if (memberRef && memberSnap && memberSnap.exists()) {
         transaction.update(memberRef, {
           ministryIds: arrayUnion(application.ministryId),
           updatedAt: now,
         });
       }
 
-      // 4. Update userAccount assignedMinistryIds if user doc exists
-      if (userRef) {
-        const userSnap = await transaction.get(userRef);
-        if (userSnap.exists()) {
-          transaction.update(userRef, {
-            assignedMinistryIds: arrayUnion(application.ministryId),
-            updatedAt: now,
-          });
-        }
+      // Update userAccount assignedMinistryIds if user doc exists
+      if (userRef && userSnap && userSnap.exists()) {
+        transaction.update(userRef, {
+          assignedMinistryIds: arrayUnion(application.ministryId),
+          updatedAt: now,
+        });
       }
     });
   },
