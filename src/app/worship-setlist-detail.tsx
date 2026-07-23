@@ -282,8 +282,9 @@ export default function WorshipSetlistDetailScreen() {
 
   const filteredSongs = availableSongs.filter(
     (s) =>
-      s.title.toLowerCase().includes(songSearch.toLowerCase()) ||
-      (s.artist && s.artist.toLowerCase().includes(songSearch.toLowerCase()))
+      !items.some((item) => item.songId === s.id) &&
+      (s.title.toLowerCase().includes(songSearch.toLowerCase()) ||
+        (s.artist && s.artist.toLowerCase().includes(songSearch.toLowerCase())))
   );
 
   return (
