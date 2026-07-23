@@ -107,7 +107,8 @@ function MemberPickerSheet({ roleLabel, ministry, currentUserId, onSelect, onClo
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
-    const sourceMembers = ministry?.members?.map(m => {
+    const ministryTeam = ministry?.members || [];
+    const sourceMembers = ministryTeam.map(m => {
       const globalMember = allMembers.find(g => g.id === m.memberId);
       return {
         id: m.memberId,
@@ -115,7 +116,7 @@ function MemberPickerSheet({ roleLabel, ministry, currentUserId, onSelect, onClo
         role: m.role,
         avatar: globalMember?.avatar || m.avatar
       };
-    }) || [];
+    });
 
     if (!q) return sourceMembers;
     return sourceMembers.filter((m) => (m.name ?? '').toLowerCase().includes(q) || (m.role ?? '').toLowerCase().includes(q));
@@ -169,35 +170,45 @@ function MemberPickerSheet({ roleLabel, ministry, currentUserId, onSelect, onClo
         </TouchableOpacity>
       )}
 
-      <FlatList
-        data={filtered}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
-        keyboardShouldPersistTaps="handled"
-        renderItem={({ item }) => {
-          const isSelected = item.id === currentUserId;
-          return (
-            <TouchableOpacity
-              style={[ps.memberRow, isSelected && ps.memberRowSelected]}
-              onPress={() => onSelect(item.id)}
-              activeOpacity={0.7}
-            >
-              {item.avatar ? (
-                <Image source={{ uri: item.avatar }} style={ps.avatar} />
-              ) : (
-                <View style={[ps.avatarBox, { backgroundColor: '#f0f0f0' }]}>
-                  <Users size={18} color="#999" />
+      {filtered.length === 0 ? (
+        <View style={{ padding: 24, alignItems: 'center' }}>
+          <Text style={{ fontSize: 14, color: '#6B7280', textAlign: 'center', fontWeight: '500' }}>
+            {(ministry?.members || []).length === 0 
+              ? `No members assigned to ${ministry?.name || 'this ministry'} yet.`
+              : 'No matching members found.'}
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={filtered}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
+          keyboardShouldPersistTaps="handled"
+          renderItem={({ item }) => {
+            const isSelected = item.id === currentUserId;
+            return (
+              <TouchableOpacity
+                style={[ps.memberRow, isSelected && ps.memberRowSelected]}
+                onPress={() => onSelect(item.id)}
+                activeOpacity={0.7}
+              >
+                {item.avatar ? (
+                  <Image source={{ uri: item.avatar }} style={ps.avatar} />
+                ) : (
+                  <View style={[ps.avatarBox, { backgroundColor: '#f0f0f0' }]}>
+                    <Users size={18} color="#999" />
+                  </View>
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={ps.memberName}>{item.name ?? 'Unnamed Member'}</Text>
+                  {item.role ? <Text style={ps.memberRole}>{item.role}</Text> : null}
                 </View>
-              )}
-              <View style={{ flex: 1 }}>
-                <Text style={ps.memberName}>{item.name ?? 'Unnamed Member'}</Text>
-                {item.role ? <Text style={ps.memberRole}>{item.role}</Text> : null}
-              </View>
-              {isSelected && <Check size={18} color="#FF6596" />}
-            </TouchableOpacity>
-          );
-        }}
-      />
+                {isSelected && <Check size={18} color="#FF6596" />}
+              </TouchableOpacity>
+            );
+          }}
+        />
+      )}
       </View>
     </View>
   );
@@ -261,21 +272,12 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
   const initialAssignments = useMemo(() => {
     const initialMap: AssignmentsMap = {};
 
-    ministries.forEach(ministry => {
-      ministry.members?.forEach(m => {
-        if (m.role) {
-          const key = getAssignmentKey(ministry.id, m.role);
-          initialMap[key] = m.memberId;
-        }
-      });
-    });
-
     eventAssignments.forEach(a => {
       initialMap[getAssignmentKey(a.ministryId, a.roleName)] = a.memberId;
     });
 
     return initialMap;
-  }, [eventAssignments, ministries]);
+  }, [eventAssignments]);
 
   // Initialize assignments map from store data and default ministry roles
   useEffect(() => {

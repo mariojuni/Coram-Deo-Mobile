@@ -156,8 +156,17 @@ export default function GivingFormScreen() {
           <Text style={styles.successText}>
             Thank you for your generosity. Your giving submission is now pending verification.
           </Text>
-          <TouchableOpacity activeOpacity={0.8} style={styles.doneBtn} onPress={withDebounce(() => router.replace('/my-giving?fromSuccess=true'))}>
-            <LinearGradient colors={['#FF6596', '#FF8AAB']} style={[StyleSheet.absoluteFill, { borderRadius: 16 }]} />
+          <TouchableOpacity 
+            activeOpacity={0.8} 
+            style={styles.doneBtn} 
+            onPress={withDebounce(() => router.replace('/my-giving?fromSuccess=true'))}
+          >
+            <LinearGradient 
+              colors={['#FF6596', '#C084FC']} 
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={[StyleSheet.absoluteFill, { borderRadius: 32 }]} 
+            />
             <Text style={styles.doneBtnText}>View My Giving</Text>
           </TouchableOpacity>
         </Animated.View>
@@ -549,17 +558,20 @@ const styles = StyleSheet.create({
   },
   doneBtn: {
     paddingHorizontal: 40,
-    paddingVertical: 16,
-    borderRadius: 16,
+    height: 56,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#FF6596',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
     shadowRadius: 12,
     elevation: 4,
   },
   doneBtnText: {
     color: '#fff',
-    fontSize: 17,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.3,
   },
 });

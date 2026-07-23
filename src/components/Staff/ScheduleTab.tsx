@@ -1,6 +1,6 @@
 import { CalendarPlus, Clock, MapPin, Pencil } from 'lucide-react-native';
 import { useEffect, useCallback, useMemo, useState } from 'react';
-import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native';
+import { FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native';
 import { useMemberStore } from '../../store/useMemberStore';
 import { useMinistryStore } from '../../store/useMinistryStore';
 import { getMinisterialTeam, type Schedule, useScheduleStore } from '../../store/useScheduleStore';
@@ -156,20 +156,27 @@ export default function ScheduleTab({
 
               {item.team.length > 0 && (
                 <View style={styles.teamRow}>
-                  <View style={styles.teamAvatars}>
-                    {item.team.map((member, index) => (
-                      <View
-                        key={`${member.id}-${index}`}
-                        style={[
-                          styles.avatarWrapper,
-                          { zIndex: 10 - index },
-                          index > 0 && styles.stackedAvatar,
-                        ]}
-                      >
-                        <Image source={{ uri: member.avatar }} style={styles.teamAvatar} />
-                      </View>
-                    ))}
-                  </View>
+                  <ScrollView 
+                    horizontal 
+                    showsHorizontalScrollIndicator={false} 
+                    contentContainerStyle={styles.teamScrollContent}
+                    style={styles.teamScrollView}
+                  >
+                    <View style={styles.teamAvatars}>
+                      {item.team.map((member, index) => (
+                        <View
+                          key={`${member.id}-${index}`}
+                          style={[
+                            styles.avatarWrapper,
+                            { zIndex: 10 - index },
+                            index > 0 && styles.stackedAvatar,
+                          ]}
+                        >
+                          <Image source={{ uri: member.avatar }} style={styles.teamAvatar} />
+                        </View>
+                      ))}
+                    </View>
+                  </ScrollView>
                   <Text style={styles.tapHint}>Tap to assign →</Text>
                 </View>
               )}
@@ -287,10 +294,12 @@ const styles = StyleSheet.create({
   locationIcon: { marginRight: 4 },
   infoText: { fontSize: 13, color: '#666', fontWeight: '500' },
   teamRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
-  teamAvatars: { flexDirection: 'row', paddingRight: 10, minHeight: 32 },
-  avatarWrapper: { position: 'relative' },
+  teamScrollView: { flex: 1, marginRight: 8 },
+  teamScrollContent: { alignItems: 'center', paddingRight: 8 },
+  teamAvatars: { flexDirection: 'row', alignItems: 'center', minHeight: 32 },
+  avatarWrapper: { position: 'relative', flexShrink: 0 },
   stackedAvatar: { marginLeft: -12 },
-  teamAvatar: { width: 32, height: 32, borderRadius: 16, borderWidth: 2, borderColor: '#fff' },
-  tapHint: { fontSize: 11, color: '#FF6596', fontWeight: '600' },
+  teamAvatar: { width: 32, height: 32, borderRadius: 16, borderWidth: 2, borderColor: '#fff', flexShrink: 0 },
+  tapHint: { fontSize: 11, color: '#FF6596', fontWeight: '600', flexShrink: 0 },
   editBtn: { padding: 4, marginLeft: 4 },
 });

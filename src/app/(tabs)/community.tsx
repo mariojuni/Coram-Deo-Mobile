@@ -661,7 +661,7 @@ function EventsTab({ searchQuery }: SubScreenProps) {
 
 
 function SermonsTab({ searchQuery }: SubScreenProps) {
-  return <SermonsExperience searchQuery={searchQuery} showSearchInput={false} />;
+  return <SermonsExperience searchQuery={searchQuery} showSearchInput={false} showDownloadEntryPoint={false} />;
 }
 
 function MembersTab({ searchQuery }: SubScreenProps) {
@@ -1007,15 +1007,6 @@ export default function CommunityScreen() {
                 </View>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginRight: 4 }}>
-                {activeTabKey === 'sermons' && (
-                  <TouchableOpacity
-                    style={styles.searchToggleButton}
-                    onPress={() => router.push('/downloads' as any)}
-                    activeOpacity={0.85}
-                  >
-                    <Download size={18} color="#6E7388" />
-                  </TouchableOpacity>
-                )}
                 <TouchableOpacity
                   style={styles.searchToggleButton}
                   onPress={() => setIsSearchOpen(true)}

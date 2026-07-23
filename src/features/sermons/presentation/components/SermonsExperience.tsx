@@ -28,9 +28,14 @@ const OLIVE = '#C084FC';
 interface SermonsExperienceProps {
   searchQuery?: string;
   showSearchInput?: boolean;
+  showDownloadEntryPoint?: boolean;
 }
 
-export function SermonsExperience({ searchQuery, showSearchInput = true }: SermonsExperienceProps) {
+export function SermonsExperience({
+  searchQuery,
+  showSearchInput = true,
+  showDownloadEntryPoint = true,
+}: SermonsExperienceProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const currentUser = useAuthStore((s) => s.currentUser);
@@ -193,24 +198,26 @@ export function SermonsExperience({ searchQuery, showSearchInput = true }: Sermo
             )}
           </View>
           
-          <TouchableOpacity 
-            onPress={() => router.push('/downloads' as any)}
-            style={{ 
-              width: 44, 
-              height: 44, 
-              borderRadius: 22, 
-              backgroundColor: '#FAFAFA', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.05,
-              shadowRadius: 4,
-              elevation: 2
-            }}
-          >
-            <Download size={20} color="#FF6596" />
-          </TouchableOpacity>
+          {showDownloadEntryPoint && (
+            <TouchableOpacity 
+              onPress={() => router.push('/downloads' as any)}
+              style={{ 
+                width: 44, 
+                height: 44, 
+                borderRadius: 22, 
+                backgroundColor: '#FAFAFA', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.05,
+                shadowRadius: 4,
+                elevation: 2
+              }}
+            >
+              <Download size={20} color="#FF6596" />
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
