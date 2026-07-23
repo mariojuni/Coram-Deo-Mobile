@@ -345,7 +345,7 @@ export default function ServeAssignmentDetailScreen() {
         </SoftCard>
 
         {/* ─── Worship Setlist Link ─── */}
-        {showWorshipResources && (
+        {showWorshipResources && setlist && (
           <BounceCard 
             bounceScale={0.96}
             style={{ borderRadius: 28 }}
@@ -353,11 +353,7 @@ export default function ServeAssignmentDetailScreen() {
               const now = Date.now();
               if (now - lastNavTimeRef.current < 800) return;
               lastNavTimeRef.current = now;
-              if (setlist) {
-                router.push({ pathname: '/worship-setlist-detail', params: { setlistId: setlist.id } } as any);
-              } else {
-                router.push({ pathname: '/worship-setlists' } as any);
-              }
+              router.push({ pathname: '/worship-setlist-detail', params: { setlistId: setlist.id, viewOnly: 'true' } } as any);
             }}
           >
             <SoftCard style={{ borderRadius: 28 }} innerStyle={{ borderRadius: 27 }}>
@@ -369,7 +365,7 @@ export default function ServeAssignmentDetailScreen() {
                   <View style={styles.setlistTextWrap}>
                     <Text style={styles.setlistLinkTitle}>Worship Setlist</Text>
                     <Text style={styles.setlistLinkSub}>
-                      {setlist ? 'View songs, keys, lyrics, and chords' : 'View worship setlists'}
+                      View songs, keys, lyrics, and chords
                     </Text>
                   </View>
                 </View>

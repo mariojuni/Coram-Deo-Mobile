@@ -43,7 +43,7 @@ import { useMinistryStore } from '@/store/useMinistryStore';
 import { useWorshipStore } from '@/store/useWorshipStore';
 
 export default function WorshipSetlistDetailScreen() {
-  const { setlistId } = useLocalSearchParams<{ setlistId: string }>();
+  const { setlistId, viewOnly } = useLocalSearchParams<{ setlistId: string, viewOnly?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const userProfile = useAuthStore((s) => s.userProfile);
@@ -74,7 +74,7 @@ export default function WorshipSetlistDetailScreen() {
   const [selectedSongKey, setSelectedSongKey] = useState('');
   const [addingSongId, setAddingSongId] = useState<string | null>(null);
 
-  const canManage = canManageMobileWorshipSetlist(userProfile, setlist, userMinistries);
+  const canManage = viewOnly === 'true' ? false : canManageMobileWorshipSetlist(userProfile, setlist, userMinistries);
 
   const loadData = async () => {
     if (!setlistId || !userProfile?.churchId) {
@@ -523,8 +523,18 @@ export default function WorshipSetlistDetailScreen() {
             <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
             <View style={styles.dragHandle} />
             <View style={styles.headerContent}>
-              <View style={styles.headerCirclePlaceholder} />
-              <Text style={styles.headerTitle}>Edit Setlist Details</Text>
+              <TouchableOpacity
+                style={[styles.createBtnModalHeader, savingSetlist && { opacity: 0.6 }]}
+                disabled={savingSetlist}
+                onPress={handleUpdateSetlist}
+              >
+                {savingSetlist ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Text style={styles.createBtnModalHeaderText}>Save</Text>
+                )}
+              </TouchableOpacity>
+              <Text style={styles.headerTitleCenter}>Edit Setlist</Text>
               <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => setEditModalVisible(false)} hitSlop={8} activeOpacity={0.8}>
                 <X size={24} color="#111827" strokeWidth={2} />
               </BounceCard>
@@ -532,12 +542,13 @@ export default function WorshipSetlistDetailScreen() {
           </View>
 
           <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-            <View style={{ gap: 16, paddingTop: 24 }}>
+            <View style={{ gap: 20, paddingTop: 24 }}>
               <View>
-
-                <Text style={styles.inputLabel}>Title</Text>
+                <Text style={styles.inputLabel}>Setlist Title *</Text>
                 <TextInput
                   style={styles.textInput}
+                  placeholder="e.g. Sunday Morning Service"
+                  placeholderTextColor="#9CA3AF"
                   value={editTitle}
                   onChangeText={setEditTitle}
                 />
@@ -547,6 +558,8 @@ export default function WorshipSetlistDetailScreen() {
                 <Text style={styles.inputLabel}>Service Date (YYYY-MM-DD)</Text>
                 <TextInput
                   style={styles.textInput}
+                  placeholder="e.g. 2024-05-12"
+                  placeholderTextColor="#9CA3AF"
                   value={editDate}
                   onChangeText={setEditDate}
                 />
@@ -580,27 +593,6 @@ export default function WorshipSetlistDetailScreen() {
                 <Trash2 size={16} color="#EF4444" />
                 <Text style={styles.deleteDangerBtnText}>Delete Setlist</Text>
               </TouchableOpacity>
-
-              <View style={styles.modalFooter}>
-                <TouchableOpacity
-                  style={styles.cancelBtn}
-                  onPress={() => setEditModalVisible(false)}
-                >
-                  <Text style={styles.cancelBtnText}>Cancel</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.submitBtn, savingSetlist && { opacity: 0.6 }]}
-                  disabled={savingSetlist}
-                  onPress={handleUpdateSetlist}
-                >
-                  {savingSetlist ? (
-                    <ActivityIndicator size="small" color="#FFF" />
-                  ) : (
-                    <Text style={styles.submitBtnText}>Save Changes</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
             </View>
           </ScrollView>
         </View>
@@ -1045,6 +1037,29 @@ const styles = StyleSheet.create({
     color: '#111827',
     textAlign: 'center',
     flex: 1,
+  },
+  headerTitleCenter: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#111827',
+    textAlign: 'center',
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    transform: [{ translateY: -8 }],
+  },
+  createBtnModalHeader: {
+    backgroundColor: '#FF6596',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  createBtnModalHeaderText: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '700',
   },
   headerCirclePlaceholder: {
     width: 40,
