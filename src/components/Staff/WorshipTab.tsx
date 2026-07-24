@@ -58,12 +58,15 @@ export default function WorshipTab() {
   const selectedEvent = schedules.find((s) => s.id === selectedEventId);
 
   const filteredEvents = useMemo(() => {
-    if (!eventSearchQuery.trim()) return schedules;
+    const setlistEventIds = new Set(setlists.map(s => s.eventId));
+    const availableSchedules = schedules.filter(s => !setlistEventIds.has(s.id));
+
+    if (!eventSearchQuery.trim()) return availableSchedules;
     const query = eventSearchQuery.toLowerCase();
-    return schedules.filter(
+    return availableSchedules.filter(
       (e) => (e.title || '').toLowerCase().includes(query) || (e.date || '').includes(query)
     );
-  }, [schedules, eventSearchQuery]);
+  }, [schedules, eventSearchQuery, setlists]);
 
 
 
@@ -314,7 +317,6 @@ export default function WorshipTab() {
                     </View>
                     <Text style={styles.setlistTitle}>{item.title}</Text>
                   </View>
-                  <ChevronRight size={20} color="#9CA3AF" />
                 </View>
 
                 <View style={styles.setlistCardMeta}>
@@ -398,7 +400,7 @@ export default function WorshipTab() {
                 >
                   <CalendarDays size={20} color="#FF6596" style={{ marginRight: 12 }} />
                   <Text style={{ fontSize: 14, fontWeight: '600', color: selectedEvent ? '#111827' : '#9CA3AF', flex: 1 }}>
-                    {selectedEvent ? selectedEvent.title : 'Select an event'}
+                    {selectedEvent ? `${selectedEvent.title} • ${selectedEvent.date ? new Date(selectedEvent.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}` : 'Select an event'}
                   </Text>
                   <ChevronRight size={18} color="#9CA3AF" />
                 </TouchableOpacity>
@@ -546,7 +548,7 @@ export default function WorshipTab() {
                           </Text>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                             <Text style={{ fontSize: 13, color: isSelected ? '#FF6596' : '#6B7280', fontWeight: '600' }}>
-                              {ev.date}
+                              {ev.date ? new Date(ev.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : ''}
                             </Text>
                             {ev.time ? (
                               <View style={{ flexDirection: 'row', alignItems: 'center' }}>

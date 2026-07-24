@@ -155,5 +155,27 @@ export const worshipRepository = {
       },
       onError
     );
+  },
+
+  subscribeToCommunitySongs: (churchId: string, onUpdate: (songs: Song[]) => void, onError: (error: Error) => void) => {
+    const q = query(
+      collection(db, 'songs'),
+      where('churchId', '==', churchId)
+    );
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const songs = snapshot.docs
+          .map(d => ({ id: d.id, ...d.data() } as Song))
+          .filter(s => {
+            const isPublished = s.status === 'active' || s.status === 'published' || !s.status;
+            const isNotHidden = s.directoryVisibility !== 'hidden';
+            return isPublished && isNotHidden;
+          })
+          .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+        onUpdate(songs);
+      },
+      onError
+    );
   }
 };

@@ -19,7 +19,17 @@ export interface Song {
   copyrightInfo?: string;
   licenseNotes?: string;
   allowPublicLyrics?: boolean;
-  status: 'active' | 'archived';
+  directoryVisibility?: 'hidden' | 'members_only' | 'public';
+  allowLyricsInDirectory?: boolean;
+  youtubeVideoId?: string;
+  mediaReferences?: {
+    provider?: 'youtube';
+    youtubeUrl?: string;
+    youtubeVideoId?: string;
+    youtubeTitle?: string;
+    youtubeThumbnailUrl?: string;
+  };
+  status: 'active' | 'archived' | 'draft' | 'published';
   createdAt?: string;
   updatedAt?: string;
 }

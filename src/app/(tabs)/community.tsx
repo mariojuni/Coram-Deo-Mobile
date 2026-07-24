@@ -15,6 +15,7 @@ import {
   HelpCircle,
   MapPin,
   MoreHorizontal,
+  Music,
   PlayCircle,
   Search,
   User,
@@ -29,6 +30,7 @@ import {
   Animated,
   Dimensions,
   Image,
+  Modal,
   Platform,
   ScrollView,
   Share,
@@ -40,9 +42,17 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EventDetailsModal } from '../../components/Events/EventDetailsModal';
+import { CommunitySongDetailModal } from '../../components/Worship/CommunitySongDetailModal';
 import { BounceCard } from '../../components/ui/BounceCard';
 import { SoftCard } from '../../components/ui/SoftCard';
 import { CommentButton } from '../../features/comments/presentation/components/CommentButton';
+import { Song } from '../../features/worship/domain/worship.types';
+import { worshipRepository } from '../../features/worship/data/worship.repository';
+import {
+  canViewCommunitySongs,
+  canViewSongInDirectory,
+  canViewLyricsInDirectory,
+} from '../../permissions/communitySongsPermissions';
 import type { Member } from '../../features/member/domain/member.types';
 import { formatPrayerTimeAgo, getFilteredPrayers } from '../../features/prayer/domain/prayer.selectors';
 import type { Prayer, PrayerFilter } from '../../features/prayer/domain/prayer.types';
@@ -67,9 +77,10 @@ const TABS = [
   { key: 'events', label: 'Events', icon: CalendarDays },
   { key: 'sermons', label: 'Sermons', icon: PlayCircle },
   { key: 'members', label: 'Members', icon: Users },
+  { key: 'songs', label: 'Songs', icon: Music },
 ] as const;
 
-type TabIndex = 0 | 1 | 2 | 3;
+type TabIndex = 0 | 1 | 2 | 3 | 4;
 type CommunityTabParam = (typeof TABS)[number]['key'];
 type SubScreenProps = { searchQuery: string };
 const PRAYER_FILTERS: PrayerFilter[] = ['Recent', 'My Requests'];
@@ -78,6 +89,7 @@ const TAB_INDEX_BY_KEY: Record<CommunityTabParam, TabIndex> = {
   events: 1,
   sermons: 2,
   members: 3,
+  songs: 4,
 };
 
 function getTabIndexFromParam(tabParam: string | string[] | undefined): TabIndex | null {
@@ -827,11 +839,192 @@ function MembersTab({ searchQuery }: SubScreenProps) {
   );
 }
 
+function SongsTab({ searchQuery }: SubScreenProps) {
+  const userProfile = useAuthStore((state) => state.userProfile);
+  const churchId = userProfile?.churchId || (userProfile as any)?.church_id;
+  const [songs, setSongs] = useState<Song[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedSong, setSelectedSong] = useState<Song | null>(null);
+
+  // Filters
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+
+  useEffect(() => {
+    if (!canViewCommunitySongs(userProfile)) {
+      setLoading(false);
+      return;
+    }
+    if (!churchId) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    const unsubscribe = worshipRepository.subscribeToCommunitySongs(
+      churchId,
+      (data) => {
+        setSongs(data);
+        setLoading(false);
+      },
+      (err) => {
+        console.error('Community songs error:', err);
+        setError('We could not load the songs. Please try again.');
+        setLoading(false);
+      }
+    );
+    return () => unsubscribe();
+  }, [churchId, userProfile]);
+
+  const filteredSongs = useMemo(() => {
+    let result = songs.filter(s => canViewSongInDirectory(userProfile, s));
+
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      result = result.filter(s => 
+        s.title?.toLowerCase().includes(q) ||
+        s.artist?.toLowerCase().includes(q) ||
+        s.composer?.toLowerCase().includes(q) ||
+        s.category?.toLowerCase().includes(q) ||
+        s.language?.toLowerCase().includes(q) ||
+        s.tags?.some(t => t.toLowerCase().includes(q))
+      );
+    }
+
+    if (selectedLanguage !== 'all') {
+      result = result.filter(s => (s.language || 'english').toLowerCase() === selectedLanguage.toLowerCase());
+    }
+
+    if (selectedCategory !== 'all') {
+      result = result.filter(s => (s.category || 'contemporary').toLowerCase() === selectedCategory.toLowerCase());
+    }
+
+    return result;
+  }, [songs, searchQuery, selectedLanguage, selectedCategory, userProfile]);
+
+  if (!canViewCommunitySongs(userProfile)) {
+    return (
+      <View style={placeholder.wrap}>
+        <Text style={placeholder.title}>Access Denied</Text>
+        <Text style={placeholder.subtitle}>You do not have permission to view songs.</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={songsStyles.wrap}>
+      {/* Category & Language Filter Bar */}
+      <View style={{ marginBottom: 12, gap: 8 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+          {['all', 'english', 'tagalog', 'ilocano', 'other'].map((lang) => (
+            <TouchableOpacity
+              key={lang}
+              style={[
+                songsStyles.filterChip,
+                selectedLanguage === lang && songsStyles.filterChipActive
+              ]}
+              onPress={() => setSelectedLanguage(lang)}
+            >
+              <Text style={[
+                songsStyles.filterChipText,
+                selectedLanguage === lang && songsStyles.filterChipTextActive
+              ]}>
+                {lang === 'all' ? 'All Languages' : lang.charAt(0).toUpperCase() + lang.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+          {['all', 'hymn', 'contemporary', 'psalm', 'praise', 'worship', 'response', 'offertory', 'communion', 'other'].map((cat) => (
+            <TouchableOpacity
+              key={cat}
+              style={[
+                songsStyles.filterChip,
+                selectedCategory === cat && songsStyles.filterChipActive
+              ]}
+              onPress={() => setSelectedCategory(cat)}
+            >
+              <Text style={[
+                songsStyles.filterChipText,
+                selectedCategory === cat && songsStyles.filterChipTextActive
+              ]}>
+                {cat === 'all' ? 'All Categories' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      {loading ? (
+        <View style={placeholder.wrap}>
+          <Text style={placeholder.subtitle}>Loading songs…</Text>
+        </View>
+      ) : error ? (
+        <View style={placeholder.wrap}>
+          <Text style={placeholder.title}>Error</Text>
+          <Text style={placeholder.subtitle}>{error}</Text>
+        </View>
+      ) : filteredSongs.length === 0 ? (
+        <View style={placeholder.wrap}>
+          <Text style={placeholder.title}>No songs available yet.</Text>
+          <Text style={placeholder.subtitle}>Songs published by your church leadership will appear here.</Text>
+        </View>
+      ) : (
+        filteredSongs.map((song) => {
+          const hasLyrics = canViewLyricsInDirectory(song);
+          return (
+            <BounceCard key={song.id} activeOpacity={0.82} onPress={() => setSelectedSong(song)} style={{ marginBottom: 10 }}>
+              <SoftCard innerStyle={songsStyles.cardInner}>
+                <View style={songsStyles.iconWrap}>
+                  <Music size={20} color="#FF6596" />
+                </View>
+
+                <View style={songsStyles.details}>
+                  <Text style={songsStyles.title} numberOfLines={1}>{song.title}</Text>
+                  <Text style={songsStyles.artist} numberOfLines={1}>{song.artist || song.composer || 'Unknown Artist'}</Text>
+                  <View style={songsStyles.tagsRow}>
+                    {song.category && (
+                      <View style={songsStyles.tagPill}>
+                        <Text style={songsStyles.tagText}>{song.category}</Text>
+                      </View>
+                    )}
+                    {song.language && (
+                      <View style={[songsStyles.tagPill, { backgroundColor: '#F3E8FF' }]}>
+                        <Text style={[songsStyles.tagText, { color: '#8B5CF6' }]}>{song.language}</Text>
+                      </View>
+                    )}
+                    {hasLyrics && (
+                      <View style={[songsStyles.tagPill, { backgroundColor: '#ECFDF3' }]}>
+                        <Text style={[songsStyles.tagText, { color: '#10B981' }]}>Lyrics</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+
+                <ChevronRight size={18} color="#C0C8D8" />
+              </SoftCard>
+            </BounceCard>
+          );
+        })
+      )}
+
+      {/* Song Details Modal */}
+      <CommunitySongDetailModal
+        song={selectedSong}
+        onClose={() => setSelectedSong(null)}
+      />
+    </View>
+  );
+}
+
 const SUB_SCREENS = [
   PrayersTab,
   EventsTab,
   SermonsTab,
   MembersTab,
+  SongsTab,
 ] as const;
 
 // ─── Main Community screen ────────────────────────────────────────────────────
@@ -847,6 +1040,7 @@ export default function CommunityScreen() {
     events: '',
     sermons: '',
     members: '',
+    songs: '',
   });
 
   // Per-tab measured layout { x, width }
@@ -923,6 +1117,7 @@ export default function CommunityScreen() {
     events: 'Search events',
     sermons: 'Search sermons',
     members: 'Search members',
+    songs: 'Search community songs',
   };
   const headerContentOffset = 112;
   const headerHeight = Math.max(insets.top, 24) + headerContentOffset;
@@ -2097,5 +2292,180 @@ export const eventsStyles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: '#1D4ED8',
+  },
+});
+
+const songsStyles = StyleSheet.create({
+  wrap: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 24,
+  },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  filterChipActive: {
+    backgroundColor: '#FF6596',
+    borderColor: '#FF6596',
+  },
+  filterChipText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#4B5563',
+  },
+  filterChipTextActive: {
+    color: '#FFFFFF',
+  },
+  cardInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderRadius: 16,
+  },
+  iconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#FFE8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  details: {
+    flex: 1,
+  },
+  title: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  artist: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginBottom: 6,
+  },
+  tagsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  tagPill: {
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
+  tagText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#4B5563',
+    textTransform: 'capitalize',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '85%',
+    paddingTop: 20,
+    paddingBottom: 32,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  closeBtn: {
+    padding: 8,
+    borderRadius: 999,
+    backgroundColor: '#F3F4F6',
+  },
+  modalBody: {
+    padding: 20,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
+  metaBadge: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  metaBadgeLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#9CA3AF',
+    textTransform: 'uppercase',
+  },
+  metaBadgeValue: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#374151',
+    textTransform: 'capitalize',
+    marginTop: 2,
+  },
+  lyricsBox: {
+    backgroundColor: '#FAF5FF',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#F3E8FF',
+  },
+  lyricsTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#7E22CE',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  lyricsText: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: '#374151',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  noLyricsBox: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  noLyricsText: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    fontWeight: '500',
   },
 });
