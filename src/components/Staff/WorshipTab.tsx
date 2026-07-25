@@ -23,6 +23,7 @@ import { worshipSetlistService } from '../../features/worship/services/worshipSe
 import { canViewMobileWorshipSetlists, canCreateMobileWorshipSetlists } from '../../permissions/mobileWorshipPermissions';
 import { SoftCard, getTopBarButtonShadowStyle, getSoftShadowStyle } from '@/components/ui/SoftCard';
 import { BounceCard } from '@/components/ui/BounceCard';
+import { useModalKeyboard } from '@/hooks/useModalKeyboard';
 import type { WorshipSetlist } from '../../features/worship/domain/worship.types';
 
 export default function WorshipTab() {
@@ -41,6 +42,7 @@ export default function WorshipTab() {
   const [tabFilter, setTabFilter] = useState<'upcoming' | 'this_month' | 'past'>('upcoming');
 
   // Create Setlist Modal State
+  const createSetlistKeyboard = useModalKeyboard({ heightRatio: 0.85, backgroundColor: '#FAFAFA' });
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newDate, setNewDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -343,9 +345,9 @@ export default function WorshipTab() {
         title="Create Setlist"
         hideHeader={true}
         hideDragHandle={true}
-        containerStyle={{ backgroundColor: '#FAFAFA', paddingHorizontal: 0, paddingBottom: 0 }}
+        {...createSetlistKeyboard.appModalProps}
       >
-        <View style={[styles.modalContainer, { flex: 1 }]}>
+        <View style={[styles.modalContainer, createSetlistKeyboard.isKeyboardOpen && { flex: 1 }]}>
 
           {/* Header with Frosted Glass */}
           <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
@@ -372,7 +374,13 @@ export default function WorshipTab() {
             </View>
           </View>
 
-          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            ref={createSetlistKeyboard.scrollViewRef}
+            style={createSetlistKeyboard.scrollViewStyle}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
             <View style={{ gap: 20, paddingTop: 24 }}>
               {/* Link Event Button */}
               <View>
@@ -452,6 +460,7 @@ export default function WorshipTab() {
         hideHeader={true}
         hideDragHandle={true}
         containerStyle={{ flex: 1, backgroundColor: '#FAFAFA', paddingHorizontal: 0, paddingBottom: 0 }}
+        heightRatio={0.85}
       >
         <View style={[styles.modalContainer, { flex: 1 }]}>
           {/* Frosted Glass Header */}

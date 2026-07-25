@@ -20,26 +20,39 @@ interface AppModalProps {
   hideDragHandle?: boolean;
   heightRatio?: number;
   dynamicHeight?: boolean;
+  avoidKeyboard?: boolean;
 }
 
-export default function AppModal({ isOpen, onClose, title, children, containerStyle, headerLeft, headerRight, headerTitleAlign = 'center', hideHeader = false, hideDragHandle = false, heightRatio = 0.5, dynamicHeight = false }: AppModalProps) {
+export default function AppModal({ isOpen, onClose, title, children, containerStyle, headerLeft, headerRight, headerTitleAlign = 'center', hideHeader = false, hideDragHandle = false, heightRatio = 0.5, dynamicHeight = false, avoidKeyboard = true }: AppModalProps) {
   const slideAnim = useMemo(() => new Animated.Value(600), []);
 
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   // Compute dynamic max height for the modal sheet
   const windowHeight = Dimensions.get('window').height;
-  const maxSheetHeight = Math.min(windowHeight * heightRatio, windowHeight - keyboardHeight - 20);
+  const maxSheetHeight = avoidKeyboard
+    ? Math.min(windowHeight * heightRatio, windowHeight - keyboardHeight - 20)
+    : windowHeight * heightRatio;
 
   useEffect(() => {
-    const showListener = Keyboard.addListener('keyboardDidShow', (e) => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const changeEvent = Platform.OS === 'ios' ? 'keyboardWillChangeFrame' : 'keyboardDidChangeFrame';
+
+    const showListener = Keyboard.addListener(showEvent, (e) => {
       setKeyboardHeight(e.endCoordinates.height);
     });
-    const hideListener = Keyboard.addListener('keyboardDidHide', () => {
+    const changeListener = Keyboard.addListener(changeEvent, (e) => {
+      if (e.endCoordinates.height > 0) {
+        setKeyboardHeight(e.endCoordinates.height);
+      }
+    });
+    const hideListener = Keyboard.addListener(hideEvent, () => {
       setKeyboardHeight(0);
     });
     return () => {
       showListener.remove();
+      changeListener.remove();
       hideListener.remove();
     };
   }, []);
@@ -57,6 +70,9 @@ export default function AppModal({ isOpen, onClose, title, children, containerSt
   }, [isOpen, slideAnim]);
 
 
+  const flatContainerStyle = containerStyle ? StyleSheet.flatten(containerStyle) : undefined;
+  const sheetBg = flatContainerStyle?.backgroundColor;
+
   return (
     <Modal visible={isOpen} animationType="none" transparent={true} onRequestClose={onClose}>
       <View style={styles.overlay}>
@@ -64,7 +80,7 @@ export default function AppModal({ isOpen, onClose, title, children, containerSt
           <View style={styles.backdrop} />
         </TouchableWithoutFeedback>
 
-        <Animated.View style={[styles.sheet, dynamicHeight && { flex: undefined }, { transform: [{ translateY: slideAnim }], maxHeight: maxSheetHeight, marginBottom: keyboardHeight }]}>
+        <Animated.View style={[styles.sheet, sheetBg ? { backgroundColor: sheetBg } : null, dynamicHeight && { flex: undefined }, { transform: [{ translateY: slideAnim }], maxHeight: maxSheetHeight, marginBottom: avoidKeyboard ? keyboardHeight : 0 }]}>
           {!hideDragHandle && <View style={styles.dragHandle} />}
 
           {/* Header */}

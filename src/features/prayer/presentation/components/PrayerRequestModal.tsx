@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { BounceCard } from '@/components/ui/BounceCard';
 import { 
   View, Text, StyleSheet, TextInput, Switch, TouchableOpacity, 
-  ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform, Alert, Keyboard 
+  ScrollView, ActivityIndicator, Alert 
 } from 'react-native';
 import AppModal from '@/components/ui/AppModal';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -12,6 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 import { BlurView } from 'expo-blur';
 import { X } from 'lucide-react-native';
+import { useModalKeyboard } from '@/hooks/useModalKeyboard';
 
 interface PrayerRequestModalProps {
   isOpen: boolean;
@@ -30,6 +31,12 @@ const CATEGORIES: { label: string; value: PrayerCategory }[] = [
 
 export default function PrayerRequestModal({ isOpen, onClose, initialData }: PrayerRequestModalProps) {
   const { userProfile, currentUser } = useAuthStore();
+  const {
+    isKeyboardOpen,
+    scrollViewRef,
+    appModalProps,
+    scrollViewStyle,
+  } = useModalKeyboard({ heightRatio: 0.85, backgroundColor: '#FAFAFA' });
   
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -147,10 +154,10 @@ export default function PrayerRequestModal({ isOpen, onClose, initialData }: Pra
       title={initialData ? "Edit Prayer Request" : "Submit Prayer Request"}
       hideHeader={true}
       hideDragHandle={true}
-      containerStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}
+      {...appModalProps}
     >
-      <View style={styles.modalContainer}>
-        {/* ─── Header ─────────────────────────────────────────────────────── */}
+      <View style={[styles.modalContainer, isKeyboardOpen && { flex: 1 }]}>
+        {/* Header */}
         <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
           <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
@@ -164,9 +171,13 @@ export default function PrayerRequestModal({ isOpen, onClose, initialData }: Pra
           </View>
         </View>
 
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <ScrollView style={styles.scrollContainer} contentContainerStyle={{ paddingTop: 90, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-          
+        <ScrollView
+          ref={scrollViewRef}
+          style={scrollViewStyle}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 90, paddingBottom: 40 }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           <Text style={styles.subtitle}>How can we pray for you?</Text>
 
           {!!error && (
@@ -203,20 +214,23 @@ export default function PrayerRequestModal({ isOpen, onClose, initialData }: Pra
 
           <View style={styles.formGroup}>
             <Text style={styles.label}>Category <Text style={styles.required}>*</Text></Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
-              {CATEGORIES.map(cat => (
-                <TouchableOpacity
-                  key={cat.value}
-                  activeOpacity={0.7}
-                  onPress={() => setCategory(cat.value)}
-                  style={[styles.categoryPill, category === cat.value && styles.categoryPillActive]}
-                >
-                  <Text style={[styles.categoryPillText, category === cat.value && styles.categoryPillTextActive]}>
-                    {cat.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+              {CATEGORIES.map((cat) => {
+                const selected = category === cat.value;
+                return (
+                  <TouchableOpacity
+                    key={cat.value}
+                    style={[styles.categoryPill, selected && styles.categoryPillActive]}
+                    onPress={() => { setCategory(cat.value); setError(''); }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.categoryPillText, selected && styles.categoryPillTextActive]}>
+                      {cat.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
 
           <View style={styles.formGroup}>
@@ -260,7 +274,6 @@ export default function PrayerRequestModal({ isOpen, onClose, initialData }: Pra
           </View>
 
           <View style={styles.actionRow}>
-
             <TouchableOpacity 
               style={[styles.submitBtnContainer, isSubmitting && { opacity: 0.7 }]} 
               activeOpacity={0.8} 
@@ -282,8 +295,7 @@ export default function PrayerRequestModal({ isOpen, onClose, initialData }: Pra
             </TouchableOpacity>
           </View>
 
-          </ScrollView>
-        </KeyboardAvoidingView>
+        </ScrollView>
       </View>
     </AppModal>
   );
@@ -326,6 +338,7 @@ const styles = StyleSheet.create({
     ...getTopBarButtonShadowStyle(20),
     width: 40,
     height: 40,
+    borderRadius: 20,
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
@@ -362,14 +375,13 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#DC2626',
     fontSize: 13,
-    fontWeight: '500',
   },
   formGroup: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   label: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#374151',
     marginBottom: 6,
   },
@@ -377,111 +389,107 @@ const styles = StyleSheet.create({
     color: '#EF4444',
   },
   input: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFF',
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
     color: '#111827',
   },
   textArea: {
-    minHeight: 80,
-    paddingTop: 12,
+    height: 100,
   },
-  categoryScroll: {
-    flexDirection: 'row',
-    overflow: 'visible',
-  },
+
   categoryPill: {
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 16,
+    borderRadius: 20,
     backgroundColor: '#F3F4F6',
-    marginRight: 6,
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: '#E5E7EB',
   },
   categoryPillActive: {
     backgroundColor: '#FFF0F5',
-    borderColor: '#FFB6D0',
+    borderColor: '#FF6596',
   },
   categoryPillText: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#6B7280',
+    fontWeight: '500',
+    color: '#4B5563',
   },
   categoryPillTextActive: {
     color: '#FF6596',
+    fontWeight: '600',
   },
+
   radioGroup: {
-    gap: 8,
+    gap: 10,
+    marginTop: 4,
   },
   radioOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    padding: 12,
-    borderRadius: 10,
+    backgroundColor: '#FFF',
+    padding: 14,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
   radioDot: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#D1D5DB',
+    borderColor: '#9CA3AF',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    marginRight: 12,
   },
   radioDotActive: {
     borderColor: '#FF6596',
   },
   radioInner: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: '#FF6596',
   },
   radioLabel: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#111827',
+    color: '#1F2937',
   },
+
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
-    paddingTop: 4,
+    marginBottom: 24,
+    paddingTop: 8,
   },
   helperText: {
     fontSize: 12,
     color: '#9CA3AF',
     marginTop: 2,
   },
+
   actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    marginTop: 8,
   },
   submitBtnContainer: {
-    flex: 1,
-    borderRadius: 32,
+    borderRadius: 14,
     overflow: 'hidden',
   },
   submitBtn: {
-    height: 56,
+    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   submitBtnText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '800',
-    letterSpacing: 0.3,
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

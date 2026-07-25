@@ -46,6 +46,7 @@ export default function BooksModal({ isOpen, onClose, books, onSelectChapter }: 
       hideHeader={true}
       hideDragHandle={true}
       containerStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}
+      heightRatio={0.85}
     >
       <View style={styles.modalContainer}>
         <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">

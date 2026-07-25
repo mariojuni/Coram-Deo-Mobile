@@ -48,6 +48,7 @@ import AppModal from '../ui/AppModal';
 import { getTopBarButtonShadowStyle, getSoftShadowStyle } from '@/components/ui/SoftCard';
 import { BounceCard } from '@/components/ui/BounceCard';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useModalKeyboard } from '@/hooks/useModalKeyboard';
 import { useScheduleStore } from '../../store/useScheduleStore';
 import { canManageAttendance } from '../../permissions/attendancePermissions';
 import { useRouter } from 'expo-router';
@@ -383,6 +384,7 @@ export default function AttendanceTab({ members, showStaffFeatures }: Attendance
         hideHeader={true}
         hideDragHandle={true}
         containerStyle={{ flex: 1, backgroundColor: '#FAFAFA', paddingHorizontal: 0, paddingBottom: 0 }}
+        heightRatio={0.85}
       >
         <View style={[styles.modalContainer, { flex: 1 }]}>
           <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
@@ -546,6 +548,7 @@ export default function AttendanceTab({ members, showStaffFeatures }: Attendance
         hideHeader={true}
         hideDragHandle={true}
         containerStyle={{ flex: 1, backgroundColor: '#FAFAFA', paddingHorizontal: 0, paddingBottom: 0 }}
+        heightRatio={0.85}
       >
         <View style={[styles.modalContainer, { flex: 1 }]}>
           <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
@@ -561,7 +564,7 @@ export default function AttendanceTab({ members, showStaffFeatures }: Attendance
             </View>
           </View>
 
-          <View style={{ paddingHorizontal: 24, paddingTop: 90, paddingBottom: 16 }}>
+          <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: 90, paddingBottom: 16 }}>
             <View style={styles.searchWrapper}>
               <Search size={20} color="#888" style={styles.searchIcon} />
               <TextInput
@@ -574,7 +577,9 @@ export default function AttendanceTab({ members, showStaffFeatures }: Attendance
             </View>
 
           <FlatList 
-            style={styles.modalScroll} contentContainerStyle={{ paddingBottom: 100 }}
+            style={styles.modalScroll}
+            contentContainerStyle={{ paddingBottom: 32 }}
+            keyboardShouldPersistTaps="handled"
             data={matchingUncheckedMembers}
             keyExtractor={m => m.id}
             initialNumToRender={15}

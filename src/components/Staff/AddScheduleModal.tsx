@@ -1,7 +1,7 @@
 import { addDoc, collection, doc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { Calendar as CalendarIcon, Clock, X } from 'lucide-react-native';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { db } from '../../firebase';
 import type { Schedule } from '../../features/schedule/domain/schedule.types';
 import CustomDatePicker from '../CustomDatePicker';
@@ -10,6 +10,7 @@ import AppModal from '@/components/ui/AppModal';
 import { BlurView } from 'expo-blur';
 import { BounceCard } from '@/components/ui/BounceCard';
 import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
+import { useModalKeyboard } from '@/hooks/useModalKeyboard';
 
 interface AddScheduleModalProps {
   isOpen: boolean;
@@ -50,6 +51,13 @@ export default function AddScheduleModal({ isOpen, onClose, eventToEdit }: AddSc
     }
     return d;
   })();
+
+  const {
+    isKeyboardOpen,
+    scrollViewRef,
+    appModalProps,
+    scrollViewStyle,
+  } = useModalKeyboard({ heightRatio: 0.85, backgroundColor: '#FAFAFA' });
 
   const [title, setTitle] = useState(eventToEdit?.title ?? 'Sunday Worship Service');
   const [date, setDate] = useState(initDate);
@@ -104,89 +112,94 @@ export default function AddScheduleModal({ isOpen, onClose, eventToEdit }: AddSc
       title={eventToEdit ? 'Edit Event' : 'New Schedule'}
       hideHeader={true}
       hideDragHandle={true}
-      containerStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}
+      {...appModalProps}
     >
-      <View style={s.modalContainer}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={[s.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
-            <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
-            <View style={s.dragHandle} />
-            <View style={s.headerContent}>
-              <TouchableOpacity onPress={handleSave} style={s.saveBtn} disabled={saving}>
-                <Text style={s.saveText}>{saving ? 'Saving…' : 'Save'}</Text>
+      <View style={[s.modalContainer, isKeyboardOpen && { flex: 1 }]}>
+        <View style={[s.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
+          <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
+          <View style={s.dragHandle} />
+          <View style={s.headerContent}>
+            <TouchableOpacity onPress={handleSave} style={s.saveBtn} disabled={saving}>
+              <Text style={s.saveText}>{saving ? 'Saving…' : 'Save'}</Text>
+            </TouchableOpacity>
+            <Text style={s.headerTitle}>{eventToEdit ? 'Edit Event' : 'New Schedule'}</Text>
+            <BounceCard bounceScale={0.85} style={s.headerCircle} onPress={onClose} hitSlop={8} activeOpacity={0.8}>
+              <X size={24} color="#111827" strokeWidth={2} />
+            </BounceCard>
+          </View>
+        </View>
+
+        <ScrollView
+          ref={scrollViewRef}
+          style={scrollViewStyle}
+          contentContainerStyle={{ padding: 24, paddingTop: 100, paddingBottom: 24 }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={s.sectionTitle}>Event Details</Text>
+
+          <Text style={s.label}>Event Title</Text>
+          <TextInput
+            style={s.input}
+            value={title}
+            onChangeText={setTitle}
+            placeholder="e.g. Sunday Worship Service"
+            placeholderTextColor="#aaa"
+          />
+
+          <Text style={s.label}>Date</Text>
+          <TouchableOpacity style={s.iconField} onPress={() => setShowDatePicker(true)}>
+            <CalendarIcon size={16} color="#888" />
+            <Text style={s.iconFieldText}>{fmtDateUI(date)}</Text>
+          </TouchableOpacity>
+
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.label}>Start Time</Text>
+              <TouchableOpacity style={s.iconField} onPress={() => setShowStartPicker(true)}>
+                <Clock size={16} color="#888" />
+                <Text style={s.iconFieldText}>{fmtTime(startTime)}</Text>
               </TouchableOpacity>
-              <Text style={s.headerTitle}>{eventToEdit ? 'Edit Event' : 'New Schedule'}</Text>
-              <BounceCard bounceScale={0.85} style={s.headerCircle} onPress={onClose} hitSlop={8} activeOpacity={0.8}>
-                <X size={24} color="#111827" strokeWidth={2} />
-              </BounceCard>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.label}>End Time</Text>
+              <TouchableOpacity style={s.iconField} onPress={() => setShowEndPicker(true)}>
+                <Clock size={16} color="#888" />
+                <Text style={s.iconFieldText}>{fmtTime(endTime)}</Text>
+              </TouchableOpacity>
             </View>
           </View>
 
-          <ScrollView contentContainerStyle={{ padding: 24, paddingTop: 100, paddingBottom: 48 }} showsVerticalScrollIndicator={false}>
-            <Text style={s.sectionTitle}>Event Details</Text>
-
-            <Text style={s.label}>Event Title</Text>
-            <TextInput
-              style={s.input}
-              value={title}
-              onChangeText={setTitle}
-              placeholder="e.g. Sunday Worship Service"
-              placeholderTextColor="#aaa"
-            />
-
-            <Text style={s.label}>Date</Text>
-            <TouchableOpacity style={s.iconField} onPress={() => setShowDatePicker(true)}>
-              <CalendarIcon size={16} color="#888" />
-              <Text style={s.iconFieldText}>{fmtDateUI(date)}</Text>
-            </TouchableOpacity>
-
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <View style={{ flex: 1 }}>
-                <Text style={s.label}>Start Time</Text>
-                <TouchableOpacity style={s.iconField} onPress={() => setShowStartPicker(true)}>
-                  <Clock size={16} color="#888" />
-                  <Text style={s.iconFieldText}>{fmtTime(startTime)}</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.label}>End Time</Text>
-                <TouchableOpacity style={s.iconField} onPress={() => setShowEndPicker(true)}>
-                  <Clock size={16} color="#888" />
-                  <Text style={s.iconFieldText}>{fmtTime(endTime)}</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <Text style={s.label}>Location</Text>
-            <TextInput
-              style={s.input}
-              value={location}
-              onChangeText={setLocation}
-              placeholder="e.g. Main Sanctuary"
-              placeholderTextColor="#aaa"
-            />
-          </ScrollView>
-
-          <CustomDatePicker
-            visible={showDatePicker}
-            date={date}
-            onConfirm={(d) => { setDate(d); setShowDatePicker(false); }}
-            onCancel={() => setShowDatePicker(false)}
+          <Text style={s.label}>Location</Text>
+          <TextInput
+            style={s.input}
+            value={location}
+            onChangeText={setLocation}
+            placeholder="e.g. Main Sanctuary"
+            placeholderTextColor="#aaa"
           />
-          <CustomTimePicker
-            visible={showStartPicker}
-            time={startTime}
-            onConfirm={(t) => { setStartTime(t); setShowStartPicker(false); }}
-            onCancel={() => setShowStartPicker(false)}
-          />
-          <CustomTimePicker
-            visible={showEndPicker}
-            time={endTime}
-            onConfirm={(t) => { setEndTime(t); setShowEndPicker(false); }}
-            onCancel={() => setShowEndPicker(false)}
-          />
-        </KeyboardAvoidingView>
+        </ScrollView>
+
+
+        <CustomDatePicker
+          visible={showDatePicker}
+          date={date}
+          onConfirm={(d) => { setDate(d); setShowDatePicker(false); }}
+          onCancel={() => setShowDatePicker(false)}
+        />
+        <CustomTimePicker
+          visible={showStartPicker}
+          time={startTime}
+          onConfirm={(t) => { setStartTime(t); setShowStartPicker(false); }}
+          onCancel={() => setShowStartPicker(false)}
+        />
+        <CustomTimePicker
+          visible={showEndPicker}
+          time={endTime}
+          onConfirm={(t) => { setEndTime(t); setShowEndPicker(false); }}
+          onCancel={() => setShowEndPicker(false)}
+        />
       </View>
     </AppModal>
   );
