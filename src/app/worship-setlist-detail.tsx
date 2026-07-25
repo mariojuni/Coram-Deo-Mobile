@@ -41,6 +41,7 @@ import {
 import { useAuthStore } from '@/store/useAuthStore';
 import { useMinistryStore } from '@/store/useMinistryStore';
 import { useWorshipStore } from '@/store/useWorshipStore';
+import { useModalKeyboard } from '@/hooks/useModalKeyboard';
 
 export default function WorshipSetlistDetailScreen() {
   const { setlistId, viewOnly } = useLocalSearchParams<{ setlistId: string, viewOnly?: string }>();
@@ -69,6 +70,7 @@ export default function WorshipSetlistDetailScreen() {
   const [savingSetlist, setSavingSetlist] = useState(false);
 
   // Add Song Modal
+  const addSongKeyboard = useModalKeyboard({ heightRatio: 0.85, backgroundColor: '#FAFAFA' });
   const [addSongModalVisible, setAddSongModalVisible] = useState(false);
   const [songSearch, setSongSearch] = useState('');
   const [selectedSongKey, setSelectedSongKey] = useState('');
@@ -606,9 +608,9 @@ export default function WorshipSetlistDetailScreen() {
         title="Add Song to Setlist"
         hideHeader={true}
         hideDragHandle={true}
-        containerStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}
+        {...addSongKeyboard.appModalProps}
       >
-        <View style={styles.modalContainer}>
+        <View style={[styles.modalContainer, addSongKeyboard.isKeyboardOpen && { flex: 1 }]}>
           {/* Header with Frosted Glass */}
           <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
             <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
@@ -623,7 +625,13 @@ export default function WorshipSetlistDetailScreen() {
             </View>
           </View>
 
-          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            ref={addSongKeyboard.scrollViewRef}
+            style={addSongKeyboard.scrollViewStyle}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
             <View style={{ gap: 12, paddingTop: 24 }}>
               <TextInput
                 style={styles.textInput}

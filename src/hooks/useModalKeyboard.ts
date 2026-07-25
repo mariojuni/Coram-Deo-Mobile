@@ -4,11 +4,17 @@ import { Dimensions, Keyboard, Platform, ScrollView, ViewStyle } from 'react-nat
 interface UseModalKeyboardOptions {
   heightRatio?: number;
   offset?: number;
+  noSuggestionOffset?: number;
   backgroundColor?: string;
 }
 
 export function useModalKeyboard(options: UseModalKeyboardOptions = {}) {
-  const { heightRatio = 0.85, offset = 12, backgroundColor = '#FAFAFA' } = options;
+  const { 
+    heightRatio = 0.85, 
+    offset = 12, 
+    noSuggestionOffset = 0,
+    backgroundColor = '#FAFAFA' 
+  } = options;
 
   const scrollViewRef = useRef<ScrollView>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -37,8 +43,12 @@ export function useModalKeyboard(options: UseModalKeyboardOptions = {}) {
   }, []);
 
   const isKeyboardOpen = keyboardHeight > 0;
+  // Standard soft keyboard on modern devices is ~290px+ with suggestion/autofill bar vs ~216-260px without
+  const hasSuggestionBar = keyboardHeight > 290;
+  const activeOffset = hasSuggestionBar ? offset : noSuggestionOffset;
+
   const windowHeight = Dimensions.get('window').height;
-  const keyboardTopInSheet = Math.max(150, windowHeight * heightRatio - keyboardHeight - offset);
+  const keyboardTopInSheet = Math.max(150, windowHeight * heightRatio - keyboardHeight - activeOffset);
 
   const appModalProps = {
     heightRatio,
@@ -54,6 +64,7 @@ export function useModalKeyboard(options: UseModalKeyboardOptions = {}) {
   return {
     keyboardHeight,
     isKeyboardOpen,
+    hasSuggestionBar,
     keyboardTopInSheet,
     scrollViewRef,
     appModalProps,
