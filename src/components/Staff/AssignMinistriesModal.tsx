@@ -272,15 +272,13 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
 
   const isStaff = ['super_admin', 'church_admin', 'ministry_leader'].includes((userProfile?.role ?? '').toLowerCase());
 
-  const mainKeyboard = useModalKeyboard({ heightRatio: 0.85, backgroundColor: '#FAFAFA' });
-  const pickerKeyboard = useModalKeyboard({ heightRatio: 0.85, backgroundColor: '#FAFAFA' });
+  const modalKeyboard = useModalKeyboard({ heightRatio: 0.85, backgroundColor: '#FAFAFA' });
 
-  const [isMainModalOpen, setIsMainModalOpen] = useState(true);
   const [assignments, setAssignments] = useState<AssignmentsMap>({});
   const [filterTab, setFilterTab] = useState<FilterTab>('all');
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [selectingRoleKey, setSelectingRoleKey] = useState<{ ministryId: string, roleName: string } | null>(null);
-  const [showPicker, setShowPicker] = useState(false);
+
   const initialAssignments = useMemo(() => {
     const initialMap: AssignmentsMap = {};
 
@@ -317,10 +315,6 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
       return;
     }
     setSelectingRoleKey({ ministryId, roleName });
-    setIsMainModalOpen(false);
-    setTimeout(() => {
-      setShowPicker(true);
-    }, 300);
   }, [isStaff]);
 
   const handleSelect = async (userId: string | null) => {
@@ -336,11 +330,7 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
       return next;
     });
 
-    setShowPicker(false);
-    setTimeout(() => {
-      setSelectingRoleKey(null);
-      setIsMainModalOpen(true);
-    }, 300);
+    setSelectingRoleKey(null);
 
     // API Update
     try {
@@ -383,16 +373,32 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
   };
 
   return (
-    <>
-      <AppModal
-        isOpen={isMainModalOpen}
-        onClose={onClose}
-        title="Assign Ministries"
-        hideHeader={true}
-        hideDragHandle={true}
-        {...mainKeyboard.appModalProps}
-      >
-        <View style={[ms.modalContainer, mainKeyboard.isKeyboardOpen && { flex: 1 }]}>
+    <AppModal
+      isOpen={true}
+      onClose={() => {
+        if (selectingRoleKey) {
+          setSelectingRoleKey(null);
+        } else {
+          onClose();
+        }
+      }}
+      title={selectingRoleKey ? "Assign Member" : "Assign Ministries"}
+      hideHeader={true}
+      hideDragHandle={true}
+      {...modalKeyboard.appModalProps}
+    >
+      {selectingRoleKey ? (
+        <MemberPickerSheet
+          roleLabel={selectingRoleKey.roleName}
+          ministry={ministries.find(m => m.id === selectingRoleKey.ministryId)}
+          currentUserId={selectingRoleKey ? (assignments[getAssignmentKey(selectingRoleKey.ministryId, selectingRoleKey.roleName)] ?? null) : null}
+          onSelect={handleSelect}
+          isKeyboardOpen={modalKeyboard.isKeyboardOpen}
+          keyboardTopInSheet={modalKeyboard.keyboardTopInSheet}
+          onClose={() => setSelectingRoleKey(null)}
+        />
+      ) : (
+        <View style={[ms.modalContainer, modalKeyboard.isKeyboardOpen && { flex: 1 }]}>
           <View style={[ms.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
             <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
             <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
@@ -407,8 +413,8 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
           </View>
 
           <ScrollView
-            ref={mainKeyboard.scrollViewRef}
-            style={mainKeyboard.scrollViewStyle}
+            ref={modalKeyboard.scrollViewRef}
+            style={modalKeyboard.scrollViewStyle}
             contentContainerStyle={{ paddingBottom: 120, paddingTop: 70 }}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
@@ -576,41 +582,8 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
         })}
       </ScrollView>
       </View>
+      )}
     </AppModal>
-
-      <AppModal
-        isOpen={showPicker}
-        onClose={() => {
-          setShowPicker(false);
-          setTimeout(() => {
-            setSelectingRoleKey(null);
-            setIsMainModalOpen(true);
-          }, 300);
-        }}
-        title="Assign Member"
-        hideHeader={true}
-        hideDragHandle={true}
-        {...pickerKeyboard.appModalProps}
-      >
-        {selectingRoleKey && (
-          <MemberPickerSheet
-            roleLabel={selectingRoleKey.roleName}
-            ministry={ministries.find(m => m.id === selectingRoleKey.ministryId)}
-            currentUserId={selectingRoleKey ? (assignments[getAssignmentKey(selectingRoleKey.ministryId, selectingRoleKey.roleName)] ?? null) : null}
-            onSelect={handleSelect}
-            isKeyboardOpen={pickerKeyboard.isKeyboardOpen}
-            keyboardTopInSheet={pickerKeyboard.keyboardTopInSheet}
-            onClose={() => {
-              setShowPicker(false);
-              setTimeout(() => {
-                setSelectingRoleKey(null);
-                setIsMainModalOpen(true);
-              }, 300);
-            }}
-          />
-        )}
-      </AppModal>
-    </>
   );
 }
 
