@@ -6,7 +6,6 @@ interface UseModalKeyboardOptions {
   offset?: number;
   noSuggestionOffset?: number;
   backgroundColor?: string;
-  dynamicHeight?: boolean;
 }
 
 export function useModalKeyboard(options: UseModalKeyboardOptions = {}) {
@@ -14,8 +13,7 @@ export function useModalKeyboard(options: UseModalKeyboardOptions = {}) {
     heightRatio = 0.85, 
     offset = 12, 
     noSuggestionOffset = 0,
-    backgroundColor = '#FAFAFA',
-    dynamicHeight = false
+    backgroundColor = '#FAFAFA' 
   } = options;
 
   const scrollViewRef = useRef<ScrollView>(null);
@@ -55,13 +53,13 @@ export function useModalKeyboard(options: UseModalKeyboardOptions = {}) {
   const appModalProps = {
     heightRatio,
     avoidKeyboard: false,
-    dynamicHeight: dynamicHeight ? !isKeyboardOpen : false,
+    dynamicHeight: !isKeyboardOpen,
     containerStyle: { paddingHorizontal: 0, paddingBottom: 0, backgroundColor } as ViewStyle,
   };
 
   const scrollViewStyle: ViewStyle = isKeyboardOpen
     ? { flex: 1, maxHeight: keyboardTopInSheet }
-    : { flex: 1 };
+    : { flexGrow: 0 };
 
   return {
     keyboardHeight,
