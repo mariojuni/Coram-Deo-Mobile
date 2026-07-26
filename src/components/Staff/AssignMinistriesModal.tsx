@@ -21,7 +21,6 @@ import AppModal from '@/components/ui/AppModal';
 import { BlurView } from 'expo-blur';
 import { BounceCard } from '@/components/ui/BounceCard';
 import { formatMemberName } from '../../features/member/domain/member.utils';
-import { useModalKeyboard } from '@/hooks/useModalKeyboard';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type FilterTab = 'all' | 'unassigned' | 'assigned';
@@ -100,11 +99,9 @@ interface MemberPickerSheetProps {
   currentUserId: string | null;
   onSelect: (userId: string | null) => void;
   onClose: () => void;
-  isKeyboardOpen?: boolean;
-  keyboardTopInSheet?: number;
 }
 
-function MemberPickerSheet({ roleLabel, ministry, currentUserId, onSelect, onClose, isKeyboardOpen, keyboardTopInSheet }: MemberPickerSheetProps) {
+function MemberPickerSheet({ roleLabel, ministry, currentUserId, onSelect, onClose }: MemberPickerSheetProps) {
   const allMembers = useMemberStore((s) => s.members);
   const [query, setQuery] = useState('');
 
@@ -126,7 +123,7 @@ function MemberPickerSheet({ roleLabel, ministry, currentUserId, onSelect, onClo
   }, [ministry, query, allMembers]);
 
   return (
-    <View style={[ps.sheet, isKeyboardOpen && { flex: 1 }]}>
+    <View style={ps.sheet}>
       <View style={[ms.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
@@ -143,7 +140,7 @@ function MemberPickerSheet({ roleLabel, ministry, currentUserId, onSelect, onClo
         </View>
       </View>
 
-      <View style={[{ paddingTop: 70 }, isKeyboardOpen && { flex: 1, maxHeight: (keyboardTopInSheet ?? 500) - 70 }]}>
+      <View style={{ paddingTop: 70 }}>
         <View style={ps.searchRow}>
           <Search size={16} color="#aaa" />
           <TextInput
@@ -266,9 +263,6 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
 
   const isStaff = ['super_admin', 'church_admin', 'ministry_leader'].includes((userProfile?.role ?? '').toLowerCase());
 
-  const mainKeyboard = useModalKeyboard({ heightRatio: 0.85, backgroundColor: '#FAFAFA' });
-  const pickerKeyboard = useModalKeyboard({ heightRatio: 0.85, backgroundColor: '#FAFAFA' });
-
   const [isMainModalOpen, setIsMainModalOpen] = useState(true);
   const [assignments, setAssignments] = useState<AssignmentsMap>({});
   const [filterTab, setFilterTab] = useState<FilterTab>('all');
@@ -382,31 +376,26 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
         isOpen={isMainModalOpen}
         onClose={onClose}
         title="Assign Ministries"
-        hideHeader={true}
-        hideDragHandle={true}
-        {...mainKeyboard.appModalProps}
-      >
-        <View style={[ms.modalContainer, mainKeyboard.isKeyboardOpen && { flex: 1 }]}>
-          <View style={[ms.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
-            <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
-            <View style={ms.dragHandle} />
-            <View style={ms.headerContent}>
-              <View style={{ width: 40 }} />
-              <Text style={ms.headerTitle}>Assign Ministries</Text>
-              <BounceCard bounceScale={0.85} style={ms.headerCircle} onPress={onClose} hitSlop={8} activeOpacity={0.8}>
-                <X size={24} color="#111827" strokeWidth={2} />
-              </BounceCard>
-            </View>
+      hideHeader={true}
+      hideDragHandle={true}
+      containerStyle={{ paddingHorizontal: 0, paddingBottom: 0, backgroundColor: '#FAFAFA' }}
+      heightRatio={0.80}
+    >
+      <View style={[ms.modalContainer, { flex: 1 }]}>
+        <View style={[ms.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
+          <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
+          <View style={ms.dragHandle} />
+          <View style={ms.headerContent}>
+            <View style={{ width: 40 }} />
+            <Text style={ms.headerTitle}>Assign Ministries</Text>
+            <BounceCard bounceScale={0.85} style={ms.headerCircle} onPress={onClose} hitSlop={8} activeOpacity={0.8}>
+              <X size={24} color="#111827" strokeWidth={2} />
+            </BounceCard>
           </View>
+        </View>
 
-          <ScrollView
-            ref={mainKeyboard.scrollViewRef}
-            style={mainKeyboard.scrollViewStyle}
-            contentContainerStyle={{ paddingBottom: 120, paddingTop: 70 }}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
+        <ScrollView contentContainerStyle={{ paddingBottom: 120, paddingTop: 70 }} showsVerticalScrollIndicator={false}>
         <SoftCard style={{ margin: 20, marginBottom: 16, borderRadius: 16 }} innerStyle={{ borderRadius: 15 }}>
           <View style={[ms.eventCard, { margin: 0 }]}>
             <View style={ms.eventIconBox}>
@@ -584,7 +573,8 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
         title="Assign Member"
         hideHeader={true}
         hideDragHandle={true}
-        {...pickerKeyboard.appModalProps}
+        containerStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}
+        heightRatio={0.55}
       >
         {selectingRoleKey && (
           <MemberPickerSheet
@@ -592,8 +582,6 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
             ministry={ministries.find(m => m.id === selectingRoleKey.ministryId)}
             currentUserId={selectingRoleKey ? (assignments[getAssignmentKey(selectingRoleKey.ministryId, selectingRoleKey.roleName)] ?? null) : null}
             onSelect={handleSelect}
-            isKeyboardOpen={pickerKeyboard.isKeyboardOpen}
-            keyboardTopInSheet={pickerKeyboard.keyboardTopInSheet}
             onClose={() => {
               setShowPicker(false);
               setTimeout(() => {
