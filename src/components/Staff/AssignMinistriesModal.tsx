@@ -310,12 +310,8 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
   }, []);
 
   const openPicker = useCallback((ministryId: string, roleName: string) => {
-    if (!isStaff) {
-      Alert.alert('Permission Denied', 'Only staff members can assign ministry roles.');
-      return;
-    }
     setSelectingRoleKey({ ministryId, roleName });
-  }, [isStaff]);
+  }, []);
 
   const handleSelect = async (userId: string | null) => {
     if (!selectingRoleKey) return;
