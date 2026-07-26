@@ -38,6 +38,8 @@ export interface DiscipleshipProgress {
   id: string;
   planId: string;
   weekId: string;
+  lessonId?: string;
+  groupId?: string;
   weekNumber: number;
   isCompleted: boolean;
   completedAt: any;
@@ -104,11 +106,12 @@ export class DiscipleshipService {
     weekId: string, 
     weekNumber: number, 
     userId: string,
-    memberId?: string | null
+    memberId?: string | null,
+    groupId?: string | null
   ): Promise<void> {
     if (!churchId || !userId) return;
 
-    // First check if already completed
+    // Check existing by weekId or lessonId
     const q = query(
       collection(db, 'discipleshipProgress'),
       where('churchId', '==', churchId),
@@ -119,14 +122,27 @@ export class DiscipleshipService {
     
     const snapshot = await getDocs(q);
     if (!snapshot.empty) {
-      return; // already marked
+      // Toggle existing document state
+      const existingDoc = snapshot.docs[0];
+      const currentCompleted = !!existingDoc.data().isCompleted;
+      await setDoc(doc(db, 'discipleshipProgress', existingDoc.id), {
+        isCompleted: !currentCompleted,
+        completedAt: !currentCompleted ? serverTimestamp() : null,
+        updatedAt: serverTimestamp(),
+        ...(groupId ? { groupId } : {}),
+        lessonId: weekId,
+      }, { merge: true });
+      return;
     }
 
-    const newDocRef = doc(collection(db, 'discipleshipProgress'));
+    const docId = groupId && memberId ? `${groupId}_${weekId}_${memberId}` : undefined;
+    const newDocRef = docId ? doc(db, 'discipleshipProgress', docId) : doc(collection(db, 'discipleshipProgress'));
+
     const payload: any = {
       churchId,
       planId,
       weekId,
+      lessonId: weekId,
       userId,
       weekNumber,
       isCompleted: true,
@@ -135,10 +151,9 @@ export class DiscipleshipService {
       updatedAt: serverTimestamp()
     };
     
-    if (memberId) {
-      payload.memberId = memberId;
-    }
+    if (memberId) payload.memberId = memberId;
+    if (groupId) payload.groupId = groupId;
 
-    await setDoc(newDocRef, payload);
+    await setDoc(newDocRef, payload, { merge: true });
   }
 }

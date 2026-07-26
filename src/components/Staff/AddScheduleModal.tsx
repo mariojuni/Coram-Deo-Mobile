@@ -114,7 +114,7 @@ export default function AddScheduleModal({ isOpen, onClose, eventToEdit }: AddSc
       hideDragHandle={true}
       {...appModalProps}
     >
-      <View style={[s.modalContainer, isKeyboardOpen && { flex: 1 }]}>
+      <View style={s.modalContainer}>
         <View style={[s.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
           <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
@@ -206,7 +206,7 @@ export default function AddScheduleModal({ isOpen, onClose, eventToEdit }: AddSc
 }
 
 const s = StyleSheet.create({
-  modalContainer: { backgroundColor: '#FAFAFA' },
+  modalContainer: { flex: 1, backgroundColor: '#FAFAFA' },
   headerContainer: {
     position: 'absolute',
     top: 0,

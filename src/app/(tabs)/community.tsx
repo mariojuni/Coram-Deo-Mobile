@@ -20,9 +20,12 @@ import {
   Search,
   User,
   Users,
+  UsersRound,
   X,
   XCircle
 } from 'lucide-react-native';
+import { GroupsTab } from '../../features/discipleshipGroup/presentation/components/GroupsTab';
+import { canAccessGroupsTab } from '../../permissions/discipleshipGroupPermissions';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActionSheetIOS,
@@ -78,9 +81,10 @@ const TABS = [
   { key: 'sermons', label: 'Sermons', icon: PlayCircle },
   { key: 'members', label: 'Members', icon: Users },
   { key: 'songs', label: 'Songs', icon: Music },
+  { key: 'groups', label: 'Groups', icon: UsersRound },
 ] as const;
 
-type TabIndex = 0 | 1 | 2 | 3 | 4;
+type TabIndex = 0 | 1 | 2 | 3 | 4 | 5;
 type CommunityTabParam = (typeof TABS)[number]['key'];
 type SubScreenProps = { searchQuery: string };
 const PRAYER_FILTERS: PrayerFilter[] = ['Recent', 'My Requests'];
@@ -90,6 +94,7 @@ const TAB_INDEX_BY_KEY: Record<CommunityTabParam, TabIndex> = {
   sermons: 2,
   members: 3,
   songs: 4,
+  groups: 5,
 };
 
 function getTabIndexFromParam(tabParam: string | string[] | undefined): TabIndex | null {
@@ -1025,6 +1030,7 @@ const SUB_SCREENS = [
   SermonsTab,
   MembersTab,
   SongsTab,
+  GroupsTab,
 ] as const;
 
 // ─── Main Community screen ────────────────────────────────────────────────────
@@ -1041,6 +1047,7 @@ export default function CommunityScreen() {
     sermons: '',
     members: '',
     songs: '',
+    groups: '',
   });
 
   // Per-tab measured layout { x, width }
@@ -1118,9 +1125,18 @@ export default function CommunityScreen() {
     sermons: 'Search sermons',
     members: 'Search members',
     songs: 'Search community songs',
+    groups: 'Search groups',
   };
   const headerContentOffset = 112;
   const headerHeight = Math.max(insets.top, 24) + headerContentOffset;
+
+  const userProfile = useAuthStore((state) => state.userProfile);
+  const showGroups = canAccessGroupsTab(userProfile);
+
+  const visibleTabs = useMemo(() => {
+    if (showGroups) return TABS;
+    return TABS.filter((t) => t.key !== 'groups');
+  }, [showGroups]);
 
   return (
     <View style={styles.container}>
@@ -1230,27 +1246,30 @@ export default function CommunityScreen() {
               ]}
             />
 
-            {TABS.map(({ key, label }, index) => (
-              <TouchableOpacity
-                key={key}
-                onLayout={(e) => {
-                  const { x, width } = e.nativeEvent.layout;
-                  handleTabLayout(index, x, width);
-                }}
-                onPress={() => handleTabPress(index as TabIndex)}
-                style={styles.tab}
-                activeOpacity={0.75}
-              >
-                <Text
-                  style={[
-                    styles.tabText,
-                    activeTab === index && styles.tabTextActive,
-                  ]}
+            {visibleTabs.map(({ key, label }) => {
+              const index = TAB_INDEX_BY_KEY[key];
+              return (
+                <TouchableOpacity
+                  key={key}
+                  onLayout={(e) => {
+                    const { x, width } = e.nativeEvent.layout;
+                    handleTabLayout(index, x, width);
+                  }}
+                  onPress={() => handleTabPress(index)}
+                  style={styles.tab}
+                  activeOpacity={0.75}
                 >
-                  {label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Text
+                    style={[
+                      styles.tabText,
+                      activeTab === index && styles.tabTextActive,
+                    ]}
+                  >
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
         </View>
       </Animated.View>

@@ -156,7 +156,7 @@ export default function PrayerRequestModal({ isOpen, onClose, initialData }: Pra
       hideDragHandle={true}
       {...appModalProps}
     >
-      <View style={[styles.modalContainer, isKeyboardOpen && { flex: 1 }]}>
+      <View style={styles.modalContainer}>
         {/* Header */}
         <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
           <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
@@ -303,6 +303,7 @@ export default function PrayerRequestModal({ isOpen, onClose, initialData }: Pra
 
 const styles = StyleSheet.create({
   modalContainer: {
+    flex: 1,
     backgroundColor: '#FAFAFA',
   },
   scrollContainer: {

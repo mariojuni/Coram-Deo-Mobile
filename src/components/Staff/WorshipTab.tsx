@@ -347,7 +347,7 @@ export default function WorshipTab() {
         hideDragHandle={true}
         {...createSetlistKeyboard.appModalProps}
       >
-        <View style={[styles.modalContainer, createSetlistKeyboard.isKeyboardOpen && { flex: 1 }]}>
+        <View style={styles.modalContainer}>
 
           {/* Header with Frosted Glass */}
           <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
@@ -882,7 +882,7 @@ const styles = StyleSheet.create({
     color: '#FF6596',
     fontWeight: '800',
   },
-  modalContainer: { backgroundColor: '#FAFAFA' },
+  modalContainer: { flex: 1, backgroundColor: '#FAFAFA' },
   scrollContent: { paddingHorizontal: 20, paddingTop: 70, paddingBottom: 32 },
 
 

@@ -1,55 +1,81 @@
 import React, { useMemo, useState } from 'react';
-import { BounceCard } from '@/components/ui/BounceCard';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Check, ChevronDown, ChevronUp } from 'lucide-react-native';
-import { BlurView } from 'expo-blur';
+import {
+  ArrowLeft,
+  BookOpen,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  HelpCircle,
+  Sparkles,
+} from 'lucide-react-native';
+import { BounceCard } from '@/components/ui/BounceCard';
+import { SoftCard } from '@/components/ui/SoftCard';
 import { useDiscipleshipDetail } from '../hooks/useDiscipleshipDetail';
 
 interface Props {
   planId: string;
   weekId: string;
+  groupId?: string;
 }
 
 interface CollapsibleSectionProps {
   title: string;
+  icon?: React.ReactNode;
   defaultExpanded?: boolean;
   children: React.ReactNode;
 }
 
-function CollapsibleSection({ title, defaultExpanded = false, children }: CollapsibleSectionProps) {
+function CollapsibleSection({ title, icon, defaultExpanded = false, children }: CollapsibleSectionProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   return (
-    <View style={styles.cardSection}>
-      <TouchableOpacity 
-        style={styles.cardHeader} 
-        onPress={() => setExpanded(!expanded)}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.sectionTitle}>{title}</Text>
-        {expanded ? <ChevronUp size={20} color="#888" /> : <ChevronDown size={20} color="#888" />}
-      </TouchableOpacity>
-      {expanded && (
-        <View style={styles.cardContent}>
-          {children}
-        </View>
-      )}
+    <View style={styles.cardSectionWrap}>
+      <SoftCard innerStyle={styles.cardInner}>
+        <TouchableOpacity
+          style={styles.cardHeader}
+          onPress={() => setExpanded(!expanded)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.cardHeaderTitleRow}>
+            {icon ? <View style={styles.sectionIconWrap}>{icon}</View> : null}
+            <Text style={styles.sectionTitle}>{title}</Text>
+          </View>
+          {expanded ? <ChevronUp size={18} color="#9CA3AF" /> : <ChevronDown size={18} color="#9CA3AF" />}
+        </TouchableOpacity>
+        {expanded && <View style={styles.cardContent}>{children}</View>}
+      </SoftCard>
     </View>
   );
 }
 
-export function DiscipleshipWeekScreen({ planId, weekId }: Props) {
+export function DiscipleshipWeekScreen({ planId, weekId, groupId }: Props) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { weeks, progress, loading, markCompleted } = useDiscipleshipDetail(planId);
+  const { plan, weeks, progress, loading, markCompleted } = useDiscipleshipDetail(planId);
 
   const currentWeek = useMemo(() => {
-    return weeks.find(w => w.id === weekId);
+    return weeks.find((w) => w.id === weekId);
   }, [weeks, weekId]);
 
   const isCompleted = useMemo(() => {
-    return progress.some(p => p.weekId === weekId && p.isCompleted);
+    if (!progress || progress.length === 0) return false;
+    return progress.some(
+      (p) =>
+        (p.weekId === weekId || p.lessonId === weekId) &&
+        p.isCompleted === true
+    );
   }, [progress, weekId]);
 
   if (loading || !currentWeek) {
@@ -61,115 +87,125 @@ export function DiscipleshipWeekScreen({ planId, weekId }: Props) {
   }
 
   const handleMarkComplete = async () => {
-    await markCompleted(weekId, currentWeek.weekNumber);
+    await markCompleted(weekId, currentWeek.weekNumber, groupId);
     router.back();
   };
 
-  const headerHeight = Math.max(insets.top, 24) + 50;
+  const topInset = Math.max(insets.top, 16);
 
   return (
     <View style={styles.container}>
-      {/* ── Frosted sticky header ── */}
-      <View
-        style={[styles.frostedHeader, { paddingTop: Math.max(insets.top, 24) }]}
-        pointerEvents="box-none"
-      >
-        <BlurView
-          intensity={80}
-          tint="light"
-          style={StyleSheet.absoluteFill}
-        />
-        <View
-          style={[
-            StyleSheet.absoluteFill,
-            { backgroundColor: 'rgba(255,255,255,0.6)' },
-          ]}
-          pointerEvents="none"
-        />
-
-        <View style={styles.headerRow}>
-          <BounceCard bounceScale={0.85} 
-            style={styles.backButton} 
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-          >
-            <ArrowLeft size={24} color="#1a1a1a" />
-          </BounceCard>
-          <Text style={styles.headerTitle}>Week {currentWeek.weekNumber}</Text>
-          <View style={{ width: 44 }} />
+      {/* ── Frosted System Header ── */}
+      <View style={[styles.frostedHeader, { paddingTop: topInset }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.iconCircleBtn}>
+          <ArrowLeft size={18} color="#111827" />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerOverline}>DISCIPLESHIP PLAN</Text>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            Week {currentWeek.weekNumber} • {plan?.title || 'Study'}
+          </Text>
         </View>
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight + 24 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: topInset + 65 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.titleContainer}>
-          <Text style={styles.chapterTitle}>{currentWeek.chapterTitle}</Text>
-          <Text style={styles.scriptureRef}>{currentWeek.scriptureReference}</Text>
-        </View>
+        {/* ── Hero Banner Card ── */}
+        <SoftCard innerStyle={styles.heroCardInner}>
+          <LinearGradient
+            colors={['#FF6596', '#B66DFF']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.heroContent}>
+            <Text style={styles.heroBadge}>WEEK {currentWeek.weekNumber}</Text>
+            <Text style={styles.chapterTitle}>{currentWeek.chapterTitle}</Text>
+            {currentWeek.scriptureReference ? (
+              <View style={styles.scripturePill}>
+                <BookOpen size={12} color="#FFFFFF" />
+                <Text style={styles.scriptureRefText}>{currentWeek.scriptureReference}</Text>
+              </View>
+            ) : null}
+          </View>
+        </SoftCard>
 
-        {currentWeek.suggestedFlow && (
-          <CollapsibleSection title="Suggested Flow" defaultExpanded={true}>
+        {/* ── Collapsible Sections ── */}
+        {currentWeek.suggestedFlow ? (
+          <CollapsibleSection
+            title="Suggested Flow"
+            icon={<Sparkles size={16} color="#FF6596" />}
+            defaultExpanded={true}
+          >
             <Text style={styles.bodyText}>{currentWeek.suggestedFlow}</Text>
           </CollapsibleSection>
-        )}
+        ) : null}
 
-        {currentWeek.storyText && (
-          <CollapsibleSection title="Pakinggan ang Kuwento" defaultExpanded={!currentWeek.suggestedFlow}>
+        {currentWeek.storyText ? (
+          <CollapsibleSection
+            title="Pakinggan ang Kuwento"
+            icon={<BookOpen size={16} color="#B66DFF" />}
+            defaultExpanded={!currentWeek.suggestedFlow}
+          >
             <Text style={styles.bodyText}>{currentWeek.storyText}</Text>
           </CollapsibleSection>
-        )}
+        ) : null}
 
-        {(currentWeek.retellInstruction || currentWeek.retellActivity) && (
-          <CollapsibleSection title="Kayo naman ngayon ang magkuwento">
-            {currentWeek.retellInstruction && (
+        {currentWeek.retellInstruction || currentWeek.retellActivity ? (
+          <CollapsibleSection
+            title="Kayo naman ngayon ang magkuwento"
+            icon={<FileText size={16} color="#EC4899" />}
+          >
+            {currentWeek.retellInstruction ? (
               <Text style={[styles.bodyText, styles.instructionText]}>
                 {currentWeek.retellInstruction}
               </Text>
-            )}
-            {currentWeek.retellActivity && (
+            ) : null}
+            {currentWeek.retellActivity ? (
               <Text style={styles.bodyText}>{currentWeek.retellActivity}</Text>
-            )}
+            ) : null}
           </CollapsibleSection>
-        )}
+        ) : null}
 
-        {currentWeek.discussionQuestions && (
-          <CollapsibleSection title="Pag-usapan natin ang kuwento">
+        {currentWeek.discussionQuestions ? (
+          <CollapsibleSection
+            title="Pag-usapan natin ang kuwento"
+            icon={<HelpCircle size={16} color="#8B5CF6" />}
+          >
             <Text style={styles.bodyText}>{currentWeek.discussionQuestions}</Text>
           </CollapsibleSection>
-        )}
+        ) : null}
 
-        {currentWeek.keyTruths && (
+        {currentWeek.keyTruths ? (
           <CollapsibleSection title="Natutunan natin sa kuwento">
             <Text style={styles.bodyText}>{currentWeek.keyTruths}</Text>
           </CollapsibleSection>
-        )}
+        ) : null}
 
-        {currentWeek.applicationQuestions && (
+        {currentWeek.applicationQuestions ? (
           <CollapsibleSection title="Upang bumago sa buhay mo">
             <Text style={styles.bodyText}>{currentWeek.applicationQuestions}</Text>
           </CollapsibleSection>
-        )}
-        
-        {currentWeek.additionalStudy && (
+        ) : null}
+
+        {currentWeek.additionalStudy ? (
           <CollapsibleSection title="Karagdagang pag-aaral">
             <Text style={styles.bodyText}>{currentWeek.additionalStudy}</Text>
           </CollapsibleSection>
-        )}
+        ) : null}
 
-        <TouchableOpacity 
-          style={[styles.completeButton, isCompleted && styles.completedButtonBg]}
-          activeOpacity={0.8}
-          onPress={handleMarkComplete}
-          disabled={isCompleted}
-        >
-          <Check size={20} color={isCompleted ? "#059669" : "#FFFFFF"} />
-          <Text style={[styles.completeButtonText, isCompleted && styles.completedButtonText]}>
-            {isCompleted ? 'Completed' : 'Mark as Completed'}
-          </Text>
-        </TouchableOpacity>
+        {/* ── Completion Action Button ── */}
+        <BounceCard activeOpacity={0.85} onPress={handleMarkComplete}>
+          <View style={[styles.completeButton, isCompleted && styles.completedButtonBg]}>
+            <Check size={18} color={isCompleted ? '#059669' : '#FFFFFF'} />
+            <Text style={[styles.completeButtonText, isCompleted && styles.completedButtonText]}>
+              {isCompleted ? 'Completed' : 'Mark as Completed'}
+            </Text>
+          </View>
+        </BounceCard>
       </ScrollView>
     </View>
   );
@@ -178,13 +214,13 @@ export function DiscipleshipWeekScreen({ planId, weekId }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: '#F9FAFB',
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FAFAFA',
+    backgroundColor: '#F9FAFB',
   },
   frostedHeader: {
     position: 'absolute',
@@ -192,96 +228,135 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 100,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.06)',
-  },
-  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingBottom: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(229, 231, 235, 0.7)',
+    gap: 12,
   },
-  backButton: {
-    width: 44,
-    height: 44,
+  iconCircleBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F3F4F6',
     justifyContent: 'center',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+  },
+  headerOverline: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FF6596',
+    letterSpacing: 0.8,
   },
   headerTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#1a1a1a',
+    color: '#111827',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 24,
-    paddingBottom: 100,
+    paddingHorizontal: 16,
+    paddingBottom: 48,
+    gap: 12,
   },
-  titleContainer: {
-    marginBottom: 32,
+  heroCardInner: {
+    padding: 20,
+    borderRadius: 20,
+    overflow: 'hidden',
+    minHeight: 140,
+    justifyContent: 'flex-end',
+  },
+  heroContent: {
+    gap: 6,
+  },
+  heroBadge: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: 'rgba(255, 255, 255, 0.9)',
+    letterSpacing: 1,
   },
   chapterTitle: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: '800',
-    color: '#1a1a1a',
-    marginBottom: 8,
-    letterSpacing: -0.5,
-    lineHeight: 32,
+    color: '#FFFFFF',
+    lineHeight: 28,
   },
-  scriptureRef: {
-    fontSize: 14,
+  scripturePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    gap: 6,
+    marginTop: 4,
+  },
+  scriptureRefText: {
+    fontSize: 12,
     fontWeight: '700',
-    color: '#FF6596',
+    color: '#FFFFFF',
   },
-  cardSection: {
-    backgroundColor: '#FFFFFF',
+  cardSectionWrap: {
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#F5F6FA',
-    marginBottom: 12,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
+  },
+  cardInner: {
+    padding: 16,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
   },
-  cardContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
+  cardHeaderTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  sectionIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: '#FFF0F5',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
-    color: '#1a1a1a',
+    color: '#111827',
+    flex: 1,
+  },
+  cardContent: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
   },
   bodyText: {
-    fontSize: 15,
-    color: '#4B5563',
-    lineHeight: 24,
+    fontSize: 14,
+    color: '#374151',
+    lineHeight: 22,
   },
   instructionText: {
     fontStyle: 'italic',
     color: '#6B7280',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   completeButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FF6596',
-    paddingVertical: 16,
+    paddingVertical: 14,
     borderRadius: 999,
-    marginTop: 20,
+    marginTop: 12,
     gap: 8,
   },
   completedButtonBg: {
@@ -294,5 +369,5 @@ const styles = StyleSheet.create({
   },
   completedButtonText: {
     color: '#059669',
-  }
+  },
 });

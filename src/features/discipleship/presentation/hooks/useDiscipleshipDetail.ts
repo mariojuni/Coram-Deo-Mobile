@@ -41,7 +41,7 @@ export function useDiscipleshipDetail(planId: string) {
     }, [currentChurchId, planId, userProfile?.uid])
   );
 
-  const markCompleted = async (weekId: string, weekNumber: number) => {
+  const markCompleted = async (weekId: string, weekNumber: number, groupId?: string | null) => {
     if (!currentChurchId || !userProfile?.uid) return;
     
     await DiscipleshipService.markWeekCompleted(
@@ -50,7 +50,8 @@ export function useDiscipleshipDetail(planId: string) {
       weekId,
       weekNumber,
       userProfile.uid,
-      userProfile.memberId
+      userProfile.memberId,
+      groupId
     );
     
     // Refresh progress

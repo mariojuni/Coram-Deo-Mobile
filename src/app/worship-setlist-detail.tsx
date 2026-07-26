@@ -610,7 +610,7 @@ export default function WorshipSetlistDetailScreen() {
         hideDragHandle={true}
         {...addSongKeyboard.appModalProps}
       >
-        <View style={[styles.modalContainer, addSongKeyboard.isKeyboardOpen && { flex: 1 }]}>
+        <View style={styles.modalContainer}>
           {/* Header with Frosted Glass */}
           <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
             <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
@@ -1013,7 +1013,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFF',
   },
-  modalContainer: { backgroundColor: '#FAFAFA' },
+  modalContainer: { flex: 1, backgroundColor: '#FAFAFA' },
   scrollContent: { paddingHorizontal: 20, paddingTop: 70, paddingBottom: 30 },
   headerContainer: {
     position: 'absolute',
