@@ -129,7 +129,6 @@ const styles = StyleSheet.create({
   sheet: {
     flex: 1,
     width: '100%',
-    maxHeight: '75%',
     backgroundColor: '#fff',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
