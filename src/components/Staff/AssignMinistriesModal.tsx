@@ -110,16 +110,23 @@ function MemberPickerSheet({ roleLabel, ministry, currentUserId, onSelect, onClo
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
-    const ministryTeam = ministry?.members || [];
-    const sourceMembers = ministryTeam.map(m => {
-      const globalMember = allMembers.find(g => g.id === m.memberId);
-      return {
-        id: m.memberId,
-        name: formatMemberName(globalMember || m),
-        role: m.role,
-        avatar: globalMember?.avatar || m.avatar
-      };
-    });
+    const ministryTeam = (ministry?.members && ministry.members.length > 0) ? ministry.members : null;
+    const sourceMembers = ministryTeam
+      ? ministryTeam.map(m => {
+          const globalMember = allMembers.find(g => g.id === m.memberId);
+          return {
+            id: m.memberId,
+            name: formatMemberName(globalMember || m),
+            role: m.role || 'Member',
+            avatar: globalMember?.avatar || m.avatar
+          };
+        })
+      : allMembers.map(g => ({
+          id: g.id,
+          name: formatMemberName(g),
+          role: g.role || 'Member',
+          avatar: g.avatar
+        }));
 
     if (!q) return sourceMembers;
     return sourceMembers.filter((m) => (m.name ?? '').toLowerCase().includes(q) || (m.role ?? '').toLowerCase().includes(q));
@@ -153,60 +160,59 @@ function MemberPickerSheet({ roleLabel, ministry, currentUserId, onSelect, onClo
             placeholder="Search by name or role…"
             placeholderTextColor="#aaa"
           />
-        {query.length > 0 && (
-          <TouchableOpacity onPress={() => setQuery('')}>
-            <X size={14} color="#aaa" />
+          {query.length > 0 && (
+            <TouchableOpacity onPress={() => setQuery('')}>
+              <X size={14} color="#aaa" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {currentUserId && (
+          <TouchableOpacity style={ps.clearRow} onPress={() => onSelect(null)}>
+            <View style={[ps.avatarBox, { backgroundColor: '#FEE2E2' }]}>
+              <X size={18} color="#EF4444" />
+            </View>
+            <View>
+              <Text style={[ps.memberName, { color: '#EF4444' }]}>Remove Assignment</Text>
+              <Text style={ps.memberRole}>Clear this role</Text>
+            </View>
           </TouchableOpacity>
         )}
-      </View>
 
-      {currentUserId && (
-        <TouchableOpacity style={ps.clearRow} onPress={() => onSelect(null)}>
-          <View style={[ps.avatarBox, { backgroundColor: '#FEE2E2' }]}>
-            <X size={18} color="#EF4444" />
+        {filtered.length === 0 ? (
+          <View style={{ padding: 24, alignItems: 'center' }}>
+            <Text style={{ fontSize: 14, color: '#6B7280', textAlign: 'center', fontWeight: '500' }}>
+              No matching members found.
+            </Text>
           </View>
-          <View>
-            <Text style={[ps.memberName, { color: '#EF4444' }]}>Remove Assignment</Text>
-            <Text style={ps.memberRole}>Clear this role</Text>
-          </View>
-        </TouchableOpacity>
-      )}
-
-      {filtered.length === 0 ? (
-        <View style={{ padding: 24, alignItems: 'center' }}>
-          <Text style={{ fontSize: 14, color: '#6B7280', textAlign: 'center', fontWeight: '500' }}>
-            {(ministry?.members || []).length === 0 
-              ? `No members assigned to ${ministry?.name || 'this ministry'} yet.`
-              : 'No matching members found.'}
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={filtered}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
-          keyboardShouldPersistTaps="handled"
-          renderItem={({ item }) => {
-            const isSelected = item.id === currentUserId;
-            return (
-              <TouchableOpacity
-                style={[ps.memberRow, isSelected && ps.memberRowSelected]}
-                onPress={() => onSelect(item.id)}
-                activeOpacity={0.7}
-              >
-                {item.avatar ? (
-                  <Image source={{ uri: item.avatar }} style={ps.avatar} />
-                ) : (
-                  <View style={[ps.avatarBox, { backgroundColor: '#f0f0f0' }]}>
-                    <Users size={18} color="#999" />
+        ) : (
+          <FlatList
+            data={filtered}
+            keyExtractor={(item) => item.id}
+            style={{ flex: 1 }}
+            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
+            keyboardShouldPersistTaps="handled"
+            renderItem={({ item }) => {
+              const isSelected = item.id === currentUserId;
+              return (
+                <TouchableOpacity
+                  style={[ps.memberRow, isSelected && ps.memberRowSelected]}
+                  onPress={() => onSelect(item.id)}
+                  activeOpacity={0.7}
+                >
+                  {item.avatar ? (
+                    <Image source={{ uri: item.avatar }} style={ps.avatar} />
+                  ) : (
+                    <View style={[ps.avatarBox, { backgroundColor: '#f0f0f0' }]}>
+                      <Users size={18} color="#999" />
+                    </View>
+                  )}
+                  <View style={{ flex: 1 }}>
+                    <Text style={ps.memberName}>{item.name ?? 'Unnamed Member'}</Text>
+                    {item.role ? <Text style={ps.memberRole}>{item.role}</Text> : null}
                   </View>
-                )}
-                <View style={{ flex: 1 }}>
-                  <Text style={ps.memberName}>{item.name ?? 'Unnamed Member'}</Text>
-                  {item.role ? <Text style={ps.memberRole}>{item.role}</Text> : null}
-                </View>
-                {isSelected && <Check size={18} color="#FF6596" />}
-              </TouchableOpacity>
+                  {isSelected && <Check size={18} color="#FF6596" />}
+                </TouchableOpacity>
             );
           }}
         />
