@@ -64,6 +64,7 @@ import type { Schedule } from '../../features/schedule/domain/schedule.types';
 import { SermonsExperience } from '../../features/sermons/presentation/components/SermonsExperience';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useMemberStore } from '../../store/useMemberStore';
+import { useMinistryStore } from '../../store/useMinistryStore';
 import {
   getUpcomingSchedules,
   getUserRsvpStatus,
@@ -81,10 +82,9 @@ const TABS = [
   { key: 'sermons', label: 'Sermons', icon: PlayCircle },
   { key: 'members', label: 'Members', icon: Users },
   { key: 'songs', label: 'Songs', icon: Music },
-  { key: 'groups', label: 'Groups', icon: UsersRound },
 ] as const;
 
-type TabIndex = 0 | 1 | 2 | 3 | 4 | 5;
+type TabIndex = 0 | 1 | 2 | 3 | 4;
 type CommunityTabParam = (typeof TABS)[number]['key'];
 type SubScreenProps = { searchQuery: string };
 const PRAYER_FILTERS: PrayerFilter[] = ['Recent', 'My Requests'];
@@ -94,7 +94,6 @@ const TAB_INDEX_BY_KEY: Record<CommunityTabParam, TabIndex> = {
   sermons: 2,
   members: 3,
   songs: 4,
-  groups: 5,
 };
 
 function getTabIndexFromParam(tabParam: string | string[] | undefined): TabIndex | null {
@@ -1024,13 +1023,154 @@ function SongsTab({ searchQuery }: SubScreenProps) {
   );
 }
 
+function MinistriesTab({ searchQuery }: SubScreenProps) {
+  const router = useRouter();
+  const userProfile = useAuthStore((s) => s.userProfile);
+  const { ministries, ministriesLoading, fetchMinistries } = useMinistryStore();
+  const churchId = userProfile?.churchId;
+
+  useEffect(() => {
+    if (churchId) fetchMinistries(churchId);
+  }, [churchId, fetchMinistries]);
+
+  const filteredMinistries = useMemo(() => {
+    return ministries.filter((m: any) =>
+      m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      m.description?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [ministries, searchQuery]);
+
+  return (
+    <ScrollView contentContainerStyle={membersStyles.scrollContent} showsVerticalScrollIndicator={false}>
+      {ministriesLoading ? (
+        <Text style={membersStyles.placeholderSubtitle}>Loading ministries...</Text>
+      ) : filteredMinistries.length === 0 ? (
+        <View style={membersStyles.placeholderContainer}>
+          <Text style={membersStyles.placeholderTitle}>No ministries found</Text>
+        </View>
+      ) : (
+        filteredMinistries.map((ministry: any) => (
+          <SoftCard key={ministry.id} style={{ marginBottom: 12 }}>
+            <View style={{ padding: 16 }}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827' }}>{ministry.name}</Text>
+              {!!ministry.description && (
+                <Text style={{ fontSize: 13, color: '#6B7280', marginTop: 4 }}>{ministry.description}</Text>
+              )}
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 12 }}>
+                <TouchableOpacity
+                  style={{ backgroundColor: '#111827', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 }}
+                  onPress={() => router.push({ pathname: '/serve-ministry-detail', params: { id: ministry.id } })}
+                  activeOpacity={0.8}
+                >
+                  <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '700' }}>View Ministry</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </SoftCard>
+        ))
+      )}
+    </ScrollView>
+  );
+}
+
+function BirthdaysTab({ searchQuery }: SubScreenProps) {
+  const members = useMemberStore((s) => s.members);
+  const membersLoading = useMemberStore((s) => s.membersLoading);
+  const userProfile = useAuthStore((s) => s.userProfile);
+
+  const { todayBirthdays, thisMonthBirthdays, upcomingBirthdays } = useMemo(() => {
+    const today = new Date();
+    const curMonth = today.getMonth() + 1;
+    const curDay = today.getDate();
+    const canSeeLeadersOnly = ['pastor', 'church_admin', 'super_admin'].includes(userProfile?.role || '');
+
+    const valid = members.filter((m) => {
+      if (m.status === 'inactive') return false;
+      const vis = m.birthdayVisibility || 'members_only';
+      if (vis === 'hidden') return false;
+      if (vis === 'leaders_only' && !canSeeLeadersOnly) return false;
+      return parseMemberDate(m) !== null;
+    });
+
+    const parsed = valid.map((m) => {
+      const d = parseMemberDate(m)!;
+      return { ...m, parsedMonth: d.m, parsedDay: d.d };
+    });
+
+    const matchesQuery = (m: any) =>
+      !searchQuery ||
+      formatMemberName(m).toLowerCase().includes(searchQuery.toLowerCase());
+
+    const todayBirthdays = parsed.filter(m => m.parsedMonth === curMonth && m.parsedDay === curDay && matchesQuery(m));
+    const thisMonthBirthdays = parsed.filter(m => m.parsedMonth === curMonth && m.parsedDay !== curDay && matchesQuery(m)).sort((a, b) => a.parsedDay - b.parsedDay);
+    const nextMonth = curMonth === 12 ? 1 : curMonth + 1;
+    const upcomingBirthdays = parsed.filter(m => m.parsedMonth === nextMonth && matchesQuery(m)).sort((a, b) => a.parsedDay - b.parsedDay);
+
+    return { todayBirthdays, thisMonthBirthdays, upcomingBirthdays };
+  }, [members, userProfile, searchQuery]);
+
+  const sendGreeting = (m: any) => {
+    Share.share({
+      message: `Happy Birthday, ${formatMemberName(m)}! 🎉 May God bless you richly on your special day!`,
+    });
+  };
+
+  const renderSection = (title: string, list: any[], isToday = false) => {
+    if (list.length === 0) return null;
+    return (
+      <View style={{ marginBottom: 20 }}>
+        <Text style={{ fontSize: 13, fontWeight: '700', color: isToday ? '#FF6596' : '#6B7280', textTransform: 'uppercase', marginBottom: 10, paddingHorizontal: 4 }}>
+          {title}
+        </Text>
+        {list.map((m) => (
+          <SoftCard key={m.id} style={{ marginBottom: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 }}>
+              <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: isToday ? '#FFE4E6' : '#F3F4F6', alignItems: 'center', justifyContent: 'center' }}>
+                <Cake size={20} color={isToday ? '#E11D48' : '#6B7280'} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: '#111827' }}>{formatMemberName(m)}</Text>
+                <Text style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>{formatBirthday(m)}</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => sendGreeting(m)}
+                style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 100 }}
+                activeOpacity={0.8}
+              >
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#4F46E5' }}>Wish</Text>
+              </TouchableOpacity>
+            </View>
+          </SoftCard>
+        ))}
+      </View>
+    );
+  };
+
+  return (
+    <ScrollView contentContainerStyle={membersStyles.scrollContent} showsVerticalScrollIndicator={false}>
+      {membersLoading ? (
+        <Text style={membersStyles.placeholderSubtitle}>Loading birthdays...</Text>
+      ) : todayBirthdays.length === 0 && thisMonthBirthdays.length === 0 && upcomingBirthdays.length === 0 ? (
+        <View style={membersStyles.placeholderContainer}>
+          <Text style={membersStyles.placeholderTitle}>No birthdays found</Text>
+        </View>
+      ) : (
+        <>
+          {renderSection("Today's Birthdays", todayBirthdays, true)}
+          {renderSection("This Month", thisMonthBirthdays)}
+          {renderSection("Upcoming Birthdays", upcomingBirthdays)}
+        </>
+      )}
+    </ScrollView>
+  );
+}
+
 const SUB_SCREENS = [
   PrayersTab,
   EventsTab,
   SermonsTab,
   MembersTab,
   SongsTab,
-  GroupsTab,
 ] as const;
 
 // ─── Main Community screen ────────────────────────────────────────────────────
@@ -1047,7 +1187,6 @@ export default function CommunityScreen() {
     sermons: '',
     members: '',
     songs: '',
-    groups: '',
   });
 
   // Per-tab measured layout { x, width }
@@ -1116,27 +1255,21 @@ export default function CommunityScreen() {
       return () => cancelAnimationFrame(frame);
     }
   }, [params.tab]);
+
   const ActiveScreen = SUB_SCREENS[activeTab];
   const activeTabKey = TABS[activeTab].key;
   const activeSearchQuery = searchByTab[activeTabKey];
   const searchPlaceholderByTab: Record<CommunityTabParam, string> = {
-    prayers: 'Search prayers',
+    prayers: 'Search prayer requests',
     events: 'Search events',
     sermons: 'Search sermons',
     members: 'Search members',
     songs: 'Search community songs',
-    groups: 'Search groups',
   };
   const headerContentOffset = 112;
   const headerHeight = Math.max(insets.top, 24) + headerContentOffset;
 
-  const userProfile = useAuthStore((state) => state.userProfile);
-  const showGroups = canAccessGroupsTab(userProfile);
-
-  const visibleTabs = useMemo(() => {
-    if (showGroups) return TABS;
-    return TABS.filter((t) => t.key !== 'groups');
-  }, [showGroups]);
+  const visibleTabs = TABS;
 
   return (
     <View style={styles.container}>
@@ -1577,6 +1710,27 @@ const prayerStyles = StyleSheet.create({
 });
 
 const membersStyles = StyleSheet.create({
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 100,
+  },
+  placeholderContainer: {
+    padding: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  placeholderTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+  placeholderSubtitle: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    paddingVertical: 20,
+  },
   wrap: {
     paddingHorizontal: 20,
     paddingTop: 20,

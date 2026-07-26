@@ -439,6 +439,30 @@ class SermonRepository {
     } as SermonNote));
   }
 
+  async fetchUserNotes(userId: string, churchId?: string): Promise<SermonNote[]> {
+    if (!userId) return [];
+    try {
+      let q = query(
+        collection(db, NOTES_COLLECTION),
+        where('userId', '==', userId)
+      );
+      if (churchId) {
+        q = query(q, where('churchId', '==', churchId));
+      }
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate(),
+        updatedAt: doc.data().updatedAt?.toDate(),
+      } as SermonNote));
+    } catch (err) {
+      console.warn('Failed to fetch user notes:', err);
+      return [];
+    }
+  }
+
+
   // Download sermons
   async downloadSermon(
     userId: string,
