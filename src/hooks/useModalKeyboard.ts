@@ -53,13 +53,13 @@ export function useModalKeyboard(options: UseModalKeyboardOptions = {}) {
   const appModalProps = {
     heightRatio,
     avoidKeyboard: false,
-    dynamicHeight: !isKeyboardOpen,
+    dynamicHeight: false,
     containerStyle: { paddingHorizontal: 0, paddingBottom: 0, backgroundColor } as ViewStyle,
   };
 
   const scrollViewStyle: ViewStyle = isKeyboardOpen
     ? { flex: 1, maxHeight: keyboardTopInSheet }
-    : { flexGrow: 0 };
+    : { flex: 1 };
 
   return {
     keyboardHeight,
