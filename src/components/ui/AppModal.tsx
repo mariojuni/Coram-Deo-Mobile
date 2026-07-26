@@ -80,7 +80,7 @@ export default function AppModal({ isOpen, onClose, title, children, containerSt
           <View style={styles.backdrop} />
         </TouchableWithoutFeedback>
 
-        <Animated.View style={[styles.sheet, sheetBg ? { backgroundColor: sheetBg } : null, dynamicHeight && { flex: undefined }, { transform: [{ translateY: slideAnim }], maxHeight: maxSheetHeight, marginBottom: avoidKeyboard ? keyboardHeight : 0 }]}>
+        <Animated.View style={[styles.sheet, sheetBg ? { backgroundColor: sheetBg } : null, dynamicHeight ? { flex: undefined } : { height: maxSheetHeight }, { transform: [{ translateY: slideAnim }], maxHeight: maxSheetHeight, marginBottom: avoidKeyboard ? keyboardHeight : 0 }]}>
           {!hideDragHandle && <View style={styles.dragHandle} />}
 
           {/* Header */}
