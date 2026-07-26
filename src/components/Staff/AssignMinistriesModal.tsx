@@ -379,7 +379,7 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
       hideHeader={true}
       hideDragHandle={true}
       containerStyle={{ paddingHorizontal: 0, paddingBottom: 0, backgroundColor: '#FAFAFA' }}
-      heightRatio={0.80}
+      heightRatio={0.85}
     >
       <View style={[ms.modalContainer, { flex: 1 }]}>
         <View style={[ms.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
@@ -574,7 +574,7 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
         hideHeader={true}
         hideDragHandle={true}
         containerStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}
-        heightRatio={0.55}
+        heightRatio={0.85}
       >
         {selectingRoleKey && (
           <MemberPickerSheet
