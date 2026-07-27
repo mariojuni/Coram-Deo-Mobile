@@ -17,7 +17,11 @@ import PrayerRequestModal from '../features/prayer/presentation/components/Praye
 import { useUIStore } from '../store/useUIStore';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
+try {
+  SplashScreen.preventAutoHideAsync();
+} catch (e) {
+  // Ignore splash screen errors on Android/native initialization
+}
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -79,7 +83,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (loaded && initialized && hasSeenWalkthrough !== null) {
-      SplashScreen.hideAsync();
+      SplashScreen.hideAsync().catch(() => {});
     }
   }, [loaded, initialized, hasSeenWalkthrough]);
 
