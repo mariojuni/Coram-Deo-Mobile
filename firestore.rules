@@ -61,7 +61,7 @@ service cloud.firestore {
       return isSuperAdmin() || (
         userDocExists() &&
         userDoc().churchId == churchId &&
-        hasAnySystemRole(['church_admin', 'ministry_leader'])
+        hasAnySystemRole(['church_admin', 'ministry_leader', 'pastor', 'staff'])
       );
     }
 
@@ -173,7 +173,9 @@ service cloud.firestore {
     // ── ministryAssignments ──────────────────────────────────────────────────
     match /ministryAssignments/{assignmentId} {
       allow read: if isSignedIn();
-      allow write: if isChurchAdmin(resource.data.churchId);
+      allow create: if isChurchAdmin(request.resource.data.churchId);
+      allow update: if isChurchAdmin(resource.data.churchId) || isChurchAdmin(request.resource.data.churchId) || (resource != null && resource.data.memberId == request.auth.uid);
+      allow delete: if isChurchAdmin(resource.data.churchId);
     }
 
     // ── Giving ───────────────────────────────────────────────────────────────
