@@ -24,6 +24,11 @@ export interface UserAccount {
   phoneNumber?: string;
   photoUrl?: string;
   username: string;
+  gender?: string;
+  birthday?: string;
+  birthDate?: string;
+  address?: string;
+  emergencyContact?: string;
   authProvider: string;
   providers?: string[];
   status: 'active' | 'pending_church_link' | 'pendingChurchLink' | 'disabled';

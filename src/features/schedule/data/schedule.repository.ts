@@ -143,12 +143,12 @@ export const scheduleRepository = {
 
                 onData(updatedSchedules);
               },
-              (err) => console.error('Error listening to setlist items:', err)
+              (err) => console.warn('Error listening to setlist items:', err)
             );
 
             setlistUnsubscribers.push(unsubItems);
           },
-          (err) => console.error('Error listening to worship setlists:', err)
+          (err) => console.warn('Error listening to worship setlists:', err)
         );
 
         setlistUnsubscribers.push(unsubSetlists);

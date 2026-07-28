@@ -873,7 +873,7 @@ function SongsTab({ searchQuery }: SubScreenProps) {
         setLoading(false);
       },
       (err) => {
-        console.error('Community songs error:', err);
+        console.warn('Community songs error:', err);
         setError('We could not load the songs. Please try again.');
         setLoading(false);
       }

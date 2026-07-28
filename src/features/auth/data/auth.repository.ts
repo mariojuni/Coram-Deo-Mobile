@@ -31,6 +31,7 @@ export interface RegistrationPayload {
   firstName: string;
   middleName?: string;
   lastName: string;
+  birthDate?: string;
   birthday?: string;
   gender?: string;
   address?: string;
@@ -164,34 +165,10 @@ async function checkUsernameTaken(username: string): Promise<boolean> {
   }
 }
 
-async function checkEmailTaken(email: string): Promise<boolean> {
-  if (!email || !email.trim()) return false;
-  const cleanEmail = email.trim().toLowerCase();
-  const usersRef = collection(db, "users");
-
-  try {
-    const q1 = query(usersRef, where("email", "==", cleanEmail));
-    const snap1 = await getDocs(q1);
-    if (!snap1.empty) {
-      const linked = snap1.docs.some(
-        (d) => d.data().authUid || d.data().accountId
-      );
-      if (linked) return true;
-    }
-
-    const q2 = query(usersRef, where("emailLowercase", "==", cleanEmail));
-    const snap2 = await getDocs(q2);
-    if (!snap2.empty) {
-      const linked = snap2.docs.some(
-        (d) => d.data().authUid || d.data().accountId
-      );
-      if (linked) return true;
-    }
-
-    return false;
-  } catch (e) {
-    return false;
-  }
+async function checkEmailTaken(_email: string): Promise<boolean> {
+  // Let Firebase Auth (createUserWithEmailAndPassword) be the authoritative source of truth for email existence.
+  // This prevents false positives when an unlinked imported member document exists in Firestore but has not been created in Firebase Auth yet.
+  return false;
 }
 
 /** Normalise a raw Firestore role string to a valid SystemRole. */
@@ -211,21 +188,69 @@ function normalizeLegacyRole(
 }
 
 export async function fetchUserAccount(user: User): Promise<UserAccount | null> {
-  const profileDocRef = doc(db, 'users', user.uid);
-  const profileSnapshot = await getDoc(profileDocRef);
-  if (!profileSnapshot.exists()) return null;
+  let profileDocRef = doc(db, 'users', user.uid);
+  let profileSnapshot = await getDoc(profileDocRef);
 
+  if (!profileSnapshot.exists()) {
+    // Search users collection by authUid for linked imported members
+    const usersRef = collection(db, "users");
+    const qAuth = query(usersRef, where("authUid", "==", user.uid));
+    const snapAuth = await getDocs(qAuth);
+
+    if (!snapAuth.empty) {
+      profileSnapshot = snapAuth.docs[0];
+    } else {
+      // Fallback 1: search by accountId
+      const qAcc = query(usersRef, where("accountId", "==", user.uid));
+      const snapAcc = await getDocs(qAcc);
+      if (!snapAcc.empty) {
+        profileSnapshot = snapAcc.docs[0];
+      } else if (user.email || user.phoneNumber) {
+        // Fallback 2: auto-link by email/phone match
+        const matchedMember = await findMemberByEmailOrPhone(user.email || undefined, user.phoneNumber || undefined);
+        if (matchedMember) {
+          const churchId = matchedMember.churchId ?? null;
+          const status = matchedMember.churchId ? "active" : "pending_church_link";
+          const memberRef = doc(db, "users", matchedMember.id);
+
+          await updateDoc(memberRef, {
+            authUid: user.uid,
+            accountId: user.uid,
+            status,
+            churchId,
+            updatedAt: serverTimestamp(),
+          }).catch(() => {});
+
+          const userAccountData = {
+            ...matchedMember,
+            authUid: user.uid,
+            accountId: user.uid,
+            memberId: matchedMember.id,
+            status,
+            churchId,
+            updatedAt: new Date().toISOString(),
+          };
+          await setDoc(doc(db, "users", user.uid), userAccountData, { merge: true }).catch(() => {});
+
+          profileSnapshot = await getDoc(profileDocRef);
+          if (!profileSnapshot.exists()) {
+            profileSnapshot = await getDoc(memberRef);
+          }
+        }
+      }
+    }
+  }
+
+  if (!profileSnapshot || !profileSnapshot.exists()) {
+    return null;
+  }
+
+  const docId = profileSnapshot.id;
   const data = profileSnapshot.data() as Record<string, unknown>;
 
-  // Ensure super admin can view the primary church details if they don't have one explicitly assigned
-  if (
-    !data.churchId &&
-    (data.role === "super_admin" ||
-      data.role === "admin" ||
-      (Array.isArray(data.systemRoles) &&
-        (data.systemRoles as string[]).includes("super_admin")))
-  ) {
-    data.churchId = "YmEc6C69Xz4DKRQaQZBV";
+  let status = data.status as import("../domain/auth.types").UserAccount['status'];
+  if (status === 'pendingChurchLink') {
+    status = 'pending_church_link';
   }
 
   // Build systemRoles: prefer the stored array; fall back to migrating the legacy single role string.
@@ -243,14 +268,9 @@ export async function fetchUserAccount(user: User): Promise<UserAccount | null> 
     (data.primaryRole as import("../domain/auth.types").SystemRole) ??
     systemRoles[0];
 
-  let status = data.status as import("../domain/auth.types").UserAccount['status'];
-  if (status === 'pendingChurchLink') {
-    status = 'pending_church_link';
-  }
-
   // Populate new fields if missing
   const emailLowercase = data.emailLowercase || (typeof data.email === 'string' ? data.email.trim().toLowerCase() : undefined);
-  const authUid = data.authUid || user.uid;
+  const authUid = (data.authUid as string) || user.uid;
   let providers = data.providers as string[] | undefined;
   if (!providers) {
     providers = [];
@@ -263,6 +283,7 @@ export async function fetchUserAccount(user: User): Promise<UserAccount | null> 
 
   return {
     uid: user.uid,
+    id: docId,
     ...data,
     status,
     emailLowercase,
@@ -271,7 +292,8 @@ export async function fetchUserAccount(user: User): Promise<UserAccount | null> 
     role: legacyRole,
     systemRoles,
     primaryRole,
-  } as UserAccount;
+    memberId: (data.memberId as string) || docId,
+  } as unknown as UserAccount;
 }
 
 GoogleSignin.configure({
@@ -337,7 +359,11 @@ function buildMemberUpdates(
     }
   }
   if (payload.address?.trim()) updates.address = payload.address.trim();
-  if (payload.birthday?.trim()) updates.birthday = payload.birthday.trim();
+  const bdate = payload.birthDate?.trim() || payload.birthday?.trim();
+  if (bdate) {
+    updates.birthDate = bdate;
+    updates.birthday = bdate;
+  }
   if (payload.gender?.trim()) updates.gender = payload.gender.trim();
   if (payload.emergencyContact?.trim()) updates.emergencyContact = payload.emergencyContact.trim();
   if (payload.username?.trim()) updates.username = payload.username.trim();
@@ -345,131 +371,145 @@ function buildMemberUpdates(
   return updates;
 }
 
+let isRegistering = false;
+
 export const authRepository = {
   checkUsernameTaken,
   checkEmailTaken,
 
   async signup(payload: RegistrationPayload): Promise<AuthCredentialResult> {
-    if (!payload.email && !payload.phoneNumber) {
-      throw new Error("Email or phone number is required.");
-    }
-    if (!payload.password) {
-      throw new Error("Password is required.");
-    }
-
-    let cleanEmail = "";
-    if (payload.email) {
-      cleanEmail = payload.email.trim().toLowerCase();
-    }
-
-    // 1. Check if username is taken by an ALREADY LINKED account BEFORE creating Auth user
-    if (payload.username) {
-      const isTaken = await checkUsernameTaken(payload.username);
-      if (isTaken) {
-        throw new Error("Username is already taken by another account.");
-      }
-    }
-
-    // 2. Check if email is already taken by an ALREADY LINKED account BEFORE creating Auth user
-    if (cleanEmail) {
-      const isEmailTaken = await checkEmailTaken(cleanEmail);
-      if (isEmailTaken) {
-        throw new Error("An account with this email already exists. Please log in instead.");
-      }
-    }
-
-    // 3. Create Firebase Auth User
-    let authCredential;
+    isRegistering = true;
     try {
-      authCredential = await createUserWithEmailAndPassword(
-        auth,
-        payload.email || "",
-        payload.password
-      );
-    } catch (authErr: any) {
-      if (authErr?.code === "auth/email-already-in-use") {
-        throw new Error("An account with this email already exists. Please log in instead.");
+      if (!payload.email && !payload.phoneNumber) {
+        throw new Error("Email or phone number is required.");
       }
-      if (authErr?.code === "auth/weak-password") {
-        throw new Error("Password should be at least 6 characters.");
+      if (!payload.password) {
+        throw new Error("Password is required.");
       }
-      if (authErr?.code === "auth/password-does-not-meet-requirements") {
-        let msg = "Password does not meet requirements. Please include numbers and a special character (e.g. !@#$).";
-        if (authErr?.message) {
-          const match = authErr.message.match(/\[(.*?)\]/);
-          if (match && match[1]) {
-            msg = `Password requirement: ${match[1]}`;
-          }
+
+      let cleanEmail = "";
+      if (payload.email) {
+        cleanEmail = payload.email.trim().toLowerCase();
+      }
+
+      // 1. Check if username is taken by an ALREADY LINKED account BEFORE creating Auth user
+      if (payload.username) {
+        const isTaken = await checkUsernameTaken(payload.username);
+        if (isTaken) {
+          throw new Error("Username is already taken by another account.");
         }
-        throw new Error(msg);
-      }
-      if (authErr?.code === "auth/invalid-email") {
-        throw new Error("The email address provided is invalid.");
-      }
-      throw authErr;
-    }
-
-    const user = authCredential.user;
-
-    try {
-      // 4. Find if this user matches an existing member document (created by church admin)
-      const matchedMember = await findMemberByEmailOrPhone(
-        payload.email,
-        payload.phoneNumber
-      );
-
-      let status: "active" | "pending_church_link" = "pending_church_link";
-      let churchId: string | null = null;
-      let memberId: string | null = null;
-
-      if (matchedMember) {
-        status = "active";
-        churchId = matchedMember.churchId ?? null;
-        memberId = matchedMember.id;
-
-        // Automatically update ALL fields on the matched member directory record with latest registration data
-        const memberRef = doc(db, "users", matchedMember.id);
-        const updates = buildMemberUpdates(user.uid, payload, cleanEmail);
-
-        await updateDoc(memberRef, updates).catch((err) => {
-          console.warn("Error updating matched member:", err);
-        });
       }
 
-      // 5. Create UserAccount document for user.uid
-      const userAccount: Omit<UserAccount, "uid"> = {
-        authUid: user.uid,
-        firstName: payload.firstName,
-        middleName: payload.middleName || "",
-        lastName: payload.lastName,
-        email: payload.email || "",
-        emailLowercase: cleanEmail,
-        phoneNumber: cleanPhoneNumber(payload.phoneNumber),
-        username: payload.username,
-        authProvider: "email",
-        providers: ["password"],
-        status: status,
-        churchId: churchId,
-        memberId: memberId,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        lastLoginAt: new Date().toISOString(),
-        systemRoles: ["member"] as import("../domain/auth.types").SystemRole[],
-        primaryRole: "member" as import("../domain/auth.types").SystemRole,
-        role: "member", // legacy compat
-      };
+      // 2. Create Firebase Auth User (Firebase Auth checks if email already exists)
+      let authCredential;
+      try {
+        authCredential = await createUserWithEmailAndPassword(
+          auth,
+          payload.email || "",
+          payload.password
+        );
+      } catch (authErr: any) {
+        if (authErr?.code === "auth/email-already-in-use") {
+          throw new Error("An account with this email already exists. Please log in instead.");
+        }
+        if (authErr?.code === "auth/weak-password") {
+          throw new Error("Password should be at least 6 characters.");
+        }
+        if (authErr?.code === "auth/password-does-not-meet-requirements") {
+          let msg = "Password does not meet requirements. Please include numbers and a special character (e.g. !@#$).";
+          if (authErr?.message) {
+            const match = authErr.message.match(/\[(.*?)\]/);
+            if (match && match[1]) {
+              msg = `Password requirement: ${match[1]}`;
+            }
+          }
+          throw new Error(msg);
+        }
+        if (authErr?.code === "auth/invalid-email") {
+          throw new Error("The email address provided is invalid.");
+        }
+        throw authErr;
+      }
 
-      await setDoc(doc(db, "users", user.uid), userAccount);
+      const user = authCredential.user;
 
-      // Sign out so user is redirected to Login screen instead of pending-church-link
-      await signOut(auth).catch(() => {});
+      try {
+        // 4. Find if this user matches an existing member document (created by church admin)
+        const matchedMember = await findMemberByEmailOrPhone(
+          payload.email,
+          payload.phoneNumber
+        );
 
-      return authCredential;
-    } catch (error) {
-      console.error("[Registration Error] Post-auth setup failed:", error);
-      // Clean up newly created Auth user if post-registration setup fails
-      await user.delete().catch(() => {});
-      throw error;
+        const bdate = payload.birthDate?.trim() || payload.birthday?.trim() || "";
+        const cleanedPhone = cleanPhoneNumber(payload.phoneNumber);
+
+        if (matchedMember) {
+          // Link and update the existing member document directly (single document, no duplicates)
+          const churchId = matchedMember.churchId ?? null;
+          const status: "active" | "pending_church_link" = matchedMember.churchId ? "active" : "pending_church_link";
+          const memberRef = doc(db, "users", matchedMember.id);
+          const updates = buildMemberUpdates(user.uid, payload, cleanEmail);
+
+          updates.status = status;
+          updates.churchId = churchId;
+          updates.authUid = user.uid;
+          updates.accountId = user.uid;
+          updates.memberId = matchedMember.id;
+          updates.authProvider = "email";
+          updates.providers = Array.from(new Set([...(matchedMember.providers || []), "password"]));
+          updates.lastLoginAt = new Date().toISOString();
+
+          await updateDoc(memberRef, updates);
+          const userAccountData = {
+            ...matchedMember,
+            ...updates,
+            updatedAt: new Date().toISOString(),
+          };
+          await setDoc(doc(db, "users", user.uid), userAccountData, { merge: true }).catch(() => {});
+        } else {
+          // Create new UserAccount document at user.uid only if no existing member was matched
+          const userAccount: Omit<UserAccount, "uid"> = {
+            authUid: user.uid,
+            accountId: user.uid,
+            memberId: user.uid,
+            firstName: payload.firstName.trim(),
+            middleName: payload.middleName?.trim() || "",
+            lastName: payload.lastName.trim(),
+            email: payload.email?.trim() || "",
+            emailLowercase: cleanEmail,
+            phoneNumber: cleanedPhone,
+            username: payload.username.trim(),
+            gender: payload.gender?.trim() || "",
+            birthDate: bdate,
+            birthday: bdate,
+            address: payload.address?.trim() || "",
+            emergencyContact: payload.emergencyContact?.trim() || "",
+            authProvider: "email",
+            providers: ["password"],
+            status: "pending_church_link",
+            churchId: null,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            lastLoginAt: new Date().toISOString(),
+            systemRoles: ["member"] as import("../domain/auth.types").SystemRole[],
+            primaryRole: "member" as import("../domain/auth.types").SystemRole,
+            role: "member", // legacy compat
+          };
+          await setDoc(doc(db, "users", user.uid), userAccount);
+        }
+
+        // Sign out so user is redirected to Login screen instead of pending-church-link
+        await signOut(auth).catch(() => {});
+
+        return authCredential;
+      } catch (error) {
+        console.error("[Registration Error] Post-auth setup failed:", error);
+        // Clean up newly created Auth user if post-registration setup fails
+        await user.delete().catch(() => {});
+        throw error;
+      }
+    } finally {
+      isRegistering = false;
     }
   },
 
@@ -629,50 +669,66 @@ export const authRepository = {
       const phoneNumber = user.phoneNumber || undefined;
       const matchedMember = await findMemberByEmailOrPhone(email, phoneNumber);
 
-      let status: "active" | "pending_church_link" = "pending_church_link";
-      let churchId = null;
-
-      if (matchedMember) {
-        if (!matchedMember.accountId) {
-          status = "active";
-          churchId = matchedMember.churchId ?? null;
-
-          const memberRef = doc(db, "users", matchedMember.id);
-          await updateDoc(memberRef, {
-            accountId: user.uid,
-            authUid: user.uid,
-            updatedAt: serverTimestamp(),
-          });
-        }
-      }
-
       const nameParts = (user.displayName || "").split(" ");
       const firstName = nameParts[0] || "";
       const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
+      const churchId = matchedMember?.churchId ?? null;
+      if (matchedMember) {
+        // Link and update the existing member document directly (single document, no duplicates)
+        const memberRef = doc(db, "users", matchedMember.id);
+        const nameParts = (user.displayName || "").split(" ");
+        const firstName = nameParts[0] || "";
+        const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
+        const churchId = matchedMember.churchId ?? null;
+        const status = matchedMember.churchId ? "active" : "pending_church_link";
 
-      const userAccount: Omit<UserAccount, "uid"> = {
-        authUid: user.uid,
-        firstName,
-        lastName,
-        email: email || "",
-        emailLowercase: cleanEmail,
-        phoneNumber: phoneNumber || "",
-        photoUrl: user.photoURL || "",
-        username: email ? email.split("@")[0] : `user${Date.now()}`,
-        authProvider: "google",
-        providers: ["google.com"],
-        status,
-        churchId,
-        memberId: matchedMember && !matchedMember.accountId ? matchedMember.id : null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        lastLoginAt: new Date().toISOString(),
-        systemRoles: ["member"] as import("../domain/auth.types").SystemRole[],
-        primaryRole: "member" as import("../domain/auth.types").SystemRole,
-        role: "member", // legacy compat
-      };
+        await updateDoc(memberRef, {
+          authUid: user.uid,
+          accountId: user.uid,
+          status,
+          churchId,
+          memberId: matchedMember.id,
+          email: email || matchedMember.email || "",
+          emailLowercase: cleanEmail || matchedMember.emailLowercase || "",
+          photoUrl: user.photoURL || matchedMember.photoUrl || "",
+          firstName: matchedMember.firstName || firstName,
+          lastName: matchedMember.lastName || lastName,
+          authProvider: "google",
+          providers: Array.from(new Set([...(matchedMember.providers || []), "google.com"])),
+          lastLoginAt: new Date().toISOString(),
+          updatedAt: serverTimestamp(),
+        });
+      } else {
+        // Create new user document at user.uid only if no existing member was matched
+        const nameParts = (user.displayName || "").split(" ");
+        const firstName = nameParts[0] || "";
+        const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
 
-      await setDoc(userDocRefByUid, userAccount);
+        const userAccount: Omit<UserAccount, "uid"> = {
+          authUid: user.uid,
+          accountId: user.uid,
+          memberId: user.uid,
+          firstName,
+          lastName,
+          email: email || "",
+          emailLowercase: cleanEmail,
+          phoneNumber: phoneNumber || "",
+          photoUrl: user.photoURL || "",
+          username: email ? email.split("@")[0] : `user${Date.now()}`,
+          authProvider: "google",
+          providers: ["google.com"],
+          status: "pending_church_link",
+          churchId: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          lastLoginAt: new Date().toISOString(),
+          systemRoles: ["member"] as import("../domain/auth.types").SystemRole[],
+          primaryRole: "member" as import("../domain/auth.types").SystemRole,
+          role: "member", // legacy compat
+        };
+
+        await setDoc(userDocRefByUid, userAccount);
+      }
     }
 
     return authCredential;
@@ -689,13 +745,17 @@ export const authRepository = {
     return onAuthStateChanged(
       auth,
       async (user) => {
-        if (!user) {
+        if (!user || isRegistering) {
           onData({ user: null, profile: null });
           return;
         }
 
         try {
           const profile = await fetchUserAccount(user);
+          if (isRegistering) {
+            onData({ user: null, profile: null });
+            return;
+          }
           onData({ user, profile });
         } catch (error: any) {
           if (error?.message?.includes('offline') || error?.code === 'unavailable') {
@@ -703,7 +763,7 @@ export const authRepository = {
           } else {
             onError(error as Error);
           }
-          onData({ user, profile: null });
+          onData({ user: null, profile: null });
         }
       },
       onError

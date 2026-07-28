@@ -28,21 +28,24 @@ export const formatMemberName = (member: any) => {
 
 export const parseMemberDate = (member: any) => {
     if (member.birthMonth && member.birthDay) {
-        return { m: member.birthMonth, d: member.birthDay, y: member.birthDate ? parseInt(member.birthDate.split('-')[0]) : null };
+        const raw = member.birthDate || member.birthday;
+        const parsedY = raw ? parseInt(raw.split('-')[0], 10) : NaN;
+        return { m: member.birthMonth, d: member.birthDay, y: isNaN(parsedY) ? null : parsedY };
     }
-    if (!member.birthday) return null;
+    const rawDate = member.birthDate || member.birthday;
+    if (!rawDate) return null;
     let [m, d, y] = [0, 0, 0];
-    if (member.birthday.includes('-')) {
-        [y, m, d] = member.birthday.split('-').map(Number);
-    } else if (member.birthday.includes('/')) {
-        const parts = member.birthday.split('/');
+    if (rawDate.includes('-')) {
+        [y, m, d] = rawDate.split('-').map(Number);
+    } else if (rawDate.includes('/')) {
+        const parts = rawDate.split('/');
         if (parts.length === 2) {
             [m, d] = parts.map(Number);
         } else {
             [m, d, y] = parts.map(Number);
         }
     } else {
-        const date = new Date(member.birthday);
+        const date = new Date(rawDate);
         if (!isNaN(date.getTime())) {
             m = date.getMonth() + 1;
             d = date.getDate();

@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import CustomDatePicker from '@/components/CustomDatePicker';
 import AppModal from '@/components/ui/AppModal';
 import { useAuthStore } from '../../store/useAuthStore';
 import { authRepository } from '../../features/auth/data/auth.repository';
@@ -81,6 +81,7 @@ export default function RegisterScreen() {
   
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const router = useRouter();
   const signup = useAuthStore((state) => state.signup);
@@ -166,6 +167,7 @@ export default function RegisterScreen() {
         firstName,
         middleName,
         lastName,
+        birthDate: birthday,
         birthday,
         gender,
         email,
@@ -173,8 +175,8 @@ export default function RegisterScreen() {
         address,
         emergencyContact,
       });
-      // Redirect directly to login screen after successful registration
-      router.replace('/(auth)/login');
+      // Show success modal upon registration completion
+      setShowSuccessModal(true);
     } catch (error: any) {
       const msg = error?.message || 'Registration failed. Please check your details.';
       setErrorMsg(msg);
@@ -484,65 +486,19 @@ export default function RegisterScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
 
-        {Platform.OS === 'ios' ? (
-          <Modal
-            visible={showDatePicker}
-            transparent
-            animationType="fade"
-            onRequestClose={() => setShowDatePicker(false)}
-          >
-            <TouchableOpacity 
-              style={styles.modalOverlay} 
-              activeOpacity={1} 
-              onPress={() => setShowDatePicker(false)}
-            >
-              <View style={styles.datePickerModalContent}>
-                <View style={styles.modalHeader}>
-                  <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                    <Text style={styles.modalHeaderBtn}>Cancel</Text>
-                  </TouchableOpacity>
-                  <Text style={styles.modalHeaderTitle}>Select Birthday</Text>
-                  <TouchableOpacity 
-                    onPress={() => {
-                      setBirthday(formatDateToMDYYYY(birthdayDate));
-                      setShowDatePicker(false);
-                    }}
-                  >
-                    <Text style={[styles.modalHeaderBtn, { color: '#B66DFF', fontWeight: '700' }]}>Done</Text>
-                  </TouchableOpacity>
-                </View>
-                <DateTimePicker
-                  value={birthdayDate}
-                  mode="date"
-                  display="inline"
-                  maximumDate={new Date()}
-                  minimumDate={new Date(1920, 0, 1)}
-                  onChange={(_, date) => {
-                    if (date) setBirthdayDate(date);
-                  }}
-                  accentColor="#B66DFF"
-                />
-              </View>
-            </TouchableOpacity>
-          </Modal>
-        ) : (
-          showDatePicker && (
-            <DateTimePicker
-              value={birthdayDate}
-              mode="date"
-              display="default"
-              maximumDate={new Date()}
-              minimumDate={new Date(1920, 0, 1)}
-              onChange={(_, selectedDate) => {
-                setShowDatePicker(false);
-                if (selectedDate) {
-                  setBirthdayDate(selectedDate);
-                  setBirthday(formatDateToMDYYYY(selectedDate));
-                }
-              }}
-            />
-          )
-        )}
+        <CustomDatePicker
+          visible={showDatePicker}
+          date={birthdayDate}
+          onConfirm={(selectedDate) => {
+            setBirthdayDate(selectedDate);
+            setBirthday(formatDateToMDYYYY(selectedDate));
+            setShowDatePicker(false);
+          }}
+          onCancel={() => setShowDatePicker(false)}
+          minimumDate={new Date(1920, 0, 1)}
+          maximumDate={new Date()}
+          accentColor="#B66DFF"
+        />
 
         {/* Gender Selection Modal using standard AppModal */}
         <AppModal
@@ -575,6 +531,39 @@ export default function RegisterScreen() {
             })}
           </View>
         </AppModal>
+
+        {/* Registration Success Confirmation Modal */}
+        <Modal
+          visible={showSuccessModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => {
+            setShowSuccessModal(false);
+            router.replace('/(auth)/login');
+          }}
+        >
+          <View style={styles.successModalOverlay}>
+            <View style={styles.successModalCard}>
+              <View style={styles.successIconCircle}>
+                <Check size={36} color="#FFFFFF" strokeWidth={3} />
+              </View>
+              <Text style={styles.successModalTitle}>Registration Successful!</Text>
+              <Text style={styles.successModalSubtitle}>
+                Your account has been created successfully. Please log in with your credentials to continue.
+              </Text>
+              <TouchableOpacity
+                style={styles.successModalButton}
+                activeOpacity={0.85}
+                onPress={() => {
+                  setShowSuccessModal(false);
+                  router.replace('/(auth)/login');
+                }}
+              >
+                <Text style={styles.successModalButtonText}>Go to Login</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </SafeAreaView>
     </View>
   );
@@ -854,5 +843,61 @@ const styles = StyleSheet.create({
   requirementMet: {
     color: '#10B981',
     fontWeight: '700',
+  },
+  successModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  successModalCard: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  successIconCircle: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: '#10B981',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  successModalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#0F172A',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  successModalSubtitle: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  successModalButton: {
+    width: '100%',
+    backgroundColor: '#B66DFF',
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+  },
+  successModalButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

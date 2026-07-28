@@ -11,7 +11,7 @@ export function useScheduleFeed() {
 
   useEffect(() => {
     const unsubscribe = scheduleRepository.subscribeToSchedules(
-      userProfile?.churchId,
+      userProfile?.churchId ?? undefined,
       (nextSchedules: Schedule[]) => {
         setSchedules(nextSchedules);
         setSchedulesLoading(false);

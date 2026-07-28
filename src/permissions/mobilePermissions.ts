@@ -196,6 +196,9 @@ export function canManageAnyMinistry(user?: UserAccount | null): boolean {
 }
 
 export function canViewStaffScreen(user?: UserAccount | null, userMinistries?: Ministry[]): boolean {
+  if (!user || !hasChurchAccess(user)) return false;
+  if (!canAccessAdminPortal(user)) return false;
+
   return (
     canViewWorshipTab(user, userMinistries) ||
     canAccessFinanceTools(user) ||
