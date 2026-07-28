@@ -200,6 +200,9 @@ export default function DiscipleshipLessonDetailScreen() {
   const handleSaveReflection = async () => {
     if (!currentMemberId || !userProfile.churchId || !userProfile.uid) return;
     setSaving(true);
+    const hasReflection = reflectionNote.trim().length > 0;
+    // Auto-mark as completed when a reflection note is submitted
+    const newCompleted = hasReflection ? true : isCompleted;
     try {
       await saveMemberProgress({
         churchId: userProfile.churchId,
@@ -209,10 +212,15 @@ export default function DiscipleshipLessonDetailScreen() {
         memberId: currentMemberId,
         userId: userProfile.uid,
         weekNumber: lesson.weekNumber,
-        isCompleted,
+        isCompleted: newCompleted,
         reflectionNote: reflectionNote.trim(),
       });
-      Alert.alert('Saved!', 'Your reflection note has been saved.');
+      if (hasReflection && newCompleted && !isCompleted) {
+        setIsCompleted(true);
+        Alert.alert('Lesson Completed! 🎉', 'Your reflection has been saved and this lesson has been marked as done.');
+      } else {
+        Alert.alert('Saved!', 'Your reflection note has been saved.');
+      }
     } catch (err) {
       console.error(err);
       Alert.alert('Error', 'Failed to save reflection note.');

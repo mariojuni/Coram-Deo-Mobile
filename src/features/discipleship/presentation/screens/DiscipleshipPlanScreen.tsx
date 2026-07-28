@@ -105,12 +105,9 @@ export function DiscipleshipPlanScreen({ planId }: Props) {
                 )}
 
                 <View style={styles.compactProgressCard}>
+                  {/* Top row: label + continue button */}
                   <View style={styles.compactProgressRow}>
-                    <View style={styles.compactProgressTextCol}>
-                      <Text style={styles.compactProgressTitle}>Your Progress</Text>
-                      <Text style={styles.compactWeeksCount}>{weeks.length} Weeks</Text>
-                    </View>
-                    
+                    <Text style={styles.compactProgressTitle}>Your Progress</Text>
                     <TouchableOpacity 
                       style={styles.compactContinueButton}
                       activeOpacity={0.8}
@@ -124,6 +121,10 @@ export function DiscipleshipPlanScreen({ planId }: Props) {
                     </TouchableOpacity>
                   </View>
 
+                  {/* Week count */}
+                  <Text style={styles.compactWeeksCount}>{weeks.length} Weeks</Text>
+
+                  {/* Progress bar + % directly below week count */}
                   <View style={styles.compactProgressBarRow}>
                     <View style={styles.compactProgressBarBg}>
                       <View style={[styles.compactProgressBarFill, { width: `${progressPercentage}%` }]} />
