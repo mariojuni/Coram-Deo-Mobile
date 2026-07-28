@@ -108,7 +108,7 @@ export function DiscipleshipPlanScreen({ planId }: Props) {
                   <View style={styles.compactProgressRow}>
                     <View style={styles.compactProgressTextCol}>
                       <Text style={styles.compactProgressTitle}>Your Progress</Text>
-                      <Text style={styles.compactProgressPercent}>{progressPercentage}%</Text>
+                      <Text style={styles.compactWeeksCount}>{weeks.length} Weeks</Text>
                     </View>
                     
                     <TouchableOpacity 
@@ -124,8 +124,11 @@ export function DiscipleshipPlanScreen({ planId }: Props) {
                     </TouchableOpacity>
                   </View>
 
-                  <View style={styles.compactProgressBarBg}>
-                    <View style={[styles.compactProgressBarFill, { width: `${progressPercentage}%` }]} />
+                  <View style={styles.compactProgressBarRow}>
+                    <View style={styles.compactProgressBarBg}>
+                      <View style={[styles.compactProgressBarFill, { width: `${progressPercentage}%` }]} />
+                    </View>
+                    <Text style={styles.compactProgressPercent}>{progressPercentage}%</Text>
                   </View>
                 </View>
               </View>
@@ -223,8 +226,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   contentContainer: {
-    flex: 1,
     marginTop: -40,
+    backgroundColor: '#FAFAFA',
   },
   headerContent: {
     paddingHorizontal: 24,
@@ -266,7 +269,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 14,
   },
   compactProgressTextCol: {
     gap: 2,
@@ -278,10 +280,15 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  compactProgressPercent: {
+  compactWeeksCount: {
     fontSize: 24,
     fontWeight: '900',
     color: '#1a1a1a',
+  },
+  compactProgressPercent: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FF6596',
   },
   compactContinueButton: {
     flexDirection: 'row',
@@ -297,7 +304,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
   },
+  compactProgressBarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 12,
+  },
   compactProgressBarBg: {
+    flex: 1,
     height: 8,
     backgroundColor: '#F3F4F6',
     borderRadius: 4,

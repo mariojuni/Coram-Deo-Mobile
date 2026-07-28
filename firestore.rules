@@ -141,10 +141,7 @@ service cloud.firestore {
 
     // ── ministryMembers ──────────────────────────────────────────────────────
     match /ministryMembers/{memberDocId} {
-      allow read: if isSignedIn()
-        && (resource.data.userId == request.auth.uid
-            || isPastorOrAdmin(resource.data.churchId)
-            || isAssignedMinistryLeader(resource.data.churchId, resource.data.ministryId));
+      allow read: if isSignedIn();
 
       allow write: if isPastorOrAdmin(request.resource.data.churchId)
         || isAssignedMinistryLeader(request.resource.data.churchId, request.resource.data.ministryId);
@@ -422,9 +419,25 @@ service cloud.firestore {
         : resource.data.churchId);
     }
 
+    match /discipleshipLessons/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && isPastorOrAdmin(request.resource.data.churchId != null
+        ? request.resource.data.churchId
+        : resource.data.churchId);
+    }
+
     match /discipleshipProgress/{docId} {
       allow read: if isSignedIn();
       allow write: if isSignedIn();
+    }
+
+    match /discipleshipGroupPosts/{postId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && (request.resource.data.authorUserId == request.auth.uid || request.resource.data.authorMemberId != null);
+      allow update, delete: if isSignedIn() && (
+        resource.data.authorUserId == request.auth.uid ||
+        isPastorOrAdmin(resource.data.churchId)
+      );
     }
 
     // ── Discipleship Groups & Leader Materials ─────────────────────────────

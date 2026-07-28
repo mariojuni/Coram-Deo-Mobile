@@ -11,6 +11,7 @@ interface MyAffiliationsSectionProps {
   groups: DiscipleshipGroup[];
   groupsLoading: boolean;
   currentLessons: Record<string, DiscipleshipLesson | null>;
+  groupLessons?: Record<string, DiscipleshipLesson[]>;
   userMinistries: UserMinistryMembership[];
   ministriesLoading: boolean;
   roleChips: string[];
@@ -22,6 +23,7 @@ export function MyAffiliationsSection({
   groups,
   groupsLoading,
   currentLessons,
+  groupLessons,
   userMinistries,
   ministriesLoading,
   roleChips,
@@ -59,6 +61,11 @@ export function MyAffiliationsSection({
                   (userId && group.leaderUserIds?.includes(userId));
                 const userRoleLabel = isLeader ? 'Leader' : 'Member';
                 const currentLesson = currentLessons[group.id];
+                const allLessons = groupLessons?.[group.id] || [];
+                const currentWeekNum = group.currentWeekNumber || currentLesson?.weekNumber || 1;
+                const previousLessons = allLessons
+                  .filter((l) => l.weekNumber < currentWeekNum)
+                  .sort((a, b) => a.weekNumber - b.weekNumber);
 
                 return (
                   <View key={group.id} style={styles.groupCardInner}>
@@ -96,36 +103,64 @@ export function MyAffiliationsSection({
 
                     {/* Current Week / Lesson */}
                     {!!currentLesson && (
-                      <View style={styles.lessonBanner}>
+                      <TouchableOpacity
+                        style={styles.lessonBanner}
+                        onPress={() => {
+                          const planId = group.planId || currentLesson.planId;
+                          if (isLeader && planId) {
+                            router.push(`/discipleship/week/${currentLesson.id}?planId=${planId}&groupId=${group.id}` as any);
+                          } else {
+                            router.push(`/discipleship/group/${group.id}/lesson/${currentLesson.id}` as any);
+                          }
+                        }}
+                        activeOpacity={0.8}
+                      >
                         <BookOpen size={14} color="#7C3AED" style={{ marginRight: 6 }} />
                         <View style={{ flex: 1 }}>
-                          <Text style={styles.lessonLabel}>Current Lesson (Week {currentLesson.weekNumber})</Text>
+                          <Text style={styles.lessonLabel}>Current Lesson (Lesson {currentLesson.weekNumber})</Text>
                           <Text style={styles.lessonTitle} numberOfLines={1}>{currentLesson.title}</Text>
                         </View>
+                        <ChevronRight size={14} color="#7C3AED" />
+                      </TouchableOpacity>
+                    )}
+
+                    {/* Previous Lessons */}
+                    {previousLessons.length > 0 && (
+                      <View style={styles.previousLessonsBox}>
+                        <Text style={styles.previousLessonsLabel}>PREVIOUS LESSONS</Text>
+                        {previousLessons.map((prevLesson) => (
+                          <TouchableOpacity
+                            key={prevLesson.id}
+                            style={styles.previousLessonRow}
+                            onPress={() => {
+                              const planId = group.planId || prevLesson.planId;
+                              if (isLeader && planId) {
+                                router.push(`/discipleship/week/${prevLesson.id}?planId=${planId}&groupId=${group.id}` as any);
+                              } else {
+                                router.push(`/discipleship/group/${group.id}/lesson/${prevLesson.id}` as any);
+                              }
+                            }}
+                            activeOpacity={0.8}
+                          >
+                            <BookOpen size={12} color="#6B7280" style={{ marginRight: 6 }} />
+                            <Text style={styles.previousLessonTitle} numberOfLines={1}>
+                              Wk {prevLesson.weekNumber}: {prevLesson.title}
+                            </Text>
+                            <ChevronRight size={12} color="#9CA3AF" />
+                          </TouchableOpacity>
+                        ))}
                       </View>
                     )}
 
                     {/* Action Buttons */}
                     <View style={styles.actionRow}>
                       <BounceCard
-                        style={[styles.actionBtn, styles.actionPrimaryBtn]}
+                        style={[styles.actionBtn, styles.actionPrimaryBtn, { flex: 1 }]}
                         onPress={() => router.push(`/discipleship/group/${group.id}` as any)}
                         activeOpacity={0.8}
                       >
                         <Text style={styles.actionPrimaryText}>View Group</Text>
                       </BounceCard>
-
-                      {currentLesson && (
-                        <BounceCard
-                          style={[styles.actionBtn, styles.actionSecondaryBtn]}
-                          onPress={() =>
-                            router.push(`/discipleship/group/${group.id}/lesson/${currentLesson.id}` as any)
-                          }
-                          activeOpacity={0.8}
-                        >
-                          <Text style={styles.actionSecondaryText}>Current Lesson</Text>
-                        </BounceCard>
-                      )}
                     </View>
                   </View>
                 );
@@ -251,10 +286,29 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3E8FF',
     padding: 10,
     borderRadius: 12,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   lessonLabel: { fontSize: 11, fontWeight: '700', color: '#7C3AED' },
   lessonTitle: { fontSize: 13, fontWeight: '600', color: '#4C1D95' },
+
+  previousLessonsBox: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 12,
+    gap: 6,
+  },
+  previousLessonsLabel: { fontSize: 10, fontWeight: '800', color: '#6B7280', letterSpacing: 0.6, marginBottom: 2 },
+  previousLessonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  previousLessonTitle: { flex: 1, fontSize: 12, fontWeight: '600', color: '#374151' },
 
   actionRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
   actionBtn: {

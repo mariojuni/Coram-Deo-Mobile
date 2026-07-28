@@ -39,6 +39,7 @@ export function useProfileDashboardData() {
   const [groups, setGroups] = useState<DiscipleshipGroup[]>([]);
   const [groupsLoading, setGroupsLoading] = useState<boolean>(true);
   const [currentLessons, setCurrentLessons] = useState<Record<string, DiscipleshipLesson | null>>({});
+  const [groupLessons, setGroupLessons] = useState<Record<string, DiscipleshipLesson[]>>({});
 
   const [userMinistries, setUserMinistries] = useState<UserMinistryMembership[]>([]);
   const [ministriesLoading, setMinistriesLoading] = useState<boolean>(true);
@@ -72,17 +73,21 @@ export function useProfileDashboardData() {
 
         // Fetch lesson meta for assigned groups that have a plan
         const lessonMap: Record<string, DiscipleshipLesson | null> = {};
+        const groupLessonsMap: Record<string, DiscipleshipLesson[]> = {};
         for (const g of userGroups) {
           if (g.planId) {
             const { lessons } = await discipleshipGroupRepository.getPlanWithLessons(churchId, g.planId);
+            groupLessonsMap[g.id] = lessons;
             const weekNum = g.currentWeekNumber || 1;
             const found = lessons.find((l) => l.weekNumber === weekNum) || lessons[0] || null;
             lessonMap[g.id] = found;
           } else {
             lessonMap[g.id] = null;
+            groupLessonsMap[g.id] = [];
           }
         }
         setCurrentLessons(lessonMap);
+        setGroupLessons(groupLessonsMap);
       },
       (err) => {
         console.warn('Error subscribing to user groups:', err);
@@ -167,7 +172,6 @@ export function useProfileDashboardData() {
           setMinistriesLoading(false);
         }
       } catch (err) {
-        console.warn('Failed to load ministry memberships:', err);
         if (isMounted) setMinistriesLoading(false);
       }
     };
@@ -328,6 +332,7 @@ export function useProfileDashboardData() {
     groups,
     groupsLoading,
     currentLessons,
+    groupLessons,
     userMinistries,
     ministriesLoading,
     highlights,

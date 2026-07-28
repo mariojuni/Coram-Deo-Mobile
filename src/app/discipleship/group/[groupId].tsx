@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Image,
   Modal,
   ScrollView,
@@ -22,6 +23,7 @@ import {
   ChevronRight,
   Clock,
   FileText,
+  Crown,
   MapPin,
   Megaphone,
   MessageSquare,
@@ -29,6 +31,7 @@ import {
   ShieldAlert,
   UserCheck,
   Users,
+  X,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BounceCard } from '../../../components/ui/BounceCard';
@@ -69,6 +72,36 @@ export default function DiscipleshipGroupDetailScreen() {
   const [postContent, setPostContent] = useState('');
   const [postType, setPostType] = useState<'discussion' | 'reflection' | 'prayer'>('discussion');
   const [posting, setPosting] = useState(false);
+
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const titleOpacity = scrollY.interpolate({
+    inputRange: [50, 110],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
+  const rosterFadeAnim = useRef(new Animated.Value(0)).current;
+  const rosterSlideAnim = useRef(new Animated.Value(600)).current;
+
+  useEffect(() => {
+    if (membersModalOpen) {
+      Animated.parallel([
+        Animated.timing(rosterFadeAnim, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.timing(rosterSlideAnim, {
+          toValue: 0,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      rosterSlideAnim.setValue(600);
+      rosterFadeAnim.setValue(0);
+    }
+  }, [membersModalOpen]);
 
   useEffect(() => {
     if (groupId && userProfile?.churchId) {
@@ -140,6 +173,11 @@ export default function DiscipleshipGroupDetailScreen() {
     ? Math.round((completedLessonIds.size / lessons.length) * 100)
     : 0;
 
+  const currentWeekNum = group.currentWeekNumber || currentLesson?.weekNumber || 1;
+  const previousLessons = lessons
+    .filter((l) => l.weekNumber < currentWeekNum)
+    .sort((a, b) => a.weekNumber - b.weekNumber);
+
   const handleCreatePost = async () => {
     if (!postContent.trim() || !userProfile.churchId || !userProfile.uid) return;
     setPosting(true);
@@ -172,12 +210,14 @@ export default function DiscipleshipGroupDetailScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.iconCircleBtn}>
           <ArrowLeft size={18} color="#111827" />
         </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerOverline}>DISCIPLESHIP GROUP</Text>
+        <Animated.View style={{ flex: 1, opacity: titleOpacity }}>
+          <Text style={styles.headerOverline}>
+            {group.groupType ? group.groupType.replace('_', ' ').toUpperCase() : 'DISCIPLESHIP GROUP'}
+          </Text>
           <Text style={styles.headerTitle} numberOfLines={1}>
             {group.name}
           </Text>
-        </View>
+        </Animated.View>
         {isLeader && (
           <TouchableOpacity
             style={styles.leaderToolsBadge}
@@ -189,7 +229,15 @@ export default function DiscipleshipGroupDetailScreen() {
         )}
       </View>
 
-      <ScrollView contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 16) + 60 }]}>
+      <Animated.ScrollView
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
+        scrollEventThrottle={16}
+        contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 16) + 60 }]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Banner Card */}
         <SoftCard innerStyle={styles.heroCardInner}>
           <LinearGradient
@@ -235,21 +283,23 @@ export default function DiscipleshipGroupDetailScreen() {
           </View>
 
           {plan || group.planTitle ? (
-            <BounceCard
-              activeOpacity={0.9}
-              onPress={() => {
-                const targetLessonId = currentLesson?.id || group.currentLessonId || (lessons.length > 0 ? lessons[0].id : null);
-                if (group.planId && targetLessonId) {
-                  router.push(`/discipleship/week/${targetLessonId}?planId=${group.planId}&groupId=${group.id}` as any);
-                } else if (targetLessonId) {
-                  router.push(`/discipleship/group/${group.id}/lesson/${targetLessonId}` as any);
-                } else {
-                  Alert.alert('Notice', 'Lesson content is currently being loaded.');
-                }
-              }}
-            >
+            <View>
               <SoftCard innerStyle={styles.planCardInner}>
-                <View style={styles.planCardHeader}>
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  style={styles.planCardHeader}
+                  onPress={() => {
+                    const targetLessonId = currentLesson?.id || group.currentLessonId || (lessons.length > 0 ? lessons[0].id : null);
+                    const effectivePlanId = group.planId || plan?.id || (currentLesson as any)?.planId || (lessons.length > 0 ? lessons[0].planId : null);
+                    if (isLeader && effectivePlanId && targetLessonId) {
+                      router.push(`/discipleship/week/${targetLessonId}?planId=${effectivePlanId}&groupId=${group.id}` as any);
+                    } else if (targetLessonId) {
+                      router.push(`/discipleship/group/${group.id}/lesson/${targetLessonId}` as any);
+                    } else {
+                      Alert.alert('Notice', 'Lesson content is currently being loaded.');
+                    }
+                  }}
+                >
                   <View style={styles.planIconWrap}>
                     <BookOpen size={20} color="#FF6596" />
                   </View>
@@ -263,7 +313,7 @@ export default function DiscipleshipGroupDetailScreen() {
                     </Text>
                   </View>
                   <ChevronRight size={18} color="#9CA3AF" />
-                </View>
+                </TouchableOpacity>
 
                 {currentLesson ? (
                   <View style={styles.currentLessonBox}>
@@ -290,6 +340,45 @@ export default function DiscipleshipGroupDetailScreen() {
                   </View>
                 )}
 
+                {/* Past Lessons List */}
+                {previousLessons.length > 0 && (
+                  <View style={styles.previousLessonsCardBox}>
+                    <Text style={styles.previousLessonsCardLabel}>PAST LESSONS</Text>
+                    {previousLessons.map((prevLesson) => {
+                      const isCompleted = completedLessonIds.has(prevLesson.id);
+
+                      return (
+                        <TouchableOpacity
+                          key={prevLesson.id}
+                          style={styles.previousLessonCardRow}
+                          onPress={() => {
+                            const effectivePlanId = group.planId || plan?.id || (prevLesson as any)?.planId || (lessons.length > 0 ? lessons[0].planId : null);
+                            if (isLeader && effectivePlanId) {
+                              router.push(`/discipleship/week/${prevLesson.id}?planId=${effectivePlanId}&groupId=${group.id}` as any);
+                            } else {
+                              router.push(`/discipleship/group/${group.id}/lesson/${prevLesson.id}` as any);
+                            }
+                          }}
+                          activeOpacity={0.8}
+                        >
+                          <CheckCircle2 size={15} color={isCompleted ? '#10B981' : '#9CA3AF'} />
+                          <View style={{ flex: 1, marginLeft: 8 }}>
+                            <Text style={styles.previousLessonCardTitle} numberOfLines={1}>
+                              Wk {prevLesson.weekNumber}: {prevLesson.title}
+                            </Text>
+                            {prevLesson.scriptureReference ? (
+                              <Text style={styles.previousLessonCardScripture} numberOfLines={1}>
+                                {prevLesson.scriptureReference}
+                              </Text>
+                            ) : null}
+                          </View>
+                          <ChevronRight size={16} color="#9CA3AF" />
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+
                 {/* Progress bar */}
                 <View style={styles.progressBarBg}>
                   <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
@@ -302,8 +391,9 @@ export default function DiscipleshipGroupDetailScreen() {
                       style={styles.primaryActionBtn}
                       onPress={() => {
                         const targetLessonId = currentLesson?.id || group.currentLessonId || (lessons.length > 0 ? lessons[0].id : null);
-                        if (group.planId && targetLessonId) {
-                          router.push(`/discipleship/week/${targetLessonId}?planId=${group.planId}&groupId=${group.id}` as any);
+                        const effectivePlanId = group.planId || plan?.id || (currentLesson as any)?.planId || (lessons.length > 0 ? lessons[0].planId : null);
+                        if (isLeader && effectivePlanId && targetLessonId) {
+                          router.push(`/discipleship/week/${targetLessonId}?planId=${effectivePlanId}&groupId=${group.id}` as any);
                         } else if (targetLessonId) {
                           router.push(`/discipleship/group/${group.id}/lesson/${targetLessonId}` as any);
                         }
@@ -314,7 +404,7 @@ export default function DiscipleshipGroupDetailScreen() {
                   )}
                 </View>
               </SoftCard>
-            </BounceCard>
+            </View>
           ) : (
             <SoftCard innerStyle={styles.emptyCardInner}>
               <Text style={styles.emptyLessonText}>No discipleship plan is currently attached to this group.</Text>
@@ -417,7 +507,7 @@ export default function DiscipleshipGroupDetailScreen() {
             ))
           )}
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Leader Tools Modal */}
       <LeaderToolsModal
@@ -428,47 +518,67 @@ export default function DiscipleshipGroupDetailScreen() {
       />
 
       {/* Members Modal */}
-      <Modal visible={membersModalOpen} animationType="slide" transparent onRequestClose={() => setMembersModalOpen(false)}>
-        <View style={styles.modalBackdrop}>
-          <BlurView intensity={40} style={StyleSheet.absoluteFill} tint="dark" />
-          <View style={styles.membersSheetContainer}>
+      <Modal visible={membersModalOpen} animationType="none" transparent onRequestClose={() => setMembersModalOpen(false)}>
+        <View style={styles.backdrop}>
+          <Animated.View style={[styles.darkOverlay, { opacity: rosterFadeAnim }]}>
+            <TouchableOpacity
+              activeOpacity={1}
+              style={StyleSheet.absoluteFill}
+              onPress={() => setMembersModalOpen(false)}
+            />
+          </Animated.View>
+          <Animated.View style={[styles.sheetContainer, { transform: [{ translateY: rosterSlideAnim }] }]}>
+            {/* Header */}
             <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>Group Roster</Text>
-              <TouchableOpacity onPress={() => setMembersModalOpen(false)} style={styles.sheetCloseBtn}>
-                <ArrowLeft size={18} color="#111827" />
-              </TouchableOpacity>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sheetOverline}>GROUP ROSTER</Text>
+                <Text style={styles.sheetTitle} numberOfLines={1}>{group.name}</Text>
+              </View>
+              <BounceCard bounceScale={0.85} style={styles.sheetHeaderCircle} onPress={() => setMembersModalOpen(false)} activeOpacity={0.8} hitSlop={8}>
+                <X size={20} color="#111827" strokeWidth={2} />
+              </BounceCard>
             </View>
 
-            <ScrollView contentContainerStyle={{ padding: 20, gap: 10 }}>
-              <Text style={styles.rosterSectionLabel}>LEADERS</Text>
-              {groupLeaders.map((m: any) => (
-                <View key={`roster-l-${m.id}`} style={styles.rosterRow}>
-                  <Image source={{ uri: m.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.firstName + ' ' + m.lastName)}` }} style={styles.rosterAvatar} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.rosterName}>{m.firstName} {m.lastName}</Text>
-                    <Text style={styles.rosterRole}>Group Leader</Text>
-                  </View>
+            <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40, gap: 16 }}>
+              {groupLeaders.length > 0 && (
+                <View style={{ gap: 8 }}>
+                  <Text style={styles.rosterSectionLabel}>LEADERS ({groupLeaders.length})</Text>
+                  {groupLeaders.map((m: any) => (
+                    <View key={`roster-l-${m.id}`} style={styles.rosterRowCard}>
+                      <Image source={{ uri: m.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent((m.firstName || '') + ' ' + (m.lastName || ''))}` }} style={styles.rosterAvatar} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.rosterName}>{m.firstName} {m.lastName}</Text>
+                        <Text style={styles.rosterRoleSub}>{m.email || 'Group Leader'}</Text>
+                      </View>
+                      <View style={styles.leaderPill}>
+                        <Crown size={12} color="#FF6596" />
+                        <Text style={styles.leaderPillText}>Leader</Text>
+                      </View>
+                    </View>
+                  ))}
                 </View>
-              ))}
+              )}
 
-              <Text style={[styles.rosterSectionLabel, { marginTop: 12 }]}>MEMBERS</Text>
-              {groupMembersList.map((m: any) => (
-                <View key={`roster-m-${m.id}`} style={styles.rosterRow}>
-                  <Image source={{ uri: m.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.firstName + ' ' + m.lastName)}` }} style={styles.rosterAvatar} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.rosterName}>{m.firstName} {m.lastName}</Text>
-                    <Text style={styles.rosterRole}>Group Member</Text>
+              <View style={{ gap: 8 }}>
+                <Text style={styles.rosterSectionLabel}>MEMBERS ({groupMembersList.length})</Text>
+                {groupMembersList.map((m: any) => (
+                  <View key={`roster-m-${m.id}`} style={styles.rosterRowCard}>
+                    <Image source={{ uri: m.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent((m.firstName || '') + ' ' + (m.lastName || ''))}` }} style={styles.rosterAvatar} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.rosterName}>{m.firstName} {m.lastName}</Text>
+                      <Text style={styles.rosterRoleSub}>Member</Text>
+                    </View>
                   </View>
-                </View>
-              ))}
+                ))}
+              </View>
             </ScrollView>
-          </View>
+          </Animated.View>
         </View>
       </Modal>
 
       {/* New Post Modal */}
       <Modal visible={newPostModalOpen} animationType="fade" transparent onRequestClose={() => setNewPostModalOpen(false)}>
-        <View style={styles.modalBackdrop}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 }}>
           <View style={styles.postModalContainer}>
             <Text style={styles.sheetTitle}>New Group Post</Text>
             <View style={styles.postTypeRow}>
@@ -568,6 +678,11 @@ const styles = StyleSheet.create({
   currentLessonLabel: { fontSize: 10, fontWeight: '800', color: '#FF6596', letterSpacing: 0.8 },
   currentLessonTitle: { fontSize: 14, fontWeight: '700', color: '#1F2937' },
   currentLessonScripture: { fontSize: 12, color: '#6B7280', fontStyle: 'italic' },
+  previousLessonsCardBox: { backgroundColor: '#F9FAFB', borderRadius: 12, padding: 12, gap: 8, borderWidth: 1, borderColor: '#F3F4F6', marginTop: 4 },
+  previousLessonsCardLabel: { fontSize: 10, fontWeight: '800', color: '#6B7280', letterSpacing: 0.8 },
+  previousLessonCardRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#E5E7EB' },
+  previousLessonCardTitle: { fontSize: 13, fontWeight: '700', color: '#1F2937' },
+  previousLessonCardScripture: { fontSize: 11, color: '#6B7280', fontStyle: 'italic', marginTop: 1 },
   progressBarBg: { height: 6, backgroundColor: '#E5E7EB', borderRadius: 3, overflow: 'hidden' },
   progressBarFill: { height: '100%', backgroundColor: '#FF6596', borderRadius: 3 },
   planActionRow: { flexDirection: 'row', justifyContent: 'flex-end' },
@@ -595,16 +710,62 @@ const styles = StyleSheet.create({
   announcementTag: { backgroundColor: '#F3E8FF', padding: 6, borderRadius: 12 },
   postContent: { fontSize: 14, color: '#374151', lineHeight: 20 },
 
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  membersSheetContainer: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '80%' },
-  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-  sheetTitle: { fontSize: 18, fontWeight: '800', color: '#111827' },
-  sheetCloseBtn: { padding: 4 },
-  rosterSectionLabel: { fontSize: 10, fontWeight: '800', color: '#9CA3AF', letterSpacing: 1 },
-  rosterRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 },
-  rosterAvatar: { width: 36, height: 36, borderRadius: 18 },
-  rosterName: { fontSize: 14, fontWeight: '700', color: '#111827' },
-  rosterRole: { fontSize: 12, color: '#6B7280' },
+  backdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'transparent',
+  },
+  darkOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+  },
+  sheetContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '85%',
+    paddingBottom: 30,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  sheetOverline: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FF6596',
+    letterSpacing: 1.2,
+  },
+  sheetTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  sheetHeaderCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rosterSectionLabel: { fontSize: 11, fontWeight: '800', color: '#6B7280', letterSpacing: 1 },
+  rosterRowCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, backgroundColor: '#F9FAFB', borderRadius: 14, borderWidth: 1, borderColor: '#F3F4F6' },
+  rosterAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#E5E7EB' },
+  rosterName: { fontSize: 15, fontWeight: '700', color: '#111827' },
+  rosterRoleSub: { fontSize: 12, color: '#6B7280', marginTop: 1 },
+  leaderPill: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FFF5F8', borderColor: '#FFE2EC', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999 },
+  leaderPillText: { fontSize: 11, fontWeight: '700', color: '#BE185D' },
 
   postModalContainer: { backgroundColor: '#FFFFFF', margin: 20, borderRadius: 20, padding: 20, gap: 14 },
   postTypeRow: { flexDirection: 'row', gap: 8 },

@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   ScrollView,
   StyleSheet,
   Text,
@@ -78,6 +79,13 @@ export function DiscipleshipWeekScreen({ planId, weekId, groupId }: Props) {
     );
   }, [progress, weekId]);
 
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const titleOpacity = scrollY.interpolate({
+    inputRange: [50, 110],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
   if (loading || !currentWeek) {
     return (
       <View style={styles.centerContainer}>
@@ -100,15 +108,20 @@ export function DiscipleshipWeekScreen({ planId, weekId, groupId }: Props) {
         <TouchableOpacity onPress={() => router.back()} style={styles.iconCircleBtn}>
           <ArrowLeft size={18} color="#111827" />
         </TouchableOpacity>
-        <View style={{ flex: 1 }}>
+        <Animated.View style={{ flex: 1, opacity: titleOpacity }}>
           <Text style={styles.headerOverline}>DISCIPLESHIP PLAN</Text>
           <Text style={styles.headerTitle} numberOfLines={1}>
-            Week {currentWeek.weekNumber} • {plan?.title || 'Study'}
+            Lesson {currentWeek.weekNumber} • {plan?.title || 'Study'}
           </Text>
-        </View>
+        </Animated.View>
       </View>
 
-      <ScrollView
+      <Animated.ScrollView
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
+        scrollEventThrottle={16}
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, { paddingTop: topInset + 65 }]}
         showsVerticalScrollIndicator={false}
@@ -122,7 +135,7 @@ export function DiscipleshipWeekScreen({ planId, weekId, groupId }: Props) {
             style={StyleSheet.absoluteFill}
           />
           <View style={styles.heroContent}>
-            <Text style={styles.heroBadge}>WEEK {currentWeek.weekNumber}</Text>
+            <Text style={styles.heroBadge}>LESSON {currentWeek.weekNumber}</Text>
             <Text style={styles.chapterTitle}>{currentWeek.chapterTitle}</Text>
             {currentWeek.scriptureReference ? (
               <View style={styles.scripturePill}>
@@ -206,7 +219,7 @@ export function DiscipleshipWeekScreen({ planId, weekId, groupId }: Props) {
             </Text>
           </View>
         </BounceCard>
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 }
@@ -288,12 +301,13 @@ const styles = StyleSheet.create({
   },
   scripturePill: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     alignSelf: 'flex-start',
+    maxWidth: '100%',
     backgroundColor: 'rgba(255, 255, 255, 0.25)',
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
+    paddingVertical: 6,
+    borderRadius: 10,
     gap: 6,
     marginTop: 4,
   },
@@ -301,6 +315,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: '#FFFFFF',
+    flexShrink: 1,
+    lineHeight: 16,
   },
   cardSectionWrap: {
     borderRadius: 16,

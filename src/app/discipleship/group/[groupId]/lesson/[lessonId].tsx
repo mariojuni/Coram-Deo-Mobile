@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   ScrollView,
   StyleSheet,
   Text,
@@ -51,6 +52,13 @@ export default function DiscipleshipLessonDetailScreen() {
 
   const [fetchedLesson, setFetchedLesson] = useState<DiscipleshipLesson | null>(null);
   const [fetchingDirect, setFetchingDirect] = useState(false);
+
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const titleOpacity = scrollY.interpolate({
+    inputRange: [50, 110],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
 
   useEffect(() => {
     if (groupId && userProfile?.churchId && (!group || group.id !== groupId)) {
@@ -220,25 +228,23 @@ export default function DiscipleshipLessonDetailScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.iconCircleBtn}>
           <ArrowLeft size={18} color="#111827" />
         </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerOverline}>WEEK {lesson.weekNumber}</Text>
+        <Animated.View style={{ flex: 1, opacity: titleOpacity }}>
+          <Text style={styles.headerOverline}>LESSON {lesson.weekNumber}</Text>
           <Text style={styles.headerTitle} numberOfLines={1}>
             {lesson.title}
           </Text>
-        </View>
-        <TouchableOpacity
-          style={[styles.completeBadge, isCompleted && styles.completeBadgeDone]}
-          onPress={handleToggleCompletion}
-          disabled={saving}
-        >
-          <CheckCircle2 size={16} color={isCompleted ? '#10B981' : '#6B7280'} />
-          <Text style={[styles.completeBadgeText, isCompleted && styles.completeBadgeTextDone]}>
-            {isCompleted ? 'Completed' : 'Mark Done'}
-          </Text>
-        </TouchableOpacity>
+        </Animated.View>
       </View>
 
-      <ScrollView contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 16) + 60 }]}>
+      <Animated.ScrollView
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
+        scrollEventThrottle={16}
+        contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 16) + 60 }]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Banner Card */}
         <SoftCard innerStyle={styles.heroCardInner}>
           <LinearGradient
@@ -341,7 +347,7 @@ export default function DiscipleshipLessonDetailScreen() {
             )}
           </TouchableOpacity>
         </SoftCard>
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 }
@@ -382,8 +388,19 @@ const styles = StyleSheet.create({
   heroContent: { gap: 6 },
   heroWeekTag: { fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.85)', letterSpacing: 1 },
   heroTitle: { fontSize: 22, fontWeight: '900', color: '#FFFFFF', letterSpacing: -0.4 },
-  scripturePill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(0,0,0,0.15)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, alignSelf: 'flex-start', marginTop: 4 },
-  scriptureText: { fontSize: 12, fontWeight: '700', color: '#FFFFFF' },
+  scripturePill: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    backgroundColor: 'rgba(0,0,0,0.18)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+    marginTop: 4,
+  },
+  scriptureText: { fontSize: 12, fontWeight: '700', color: '#FFFFFF', flexShrink: 1, lineHeight: 16 },
 
   memoryVerseCard: { backgroundColor: '#FFF5F8', borderRadius: 16, padding: 16, gap: 10, borderWidth: 1, borderColor: '#FFE2EC' },
   sectionCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, gap: 10 },

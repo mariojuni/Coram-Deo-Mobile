@@ -26,6 +26,7 @@ export default function ProfileScreen() {
     groups,
     groupsLoading,
     currentLessons,
+    groupLessons,
     userMinistries,
     ministriesLoading,
     highlights,
@@ -96,6 +97,7 @@ export default function ProfileScreen() {
           groups={groups}
           groupsLoading={groupsLoading}
           currentLessons={currentLessons}
+          groupLessons={groupLessons}
           userMinistries={userMinistries}
           ministriesLoading={ministriesLoading}
           roleChips={roleChips}

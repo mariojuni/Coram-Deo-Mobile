@@ -182,13 +182,13 @@ export function LeaderToolsModal({
   return (
     <Modal visible={visible} animationType="none" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <TouchableOpacity
-          activeOpacity={1}
-          style={StyleSheet.absoluteFill}
-          onPress={onClose}
-        >
-          <Animated.View style={[styles.darkOverlay, { opacity: fadeAnim }]} />
-        </TouchableOpacity>
+        <Animated.View style={[styles.darkOverlay, { opacity: fadeAnim }]}>
+          <TouchableOpacity
+            activeOpacity={1}
+            style={StyleSheet.absoluteFill}
+            onPress={onClose}
+          />
+        </Animated.View>
         <Animated.View style={[styles.sheetContainer, { transform: [{ translateY: slideAnim }] }]}>
           {/* Header */}
           <View style={styles.header}>

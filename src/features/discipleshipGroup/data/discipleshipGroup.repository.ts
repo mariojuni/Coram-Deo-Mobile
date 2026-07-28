@@ -359,8 +359,7 @@ export class DiscipleshipGroupRepository {
           });
         onNext(posts);
       },
-      (err) => {
-        console.warn('[DiscipleshipGroupRepository] Posts permission/network warning:', err?.message || err);
+      (_err) => {
         onNext([]);
       }
     );
