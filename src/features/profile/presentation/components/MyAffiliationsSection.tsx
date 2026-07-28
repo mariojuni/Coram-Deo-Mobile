@@ -30,10 +30,6 @@ export function MyAffiliationsSection({
 }: MyAffiliationsSectionProps) {
   const router = useRouter();
 
-  const staffRoles = roleChips.filter((r) =>
-    ['Super Admin', 'Church Admin', 'Pastor', 'Secretary', 'Finance Admin'].includes(r)
-  );
-
   return (
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>My Affiliations</Text>
@@ -180,32 +176,6 @@ export function MyAffiliationsSection({
           </View>
         </View>
       </SoftCard>
-
-      {/* ─── C. Church Roles Card ─── */}
-      {staffRoles.length > 0 && (
-        <SoftCard style={{ marginBottom: 16 }}>
-          <View style={styles.sideBarContainer}>
-            <View style={[styles.sideAccentBar, { backgroundColor: '#3B82F6' }]} />
-            <View style={styles.sideBarContent}>
-              <View style={styles.cardHeaderRow}>
-                <View style={[styles.iconBox, { backgroundColor: '#DBEAFE' }]}>
-                  <Shield size={18} color="#3B82F6" />
-                </View>
-                <Text style={styles.cardHeaderTitle}>Church Roles & Privileges</Text>
-              </View>
-
-              <View style={styles.staffChipsContainer}>
-                {staffRoles.map((role, i) => (
-                  <View key={`${role}-${i}`} style={styles.staffChip}>
-                    <Sparkles size={12} color="#1D4ED8" style={{ marginRight: 4 }} />
-                    <Text style={styles.staffChipText}>{role}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          </View>
-        </SoftCard>
-      )}
     </View>
   );
 }

@@ -45,7 +45,7 @@ const sanitizeVerseText = (text: string): string => {
 
 export default function BibleReader({ preferences, updatePreferences, books, hideChapterNav = false, scrollToVerse, controlsTabBar = false }: BibleReaderProps) {
   const scrollRef = useRef<ScrollView>(null);
-  const verseYPositions = useRef<Record<string, number>>({});
+  const contentHeightRef = useRef<number>(0);
   const lastScrollY = useRef(0);
   const setTabBarVisible = useUIStore((s) => s.setTabBarVisible);
   const tabBarVisible = useUIStore((s) => s.tabBarVisible);
@@ -77,11 +77,6 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
   } = useBibleReader(preferences, books, updatePreferences);
   const selectedVerseSet = useMemo(() => new Set(selectedVerses), [selectedVerses]);
 
-  // Reset captured positions when chapter changes
-  useEffect(() => {
-    verseYPositions.current = {};
-  }, [preferences.activeBook, preferences.activeChapter]);
-
   // Reset tab bar visibility on unmount
   useEffect(() => {
     if (!controlsTabBar) return;
@@ -100,16 +95,31 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
     lastScrollY.current = y;
   };
 
-  // Scroll to target verse after chapter finishes loading
+  // Scroll to target verse after chapter finishes loading based on character ratio & container height
   useEffect(() => {
     if (loading || !scrollToVerse || chapterData.length === 0) return;
-    // Give layout a tick to settle before scrolling
     const timer = setTimeout(() => {
-      const y = verseYPositions.current[scrollToVerse];
-      if (y !== undefined) {
-        scrollRef.current?.scrollTo({ y: Math.max(0, y - 80), animated: true });
+      const targetVerseNum = parseInt(scrollToVerse, 10);
+      if (isNaN(targetVerseNum)) return;
+
+      let charCountBefore = 0;
+      let totalCharCount = 0;
+
+      chapterData.forEach((v: Verse) => {
+        const vNum = parseInt(v.verseNumber, 10);
+        const len = (v.content || '').length + (v.verseNumber || '').length + 2;
+        if (!isNaN(vNum) && vNum < targetVerseNum) {
+          charCountBefore += len;
+        }
+        totalCharCount += len;
+      });
+
+      if (totalCharCount > 0 && contentHeightRef.current > 0) {
+        const ratio = charCountBefore / totalCharCount;
+        const targetY = ratio * contentHeightRef.current;
+        scrollRef.current?.scrollTo({ y: Math.max(0, targetY - 60), animated: true });
       }
-    }, 120);
+    }, 150);
     return () => clearTimeout(timer);
   }, [loading, scrollToVerse, chapterData]);
 
@@ -191,32 +201,33 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
           onScroll={handleScroll}
           scrollEventThrottle={16}
         >
-        {/* Original paragraph-style verse rendering — onLayout captures y per verse */}
-        <Text style={styles.chapterContent}>
-          {chapterData.map((verse: Verse) => {
-            const isSelected = selectedVerseSet.has(verse.verseNumber);
-            const highlightColorValue = verseBackgroundColor(verse.verseNumber);
-            const sanitizedContent = sanitizeVerseText(verse.content);
+          {/* Continuous paragraph-style verse rendering */}
+          <Text
+            style={styles.chapterContent}
+            onLayout={(e) => {
+              contentHeightRef.current = e.nativeEvent.layout.height;
+            }}
+          >
+            {chapterData.map((verse: Verse) => {
+              const isSelected = selectedVerseSet.has(verse.verseNumber);
+              const highlightColorValue = verseBackgroundColor(verse.verseNumber);
+              const sanitizedContent = sanitizeVerseText(verse.content);
 
-            return (
-              <Text
-                key={verse.id}
-                onPress={() => toggleVerse(verse.verseNumber)}
-                onLayout={(e) => {
-                  verseYPositions.current[verse.verseNumber] = e.nativeEvent.layout.y;
-                }}
-                style={[
-                  styles.verseWrap,
-                  { backgroundColor: highlightColorValue },
-                  isSelected && styles.verseSelected,
-                ]}
-              >
-                <Text style={styles.verseLabel}> {verse.verseNumber} </Text>
-                <Text style={styles.verseText}>{sanitizedContent}</Text>
-              </Text>
-            );
-          })}
-        </Text>
+              return (
+                <Text
+                  key={verse.id}
+                  onPress={() => toggleVerse(verse.verseNumber)}
+                  style={[
+                    highlightColorValue !== 'transparent' ? { backgroundColor: highlightColorValue } : undefined,
+                    isSelected && styles.verseSelected,
+                  ]}
+                >
+                  <Text style={styles.verseLabel}> {verse.verseNumber} </Text>
+                  {sanitizedContent}{' '}
+                </Text>
+              );
+            })}
+          </Text>
         </ScrollView>
       </Animated.View>
       
@@ -274,27 +285,16 @@ const styles = StyleSheet.create({  container: { flex: 1, backgroundColor: '#faf
     fontFamily: 'Inter',
     color: '#1a1a1a',
   },
-  verseWrap: {
-    // borderRadius on nested Text components causes vertical stretching bugs on iOS
-  },
   verseSelected: {
-    backgroundColor: 'rgba(255,101,150,0.15)',
+    backgroundColor: 'rgba(255, 101, 150, 0.25)',
     textDecorationLine: 'underline',
-    textDecorationStyle: 'dashed',
     textDecorationColor: '#FF6596',
   },
   verseLabel: {
     fontSize: 13,
-    lineHeight: 29,
     fontWeight: '600',
     color: '#FF6596',
     fontFamily: 'Inter',
-  },
-  verseText: {
-    fontSize: 18,
-    lineHeight: 29,
-    fontFamily: 'Inter',
-    color: '#1a1a1a',
   },
   navOverlay: {
     position: 'absolute',

@@ -19,7 +19,11 @@ export function usePrayerFeed() {
         setPrayers(nextPrayers);
         setLoading(false);
       },
-      (error) => {
+      (error: any) => {
+        if (error?.code === 'permission-denied' || error?.message?.includes('permission')) {
+          setLoading(false);
+          return;
+        }
         console.error('Error fetching prayers:', error);
         setLoading(false);
       }

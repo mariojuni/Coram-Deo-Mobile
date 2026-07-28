@@ -45,7 +45,7 @@ export function canViewMobileMinistryApplication(
  * Returns true if user can review (approve/decline) the specific application.
  * super_admin, church_admin, pastor: all applications in their church.
  * ministry_leader: only applications for ministries in user.managedMinistryIds.
- * finance_admin, secretary, viewer: false by default.
+ * finance_admin, secretary, member: false by default.
  */
 export function canReviewMobileMinistryApplication(
   user?: UserAccount | null,

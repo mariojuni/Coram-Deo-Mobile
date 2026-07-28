@@ -1,12 +1,57 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { AlertCircle, Calendar, Heart, Lock, Mail, MapPin, Phone, User, ArrowLeft, ArrowRight } from 'lucide-react-native';
+import { AlertCircle, Calendar, Heart, Lock, Mail, MapPin, Phone, User, ArrowLeft, ArrowRight, Eye, EyeOff, ChevronDown, Check } from 'lucide-react-native';
 import { useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import AppModal from '@/components/ui/AppModal';
 import { useAuthStore } from '../../store/useAuthStore';
+import { authRepository } from '../../features/auth/data/auth.repository';
 
+function formatDateToMDYYYY(date: Date): string {
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const year = date.getFullYear();
+  return `${month}/${day}/${year}`;
+}
+
+function formatPHPhoneNumber(input: string): string {
+  let digits = input.replace(/\D/g, '');
+  if (digits.startsWith('63')) {
+    digits = digits.slice(2);
+  } else if (digits.startsWith('0')) {
+    digits = digits.slice(1);
+  }
+  digits = digits.slice(0, 10);
+
+  if (digits.length === 0) return '+63 ';
+  if (digits.length <= 3) return `+63 ${digits}`;
+  if (digits.length <= 6) return `+63 ${digits.slice(0, 3)} ${digits.slice(3)}`;
+  return `+63 ${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
+}
+
+function validatePasswordRequirements(pwd: string): string | null {
+  if (pwd.length < 6) {
+    return 'Password must be at least 6 characters long';
+  }
+  if (!/[A-Z]/.test(pwd)) {
+    return 'Password must contain at least one uppercase letter (A-Z)';
+  }
+  if (!/[a-z]/.test(pwd)) {
+    return 'Password must contain at least one lowercase letter (a-z)';
+  }
+  if (!/[0-9]/.test(pwd)) {
+    return 'Password must contain at least one numeric character (0-9)';
+  }
+  if (!/[^A-Za-z0-9]/.test(pwd)) {
+    return 'Password must contain at least one special character (!@#$%^&* etc.)';
+  }
+  return null;
+}
+
+const GENDER_OPTIONS = ['Male', 'Female'];
 
 export default function RegisterScreen() {
   const [step, setStep] = useState(1);
@@ -15,17 +60,22 @@ export default function RegisterScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   // Personal Details
   const [firstName, setFirstName] = useState('');
   const [middleName, setMiddleName] = useState('');
   const [lastName, setLastName] = useState('');
   const [birthday, setBirthday] = useState('');
+  const [birthdayDate, setBirthdayDate] = useState<Date>(new Date(2000, 0, 1));
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [gender, setGender] = useState('');
+  const [showGenderModal, setShowGenderModal] = useState(false);
   
   // Contact Info
   const [email, setEmail] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('+63 ');
   const [address, setAddress] = useState('');
   const [emergencyContact, setEmergencyContact] = useState('');
   
@@ -36,20 +86,39 @@ export default function RegisterScreen() {
   const signup = useAuthStore((state) => state.signup);
   const loginWithGoogle = useAuthStore((state) => state.loginWithGoogle);
 
-  const handleNext = () => {
+  const handleNext = async () => {
     setErrorMsg('');
     if (step === 1) {
-      if (!username || !password || !confirmPassword) {
+      if (!username.trim() || !password || !confirmPassword) {
         setErrorMsg('Please fill in all required fields (*)');
+        return;
+      }
+      const pwdError = validatePasswordRequirements(password);
+      if (pwdError) {
+        setErrorMsg(pwdError);
         return;
       }
       if (password !== confirmPassword) {
         setErrorMsg('Passwords do not match');
         return;
       }
+
+      setIsLoading(true);
+      try {
+        const isTaken = await authRepository.checkUsernameTaken(username);
+        if (isTaken) {
+          setErrorMsg('Username is already taken. Please choose another username.');
+          return;
+        }
+      } catch (err) {
+        // proceed
+      } finally {
+        setIsLoading(false);
+      }
+
       setStep(2);
     } else if (step === 2) {
-      if (!firstName || !lastName) {
+      if (!firstName.trim() || !lastName.trim()) {
         setErrorMsg('Please fill in all required fields (*)');
         return;
       }
@@ -74,6 +143,22 @@ export default function RegisterScreen() {
     setErrorMsg('');
     setIsLoading(true);
 
+    if (email.trim()) {
+      try {
+        const isEmailTaken = await authRepository.checkEmailTaken(email);
+        if (isEmailTaken) {
+          setErrorMsg('An account with this email already exists. Please log in instead.');
+          setIsLoading(false);
+          return;
+        }
+      } catch (err) {
+        // proceed
+      }
+    }
+
+    const cleanPhone = phoneNumber.replace(/\D/g, '');
+    const finalPhone = cleanPhone === '63' || cleanPhone === '' ? '' : phoneNumber.replace(/\s+/g, '').trim();
+
     try {
       await signup({
         username,
@@ -84,13 +169,20 @@ export default function RegisterScreen() {
         birthday,
         gender,
         email,
-        phoneNumber,
+        phoneNumber: finalPhone,
         address,
         emergencyContact,
       });
-      // Will auto redirect in layout if auth state changes
+      // Redirect directly to login screen after successful registration
+      router.replace('/(auth)/login');
     } catch (error: any) {
-      setErrorMsg(error.message);
+      const msg = error?.message || 'Registration failed. Please check your details.';
+      setErrorMsg(msg);
+      // Automatically redirect user back to Step 1 if error is password or username related
+      const lower = msg.toLowerCase();
+      if (lower.includes('password') || lower.includes('username')) {
+        setStep(1);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -166,7 +258,56 @@ export default function RegisterScreen() {
                   <Text style={styles.inputLabel}>Password *</Text>
                   <View style={styles.inputWrapper}>
                     <Lock size={18} color="#888" style={styles.inputIcon} />
-                    <TextInput style={styles.input} placeholder="Password" placeholderTextColor="#888" value={password} onChangeText={setPassword} secureTextEntry />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Password"
+                      placeholderTextColor="#888"
+                      value={password}
+                      onChangeText={setPassword}
+                      secureTextEntry={!showPassword}
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowPassword(!showPassword)}
+                      style={styles.eyeIconBtn}
+                      activeOpacity={0.7}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      {showPassword ? <EyeOff size={20} color="#888" /> : <Eye size={20} color="#888" />}
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.passwordRequirementsBox}>
+                    <Text style={styles.requirementsTitle}>Password Requirements:</Text>
+                    <View style={styles.requirementRow}>
+                      <Check size={14} color={password.length >= 6 ? '#10B981' : '#9CA3AF'} />
+                      <Text style={[styles.requirementText, password.length >= 6 && styles.requirementMet]}>
+                        At least 6 characters
+                      </Text>
+                    </View>
+                    <View style={styles.requirementRow}>
+                      <Check size={14} color={/[A-Z]/.test(password) ? '#10B981' : '#9CA3AF'} />
+                      <Text style={[styles.requirementText, /[A-Z]/.test(password) && styles.requirementMet]}>
+                        One uppercase letter (A-Z)
+                      </Text>
+                    </View>
+                    <View style={styles.requirementRow}>
+                      <Check size={14} color={/[a-z]/.test(password) ? '#10B981' : '#9CA3AF'} />
+                      <Text style={[styles.requirementText, /[a-z]/.test(password) && styles.requirementMet]}>
+                        One lowercase letter (a-z)
+                      </Text>
+                    </View>
+                    <View style={styles.requirementRow}>
+                      <Check size={14} color={/[0-9]/.test(password) ? '#10B981' : '#9CA3AF'} />
+                      <Text style={[styles.requirementText, /[0-9]/.test(password) && styles.requirementMet]}>
+                        One numeric character (0-9)
+                      </Text>
+                    </View>
+                    <View style={styles.requirementRow}>
+                      <Check size={14} color={/[^A-Za-z0-9]/.test(password) ? '#10B981' : '#9CA3AF'} />
+                      <Text style={[styles.requirementText, /[^A-Za-z0-9]/.test(password) && styles.requirementMet]}>
+                        One special character (!@#$%^&* etc.)
+                      </Text>
+                    </View>
                   </View>
                 </View>
 
@@ -174,7 +315,22 @@ export default function RegisterScreen() {
                   <Text style={styles.inputLabel}>Confirm Password *</Text>
                   <View style={styles.inputWrapper}>
                     <Lock size={18} color="#888" style={styles.inputIcon} />
-                    <TextInput style={styles.input} placeholder="Confirm Password" placeholderTextColor="#888" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Confirm Password"
+                      placeholderTextColor="#888"
+                      value={confirmPassword}
+                      onChangeText={setConfirmPassword}
+                      secureTextEntry={!showConfirmPassword}
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                      style={styles.eyeIconBtn}
+                      activeOpacity={0.7}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      {showPassword ? <EyeOff size={20} color="#888" /> : <Eye size={20} color="#888" />}
+                    </TouchableOpacity>
                   </View>
                 </View>
               </View>
@@ -208,18 +364,36 @@ export default function RegisterScreen() {
 
                 <View style={styles.formGroup}>
                   <Text style={styles.inputLabel}>Birthday</Text>
-                  <View style={styles.inputWrapper}>
+                  <TouchableOpacity
+                    style={styles.inputWrapper}
+                    onPress={() => setShowDatePicker(true)}
+                    activeOpacity={0.8}
+                  >
                     <Calendar size={18} color="#888" style={styles.inputIcon} />
-                    <TextInput style={styles.input} placeholder="YYYY-MM-DD" placeholderTextColor="#888" value={birthday} onChangeText={setBirthday} />
-                  </View>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="M/D/YYYY (e.g. 6/17/1996)"
+                      placeholderTextColor="#888"
+                      value={birthday}
+                      editable={false}
+                      pointerEvents="none"
+                    />
+                  </TouchableOpacity>
                 </View>
 
                 <View style={styles.formGroup}>
                   <Text style={styles.inputLabel}>Gender</Text>
-                  <View style={styles.inputWrapper}>
+                  <TouchableOpacity
+                    style={styles.inputWrapper}
+                    onPress={() => setShowGenderModal(true)}
+                    activeOpacity={0.8}
+                  >
                     <User size={18} color="#888" style={styles.inputIcon} />
-                    <TextInput style={styles.input} placeholder="Male/Female" placeholderTextColor="#888" value={gender} onChangeText={setGender} />
-                  </View>
+                    <Text style={[styles.input, styles.selectInputText, !gender && styles.placeholderText]}>
+                      {gender || 'Select Gender'}
+                    </Text>
+                    <ChevronDown size={18} color="#888" />
+                  </TouchableOpacity>
                 </View>
               </View>
             )}
@@ -238,7 +412,14 @@ export default function RegisterScreen() {
                   <Text style={styles.inputLabel}>Phone Number</Text>
                   <View style={styles.inputWrapper}>
                     <Phone size={18} color="#888" style={styles.inputIcon} />
-                    <TextInput style={styles.input} placeholder="Phone Number" placeholderTextColor="#888" value={phoneNumber} onChangeText={setPhoneNumber} keyboardType="phone-pad" />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="+63 9XX XXX XXXX"
+                      placeholderTextColor="#888"
+                      value={phoneNumber}
+                      onChangeText={(text) => setPhoneNumber(formatPHPhoneNumber(text))}
+                      keyboardType="phone-pad"
+                    />
                   </View>
                 </View>
 
@@ -302,6 +483,98 @@ export default function RegisterScreen() {
 
           </ScrollView>
         </KeyboardAvoidingView>
+
+        {Platform.OS === 'ios' ? (
+          <Modal
+            visible={showDatePicker}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setShowDatePicker(false)}
+          >
+            <TouchableOpacity 
+              style={styles.modalOverlay} 
+              activeOpacity={1} 
+              onPress={() => setShowDatePicker(false)}
+            >
+              <View style={styles.datePickerModalContent}>
+                <View style={styles.modalHeader}>
+                  <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                    <Text style={styles.modalHeaderBtn}>Cancel</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.modalHeaderTitle}>Select Birthday</Text>
+                  <TouchableOpacity 
+                    onPress={() => {
+                      setBirthday(formatDateToMDYYYY(birthdayDate));
+                      setShowDatePicker(false);
+                    }}
+                  >
+                    <Text style={[styles.modalHeaderBtn, { color: '#B66DFF', fontWeight: '700' }]}>Done</Text>
+                  </TouchableOpacity>
+                </View>
+                <DateTimePicker
+                  value={birthdayDate}
+                  mode="date"
+                  display="inline"
+                  maximumDate={new Date()}
+                  minimumDate={new Date(1920, 0, 1)}
+                  onChange={(_, date) => {
+                    if (date) setBirthdayDate(date);
+                  }}
+                  accentColor="#B66DFF"
+                />
+              </View>
+            </TouchableOpacity>
+          </Modal>
+        ) : (
+          showDatePicker && (
+            <DateTimePicker
+              value={birthdayDate}
+              mode="date"
+              display="default"
+              maximumDate={new Date()}
+              minimumDate={new Date(1920, 0, 1)}
+              onChange={(_, selectedDate) => {
+                setShowDatePicker(false);
+                if (selectedDate) {
+                  setBirthdayDate(selectedDate);
+                  setBirthday(formatDateToMDYYYY(selectedDate));
+                }
+              }}
+            />
+          )
+        )}
+
+        {/* Gender Selection Modal using standard AppModal */}
+        <AppModal
+          isOpen={showGenderModal}
+          onClose={() => setShowGenderModal(false)}
+          title="Select Gender"
+          dynamicHeight={true}
+          heightRatio={0.35}
+          containerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }}
+        >
+          <View style={styles.genderOptionsContainer}>
+            {GENDER_OPTIONS.map((option) => {
+              const isSelected = gender === option;
+              return (
+                <TouchableOpacity
+                  key={option}
+                  style={[styles.genderOptionCard, isSelected && styles.genderOptionCardSelected]}
+                  onPress={() => {
+                    setGender(option);
+                    setShowGenderModal(false);
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.genderOptionText, isSelected && styles.genderOptionTextSelected]}>
+                    {option}
+                  </Text>
+                  {isSelected && <Check size={20} color="#B66DFF" />}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </AppModal>
       </SafeAreaView>
     </View>
   );
@@ -416,6 +689,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1a1a1a',
   },
+  selectInputText: {
+    lineHeight: 56,
+  },
+  placeholderText: {
+    color: '#888888',
+  },
+  eyeIconBtn: {
+    padding: 8,
+  },
   buttonContainer: {
     flexDirection: 'row',
     marginTop: 12,
@@ -485,5 +767,92 @@ const styles = StyleSheet.create({
     color: '#B66DFF',
     fontSize: 14,
     fontWeight: '800',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  datePickerModalContent: {
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: 34,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  modalHeaderTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1a1a1a',
+  },
+  modalHeaderBtn: {
+    fontSize: 15,
+    color: '#666',
+    fontWeight: '500',
+  },
+  genderOptionsContainer: {
+    paddingVertical: 12,
+    gap: 12,
+  },
+  genderOptionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+  },
+  genderOptionCardSelected: {
+    backgroundColor: '#F5F3FF',
+    borderColor: '#B66DFF',
+  },
+  genderOptionText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#334155',
+  },
+  genderOptionTextSelected: {
+    color: '#B66DFF',
+    fontWeight: '700',
+  },
+  passwordRequirementsBox: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  requirementsTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748B',
+    marginBottom: 6,
+  },
+  requirementRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  requirementText: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  requirementMet: {
+    color: '#10B981',
+    fontWeight: '700',
   },
 });

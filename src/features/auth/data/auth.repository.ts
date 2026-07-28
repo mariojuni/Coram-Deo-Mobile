@@ -17,6 +17,7 @@ import {
   getDocs,
   setDoc,
   updateDoc,
+  deleteField,
   serverTimestamp,
 } from "firebase/firestore";
 import { auth, db } from "../../../firebase";
@@ -37,12 +38,25 @@ export interface RegistrationPayload {
   username: string;
 }
 
+function extractCorePhoneDigits(phone: string): string {
+  let digits = phone.replace(/\D/g, '');
+  if (digits.startsWith('63') && digits.length >= 12) {
+    digits = digits.slice(2);
+  } else if (digits.startsWith('0') && digits.length >= 11) {
+    digits = digits.slice(1);
+  }
+  if (digits.length >= 10) {
+    return digits.slice(-10);
+  }
+  return digits;
+}
+
 async function findMemberByEmailOrPhone(
   email?: string,
   phone?: string
 ): Promise<Member | null> {
   const usersRef = collection(db, "users");
-  let matchedDoc = null;
+  let matchedDoc: any = null;
 
   if (email) {
     const cleanEmail = email.trim().toLowerCase();
@@ -62,16 +76,61 @@ async function findMemberByEmailOrPhone(
         const match = matches.find(d => d.data().churchId) || matches[0];
         matchedDoc = match;
         // Auto-fix the dirty data in Firestore
-        await updateDoc(doc(db, "users", match.id), { email: cleanEmail });
+        await updateDoc(doc(db, "users", match.id), { email: cleanEmail }).catch(() => {});
       }
     }
   }
 
   if (!matchedDoc && phone) {
-    const qPhone = query(usersRef, where("phoneNumber", "==", phone));
-    const snap = await getDocs(qPhone);
-    if (!snap.empty) {
-      matchedDoc = snap.docs.find(d => d.data().churchId) || snap.docs[0];
+    const rawPhone = phone.trim();
+    const coreDigits = extractCorePhoneDigits(rawPhone);
+
+    if (coreDigits.length >= 7) {
+      const withZero = '0' + coreDigits;
+      const withPlus63 = '+63' + coreDigits;
+      const withPlus63Space = `+63 ${coreDigits.slice(0, 3)} ${coreDigits.slice(3, 6)} ${coreDigits.slice(6)}`.trim();
+
+      const variants = Array.from(
+        new Set([rawPhone, coreDigits, withZero, withPlus63, withPlus63Space])
+      ).filter(Boolean);
+
+      // 1. Try querying Firestore for phoneNumber field
+      try {
+        const qPhone = query(usersRef, where("phoneNumber", "in", variants.slice(0, 10)));
+        const snap = await getDocs(qPhone);
+        if (!snap.empty) {
+          matchedDoc = snap.docs.find(d => d.data().churchId) || snap.docs[0];
+        }
+      } catch (e) {
+        // proceed
+      }
+
+      // Try querying Firestore for legacy 'phone' field if not matched
+      if (!matchedDoc) {
+        try {
+          const qPhone2 = query(usersRef, where("phone", "in", variants.slice(0, 10)));
+          const snap2 = await getDocs(qPhone2);
+          if (!snap2.empty) {
+            matchedDoc = snap2.docs.find(d => d.data().churchId) || snap2.docs[0];
+          }
+        } catch (e) {
+          // proceed
+        }
+      }
+
+      // 2. Fallback scan: normalize database phone numbers (checking both phoneNumber and phone)
+      if (!matchedDoc) {
+        const allUsersSnap = await getDocs(usersRef);
+        const match = allUsersSnap.docs.find(d => {
+          const data = d.data();
+          const dbPhone = data.phoneNumber || data.phone;
+          if (typeof dbPhone !== 'string' || !dbPhone.trim()) return false;
+          return extractCorePhoneDigits(dbPhone) === coreDigits;
+        });
+        if (match) {
+          matchedDoc = match;
+        }
+      }
     }
   }
 
@@ -82,10 +141,57 @@ async function findMemberByEmailOrPhone(
 }
 
 async function checkUsernameTaken(username: string): Promise<boolean> {
+  if (!username || !username.trim()) return false;
+  const cleanUsername = username.trim().toLowerCase();
   const usersRef = collection(db, "users");
-  const q = query(usersRef, where("username", "==", username));
-  const snap = await getDocs(q);
-  return !snap.empty;
+
+  try {
+    const q1 = query(usersRef, where("username", "==", username.trim()));
+    const snap1 = await getDocs(q1);
+    if (!snap1.empty) return true;
+
+    const q2 = query(usersRef, where("username", "==", cleanUsername));
+    const snap2 = await getDocs(q2);
+    if (!snap2.empty) return true;
+
+    const allUsers = await getDocs(usersRef);
+    return allUsers.docs.some((d) => {
+      const u = d.data().username;
+      return typeof u === "string" && u.trim().toLowerCase() === cleanUsername;
+    });
+  } catch (e) {
+    return false;
+  }
+}
+
+async function checkEmailTaken(email: string): Promise<boolean> {
+  if (!email || !email.trim()) return false;
+  const cleanEmail = email.trim().toLowerCase();
+  const usersRef = collection(db, "users");
+
+  try {
+    const q1 = query(usersRef, where("email", "==", cleanEmail));
+    const snap1 = await getDocs(q1);
+    if (!snap1.empty) {
+      const linked = snap1.docs.some(
+        (d) => d.data().authUid || d.data().accountId
+      );
+      if (linked) return true;
+    }
+
+    const q2 = query(usersRef, where("emailLowercase", "==", cleanEmail));
+    const snap2 = await getDocs(q2);
+    if (!snap2.empty) {
+      const linked = snap2.docs.some(
+        (d) => d.data().authUid || d.data().accountId
+      );
+      if (linked) return true;
+    }
+
+    return false;
+  } catch (e) {
+    return false;
+  }
 }
 
 /** Normalise a raw Firestore role string to a valid SystemRole. */
@@ -93,7 +199,8 @@ function normalizeLegacyRole(
   raw: string
 ): import("../domain/auth.types").SystemRole {
   const map: Record<string, import("../domain/auth.types").SystemRole> = {
-    member: "viewer",
+    viewer: "member",
+    member: "member",
     admin: "church_admin",
     churchAdmin: "church_admin",
     superAdmin: "super_admin",
@@ -128,7 +235,7 @@ export async function fetchUserAccount(user: User): Promise<UserAccount | null> 
   } else if (data.role && typeof data.role === "string") {
     systemRoles = [normalizeLegacyRole(data.role as string)];
   } else {
-    systemRoles = ["viewer"];
+    systemRoles = ["member"];
   }
 
   // Determine primaryRole: stored value wins; otherwise use the first item in systemRoles.
@@ -196,7 +303,52 @@ async function findUserAccountByEmail(email: string) {
   }) || null;
 }
 
+function cleanPhoneNumber(phone?: string): string {
+  if (!phone) return "";
+  const noSpace = phone.replace(/\s+/g, "").trim();
+  const digits = noSpace.replace(/\D/g, "");
+  if (digits === "63" || digits === "") return "";
+  return noSpace;
+}
+
+function buildMemberUpdates(
+  userUid: string,
+  payload: RegistrationPayload,
+  cleanEmail: string
+): Record<string, any> {
+  const updates: Record<string, any> = {
+    accountId: userUid,
+    authUid: userUid,
+    updatedAt: serverTimestamp(),
+  };
+
+  if (payload.firstName?.trim()) updates.firstName = payload.firstName.trim();
+  if (payload.middleName !== undefined) updates.middleName = payload.middleName.trim();
+  if (payload.lastName?.trim()) updates.lastName = payload.lastName.trim();
+  if (payload.email?.trim()) {
+    updates.email = payload.email.trim();
+    updates.emailLowercase = cleanEmail;
+  }
+  if (payload.phoneNumber) {
+    const cleaned = cleanPhoneNumber(payload.phoneNumber);
+    if (cleaned) {
+      updates.phoneNumber = cleaned;
+      updates.phone = deleteField();
+    }
+  }
+  if (payload.address?.trim()) updates.address = payload.address.trim();
+  if (payload.birthday?.trim()) updates.birthday = payload.birthday.trim();
+  if (payload.gender?.trim()) updates.gender = payload.gender.trim();
+  if (payload.emergencyContact?.trim()) updates.emergencyContact = payload.emergencyContact.trim();
+  if (payload.username?.trim()) updates.username = payload.username.trim();
+
+  return updates;
+}
+
 export const authRepository = {
+  checkUsernameTaken,
+  checkEmailTaken,
+
   async signup(payload: RegistrationPayload): Promise<AuthCredentialResult> {
     if (!payload.email && !payload.phoneNumber) {
       throw new Error("Email or phone number is required.");
@@ -205,91 +357,86 @@ export const authRepository = {
       throw new Error("Password is required.");
     }
 
-    const isTaken = await checkUsernameTaken(payload.username);
-    if (isTaken) {
-      throw new Error("Username is already taken.");
-    }
-    
     let cleanEmail = "";
     if (payload.email) {
       cleanEmail = payload.email.trim().toLowerCase();
-      // Check if duplicate user account exists
-      const existingUserDoc = await findUserAccountByEmail(cleanEmail);
-      if (existingUserDoc) {
-        const data = existingUserDoc.data();
-        if (data.authUid) {
-          throw new Error("An account with this email already exists. Please sign in instead.");
+    }
+
+    // 1. Check if username is taken by an ALREADY LINKED account BEFORE creating Auth user
+    if (payload.username) {
+      const isTaken = await checkUsernameTaken(payload.username);
+      if (isTaken) {
+        throw new Error("Username is already taken by another account.");
+      }
+    }
+
+    // 2. Check if email is already taken by an ALREADY LINKED account BEFORE creating Auth user
+    if (cleanEmail) {
+      const isEmailTaken = await checkEmailTaken(cleanEmail);
+      if (isEmailTaken) {
+        throw new Error("An account with this email already exists. Please log in instead.");
+      }
+    }
+
+    // 3. Create Firebase Auth User
+    let authCredential;
+    try {
+      authCredential = await createUserWithEmailAndPassword(
+        auth,
+        payload.email || "",
+        payload.password
+      );
+    } catch (authErr: any) {
+      if (authErr?.code === "auth/email-already-in-use") {
+        throw new Error("An account with this email already exists. Please log in instead.");
+      }
+      if (authErr?.code === "auth/weak-password") {
+        throw new Error("Password should be at least 6 characters.");
+      }
+      if (authErr?.code === "auth/password-does-not-meet-requirements") {
+        let msg = "Password does not meet requirements. Please include numbers and a special character (e.g. !@#$).";
+        if (authErr?.message) {
+          const match = authErr.message.match(/\[(.*?)\]/);
+          if (match && match[1]) {
+            msg = `Password requirement: ${match[1]}`;
+          }
         }
-        // If authUid is empty/null, we will link below.
+        throw new Error(msg);
       }
+      if (authErr?.code === "auth/invalid-email") {
+        throw new Error("The email address provided is invalid.");
+      }
+      throw authErr;
     }
 
-    const matchedMember = await findMemberByEmailOrPhone(
-      payload.email,
-      payload.phoneNumber
-    );
-
-    if (matchedMember && matchedMember.accountId) {
-      // If we are linking an unauthenticated existing account, it's fine.
-      // But if it's explicitly linked to a different auth account:
-      const existingUserDoc = await findUserAccountByEmail(cleanEmail);
-      if (!existingUserDoc || existingUserDoc.data()?.authUid) {
-         throw new Error("This email or phone number is already registered. Please log in instead.");
-      }
-    }
-
-    // Create Firebase Auth User
-    const authCredential = await createUserWithEmailAndPassword(
-      auth,
-      payload.email || "",
-      payload.password
-    );
     const user = authCredential.user;
 
-    let status: "active" | "pending_church_link" = "pending_church_link";
-    let churchId = null;
+    try {
+      // 4. Find if this user matches an existing member document (created by church admin)
+      const matchedMember = await findMemberByEmailOrPhone(
+        payload.email,
+        payload.phoneNumber
+      );
 
-    if (matchedMember) {
-      status = "active";
-      churchId = matchedMember.churchId;
+      let status: "active" | "pending_church_link" = "pending_church_link";
+      let churchId: string | null = null;
+      let memberId: string | null = null;
 
-      // Update Member
-      const memberRef = doc(db, "users", matchedMember.id);
-      const updates: any = {
-        accountId: user.uid,
-        authUid: user.uid,
-        updatedAt: serverTimestamp(),
-      };
-      if (!matchedMember.email && payload.email) updates.email = payload.email;
-      if (!matchedMember.phoneNumber && payload.phoneNumber)
-        updates.phoneNumber = payload.phoneNumber;
-      if (!matchedMember.address && payload.address)
-        updates.address = payload.address;
-      if (!matchedMember.birthday && payload.birthday)
-        updates.birthday = payload.birthday;
-      if (!matchedMember.gender && payload.gender)
-        updates.gender = payload.gender;
+      if (matchedMember) {
+        status = "active";
+        churchId = matchedMember.churchId ?? null;
+        memberId = matchedMember.id;
 
-      await updateDoc(memberRef, updates);
-    }
+        // Automatically update ALL fields on the matched member directory record with latest registration data
+        const memberRef = doc(db, "users", matchedMember.id);
+        const updates = buildMemberUpdates(user.uid, payload, cleanEmail);
 
-    // Check if we are linking an existing UserAccount document (e.g. from a previous partial creation)
-    const existingDoc = cleanEmail ? await findUserAccountByEmail(cleanEmail) : null;
-    if (existingDoc && !existingDoc.data().authUid) {
-      // Link Firebase uid to existing userAccount
-      const updates = {
-        authUid: user.uid,
-        emailLowercase: cleanEmail,
-        providers: [...(existingDoc.data().providers || []), "password"],
-        status: status,
-        updatedAt: new Date().toISOString()
-      };
-      await updateDoc(existingDoc.ref, updates);
-      
-      // If existing doc ID is not the user.uid, this is a schema drift. 
-      // Ideally uid === authUid. We'll leave it as updating the existing doc for now.
-    } else {
-      // Create UserAccount
+        await updateDoc(memberRef, updates).catch((err) => {
+          console.warn("Error updating matched member:", err);
+        });
+      }
+
+      // 5. Create UserAccount document for user.uid
       const userAccount: Omit<UserAccount, "uid"> = {
         authUid: user.uid,
         firstName: payload.firstName,
@@ -297,29 +444,105 @@ export const authRepository = {
         lastName: payload.lastName,
         email: payload.email || "",
         emailLowercase: cleanEmail,
-        phoneNumber: payload.phoneNumber || "",
+        phoneNumber: cleanPhoneNumber(payload.phoneNumber),
         username: payload.username,
         authProvider: "email",
         providers: ["password"],
         status: status,
         churchId: churchId,
-        memberId: matchedMember?.id || null,
+        memberId: memberId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         lastLoginAt: new Date().toISOString(),
-        systemRoles: ["viewer"] as import("../domain/auth.types").SystemRole[],
-        primaryRole: "viewer" as import("../domain/auth.types").SystemRole,
-        role: "viewer", // legacy compat
+        systemRoles: ["member"] as import("../domain/auth.types").SystemRole[],
+        primaryRole: "member" as import("../domain/auth.types").SystemRole,
+        role: "member", // legacy compat
       };
 
       await setDoc(doc(db, "users", user.uid), userAccount);
-    }
 
-    return authCredential;
+      // Sign out so user is redirected to Login screen instead of pending-church-link
+      await signOut(auth).catch(() => {});
+
+      return authCredential;
+    } catch (error) {
+      console.error("[Registration Error] Post-auth setup failed:", error);
+      // Clean up newly created Auth user if post-registration setup fails
+      await user.delete().catch(() => {});
+      throw error;
+    }
   },
 
-  login(email: string, password: string): Promise<AuthCredentialResult> {
-    return signInWithEmailAndPassword(auth, email, password);
+  async login(identifier: string, password: string): Promise<AuthCredentialResult> {
+    let emailToUse = identifier.trim();
+
+    if (!emailToUse.includes("@")) {
+      const cleanUsername = emailToUse.toLowerCase();
+      const usersRef = collection(db, "users");
+
+      try {
+        let foundEmail: string | null = null;
+
+        // 1. Query exact match
+        const q1 = query(usersRef, where("username", "==", emailToUse));
+        const snap1 = await getDocs(q1);
+        if (!snap1.empty && snap1.docs[0].data().email) {
+          foundEmail = snap1.docs[0].data().email;
+        }
+
+        // 2. Query lowercase match
+        if (!foundEmail && cleanUsername !== emailToUse) {
+          const q2 = query(usersRef, where("username", "==", cleanUsername));
+          const snap2 = await getDocs(q2);
+          if (!snap2.empty && snap2.docs[0].data().email) {
+            foundEmail = snap2.docs[0].data().email;
+          }
+        }
+
+        // 3. Fallback scan across users collection if indexed query returned no match
+        if (!foundEmail) {
+          const allUsers = await getDocs(usersRef);
+          const matched = allUsers.docs.find(d => {
+            const u = d.data().username;
+            return typeof u === 'string' && u.trim().toLowerCase() === cleanUsername;
+          });
+          if (matched && matched.data().email) {
+            foundEmail = matched.data().email;
+          }
+        }
+
+        if (foundEmail) {
+          emailToUse = foundEmail;
+        } else {
+          throw new Error(`No account found with username '${identifier.trim()}'.`);
+        }
+      } catch (err: any) {
+        console.error("[Login] Username lookup error:", err);
+        if (err?.message?.includes("No account found")) {
+          throw err;
+        }
+        if (err?.code === "permission-denied" || err?.message?.includes("permission")) {
+          throw new Error("Missing Firestore permissions for username lookup. Please sign in using your registered email address.");
+        }
+        throw new Error(err?.message || "Unable to sign in with username.");
+      }
+    }
+
+    try {
+      return await signInWithEmailAndPassword(auth, emailToUse, password);
+    } catch (authErr: any) {
+      if (
+        authErr?.code === "auth/invalid-credential" ||
+        authErr?.code === "auth/user-not-found" ||
+        authErr?.code === "auth/wrong-password"
+      ) {
+        throw new Error("Invalid email/username or password.");
+      }
+      if (authErr?.code === "auth/invalid-email") {
+        throw new Error("Please enter a valid email address or username.");
+      }
+      throw authErr;
+    }
   },
 
   async loginWithGoogle(): Promise<AuthCredentialResult> {
@@ -444,9 +667,9 @@ export const authRepository = {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         lastLoginAt: new Date().toISOString(),
-        systemRoles: ["viewer"] as import("../domain/auth.types").SystemRole[],
-        primaryRole: "viewer" as import("../domain/auth.types").SystemRole,
-        role: "viewer", // legacy compat
+        systemRoles: ["member"] as import("../domain/auth.types").SystemRole[],
+        primaryRole: "member" as import("../domain/auth.types").SystemRole,
+        role: "member", // legacy compat
       };
 
       await setDoc(userDocRefByUid, userAccount);

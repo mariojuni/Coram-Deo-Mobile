@@ -17,7 +17,7 @@ export default function MoreScreen() {
       ? userProfile.systemRoles[0]
       : undefined) ||
     userProfile?.role ||
-    'viewer';
+    'member';
   const displayRole = String(primaryRoleRaw).replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
   const hasChurchId = Boolean(userProfile?.churchId);
 

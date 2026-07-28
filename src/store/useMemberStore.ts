@@ -32,7 +32,11 @@ export const useMemberStore = create<MemberStore>((set) => ({
       (members) => {
         set({ members, membersLoading: false });
       },
-      (error) => {
+      (error: any) => {
+        if (error?.code === 'permission-denied' || error?.message?.includes('permission')) {
+          set({ membersLoading: false });
+          return;
+        }
         console.error('Error fetching users:', error);
         set({ membersLoading: false });
       }
@@ -52,7 +56,11 @@ export const useMemberStore = create<MemberStore>((set) => ({
       (services) => {
         set({ services, servicesLoading: false });
       },
-      (error) => {
+      (error: any) => {
+        if (error?.code === 'permission-denied' || error?.message?.includes('permission')) {
+          set({ servicesLoading: false });
+          return;
+        }
         console.error('Error fetching services:', error);
         set({ servicesLoading: false });
       }

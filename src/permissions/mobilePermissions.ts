@@ -17,7 +17,7 @@ function getSystemRoles(user?: UserAccount | null): SystemRole[] {
   if (user.role) {
     return [user.role as SystemRole];
   }
-  return ['viewer'];
+  return ['member'];
 }
 
 /** Returns true if the user holds the specified role. */
@@ -54,7 +54,7 @@ export function canAccessChurchFeatures(user?: UserAccount | null): boolean {
   return hasChurchAccess(user);
 }
 
-// ─── Mobile feature guards (viewer-safe) ─────────────────────────────────────
+// ─── Mobile feature guards (member-safe) ─────────────────────────────────────
 
 export function canSubmitPrayerRequest(user?: UserAccount | null): boolean {
   return hasChurchAccess(user);
@@ -133,8 +133,8 @@ export function canManageMinistry(
 }
 
 /**
- * Admin portal access: any role other than viewer.
- * viewer can use normal mobile features but cannot enter the admin portal.
+ * Admin portal access: any role other than member.
+ * member can use normal mobile features but cannot enter the admin portal.
  */
 export function canAccessAdminPortal(user?: UserAccount | null): boolean {
   return hasAnyRole(user, [

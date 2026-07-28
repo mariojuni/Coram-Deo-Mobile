@@ -114,7 +114,11 @@ export const useSermonStore = create<SermonState>((set, get) => ({
       (sermons) => {
         set({ sermons, loading: false, hasMore: false });
       },
-      (error) => {
+      (error: any) => {
+        if (error?.code === 'permission-denied' || error?.message?.includes('permission')) {
+          set({ loading: false });
+          return;
+        }
         console.error('Error subscribing to sermons:', error);
         set({ loading: false });
       }

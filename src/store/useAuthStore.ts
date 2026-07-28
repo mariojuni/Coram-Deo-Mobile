@@ -6,6 +6,10 @@ import { clearSensitiveCache } from '../features/files/services/fileCacheService
 import { useMemberStore } from './useMemberStore';
 import { useScheduleStore } from './useScheduleStore';
 import { useBiblePlanStore } from './useBiblePlanStore';
+import { useSermonStore } from './useSermonStore';
+import { useWorshipStore } from './useWorshipStore';
+import { useDiscipleshipGroupStore } from './useDiscipleshipGroupStore';
+import { useMinistryStore } from './useMinistryStore';
 
 interface AuthState {
   currentUser: User | null;
@@ -19,6 +23,19 @@ interface AuthState {
   initializeAuthListener: () => void;
   updateUserProfile: (updates: Partial<UserAccount>) => void;
 }
+
+const clearAllStoreListeners = () => {
+  useMemberStore.getState().initializeMembersListener(null);
+  useMemberStore.getState().initializeServicesListener(null);
+  useScheduleStore.getState().clearSchedulesListener();
+  useBiblePlanStore.getState().clearAllListeners();
+  useSermonStore.getState().unsubscribeSermons();
+  useWorshipStore.getState().clearSetlistsListener();
+  useDiscipleshipGroupStore.getState().initializeUserGroupsListener(null);
+  useDiscipleshipGroupStore.getState().clearActiveGroup();
+  useMinistryStore.getState().clearMinistryListeners();
+  useSermonStore.setState({ sermons: [], loading: false, currentSermon: null });
+};
 
 export const useAuthStore = create<AuthState>((set) => ({
   currentUser: null,
@@ -52,10 +69,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   logout: async () => {
     try {
-      useMemberStore.getState().initializeMembersListener(null);
-      useMemberStore.getState().initializeServicesListener(null);
-      useScheduleStore.getState().clearSchedulesListener();
-      useBiblePlanStore.getState().clearAllListeners();
+      clearAllStoreListeners();
       await clearSensitiveCache();
     } catch (e) {
       console.warn('Failed to clear sensitive cache on logout', e);
@@ -65,6 +79,9 @@ export const useAuthStore = create<AuthState>((set) => ({
   initializeAuthListener: () => {
     authRepository.subscribeToAuthState(
       ({ user, profile }) => {
+        if (!user) {
+          clearAllStoreListeners();
+        }
         set({
           currentUser: user,
           userProfile: profile,

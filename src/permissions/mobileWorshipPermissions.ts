@@ -10,7 +10,7 @@ function getSystemRoles(user?: UserAccount | null): SystemRole[] {
   if (user.role) {
     return [user.role as SystemRole];
   }
-  return ['viewer'];
+  return ['member'];
 }
 
 export function hasRole(user: UserAccount | null | undefined, role: SystemRole): boolean {

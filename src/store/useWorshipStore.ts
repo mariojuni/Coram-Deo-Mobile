@@ -37,7 +37,11 @@ export const useWorshipStore = create<WorshipStore>((set) => ({
         (nextSetlists) => {
           set({ setlists: nextSetlists, setlistsLoading: false });
         },
-        (error) => {
+        (error: any) => {
+          if (error?.code === 'permission-denied' || error?.message?.includes('permission')) {
+            set({ setlistsLoading: false });
+            return;
+          }
           console.error('Error fetching setlists:', error);
           set({ setlistsLoading: false });
         }

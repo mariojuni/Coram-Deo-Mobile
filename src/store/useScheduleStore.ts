@@ -37,7 +37,11 @@ export const useScheduleStore = create<ScheduleStore>((set) => ({
         (nextSchedules) => {
           set({ schedules: nextSchedules, schedulesLoading: false });
         },
-        (error) => {
+        (error: any) => {
+          if (error?.code === 'permission-denied' || error?.message?.includes('permission')) {
+            set({ schedulesLoading: false });
+            return;
+          }
           console.error('Error fetching schedules:', error);
           set({ schedulesLoading: false });
         }

@@ -249,7 +249,7 @@ service cloud.firestore {
 
     // ── Users ────────────────────────────────────────────────────────────────
     match /users/{userId} {
-      allow read: if isSignedIn();
+      allow read: if true;
 
       allow create: if isSignedIn();
 
@@ -320,11 +320,7 @@ service cloud.firestore {
 
       // Prayer requests subcollection
       match /prayer_requests/{requestId} {
-        allow read: if isSignedIn() && (
-          resource.data.userId == request.auth.uid ||
-          resource.data.visibility == 'public' ||
-          isPastorOrAdmin(churchId)
-        );
+        allow read: if isSignedIn();
         allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
         allow update: if isSignedIn() && (
           resource.data.userId == request.auth.uid ||

@@ -105,7 +105,11 @@ export const useBiblePlanStore = create<BiblePlanStore>((set, get) => ({
     plansUnsubscribe = biblePlanRepository.subscribeToPublishedPlans(
       churchId,
       (plans) => set({ plans, plansLoading: false }),
-      (error) => {
+      (error: any) => {
+        if (error?.code === 'permission-denied' || error?.message?.includes('permission')) {
+          set({ plansLoading: false });
+          return;
+        }
         console.error('[BiblePlanStore] plans listener error:', error);
         set({ plansLoading: false });
       }
@@ -145,7 +149,11 @@ export const useBiblePlanStore = create<BiblePlanStore>((set, get) => ({
       userId,
       churchId,
       (plans) => set({ userBiblePlans: plans, userBiblePlansLoading: false }),
-      (error) => {
+      (error: any) => {
+        if (error?.code === 'permission-denied' || error?.message?.includes('permission')) {
+          set({ userBiblePlansLoading: false });
+          return;
+        }
         console.error('[BiblePlanStore] userBiblePlans listener error:', error);
         set({ userBiblePlansLoading: false });
       }
@@ -186,7 +194,11 @@ export const useBiblePlanStore = create<BiblePlanStore>((set, get) => ({
       planId,
       churchId,
       (progress) => set({ planProgress: progress, planProgressLoading: false }),
-      (error) => {
+      (error: any) => {
+        if (error?.code === 'permission-denied' || error?.message?.includes('permission')) {
+          set({ planProgressLoading: false });
+          return;
+        }
         console.error('[BiblePlanStore] progress listener error:', error);
         set({ planProgressLoading: false });
       }

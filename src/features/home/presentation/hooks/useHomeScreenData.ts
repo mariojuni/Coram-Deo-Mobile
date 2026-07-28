@@ -23,6 +23,7 @@ export function useHomeScreenData() {
   const { assignments, initializeAssignmentsListener, fetchMinistries } = useMinistryStore();
   const [latestPrayer, setLatestPrayer] = useState<Prayer | null>(null);
   const [hasError, setHasError] = useState<boolean>(false);
+  const [retryTrigger, setRetryTrigger] = useState(false);
 
   const initializePlansListener = useBiblePlanStore((s) => s.initializePlansListener);
   const initializeUserBiblePlansListener = useBiblePlanStore((s) => s.initializeUserBiblePlansListener);
@@ -47,8 +48,11 @@ export function useHomeScreenData() {
     const unsubscribe = prayerRepository.subscribeToLatestPrayer(
       churchId,
       (prayer) => setLatestPrayer(prayer),
-      (error) => {
-        console.error('Error fetching schedules:', error);
+      (error: any) => {
+        if (error?.code === 'permission-denied' || error?.message?.includes('permission')) {
+          return;
+        }
+        console.error('Error fetching latest prayer:', error);
         setHasError(true);
       }
     );
@@ -164,7 +168,6 @@ export function useHomeScreenData() {
   };
 
   const clearError = () => setHasError(false);
-  const [retryTrigger, setRetryTrigger] = useState(false);
   const retry = () => {
     clearError();
     setRetryTrigger(prev => !prev);

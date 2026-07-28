@@ -285,7 +285,7 @@ export function useProfileDashboardData() {
     const chips: string[] = [];
     const roles: SystemRole[] = Array.isArray(userProfile?.systemRoles) && userProfile.systemRoles.length > 0
       ? userProfile.systemRoles
-      : (userProfile?.role ? [userProfile.role as SystemRole] : ['viewer']);
+      : (userProfile?.role ? [userProfile.role as SystemRole] : ['member']);
 
     const roleMap: Record<SystemRole, string> = {
       super_admin: 'Super Admin',
@@ -294,7 +294,7 @@ export function useProfileDashboardData() {
       secretary: 'Secretary',
       finance_admin: 'Finance Admin',
       ministry_leader: 'Ministry Leader',
-      viewer: 'Member',
+      member: 'Member',
     };
 
     roles.forEach((r) => {

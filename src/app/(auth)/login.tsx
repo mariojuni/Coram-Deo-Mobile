@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { AlertCircle, Lock, Mail } from 'lucide-react-native';
+import { AlertCircle, Lock, Mail, Eye, EyeOff } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,8 +9,9 @@ import { useAuthStore } from '../../store/useAuthStore';
 
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   
@@ -19,15 +20,15 @@ export default function LoginScreen() {
   const loginWithGoogle = useAuthStore((state) => state.loginWithGoogle);
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      setErrorMsg('Please enter both email and password');
+    if (!identifier.trim() || !password) {
+      setErrorMsg('Please enter your email/username and password');
       return;
     }
     
     setErrorMsg('');
     setIsLoading(true);
     try {
-      await login(email, password);
+      await login(identifier, password);
     } catch (error: any) {
       setErrorMsg(error.message);
     } finally {
@@ -76,12 +77,11 @@ export default function LoginScreen() {
                 <Mail size={18} color="#888" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Email"
+                  placeholder="Email or Username"
                   placeholderTextColor="#888"
-                  value={email}
-                  onChangeText={setEmail}
+                  value={identifier}
+                  onChangeText={setIdentifier}
                   autoCapitalize="none"
-                  keyboardType="email-address"
                 />
               </View>
             </View>
@@ -95,8 +95,16 @@ export default function LoginScreen() {
                   placeholderTextColor="#888"
                   value={password}
                   onChangeText={setPassword}
-                  secureTextEntry
+                  secureTextEntry={!showPassword}
                 />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={{ padding: 8 }}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  {showPassword ? <EyeOff size={20} color="#888" /> : <Eye size={20} color="#888" />}
+                </TouchableOpacity>
               </View>
             </View>
 

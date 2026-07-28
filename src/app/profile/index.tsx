@@ -9,7 +9,6 @@ import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useProfileDashboardData } from '@/features/profile/presentation/hooks/useProfileDashboardData';
 import { ProfileHeaderCard } from '@/features/profile/presentation/components/ProfileHeaderCard';
-import { QuickStatsRow } from '@/features/profile/presentation/components/QuickStatsRow';
 import { MyAffiliationsSection } from '@/features/profile/presentation/components/MyAffiliationsSection';
 import { ProfileActivityTabs } from '@/features/profile/presentation/components/ProfileActivityTabs';
 
@@ -46,7 +45,7 @@ export default function ProfileScreen() {
     'Member';
   const photoUrl = userProfile?.photoUrl || currentUser?.photoURL;
   const status = userProfile?.status || 'Active';
-  const churchName = (userProfile as any)?.churchName || 'Church App Community';
+  const churchName = (userProfile as any)?.churchName;
 
   return (
     <View style={styles.container}>
@@ -80,18 +79,17 @@ export default function ProfileScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingTop: Math.max(insets.top, 24) + 70 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* 1. Profile Header */}
+        {/* 1. Integrated Hero Profile & Quick Stats Dashboard */}
         <ProfileHeaderCard
           fullName={fullName}
           photoUrl={photoUrl}
           churchName={churchName}
           roleChips={roleChips}
           status={status}
+          stats={stats}
           onEditAvatar={() => router.push('/profile/edit-profile')}
+          onEditProfile={() => router.push('/profile/edit-profile')}
         />
-
-        {/* 2. Quick Stats Overview */}
-        <QuickStatsRow stats={stats} />
 
         {/* 3. My Affiliations */}
         <MyAffiliationsSection

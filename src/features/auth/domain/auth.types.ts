@@ -9,7 +9,7 @@ export type SystemRole =
   | "secretary"
   | "finance_admin"
   | "ministry_leader"
-  | "viewer";
+  | "member";
 
 export interface UserAccount {
   uid: string; // The auth uid, also the document ID
