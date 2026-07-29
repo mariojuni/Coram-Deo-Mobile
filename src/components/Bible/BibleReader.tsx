@@ -201,31 +201,50 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
           onScroll={handleScroll}
           scrollEventThrottle={16}
         >
-          {/* Continuous paragraph-style verse rendering */}
+          {/* Strict 2-level nesting — verse number and content are DIRECT children of
+              the paragraph <Text> (level-2 siblings). backgroundColor never goes deeper
+              than level-2, so the iOS barcode bug cannot occur in any state (highlighted,
+              selected, or both). The Word Joiner (U+2060) at the end of the verse number
+              string signals the layout engine not to break the line between the number
+              and the first word of the verse, preventing orphaned verse numbers. */}
           <Text
             style={styles.chapterContent}
             onLayout={(e) => {
               contentHeightRef.current = e.nativeEvent.layout.height;
             }}
           >
-            {chapterData.map((verse: Verse) => {
+            {chapterData.flatMap((verse: Verse) => {
               const isSelected = selectedVerseSet.has(verse.verseNumber);
               const highlightColorValue = verseBackgroundColor(verse.verseNumber);
+              const hasHighlight = highlightColorValue !== 'transparent';
               const sanitizedContent = sanitizeVerseText(verse.content);
 
-              return (
+              return [
+                // Level-2a — verse number. Word Joiner at the end locks it to the
+                // first word of the content so the line cannot break between them.
                 <Text
-                  key={verse.id}
-                  onPress={() => toggleVerse(verse.verseNumber)}
+                  key={`${verse.id}-n`}
                   style={[
-                    highlightColorValue !== 'transparent' ? { backgroundColor: highlightColorValue } : undefined,
+                    styles.verseLabel,
+                    hasHighlight && { backgroundColor: highlightColorValue },
                     isSelected && styles.verseSelected,
                   ]}
                 >
-                  <Text style={styles.verseLabel}> {verse.verseNumber} </Text>
+                  {verse.verseNumber}{'\u2060'}
+                </Text>,
+                // Level-2b — verse content. Leaf node, backgroundColor safe here.
+                <Text
+                  key={verse.id}
+                  onPress={() => toggleVerse(verse.verseNumber)}
+                  suppressHighlighting
+                  style={[
+                    hasHighlight && { backgroundColor: highlightColorValue },
+                    isSelected && styles.verseSelected,
+                  ]}
+                >
                   {sanitizedContent}{' '}
-                </Text>
-              );
+                </Text>,
+              ];
             })}
           </Text>
         </ScrollView>
@@ -286,7 +305,8 @@ const styles = StyleSheet.create({  container: { flex: 1, backgroundColor: '#faf
     color: '#1a1a1a',
   },
   verseSelected: {
-    backgroundColor: 'rgba(255, 101, 150, 0.25)',
+    // No backgroundColor on tap — background only appears once a highlight color is chosen.
+    // A subtle underline shows the verse is selected and the color toolbar is active.
     textDecorationLine: 'underline',
     textDecorationColor: '#FF6596',
   },

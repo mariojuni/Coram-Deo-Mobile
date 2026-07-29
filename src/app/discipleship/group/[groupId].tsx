@@ -44,6 +44,7 @@ import {
   canManageDiscipleshipGroup,
   canViewDiscipleshipGroup,
 } from '../../../permissions/discipleshipGroupPermissions';
+import { DiscipleshipGroupDetailSkeleton } from '../../../features/discipleshipGroup/presentation/components/DiscipleshipGroupDetailSkeleton';
 
 export default function DiscipleshipGroupDetailScreen() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
@@ -115,12 +116,7 @@ export default function DiscipleshipGroupDetailScreen() {
   }, [groupId, userProfile?.churchId]);
 
   if (loading) {
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#FF6596" />
-        <Text style={styles.loadingText}>Loading group details…</Text>
-      </View>
-    );
+    return <DiscipleshipGroupDetailSkeleton />;
   }
 
   if (!group || !userProfile) {

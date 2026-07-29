@@ -1,12 +1,13 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { BounceCard } from '@/components/ui/BounceCard';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, BookOpen, CheckCircle, Circle, Play } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useDiscipleshipDetail } from '../hooks/useDiscipleshipDetail';
+import { DiscipleshipPlanSkeleton } from './DiscipleshipPlanSkeleton';
 
 interface Props {
   planId: string;
@@ -16,6 +17,15 @@ export function DiscipleshipPlanScreen({ planId }: Props) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { plan, weeks, progress, loading } = useDiscipleshipDetail(planId);
+
+  // Ensure shimmer is visible for at least 600ms even if data loads from cache instantly
+  const [minTimerDone, setMinTimerDone] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setMinTimerDone(true), 600);
+    return () => clearTimeout(t);
+  }, []);
+
+  const showSkeleton = loading || !plan || !minTimerDone;
 
   const completedWeeks = useMemo(() => {
     return new Set(progress.filter(p => p.isCompleted).map(p => p.weekId));
@@ -30,12 +40,8 @@ export function DiscipleshipPlanScreen({ planId }: Props) {
     return weeks.find(w => !completedWeeks.has(w.id));
   }, [weeks, completedWeeks]);
 
-  if (loading || !plan) {
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#FF6596" />
-      </View>
-    );
+  if (showSkeleton) {
+    return <DiscipleshipPlanSkeleton />;
   }
 
   const handleContinue = () => {
@@ -188,12 +194,6 @@ export function DiscipleshipPlanScreen({ planId }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: '#FAFAFA',
   },
   coverContainer: {

@@ -31,6 +31,7 @@ import { useAuthStore } from '../../../../../store/useAuthStore';
 import { useDiscipleshipGroupStore } from '../../../../../store/useDiscipleshipGroupStore';
 import { canViewGroupLesson } from '../../../../../permissions/discipleshipGroupPermissions';
 import type { DiscipleshipLesson } from '../../../../../features/discipleshipGroup/domain/discipleshipGroup.types';
+import { DiscipleshipLessonSkeleton } from '../../../../../features/discipleshipGroup/presentation/components/DiscipleshipLessonSkeleton';
 
 export default function DiscipleshipLessonDetailScreen() {
   const { groupId, lessonId } = useLocalSearchParams<{ groupId: string; lessonId: string }>();
@@ -137,12 +138,7 @@ export default function DiscipleshipLessonDetailScreen() {
   }, [currentProgress]);
 
   if (loading) {
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#FF6596" />
-        <Text style={styles.loadingText}>Loading lesson…</Text>
-      </View>
-    );
+    return <DiscipleshipLessonSkeleton />;
   }
 
   if (!group || !userProfile || !lesson) {

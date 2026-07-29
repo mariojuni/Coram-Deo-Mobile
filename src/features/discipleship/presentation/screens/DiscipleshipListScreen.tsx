@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { BookOpen, Calendar, ChevronRight } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useDiscipleshipPlans } from '../hooks/useDiscipleshipPlans';
+import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
 
 export function DiscipleshipListScreen() {
   const insets = useSafeAreaInsets();
@@ -16,8 +17,40 @@ export function DiscipleshipListScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#FF6596" />
+      <View style={styles.container}>
+        {/* Keep the frosted header visible during load */}
+        <View
+          style={[styles.frostedHeader, { paddingTop: Math.max(insets.top, 24) }]}
+          pointerEvents="box-none"
+        >
+          <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+          <View
+            style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.6)' }]}
+            pointerEvents="none"
+          />
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>Discipleship</Text>
+          </View>
+        </View>
+
+        {/* Shimmer skeleton cards */}
+        <View style={[styles.skeletonContent, { paddingTop: headerHeight + 16 }]}>
+          {[...Array(4)].map((_, i) => (
+            <View key={i} style={styles.skeletonCard}>
+              {/* Cover image shimmer */}
+              <ShimmerSkeleton height={160} borderRadius={0} style={styles.skeletonCover} />
+              {/* Content shimmer */}
+              <View style={styles.skeletonCardContent}>
+                <ShimmerSkeleton height={20} width="70%" borderRadius={6} style={styles.skeletonMb8} />
+                <ShimmerSkeleton height={14} width="50%" borderRadius={5} style={styles.skeletonMb16} />
+                <View style={styles.skeletonMetaRow}>
+                  <ShimmerSkeleton height={26} width={90} borderRadius={999} />
+                  <ShimmerSkeleton height={26} width={70} borderRadius={999} />
+                </View>
+              </View>
+            </View>
+          ))}
+        </View>
       </View>
     );
   }
@@ -113,11 +146,34 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FAFAFA',
   },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FAFAFA',
+  skeletonContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 100,
+  },
+  skeletonCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#F5F6FA',
+    marginBottom: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  skeletonCover: {
+    width: '100%',
+  },
+  skeletonCardContent: {
+    padding: 16,
+  },
+  skeletonMb8: { marginBottom: 8 },
+  skeletonMb16: { marginBottom: 16 },
+  skeletonMetaRow: {
+    flexDirection: 'row',
+    gap: 8,
   },
   frostedHeader: {
     position: 'absolute',
