@@ -108,7 +108,7 @@ export function VerseOfTheDayCard() {
     return (
       <View style={styles.outerContainer}>
         <LinearGradient
-          colors={['#FF6596', '#B66DFF']}
+          colors={['#FC709D', '#B069F5']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.loadingContainer}
@@ -126,7 +126,7 @@ export function VerseOfTheDayCard() {
       <Pressable onPressIn={handlePressIn} onPressOut={handlePressOut} onPress={handlePress}>
         <Animated.View style={[styles.cardContainer, animatedStyle]}>
           <LinearGradient
-            colors={['#FF6596', '#C36EFF', '#B66DFF']}
+            colors={['#FC709D', '#BD6DF2', '#B069F5']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.gradientFill}
@@ -142,13 +142,7 @@ export function VerseOfTheDayCard() {
             {/* ── Diagonal shimmer streak ── */}
             <View style={styles.shimmerStreak} />
 
-            {/* ── Large concentric rings — top-right ── */}
-            <View style={styles.ringOuter} />
-            <View style={styles.ringInner} />
 
-            {/* ── Small concentric rings — bottom-left ── */}
-            <View style={styles.ringSmallOuter} />
-            <View style={styles.ringSmallInner} />
 
             {/* ── Soft luminous orbs ── */}
             <View style={styles.orb1} />
@@ -277,53 +271,7 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '30deg' }],
   },
 
-  // ── Large concentric rings — top-right
-  ringOuter: {
-    position: 'absolute',
-    width: 170,
-    height: 170,
-    borderRadius: 85,
-    top: -58,
-    right: -58,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.20)',
-    backgroundColor: 'transparent',
-  },
-  ringInner: {
-    position: 'absolute',
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    top: -32,
-    right: -32,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.13)',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-  },
 
-  // ── Small concentric rings — bottom-left
-  ringSmallOuter: {
-    position: 'absolute',
-    width: 95,
-    height: 95,
-    borderRadius: 48,
-    bottom: -32,
-    left: -22,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.16)',
-    backgroundColor: 'transparent',
-  },
-  ringSmallInner: {
-    position: 'absolute',
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    bottom: -14,
-    left: -4,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
-    backgroundColor: 'rgba(255,255,255,0.04)',
-  },
 
   // ── Orbs
   orb1: {

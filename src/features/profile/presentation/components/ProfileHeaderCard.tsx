@@ -133,8 +133,6 @@ const styles = StyleSheet.create({
     width: AVATAR_SIZE,
     height: AVATAR_SIZE,
     borderRadius: AVATAR_SIZE / 2,
-    borderWidth: 2.5,
-    borderColor: BRAND_BORDER,
   },
   avatarInitials: {
     width: AVATAR_SIZE,
