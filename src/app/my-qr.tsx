@@ -1,9 +1,9 @@
 import { useRouter } from 'expo-router';
 import { BounceCard } from '@/components/ui/BounceCard';
-import { Save, X } from 'lucide-react-native';
+import { Save } from 'lucide-react-native';
 import { Image, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../store/useAuthStore';
+import AppModal from '@/components/ui/AppModal';
 
 export default function MyQRScreen() {
   const router = useRouter();
@@ -16,48 +16,43 @@ export default function MyQRScreen() {
 
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${qrId}`;
 
-
-
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Check-in QR Pass</Text>
-        <BounceCard bounceScale={0.85} style={styles.closeBtn} onPress={() => router.back()}>
-          <X size={20} color="#1a1a1a" />
-        </BounceCard>
+    <AppModal
+      isOpen={true}
+      onClose={() => router.back()}
+      title="My Check-in QR Pass"
+      heightRatio={0.85}
+      dynamicHeight={false}
+      containerStyle={{ paddingHorizontal: 24, paddingBottom: 24, backgroundColor: '#FFF5F8' }}
+    >
+      <View style={styles.content}>
+        <Text style={styles.subtitle}>
+          Show this QR code to the church staff at the welcome desk to check in.
+        </Text>
+
+        <View style={styles.qrContainer}>
+          <Image source={{ uri: qrUrl }} style={styles.qrImage} />
+        </View>
+
+        <Text style={styles.name}>{qrName}</Text>
+        <Text style={styles.role}>{qrRole}</Text>
+
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity style={styles.saveBtn} onPress={() => Alert.alert('Coming soon', 'Saving to gallery will be available in a future update.')}>
+            <Save size={16} color="#007AFF" />
+            <Text style={styles.saveBtnText}>Save to Gallery</Text>
+          </TouchableOpacity>
+          <BounceCard bounceScale={0.85} style={styles.doneBtn} onPress={() => router.back()}>
+            <Text style={styles.doneBtnText}>Done</Text>
+          </BounceCard>
+        </View>
       </View>
-
-      <Text style={styles.subtitle}>
-        Show this QR code to the church staff at the welcome desk to check in.
-      </Text>
-
-      <View style={styles.qrContainer}>
-        <Image source={{ uri: qrUrl }} style={styles.qrImage} />
-      </View>
-
-      <Text style={styles.name}>{qrName}</Text>
-      <Text style={styles.role}>{qrRole}</Text>
-
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.saveBtn}>
-          <Save size={16} color="#007AFF" />
-          <Text style={styles.saveBtnText}>Save to Gallery</Text>
-        </TouchableOpacity>
-        <BounceCard bounceScale={0.85} style={styles.doneBtn} onPress={() => router.back()}>
-          <Text style={styles.doneBtnText}>Done</Text>
-        </BounceCard>
-      </View>
-
-
-    </SafeAreaView>
+    </AppModal>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF5F8', alignItems: 'center', padding: 24 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 24, paddingTop: 16 },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#1a1a1a' },
-  closeBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#e1e4e8', alignItems: 'center', justifyContent: 'center' },
+  content: { flex: 1, alignItems: 'center', paddingTop: 16 },
   subtitle: { fontSize: 14, color: '#666', textAlign: 'center', marginBottom: 32, lineHeight: 20 },
   qrContainer: { backgroundColor: '#fff', padding: 16, borderRadius: 20, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, elevation: 2, marginBottom: 24, borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)' },
   qrImage: { width: 200, height: 200 },

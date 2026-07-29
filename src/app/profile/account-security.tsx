@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { BounceCard } from '@/components/ui/BounceCard';
+import AppModal from '@/components/ui/AppModal';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -101,26 +102,23 @@ export default function AccountSecurityScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <AppModal
+      isOpen={true}
+      onClose={() => router.back()}
+      title={isEmail ? 'Change Email' : (isSetPassword ? 'Set Password' : 'Change Password')}
+      headerRight={
+        <TouchableOpacity style={styles.headerCircle} onPress={handleSave} disabled={loading} activeOpacity={0.7} hitSlop={8}>
+          {loading ? <ActivityIndicator size="small" color="#EF4444" /> : <Check size={20} color="#EF4444" strokeWidth={2.5} />}
+        </TouchableOpacity>
+      }
+      heightRatio={0.85}
+      dynamicHeight={false}
+      containerStyle={{ paddingHorizontal: 0, paddingBottom: 0, backgroundColor: '#FFFFFF' }}
+    >
       <LinearGradient colors={['#FFF5F5', '#FFFFFF']} style={StyleSheet.absoluteFill} />
       
-      {/* ─── Header ─────────────────────────────────────────────────────── */}
-      <View style={[styles.headerContainer, { paddingTop: Platform.OS === 'ios' ? 24 : Math.max(insets.top, 24) }]} pointerEvents="box-none">
-        <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
-        <View style={styles.headerContent}>
-          <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => router.back()} hitSlop={8} activeOpacity={0.8}>
-            <ArrowLeft size={24} color="#111827" strokeWidth={2} />
-          </BounceCard>
-          <Text style={styles.headerTitle}>{isEmail ? 'Change Email' : (isSetPassword ? 'Set Password' : 'Change Password')}</Text>
-          <TouchableOpacity style={styles.headerCircle} onPress={handleSave} disabled={loading} activeOpacity={0.7} hitSlop={8}>
-            {loading ? <ActivityIndicator size="small" color="#EF4444" /> : <Check size={20} color="#EF4444" strokeWidth={2.5} />}
-          </TouchableOpacity>
-        </View>
-      </View>
-
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: (Platform.OS === 'ios' ? 24 : Math.max(insets.top, 24)) + 70 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: 24 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             
             {!isSetPassword && (
               <>
@@ -189,7 +187,7 @@ export default function AccountSecurityScreen() {
 
         </ScrollView>
       </KeyboardAvoidingView>
-    </View>
+    </AppModal>
   );
 }
 

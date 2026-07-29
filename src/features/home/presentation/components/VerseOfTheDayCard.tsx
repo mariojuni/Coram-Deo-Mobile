@@ -183,15 +183,6 @@ export function VerseOfTheDayCard() {
                   <Sparkles size={9} color="rgba(255,255,255,0.95)" strokeWidth={2.5} />
                   <Text style={styles.badgeText}>VERSE OF THE DAY</Text>
                 </View>
-                {/* 7-day streak dots — first 3 lit up */}
-                <View style={styles.dayDots}>
-                  {[1, 2, 3, 4, 5, 6, 7].map(d => (
-                    <View
-                      key={d}
-                      style={[styles.dayDot, d <= 3 && styles.dayDotActive]}
-                    />
-                  ))}
-                </View>
               </View>
 
               {/* Verse text */}
@@ -360,23 +351,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.3,
   },
 
-  // ── 7-day streak dots
-  dayDots: {
-    flexDirection: 'row',
-    gap: 4,
-    alignItems: 'center',
-  },
-  dayDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.25)',
-  },
-  dayDotActive: {
-    backgroundColor: 'rgba(255,255,255,0.85)',
-    width: 6,
-    height: 6,
-  },
+
 
   verseText: {
     color: '#FFFFFF',

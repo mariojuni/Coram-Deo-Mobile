@@ -137,7 +137,7 @@ export default function RootLayout() {
               <Stack.Screen name="pending-church-link" options={{ headerShown: false }} />
               <Stack.Screen name="disabled-account" options={{ headerShown: false }} />
               <Stack.Screen name="scanner" options={{ presentation: 'modal', headerShown: false }} />
-              <Stack.Screen name="my-qr" options={{ presentation: 'modal', headerShown: false }} />
+              <Stack.Screen name="my-qr" options={{ presentation: 'transparentModal', animation: 'none', headerShown: false }} />
               <Stack.Screen name="more" options={{ headerShown: false }} />
               <Stack.Screen name="giving" options={{ headerShown: false }} />
               <Stack.Screen name="giving-campaign-detail" options={{ headerShown: false }} />

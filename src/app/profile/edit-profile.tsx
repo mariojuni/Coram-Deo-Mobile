@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BounceCard } from '@/components/ui/BounceCard';
+import AppModal from '@/components/ui/AppModal';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Image, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -136,26 +137,23 @@ export default function EditProfileScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <AppModal
+      isOpen={true}
+      onClose={() => router.back()}
+      title="Edit Profile"
+      headerRight={
+        <TouchableOpacity style={styles.headerCircle} onPress={handleSave} disabled={loading} activeOpacity={0.7} hitSlop={8}>
+          {loading ? <ActivityIndicator size="small" color="#007AFF" /> : <Check size={20} color="#007AFF" strokeWidth={2.5} />}
+        </TouchableOpacity>
+      }
+      heightRatio={0.85}
+      dynamicHeight={false}
+      containerStyle={{ paddingHorizontal: 0, paddingBottom: 0, backgroundColor: '#FFFFFF' }}
+    >
       <LinearGradient colors={['#F3F9FF', '#FFFFFF']} style={StyleSheet.absoluteFill} />
       
-      {/* ─── Header ─────────────────────────────────────────────────────── */}
-      <View style={[styles.headerContainer, { paddingTop: Platform.OS === 'ios' ? 24 : insets.top + 12 }]} pointerEvents="box-none">
-        <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
-        <View style={styles.headerContent}>
-          <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => router.back()} hitSlop={8} activeOpacity={0.8}>
-            <ArrowLeft size={24} color="#111827" strokeWidth={2} />
-          </BounceCard>
-          <Text style={styles.headerTitle}>Edit Profile</Text>
-          <TouchableOpacity style={styles.headerCircle} onPress={handleSave} disabled={loading} activeOpacity={0.7} hitSlop={8}>
-            {loading ? <ActivityIndicator size="small" color="#007AFF" /> : <Check size={20} color="#007AFF" strokeWidth={2.5} />}
-          </TouchableOpacity>
-        </View>
-      </View>
-
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: (Platform.OS === 'ios' ? 24 : insets.top + 12) + 70 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: 24 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             
             <View style={styles.avatarSection}>
               <TouchableOpacity style={styles.avatarWrapper} onPress={handlePickImage} activeOpacity={0.8}>
@@ -250,7 +248,7 @@ export default function EditProfileScreen() {
 
         </ScrollView>
       </KeyboardAvoidingView>
-    </View>
+    </AppModal>
   );
 }
 
