@@ -1,7 +1,7 @@
 import React from 'react';
 import { useRouter } from 'expo-router';
 import { BounceCard } from '@/components/ui/BounceCard';
-import { ChevronLeft, Settings } from 'lucide-react-native';
+import { ChevronLeft } from 'lucide-react-native';
 import { ScrollView, StyleSheet, Text, View, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -64,15 +64,7 @@ export default function ProfileScreen() {
 
           <Text style={styles.headerTitle} numberOfLines={1}>Personal Dashboard</Text>
 
-          <BounceCard
-            bounceScale={0.85}
-            style={styles.headerCircle}
-            onPress={() => router.push('/profile/settings')}
-            hitSlop={8}
-            activeOpacity={0.8}
-          >
-            <Settings size={20} color="#1a1a1a" strokeWidth={2} />
-          </BounceCard>
+          <View style={styles.headerCircle} />
         </View>
       </View>
 
@@ -80,7 +72,7 @@ export default function ProfileScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingTop: Math.max(insets.top, 24) + 70 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* 1. Integrated Hero Profile & Quick Stats Dashboard */}
+        {/* 1. Hero Profile Card */}
         <ProfileHeaderCard
           fullName={fullName}
           photoUrl={photoUrl}
@@ -89,7 +81,7 @@ export default function ProfileScreen() {
           status={status}
           stats={stats}
           onEditAvatar={() => router.push('/profile/edit-profile')}
-          onEditProfile={() => router.push('/profile/edit-profile')}
+          onSettingsPress={() => router.push('/profile/settings')}
         />
 
         {/* 3. My Affiliations */}

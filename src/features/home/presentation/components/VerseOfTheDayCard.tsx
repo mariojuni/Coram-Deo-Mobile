@@ -1,9 +1,10 @@
+import { Fonts } from '@/constants/theme';
 import { useBibleVersionStore } from '@/store/useBibleVersionStore';
 import { fetchVerseOfTheDay, getUserPreferences, saveUserPreferences } from '@/utils/bibleApi';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { BookOpen, ChevronRight } from 'lucide-react-native';
+import { BookOpen, ChevronRight, Sparkles, Star } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -28,8 +29,18 @@ const stripHtml = (html: string) => {
   );
 };
 
+// Scattered sparkle positions (static, purely decorative)
+const SPARKLES = [
+  { top: 12, left: 18, size: 7, opacity: 0.45 },
+  { top: 28, right: 80, size: 5, opacity: 0.30 },
+  { top: 58, left: 62, size: 4, opacity: 0.22 },
+  { bottom: 32, right: 22, size: 6, opacity: 0.38 },
+  { bottom: 16, left: 92, size: 4, opacity: 0.25 },
+];
+
 export function VerseOfTheDayCard() {
   const router = useRouter();
+
   const activeTranslation = useBibleVersionStore((s) => s.activeTranslation);
   const isVersionLoaded = useBibleVersionStore((s) => s.isLoaded);
   const [verseText, setVerseText] = useState('');
@@ -44,41 +55,27 @@ export function VerseOfTheDayCard() {
 
   const scale = useSharedValue(1);
 
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: scale.get() }],
-    };
-  });
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.get() }],
+  }));
 
-  const handlePressIn = () => {
-    scale.set(withTiming(0.97, { duration: 150 }));
-  };
-
-  const handlePressOut = () => {
-    scale.set(withTiming(1, { duration: 150 }));
-  };
+  const handlePressIn = () => scale.set(withTiming(0.975, { duration: 150 }));
+  const handlePressOut = () => scale.set(withTiming(1, { duration: 200 }));
 
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
     if (passageId) {
-      // passageId usually looks like "ROM.12.12"
       const parts = passageId.split('.');
       if (parts.length >= 2) {
-        const bookId = parts[0];
-        const chapterNum = parts[1];
-
         try {
           const prefs = { ...(cachedPrefs || {}) };
-          prefs.activeBook = bookId;
-          prefs.activeChapter = chapterNum;
-          
+          prefs.activeBook = parts[0];
+          prefs.activeChapter = parts[1];
           // Fire and forget save to avoid delaying navigation
-          saveUserPreferences(prefs).catch(e => console.error("Failed to save prefs", e));
-
+          saveUserPreferences(prefs).catch(e => console.error('Failed to save prefs', e));
           router.push('/(tabs)/bible');
         } catch (e) {
-          console.error("Failed to navigate to verse", e);
+          console.error('Failed to navigate to verse', e);
         }
       }
     }
@@ -87,7 +84,6 @@ export function VerseOfTheDayCard() {
   useEffect(() => {
     // Wait until the version store has loaded before fetching
     if (!isVersionLoaded) return;
-
     async function loadVerse() {
       setLoading(true);
       try {
@@ -127,44 +123,107 @@ export function VerseOfTheDayCard() {
 
   return (
     <View style={styles.outerContainer}>
-      <Pressable
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        onPress={handlePress}
-      >
+      <Pressable onPressIn={handlePressIn} onPressOut={handlePressOut} onPress={handlePress}>
         <Animated.View style={[styles.cardContainer, animatedStyle]}>
           <LinearGradient
-            colors={['#FF6596', '#B66DFF']}
+            colors={['#FF6596', '#C36EFF', '#B66DFF']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={styles.card}
+            style={styles.gradientFill}
           >
-            {/* Large decorative quote art */}
+            {/* ── Top shine accent bar ── */}
+            <LinearGradient
+              colors={['rgba(255,255,255,0.32)', 'rgba(255,255,255,0)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.topShineBar}
+            />
+
+            {/* ── Diagonal shimmer streak ── */}
+            <View style={styles.shimmerStreak} />
+
+            {/* ── Large concentric rings — top-right ── */}
+            <View style={styles.ringOuter} />
+            <View style={styles.ringInner} />
+
+            {/* ── Small concentric rings — bottom-left ── */}
+            <View style={styles.ringSmallOuter} />
+            <View style={styles.ringSmallInner} />
+
+            {/* ── Soft luminous orbs ── */}
+            <View style={styles.orb1} />
+            <View style={styles.orb2} />
+            <View style={styles.orb3} />
+
+            {/* ── Dot grid (top-right corner) ── */}
+            {Array.from({ length: 3 }).map((_, row) =>
+              Array.from({ length: 5 }).map((_, col) => (
+                <View
+                  key={`d-${row}-${col}`}
+                  style={[styles.dot, { top: 20 + row * 20, right: 20 + col * 20 }]}
+                />
+              ))
+            )}
+
+            {/* ── Scattered star sparks ── */}
+            {SPARKLES.map((sp, i) => (
+              <View key={`sp-${i}`} style={[styles.sparkleWrap, sp as any]}>
+                <Star
+                  size={sp.size}
+                  color={`rgba(255,255,255,${sp.opacity})`}
+                  fill={`rgba(255,255,255,${sp.opacity})`}
+                  strokeWidth={0}
+                />
+              </View>
+            ))}
+
+            {/* ── Large watermark open-quote ── */}
             <Text style={styles.decorativeQuote}>{'\u201C'}</Text>
 
-            {/* Top label row */}
-            <View style={styles.topRow}>
-              <View style={styles.badge}>
-                <BookOpen size={10} color="rgba(255,255,255,0.9)" strokeWidth={2.5} />
-                <Text style={styles.badgeText}>VERSE OF THE DAY</Text>
+            {/* ══════════════ CARD CONTENT ══════════════ */}
+            <View style={styles.card}>
+
+              {/* Top row: badge + day-streak dots */}
+              <View style={styles.topRow}>
+                <View style={styles.badge}>
+                  <Sparkles size={9} color="rgba(255,255,255,0.95)" strokeWidth={2.5} />
+                  <Text style={styles.badgeText}>VERSE OF THE DAY</Text>
+                </View>
+                {/* 7-day streak dots — first 3 lit up */}
+                <View style={styles.dayDots}>
+                  {[1, 2, 3, 4, 5, 6, 7].map(d => (
+                    <View
+                      key={d}
+                      style={[styles.dayDot, d <= 3 && styles.dayDotActive]}
+                    />
+                  ))}
+                </View>
+              </View>
+
+              {/* Verse text */}
+              <Text
+                style={[styles.verseText, { fontFamily: Fonts?.serif ?? 'serif' }]}
+                numberOfLines={5}
+              >
+                {verseText}
+              </Text>
+
+              {/* Divider */}
+              <View style={styles.divider} />
+
+              {/* Bottom: reference pill + read CTA */}
+              <View style={styles.bottomRow}>
+                <View style={styles.referencePill}>
+                  <BookOpen size={10} color="rgba(255,255,255,0.95)" strokeWidth={2.5} />
+                  <Text style={styles.reference}>{reference}</Text>
+                </View>
+                <Pressable style={styles.readCta} onPress={handlePress}>
+                  <Text style={styles.readCtaText}>Read chapter</Text>
+                  <ChevronRight size={13} color="#fff" strokeWidth={2.5} />
+                </Pressable>
               </View>
             </View>
 
-            {/* Verse text */}
-            <Text style={styles.verseText} numberOfLines={5}>
-              {verseText}
-            </Text>
-
-            {/* Bottom row: reference + read prompt */}
-            <View style={styles.bottomRow}>
-              <View style={styles.referencePill}>
-                <Text style={styles.reference}>{reference}</Text>
-              </View>
-              <View style={styles.readRow}>
-                <Text style={styles.readLabel}>Read chapter</Text>
-                <ChevronRight size={12} color="rgba(255,255,255,0.7)" strokeWidth={2.5} />
-              </View>
-            </View>
           </LinearGradient>
         </Animated.View>
       </Pressable>
@@ -177,40 +236,164 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   loadingContainer: {
-    height: 148,
+    height: 160,
     borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
   cardContainer: {
     borderRadius: 24,
-    shadowColor: '#FF6596',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.28,
-    shadowRadius: 16,
-    elevation: 6,
-  },
-  card: {
-    borderRadius: 24,
-    paddingHorizontal: 22,
-    paddingTop: 20,
-    paddingBottom: 18,
+    shadowColor: '#E040A0',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.35,
+    shadowRadius: 22,
+    elevation: 8,
     overflow: 'hidden',
   },
+  gradientFill: {
+    borderRadius: 24,
+    overflow: 'hidden',
+  },
+
+  // ── Top shine bar
+  topShineBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 2.5,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+  },
+
+  // ── Diagonal shimmer streak
+  shimmerStreak: {
+    position: 'absolute',
+    top: -30,
+    left: -40,
+    width: 80,
+    height: 240,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    transform: [{ rotate: '30deg' }],
+  },
+
+  // ── Large concentric rings — top-right
+  ringOuter: {
+    position: 'absolute',
+    width: 170,
+    height: 170,
+    borderRadius: 85,
+    top: -58,
+    right: -58,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.20)',
+    backgroundColor: 'transparent',
+  },
+  ringInner: {
+    position: 'absolute',
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    top: -32,
+    right: -32,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.13)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+
+  // ── Small concentric rings — bottom-left
+  ringSmallOuter: {
+    position: 'absolute',
+    width: 95,
+    height: 95,
+    borderRadius: 48,
+    bottom: -32,
+    left: -22,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.16)',
+    backgroundColor: 'transparent',
+  },
+  ringSmallInner: {
+    position: 'absolute',
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    bottom: -14,
+    left: -4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+
+  // ── Orbs
+  orb1: {
+    position: 'absolute',
+    width: 210,
+    height: 210,
+    borderRadius: 105,
+    top: -95,
+    right: -75,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  orb2: {
+    position: 'absolute',
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    bottom: -55,
+    left: -5,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  orb3: {
+    position: 'absolute',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    top: 35,
+    left: '46%',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+
+  // ── Dot grid
+  dot: {
+    position: 'absolute',
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+  },
+
+  // ── Sparkle stars
+  sparkleWrap: {
+    position: 'absolute',
+  },
+
+  // ── Large watermark quote
   decorativeQuote: {
     position: 'absolute',
-    top: -10,
-    right: 16,
-    fontSize: 140,
-    lineHeight: 160,
-    color: 'rgba(255,255,255,0.10)',
+    top: -24,
+    right: 12,
+    fontSize: 165,
+    lineHeight: 185,
+    color: 'rgba(255,255,255,0.08)',
     fontFamily: 'ui-serif',
     fontWeight: '900',
   },
+
+  // ── Content area
+  card: {
+    paddingHorizontal: 22,
+    paddingTop: 20,
+    paddingBottom: 14,
+  },
+
   topRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 14,
   },
+
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -220,48 +403,85 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 100,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
+    borderColor: 'rgba(255,255,255,0.30)',
   },
   badgeText: {
     color: 'rgba(255,255,255,0.95)',
     fontSize: 9,
     fontWeight: '700',
-    letterSpacing: 1,
+    letterSpacing: 1.3,
   },
+
+  // ── 7-day streak dots
+  dayDots: {
+    flexDirection: 'row',
+    gap: 4,
+    alignItems: 'center',
+  },
+  dayDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+  },
+  dayDotActive: {
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    width: 6,
+    height: 6,
+  },
+
   verseText: {
     color: '#FFFFFF',
     fontSize: 16,
-    lineHeight: 25,
+    lineHeight: 26,
     fontWeight: '500',
-    fontFamily: 'ui-serif',
-    marginBottom: 18,
-    letterSpacing: 0.1,
+    marginBottom: 16,
+    letterSpacing: 0.15,
   },
+
+  // ── Mid divider
+  divider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    marginBottom: 14,
+  },
+
   bottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   referencePill: {
-    backgroundColor: 'rgba(255,255,255,0.20)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(255,255,255,0.18)',
     paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingVertical: 6,
     borderRadius: 100,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.30)',
   },
   reference: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '700',
-    letterSpacing: 0.3,
+    letterSpacing: 0.4,
   },
-  readRow: {
+  readCta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: 3,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
   },
-  readLabel: {
-    color: 'rgba(255,255,255,0.70)',
-    fontSize: 12,
-    fontWeight: '500',
+  readCtaText: {
+    color: 'rgba(255,255,255,0.95)',
+    fontSize: 11.5,
+    fontWeight: '600',
   },
 });
