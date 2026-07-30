@@ -32,6 +32,8 @@ jobs:
 
       - name: Build for Staging (Android & iOS)
         run: eas build --platform all --profile staging --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
   build_production:
     name: Build Production Mobile App
@@ -58,3 +60,5 @@ jobs:
 
       - name: Build for Production (Android & iOS)
         run: eas build --platform all --profile production --non-interactive --auto-submit
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
