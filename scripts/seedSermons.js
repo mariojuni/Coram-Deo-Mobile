@@ -13,6 +13,12 @@
 const { initializeApp, cert } = require('firebase-admin/app');
 const { getFirestore, Timestamp } = require('firebase-admin/firestore');
 
+// Check environment to prevent seeding production
+if (process.env.APP_ENV === 'production' || process.env.EXPO_PUBLIC_APP_ENV === 'production') {
+  console.error('❌ SEED SCRIPT BLOCKED: Cannot run seed scripts in the production environment! Data safety safeguard triggered.');
+  process.exit(1);
+}
+
 // Initialize Firebase Admin (you'll need to add your service account key)
 // Download from: Firebase Console > Project Settings > Service Accounts
 const serviceAccount = require('./serviceAccountKey.json');

@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "nazarenechurch-9c030"
+    "default": "nazarenechurch-9c030",
+    "staging": "church-app-staging",
+    "production": "church-app-production"
   }
 }

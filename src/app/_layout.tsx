@@ -3,7 +3,7 @@ import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
-import { useColorScheme } from 'react-native';
+import { useColorScheme, View, Text } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import { VersionProvider } from '@/features/bible/presentation/context/VersionManagerContext';
@@ -163,6 +163,21 @@ export default function RootLayout() {
             onClose={closePrayerModal} 
             initialData={editingPrayer} 
           />
+          {process.env.EXPO_PUBLIC_APP_ENV === 'staging' && (
+            <View pointerEvents="none" style={{
+              position: 'absolute',
+              top: 40, // Below status bar usually
+              alignSelf: 'center',
+              backgroundColor: 'rgba(255, 165, 0, 0.9)',
+              paddingHorizontal: 12,
+              paddingVertical: 4,
+              borderRadius: 16,
+              zIndex: 9999,
+              elevation: 9999,
+            }}>
+              <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 12 }}>STAGING ENVIRONMENT</Text>
+            </View>
+          )}
         </AudioProvider>
       </ThemeProvider>
     </GestureHandlerRootView>

@@ -1,0 +1,38 @@
+name: Build Mobile App with EAS
+
+on:
+  push:
+    branches:
+      - develop
+    tags:
+      - 'release-*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Expo and EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build for Staging (Android & iOS)
+        if: github.ref == 'refs/heads/develop'
+        run: eas build --platform all --profile staging --non-interactive
+
+      - name: Build for Production (Android & iOS)
+        if: startsWith(github.ref, 'refs/tags/release-')
+        run: eas build --platform all --profile production --non-interactive
