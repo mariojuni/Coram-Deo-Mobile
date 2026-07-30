@@ -131,7 +131,6 @@ export default function StaffMinistryApplicationsScreen() {
             await ministryApplicationService.approveMinistryApplication(app, userProfile, {
               reviewedBy: reviewerName,
             });
-            setSyncToastMessage('Application approved. The member has been added to the ministry.');
           } catch (err: any) {
             Alert.alert('Error', err.message || 'Failed to approve application.');
           } finally {

@@ -84,7 +84,6 @@ export function MinistryApplicationDetailModal({
               await ministryApplicationService.approveMinistryApplication(application, userProfile, {
                 reviewedBy: reviewerName,
               });
-              setSyncToastMessage('Application approved. The member has been added to the ministry.');
               onClose();
             } catch (err: any) {
               Alert.alert('Error', err.message || 'Failed to approve application.');
