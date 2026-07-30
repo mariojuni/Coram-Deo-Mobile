@@ -4,12 +4,12 @@ on:
   push:
     branches:
       - release
-      - develop
+      - development
 
 jobs:
   deploy_staging:
     name: Deploy to Staging
-    if: github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/development'
     runs-on: ubuntu-latest
     environment: staging
     steps:

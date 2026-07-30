@@ -3,13 +3,13 @@ name: Build Mobile App with EAS
 on:
   push:
     branches:
-      - develop
+      - development
       - release
 
 jobs:
   build_staging:
     name: Build Staging Mobile App
-    if: github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/development'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
