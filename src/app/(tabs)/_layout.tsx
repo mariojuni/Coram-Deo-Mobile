@@ -1,8 +1,8 @@
 import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
 import { Book, Handshake, Home, Users, CheckCircle } from 'lucide-react-native';
-import { useEffect, useRef } from 'react';
-import { Animated, Platform, StyleSheet, TouchableOpacity, View, Text, ActivityIndicator } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Platform, StyleSheet, TouchableOpacity, View, Text, ActivityIndicator, AccessibilityInfo } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FabMenu from '../../components/Navigation/FabMenu';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -20,7 +20,22 @@ const AnimatedTabItem = ({ isFocused, route, options, onPress, IconComponent, sh
   const scale = useRef(new Animated.Value(isFocused ? 1.15 : 1)).current;
   const translateY = useRef(new Animated.Value(isFocused ? -4 : 0)).current;
 
+  const [reduceMotion, setReduceMotion] = useState(false);
+
   useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      scale.setValue(isFocused ? 1.15 : 1);
+      translateY.setValue(isFocused ? -4 : 0);
+      return;
+    }
     Animated.parallel([
       Animated.spring(scale, {
         toValue: isFocused ? 1.15 : 1,
@@ -35,15 +50,17 @@ const AnimatedTabItem = ({ isFocused, route, options, onPress, IconComponent, sh
         tension: 100,
       })
     ]).start();
-  }, [isFocused]);
+  }, [isFocused, reduceMotion]);
 
   const color = isFocused ? '#FF6596' : '#D2D4E1';
+  const label = options.tabBarAccessibilityLabel || options.title || route.name;
 
   return (
     <TouchableOpacity
       accessibilityRole="button"
       accessibilityState={isFocused ? { selected: true } : {}}
-      accessibilityLabel={options.tabBarAccessibilityLabel}
+      accessibilityLabel={label}
+      accessibilityHint={`Navigates to the ${label} screen`}
       testID={options.tabBarTestID}
       onPress={onPress}
       style={styles.navItem}
@@ -67,7 +84,6 @@ const AnimatedTabItem = ({ isFocused, route, options, onPress, IconComponent, sh
     </TouchableOpacity>
   );
 };
-
 function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
   const insets = useSafeAreaInsets();
   const tabBarVisible = useUIStore((s) => s.tabBarVisible);
@@ -302,6 +318,10 @@ const styles = StyleSheet.create({
   },
   navItem: {
     padding: 4,
+    minWidth: 48,
+    minHeight: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   navItemActive: {
     transform: [{ translateY: -2 }],

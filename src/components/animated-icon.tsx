@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
-import { useState } from 'react';
-import { Dimensions, StyleSheet, View } from 'react-native';
+import { useState, useEffect } from 'react';
+import { Dimensions, StyleSheet, View, AccessibilityInfo } from 'react-native';
 import Animated, { Easing, Keyframe } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
@@ -81,8 +81,29 @@ const glowKeyframe = new Keyframe({
 });
 
 export function AnimatedIcon() {
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
+  if (reduceMotion) {
+    return (
+      <View style={styles.iconContainer} accessible={true} accessibilityRole="image" accessibilityLabel="App Logo">
+        <View style={styles.background} />
+        <View style={styles.imageContainer}>
+          <Image style={styles.image} source={require('@/assets/images/expo-logo.png')} />
+        </View>
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.iconContainer}>
+    <View style={styles.iconContainer} accessible={true} accessibilityRole="image" accessibilityLabel="App Logo">
       <Animated.View entering={glowKeyframe.duration(60 * 1000 * 4)} style={styles.glow}>
         <Image style={styles.glow} source={require('@/assets/images/logo-glow.png')} />
       </Animated.View>

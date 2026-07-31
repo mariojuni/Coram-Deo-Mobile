@@ -11,7 +11,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { getSoftShadowStyle, getTopBarButtonShadowStyle } from '../components/ui/SoftCard';
-
+import { AccessibleTextInput } from '../components/a11y/AccessibleTextInput';
+import { AccessibleButton } from '../components/a11y/AccessibleButton';
 
 export default function GivingFormScreen() {
   const { campaignId, fundType, fundId } = useLocalSearchParams();
@@ -227,18 +228,16 @@ export default function GivingFormScreen() {
         )}
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Amount (₱)</Text>
-          <View style={styles.amountInputWrap}>
-            <Text style={styles.currencySymbol}>₱</Text>
-            <TextInput
-              style={styles.amountInput}
-              keyboardType="decimal-pad"
-              placeholder="0.00"
-              placeholderTextColor="#9CA3AF"
-              value={amount}
-              onChangeText={setAmount}
-            />
-          </View>
+          <AccessibleTextInput
+            label="Amount (₱)"
+            style={styles.amountInput}
+            containerStyle={styles.amountInputWrap}
+            keyboardType="decimal-pad"
+            placeholder="0.00"
+            placeholderTextColor="#9CA3AF"
+            value={amount}
+            onChangeText={setAmount}
+          />
         </View>
 
         <View style={styles.formGroup}>
@@ -286,8 +285,8 @@ export default function GivingFormScreen() {
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Reference Number (Optional)</Text>
-          <TextInput
+          <AccessibleTextInput
+            label="Reference Number (Optional)"
             style={styles.textInput}
             placeholder="e.g. 123456789"
             placeholderTextColor="#9CA3AF"
@@ -314,8 +313,8 @@ export default function GivingFormScreen() {
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Note (Optional)</Text>
-          <TextInput
+          <AccessibleTextInput
+            label="Note (Optional)"
             style={[styles.textInput, styles.textArea]}
             placeholder="Add a message..."
             placeholderTextColor="#9CA3AF"
@@ -331,11 +330,13 @@ export default function GivingFormScreen() {
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.65)', borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)' }]} pointerEvents="none" />
 
-        <TouchableOpacity 
+        <AccessibleButton 
           activeOpacity={0.8}
           style={[styles.submitBtnWrap, (isSubmitting || isCampaignInactive) && styles.submitBtnDisabled]} 
           onPress={handleSubmitDebounced}
           disabled={isSubmitting || isCampaignInactive}
+          loading={isSubmitting}
+          accessibilityLabel={isCampaignInactive ? 'Campaign Ended' : 'Submit Giving'}
         >
           <LinearGradient 
             colors={isCampaignInactive ? ['#D1D5DB', '#9CA3AF'] : ['#FF6596', '#C084FC']} 
@@ -343,13 +344,11 @@ export default function GivingFormScreen() {
             end={{ x: 1, y: 0 }}
             style={styles.submitBtnGradient} 
           >
-            {isSubmitting ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
+            {!isSubmitting && (
               <Text style={styles.submitBtnText}>{isCampaignInactive ? 'Campaign Ended' : 'Submit Giving'}</Text>
             )}
           </LinearGradient>
-        </TouchableOpacity>
+        </AccessibleButton>
       </View>
     </View>
   );

@@ -1,6 +1,7 @@
 // https://docs.expo.dev/guides/using-eslint/
 const { defineConfig } = require('eslint/config');
 const expoConfig = require("eslint-config-expo/flat");
+const rnA11y = require("eslint-plugin-react-native-a11y");
 
 module.exports = defineConfig([
   expoConfig,
@@ -8,7 +9,11 @@ module.exports = defineConfig([
     ignores: ["dist/*"],
   },
   {
+    plugins: {
+      "react-native-a11y": rnA11y,
+    },
     rules: {
+      ...rnA11y.configs.basic.rules,
       // React Native's Animated.Value refs are intentionally read in render —
       // this is a known false-positive for the RN animation pattern.
       "react-hooks/refs": "off",
