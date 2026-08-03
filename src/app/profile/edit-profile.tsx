@@ -155,9 +155,9 @@ export default function EditProfileScreen() {
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
         <View style={styles.dragHandle} />
         <View style={styles.headerContent}>
-          <TouchableOpacity onPress={handleSave} disabled={loading} style={styles.headerSaveBtn} hitSlop={8}>
-            {loading ? <ActivityIndicator size="small" color="#007AFF" /> : <Text style={styles.headerSaveText}>Update</Text>}
-          </TouchableOpacity>
+          <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={handleSave} disabled={loading} hitSlop={8} activeOpacity={0.8}>
+            {loading ? <ActivityIndicator size="small" color="#007AFF" /> : <Check size={20} color="#007AFF" strokeWidth={2.5} />}
+          </BounceCard>
           <Text style={styles.headerTitle}>Edit Profile</Text>
           <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => router.back()} hitSlop={8} activeOpacity={0.8}>
             <X size={24} color="#111827" strokeWidth={2} />
@@ -309,8 +309,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginHorizontal: 12,
   },
-  headerSaveBtn: { width: 50, alignItems: 'flex-start', justifyContent: 'center', height: 40 },
-  headerSaveText: { color: '#007AFF', fontSize: 16, fontWeight: '700' },
 
   
   avatarSection: { alignItems: 'center', marginBottom: 32, marginTop: 12 },

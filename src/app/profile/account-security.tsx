@@ -5,7 +5,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert,
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, X, ShieldAlert } from 'lucide-react-native';
+import { ArrowLeft, X, ShieldAlert, Check } from 'lucide-react-native';
 import { auth, db } from '../../firebase';
 import { EmailAuthProvider, reauthenticateWithCredential, updateEmail, updatePassword, linkWithCredential } from 'firebase/auth';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
@@ -120,9 +120,9 @@ export default function AccountSecurityScreen() {
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
         <View style={styles.dragHandle} />
         <View style={styles.headerContent}>
-          <TouchableOpacity onPress={handleSave} disabled={loading} style={styles.headerSaveBtn} hitSlop={8}>
-            {loading ? <ActivityIndicator size="small" color="#EF4444" /> : <Text style={styles.headerSaveText}>Update</Text>}
-          </TouchableOpacity>
+          <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={handleSave} disabled={loading} hitSlop={8} activeOpacity={0.8}>
+            {loading ? <ActivityIndicator size="small" color="#EF4444" /> : <Check size={20} color="#EF4444" strokeWidth={2.5} />}
+          </BounceCard>
           <Text style={styles.headerTitle}>{isEmail ? 'Change Email' : (isSetPassword ? 'Set Password' : 'Change Password')}</Text>
           <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => router.back()} hitSlop={8} activeOpacity={0.8}>
             <X size={24} color="#111827" strokeWidth={2} />
@@ -242,8 +242,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginHorizontal: 12,
   },
-  headerSaveBtn: { width: 50, alignItems: 'flex-start', justifyContent: 'center', height: 40 },
-  headerSaveText: { color: '#EF4444', fontSize: 16, fontWeight: '700' },
   
   alertCard: {
     flexDirection: 'row',
