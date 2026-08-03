@@ -1,0 +1,83 @@
+name: Distribute App to Firebase Testers
+
+on:
+  push:
+    branches:
+      - development
+      - release
+
+jobs:
+  distribute_android:
+    name: Build and Distribute Android (APK)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+        
+      - name: Build Android Release APK
+        run: |
+          cd android
+          ./gradlew assembleRelease
+          
+      - name: Upload artifact to Firebase App Distribution
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+          appId: 1:676505939287:android:d866ffaa59194ef4eda212
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_STAGING }}
+          groups: testers
+          file: android/app/build/outputs/apk/release/app-release.apk
+
+  distribute_ios:
+    name: Build and Distribute iOS (IPA)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Expo and EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Build iOS on EAS and download artifact
+        run: |
+          # The --json flag outputs build logs to stderr and the final JSON to stdout
+          BUILD_JSON=$(eas build --platform ios --profile staging --non-interactive --wait --json)
+          URL=$(echo $BUILD_JSON | jq -r '.[0].artifacts.buildUrl')
+          echo "Downloading IPA from $URL"
+          curl -L -o app-release.ipa "$URL"
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Upload artifact to Firebase App Distribution
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+          appId: 1:676505939287:ios:6c4ee86ac4d10db6eda212
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_STAGING }}
+          groups: testers
+          file: app-release.ipa
