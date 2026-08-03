@@ -10,6 +10,7 @@ jobs:
   distribute_android:
     name: Build and Distribute Android (APK)
     runs-on: ubuntu-latest
+    environment: staging
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -45,6 +46,7 @@ jobs:
   distribute_ios:
     name: Build and Distribute iOS (IPA)
     runs-on: ubuntu-latest
+    environment: staging
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
