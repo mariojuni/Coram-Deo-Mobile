@@ -5,7 +5,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Image,
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Camera, Check } from 'lucide-react-native';
+import { ArrowLeft, Camera, Check, X } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -13,6 +13,7 @@ import { db, storage } from '../../firebase';
 import { useAuthStore } from '@/store/useAuthStore';
 import { canEditOwnProfile } from '@/permissions/mobilePermissions';
 import { LinearGradient } from 'expo-linear-gradient';
+import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 
 export default function EditProfileScreen() {
   const router = useRouter();
@@ -141,19 +142,31 @@ export default function EditProfileScreen() {
       isOpen={true}
       onClose={() => router.back()}
       title="Edit Profile"
-      headerRight={
-        <TouchableOpacity style={styles.headerCircle} onPress={handleSave} disabled={loading} activeOpacity={0.7} hitSlop={8}>
-          {loading ? <ActivityIndicator size="small" color="#007AFF" /> : <Check size={20} color="#007AFF" strokeWidth={2.5} />}
-        </TouchableOpacity>
-      }
+      hideHeader={true}
+      hideDragHandle={true}
       heightRatio={0.85}
       dynamicHeight={false}
       containerStyle={{ paddingHorizontal: 0, paddingBottom: 0, backgroundColor: '#FFFFFF' }}
     >
       <LinearGradient colors={['#F3F9FF', '#FFFFFF']} style={StyleSheet.absoluteFill} />
       
+      <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
+        <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
+        <View style={styles.dragHandle} />
+        <View style={styles.headerContent}>
+          <TouchableOpacity onPress={handleSave} disabled={loading} style={styles.headerSaveBtn} hitSlop={8}>
+            {loading ? <ActivityIndicator size="small" color="#007AFF" /> : <Text style={styles.headerSaveText}>Save</Text>}
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Edit Profile</Text>
+          <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => router.back()} hitSlop={8} activeOpacity={0.8}>
+            <X size={24} color="#111827" strokeWidth={2} />
+          </BounceCard>
+        </View>
+      </View>
+      
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: 24 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: 80 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             
             <View style={styles.avatarSection}>
               <TouchableOpacity style={styles.avatarWrapper} onPress={handlePickImage} activeOpacity={0.8}>
@@ -266,6 +279,14 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255,255,255,0.4)',
     overflow: 'hidden',
   },
+  dragHandle: {
+    width: 40,
+    height: 5,
+    backgroundColor: '#d1d5db',
+    borderRadius: 10,
+    alignSelf: 'center',
+    marginBottom: 4,
+  },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -274,19 +295,11 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   headerCircle: {
+    ...getTopBarButtonShadowStyle(20),
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
   },
   headerTitle: {
     flex: 1,
@@ -296,7 +309,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginHorizontal: 12,
   },
-  headerSaveBtn: { padding: 4, marginRight: -4 },
+  headerSaveBtn: { width: 50, alignItems: 'flex-start', justifyContent: 'center', height: 40 },
+  headerSaveText: { color: '#007AFF', fontSize: 16, fontWeight: '700' },
 
   
   avatarSection: { alignItems: 'center', marginBottom: 32, marginTop: 12 },
