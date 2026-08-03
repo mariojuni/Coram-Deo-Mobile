@@ -7,7 +7,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
   return {
     ...config,
-    name: appName,
+    name: "Coram Deo", // Keep this static so the Xcode project folder is always 'CoramDeo'
     slug: "ChurchAppNative",
     version: "1.0.0",
     orientation: "portrait",
@@ -17,7 +17,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ios: {
       icon: "./assets/expo.icon",
       bundleIdentifier,
-      googleServicesFile: isProd ? "./credentials/production/GoogleService-Info.plist" : "./credentials/staging/GoogleService-Info.plist"
+      googleServicesFile: isProd ? "./credentials/production/GoogleService-Info.plist" : "./credentials/staging/GoogleService-Info.plist",
+      infoPlist: {
+        CFBundleDisplayName: appName
+      }
     },
     android: {
       adaptiveIcon: {
@@ -50,7 +53,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         }
       ],
       "expo-router",
-      "@react-native-google-signin/google-signin",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          iosUrlScheme: isProd 
+            ? "YOUR_PROD_REVERSED_CLIENT_ID_HERE" // Update this once production GoogleService-Info.plist has CLIENT_ID
+            : "com.googleusercontent.apps.676505939287-dudp40gr0pns1kpff4fc1ohu6qt4ha92"
+        }
+      ],
       [
         "expo-splash-screen",
         {

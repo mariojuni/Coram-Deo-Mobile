@@ -300,7 +300,7 @@ GoogleSignin.configure({
   webClientId:
     "676505939287-eqsoa6bc8tkgkun3bmqtdmu2418hnu7m.apps.googleusercontent.com",
   iosClientId:
-    "676505939287-r3lac99rq77b0cg1n8bk69lict7mp1j0.apps.googleusercontent.com",
+    "676505939287-dudp40gr0pns1kpff4fc1ohu6qt4ha92.apps.googleusercontent.com",
 });
 
 async function findUserAccountByEmail(email: string) {
