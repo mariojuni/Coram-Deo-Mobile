@@ -77,10 +77,13 @@
   "allowScripts": {
     "@firebase/util@1.15.1": true,
     "fsevents@2.3.3": true,
-    "protobufjs@7.6.4": true,
+    "protobufjs@7.6.5": true,
     "unrs-resolver@1.12.2": true
   },
   "overrides": {
-    "xml2js": "^0.6.2"
+    "xml2js": "^0.6.2",
+    "eslint-plugin-react-native-a11y": {
+      "eslint": "$eslint"
+    }
   }
 }
