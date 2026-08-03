@@ -1,6 +1,6 @@
 import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
-import { Book, Handshake, Home, Users, CheckCircle } from 'lucide-react-native';
+import { Book, Handshake, Home, Users, CheckCircle, XCircle } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Platform, StyleSheet, TouchableOpacity, View, Text, ActivityIndicator, AccessibilityInfo } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -190,6 +190,7 @@ export default function TabLayout() {
   }, [userProfile?.churchId, userProfile?.memberId, currentUser?.uid, initializeMemberAssignmentsListener]);
 
   const syncToastMessage = useUIStore((s) => s.syncToastMessage);
+  const syncToastType = useUIStore((s) => s.syncToastType);
   
   // Get active ministries for the user to check staff/tool permissions
   const userMinistries = useMinistryStore((state) => state.ministries).filter(
@@ -275,13 +276,22 @@ export default function TabLayout() {
       )}
       {/* ── Global Sync Toast ── */}
       {!!syncToastMessage && (
-        <View style={[styles.floatingToast, { bottom: Math.max(insets.bottom, 16) + 64 }]}>
-          {syncToastMessage.includes('Successfully') ? (
+        <View style={[
+          styles.floatingToast, 
+          { bottom: Math.max(insets.bottom, 16) + 64 },
+          syncToastType === 'error' && { backgroundColor: '#FEE2E2', borderColor: 'rgba(220,38,38,0.5)' }
+        ]}>
+          {syncToastType === 'error' ? (
+            <XCircle size={18} color="#991B1B" style={{ marginRight: 10 }} />
+          ) : (syncToastType === 'success' || syncToastMessage.includes('Successfully')) ? (
             <CheckCircle size={18} color="#03543F" style={{ marginRight: 10 }} />
           ) : (
             <ActivityIndicator size="small" color="#03543F" style={{ marginRight: 10 }} />
           )}
-          <Text style={styles.floatingToastText}>{syncToastMessage}</Text>
+          <Text style={[
+            styles.floatingToastText,
+            syncToastType === 'error' && { color: '#991B1B' }
+          ]}>{syncToastMessage}</Text>
         </View>
       )}
 

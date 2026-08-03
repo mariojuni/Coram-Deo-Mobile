@@ -921,7 +921,7 @@ function SongsTab({ searchQuery }: SubScreenProps) {
       {/* Category & Language Filter Bar */}
       <View style={{ marginBottom: 12, gap: 8 }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-          {['all', 'english', 'tagalog', 'ilocano', 'other'].map((lang) => (
+          {['all', 'english', 'tagalog', 'other'].map((lang) => (
             <TouchableOpacity
               key={lang}
               style={[

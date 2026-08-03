@@ -8,9 +8,10 @@ interface UIStore {
   prayerModalOpen: boolean;
   editingPrayer: Prayer | null;
   syncToastMessage: string;
+  syncToastType: 'success' | 'loading' | 'error';
   openPrayerModal: (prayer?: Prayer) => void;
   closePrayerModal: () => void;
-  setSyncToastMessage: (msg: string) => void;
+  setSyncToastMessage: (msg: string, type?: 'success' | 'loading' | 'error') => void;
 }
 
 export const useUIStore = create<UIStore>((set) => ({
@@ -19,7 +20,8 @@ export const useUIStore = create<UIStore>((set) => ({
   prayerModalOpen: false,
   editingPrayer: null,
   syncToastMessage: '',
+  syncToastType: 'success',
   openPrayerModal: (prayer) => set({ prayerModalOpen: true, editingPrayer: prayer || null }),
   closePrayerModal: () => set({ prayerModalOpen: false, editingPrayer: null }),
-  setSyncToastMessage: (msg) => set({ syncToastMessage: msg }),
+  setSyncToastMessage: (msg, type) => set({ syncToastMessage: msg, syncToastType: type || 'success' }),
 }));

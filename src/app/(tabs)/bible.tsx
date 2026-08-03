@@ -14,6 +14,7 @@ import TopNavBar from '../../components/Navigation/TopNavBar';
 import { db } from '../../firebase';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useBibleVersionStore } from '../../store/useBibleVersionStore';
+import { useUIStore } from '../../store/useUIStore';
 import { fetchBibleIndex, getSavedVersions, getUserPreferences, saveUserPreferences } from '../../utils/bibleApi';
 
 type BiblePreferencesWithHighlights = BiblePreferences & {
@@ -35,6 +36,7 @@ export default function BibleScreen() {
   const userProfile = useAuthStore((state) => state.userProfile);
   const setTranslation = useBibleVersionStore((state) => state.setTranslation);
   const globalTranslation = useBibleVersionStore((state) => state.activeTranslation);
+  const setSyncToastMessage = useUIStore((state) => state.setSyncToastMessage);
   const [preferences, setPreferences] = useState<BiblePreferencesWithHighlights | null>(null);
   const [savedVersions, setSavedVersions] = useState<BibleVersion[]>([]);
   const [books, setBooks] = useState<BibleBook[]>([]);
@@ -95,8 +97,12 @@ export default function BibleScreen() {
             },
           }));
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching Bible highlights from Firebase:', error);
+        if (error?.message?.includes('offline') || error?.code === 'unavailable') {
+          setSyncToastMessage('Device is offline. Cannot fetch latest highlights.', 'error');
+          setTimeout(() => setSyncToastMessage('', 'success'), 3000);
+        }
       }
     };
     fetchUserHighlights();
