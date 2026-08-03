@@ -121,7 +121,7 @@ export default function AccountSecurityScreen() {
         <View style={styles.dragHandle} />
         <View style={styles.headerContent}>
           <TouchableOpacity onPress={handleSave} disabled={loading} style={styles.headerSaveBtn} hitSlop={8}>
-            {loading ? <ActivityIndicator size="small" color="#EF4444" /> : <Text style={styles.headerSaveText}>Save</Text>}
+            {loading ? <ActivityIndicator size="small" color="#EF4444" /> : <Text style={styles.headerSaveText}>Update</Text>}
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{isEmail ? 'Change Email' : (isSetPassword ? 'Set Password' : 'Change Password')}</Text>
           <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => router.back()} hitSlop={8} activeOpacity={0.8}>
@@ -191,12 +191,6 @@ export default function AccountSecurityScreen() {
                 </View>
               )}
             </View>
-
-            <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={loading} activeOpacity={0.8}>
-              <LinearGradient colors={['#EF4444', '#DC2626']} style={styles.saveBtnGradient}>
-                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>{isSetPassword ? 'Set Password' : `Update ${isEmail ? 'Email' : 'Password'}`}</Text>}
-              </LinearGradient>
-            </TouchableOpacity>
 
         </ScrollView>
       </KeyboardAvoidingView>
@@ -292,12 +286,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#F3F4F6',
     borderRadius: 12, paddingHorizontal: 16, paddingVertical: 16,
     fontSize: 16, color: '#111827', fontWeight: '500'
-  },
-  saveBtn: {
-    borderRadius: 16, marginTop: 12, shadowColor: '#EF4444', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
-  },
-  saveBtnGradient: {
-    borderRadius: 16, paddingVertical: 18, alignItems: 'center', justifyContent: 'center'
-  },
-  saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '700', letterSpacing: 0.5 },
+  }
 });

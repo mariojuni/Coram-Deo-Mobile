@@ -156,7 +156,7 @@ export default function EditProfileScreen() {
         <View style={styles.dragHandle} />
         <View style={styles.headerContent}>
           <TouchableOpacity onPress={handleSave} disabled={loading} style={styles.headerSaveBtn} hitSlop={8}>
-            {loading ? <ActivityIndicator size="small" color="#007AFF" /> : <Text style={styles.headerSaveText}>Save</Text>}
+            {loading ? <ActivityIndicator size="small" color="#007AFF" /> : <Text style={styles.headerSaveText}>Update</Text>}
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Edit Profile</Text>
           <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => router.back()} hitSlop={8} activeOpacity={0.8}>
