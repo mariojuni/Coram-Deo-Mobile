@@ -21,19 +21,24 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
+      - name: Setup Expo and EAS
+        uses: expo/expo-github-action@v8
         with:
-          distribution: 'zulu'
-          java-version: '17'
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
         
-      - name: Build Android Release APK
+      - name: Build Android on EAS and download artifact
         run: |
-          cd android
-          ./gradlew assembleRelease
+          # The --json flag outputs build logs to stderr and the final JSON to stdout
+          BUILD_JSON=$(eas build --platform android --profile staging --non-interactive --wait --json)
+          URL=$(echo $BUILD_JSON | jq -r '.[0].artifacts.buildUrl')
+          echo "Downloading APK from $URL"
+          curl -L -o app-release.apk "$URL"
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           
       - name: Upload artifact to Firebase App Distribution
         uses: wzieba/Firebase-Distribution-Github-Action@v1
@@ -41,7 +46,7 @@ jobs:
           appId: 1:676505939287:android:d866ffaa59194ef4eda212
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_STAGING }}
           groups: testers
-          file: android/app/build/outputs/apk/release/app-release.apk
+          file: app-release.apk
 
   distribute_ios:
     name: Build and Distribute iOS (IPA)
