@@ -64,7 +64,7 @@ export default function ProfileScreen() {
 
           <Text style={styles.headerTitle} numberOfLines={1}>Personal Dashboard</Text>
 
-          <View style={styles.headerCircle} />
+          <View style={{ width: 40 }} />
         </View>
       </View>
 
