@@ -3,7 +3,9 @@ import { useUIStore } from '@/store/useUIStore';
 import { ChevronLeft, ChevronRight, Copy, X } from 'lucide-react-native';
 import { useEffect, useMemo, useRef } from 'react';
 import { getSoftShadowStyle, getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
-import { ActivityIndicator, Animated, NativeScrollEvent, NativeSyntheticEvent, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, NativeScrollEvent, NativeSyntheticEvent, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface BibleReaderProps {
   preferences: any;
@@ -49,6 +51,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
   const lastScrollY = useRef(0);
   const setTabBarVisible = useUIStore((s) => s.setTabBarVisible);
   const tabBarVisible = useUIStore((s) => s.tabBarVisible);
+  const insets = useSafeAreaInsets();
 
   // Animate nav arrows bottom: 110 (tab bar visible) ↔ 20 (tab bar hidden)
   const NAV_BOTTOM_SHOWN = 110;
@@ -268,7 +271,10 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
 
       {/* Highlighting Toolbar */}
       {selectedVerses.length > 0 && (
-        <View style={styles.actionToolbar}>
+        <View style={[styles.actionToolbar, { bottom: Math.max(insets.bottom, 16) + 84 }]}>
+          <BlurView intensity={80} tint="light" style={[StyleSheet.absoluteFill, { borderRadius: 40, overflow: 'hidden' }]} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)', borderRadius: 40 }]} pointerEvents="none" />
+          
           <TouchableOpacity style={styles.copyBtn} onPress={handleCopy}>
             <Copy size={20} color="#1a1a1a" />
             <Text style={styles.copyText}>Copy</Text>
@@ -336,13 +342,16 @@ const styles = StyleSheet.create({  container: { flex: 1, backgroundColor: '#faf
   actionToolbar: {
     ...getTopBarButtonShadowStyle(100),
     position: 'absolute',
-    bottom: 100, // Above the floating tab bar
     alignSelf: 'center',
     padding: 8,
     paddingHorizontal: 16,
     zIndex: 10,
     flexDirection: 'row',
     alignItems: 'center',
+    borderRadius: 40,
+    backgroundColor: Platform.OS === 'android' ? '#FFFFFF' : 'transparent',
+    borderColor: 'rgba(255,255,255,0.5)',
+    borderWidth: 1,
   },
   copyBtn: {
     flexDirection: 'row',
