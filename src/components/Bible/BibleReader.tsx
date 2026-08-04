@@ -15,7 +15,10 @@ interface BibleReaderProps {
   /** If set, after the chapter loads the reader will scroll to this verse number */
   scrollToVerse?: string;
   /** If true, hides/shows the tab bar based on scroll direction */
+  /** If true, hides/shows the tab bar based on scroll direction */
   controlsTabBar?: boolean;
+  /** Optional animated value for scroll position */
+  scrollY?: Animated.Value;
 }
 
 interface Verse {
@@ -45,7 +48,7 @@ const sanitizeVerseText = (text: string): string => {
     .trim();
 };
 
-export default function BibleReader({ preferences, updatePreferences, books, hideChapterNav = false, scrollToVerse, controlsTabBar = false }: BibleReaderProps) {
+export default function BibleReader({ preferences, updatePreferences, books, hideChapterNav = false, scrollToVerse, controlsTabBar = false, scrollY }: BibleReaderProps) {
   const scrollRef = useRef<ScrollView>(null);
   const contentHeightRef = useRef<number>(0);
   const lastScrollY = useRef(0);
@@ -88,15 +91,21 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
     };
   }, [controlsTabBar, setTabBarVisible]);
 
-  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    if (!controlsTabBar) return;
-    const y = e.nativeEvent.contentOffset.y;
-    const delta = y - lastScrollY.current;
-    if (Math.abs(delta) > 6) {
-      setTabBarVisible(delta < 0 || y < 60);
+  const handleScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { y: scrollY || new Animated.Value(0) } } }],
+    {
+      useNativeDriver: false,
+      listener: (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+        if (!controlsTabBar) return;
+        const y = e.nativeEvent.contentOffset.y;
+        const delta = y - lastScrollY.current;
+        if (Math.abs(delta) > 6) {
+          setTabBarVisible(delta < 0 || y < 60);
+        }
+        lastScrollY.current = y;
+      },
     }
-    lastScrollY.current = y;
-  };
+  );
 
   // Scroll to target verse after chapter finishes loading based on character ratio & container height
   useEffect(() => {
@@ -196,8 +205,8 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
         style={[styles.scrollView, { transform: [{ translateX: swipeX }] }]}
         {...panResponder.panHandlers}
       >
-        <ScrollView
-          ref={scrollRef}
+        <Animated.ScrollView
+          ref={scrollRef as any}
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -250,7 +259,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
               ];
             })}
           </Text>
-        </ScrollView>
+        </Animated.ScrollView>
       </Animated.View>
       
       {/* Navigation Arrows overlay */}

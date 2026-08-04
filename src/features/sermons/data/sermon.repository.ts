@@ -19,7 +19,7 @@ import {
   onSnapshot,
 } from 'firebase/firestore';
 import * as FileSystem from 'expo-file-system';
-import { db, storage } from '@/firebase';
+import { db, storage, auth } from '@/firebase';
 import { ref, getDownloadURL } from 'firebase/storage';
 import type {
   Sermon,
@@ -46,6 +46,9 @@ class SermonRepository {
       return pathOrUrl;
     }
     try {
+      if (auth) {
+        await auth.authStateReady();
+      }
       const storageRef = ref(storage, pathOrUrl);
       return await getDownloadURL(storageRef);
     } catch (error) {

@@ -6,8 +6,8 @@ import {
 } from '@/features/bible/presentation/hooks/useBibleTopNav';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { Animated, StyleSheet, View } from 'react-native';
 import BibleReader from '../../components/Bible/BibleReader';
 import BooksModal from '../../components/Bible/BooksModal';
 import TopNavBar from '../../components/Navigation/TopNavBar';
@@ -42,6 +42,7 @@ export default function BibleScreen() {
   const [books, setBooks] = useState<BibleBook[]>([]);
   const [isBooksModalOpen, setIsBooksModalOpen] = useState(false);
   const router = useRouter();
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   // Instantly sync active translation from global store
   useEffect(() => {
@@ -140,6 +141,7 @@ export default function BibleScreen() {
         updatePreferences={handleUpdatePreferences}
         books={books}
         controlsTabBar
+        scrollY={scrollY}
       />
 
       <TopNavBar
@@ -147,6 +149,7 @@ export default function BibleScreen() {
         onLeftPress={() => setIsBooksModalOpen(true)}
         rightText={rightText}
         onRightPress={() => router.push('/version-manager')}
+        scrollY={scrollY}
       />
 
       <BooksModal
