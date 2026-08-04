@@ -13,7 +13,7 @@ import { db, storage } from '../../firebase';
 import { useAuthStore } from '@/store/useAuthStore';
 import { canEditOwnProfile } from '@/permissions/mobilePermissions';
 import { LinearGradient } from 'expo-linear-gradient';
-import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
+import { getTopBarButtonShadowStyle, getSoftShadowStyle } from '@/components/ui/SoftCard';
 
 export default function EditProfileScreen() {
   const router = useRouter();
@@ -327,17 +327,11 @@ const styles = StyleSheet.create({
   },
 
   cardGroup: {
+    ...(getSoftShadowStyle(20) as any),
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 20,
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.03,
-    shadowRadius: 10,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.02)',
   },
   formGroup: { marginBottom: 20 },
   label: { fontSize: 13, fontWeight: '700', color: '#6B7280', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
