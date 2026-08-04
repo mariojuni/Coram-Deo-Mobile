@@ -25,7 +25,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   const appName = isProd ? "Coram Deo" : "Coram Deo Staging";
   const bundleIdentifier = isProd ? "com.coramdeo.app.prod" : "com.coramdeo.app.staging";
 
-  return {
+  const baseConfig: ExpoConfig = {
     ...config,
     name: "Coram Deo", // Keep this static so the Xcode project folder is always 'CoramDeo'
     slug: "ChurchAppNative",
@@ -65,7 +65,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       favicon: "./assets/images/favicon.png"
     },
     plugins: [
-      withFirebaseSPMDisable,
       [
         "expo-build-properties",
         {
@@ -111,4 +110,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       }
     }
   };
+
+  return withFirebaseSPMDisable(baseConfig);
 };
