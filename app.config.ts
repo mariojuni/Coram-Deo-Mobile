@@ -28,11 +28,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   const baseConfig: ExpoConfig = {
     ...config,
     name: "Coram Deo", // Keep this static so the Xcode project folder is always 'CoramDeo'
-    slug: "ChurchAppNative",
+    slug: "CoramDeoApp",
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/images/icon.png",
-    scheme: "churchappnative",
+    scheme: "coramdeoapp",
     userInterfaceStyle: "automatic",
     ios: {
       icon: "./assets/expo.icon",
