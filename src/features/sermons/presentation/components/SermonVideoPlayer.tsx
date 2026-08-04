@@ -45,7 +45,7 @@ export function SermonVideoPlayer({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const controlsTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const player = useVideoPlayer(videoSource, (p) => {
+  const player = useVideoPlayer(videoSource ? { uri: videoSource } : null, (p) => {
     p.loop = false;
     p.pause();
     p.timeUpdateEventInterval = 0.5; // Update every half second
@@ -208,6 +208,11 @@ export function SermonVideoPlayer({
             <View style={styles.errorBox}>
               <AlertCircle size={32} color="#fff" />
               <Text style={styles.errorText}>Failed to load video</Text>
+              {player.error?.message ? (
+                <Text style={{ color: '#fff', fontSize: 12, textAlign: 'center', marginHorizontal: 20 }}>
+                  {player.error.message}
+                </Text>
+              ) : null}
               <TouchableOpacity
                 style={styles.retryBtn}
                 onPress={() => {
