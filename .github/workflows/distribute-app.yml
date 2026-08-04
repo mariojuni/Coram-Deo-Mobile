@@ -43,7 +43,7 @@ jobs:
       - name: Upload artifact to Firebase App Distribution
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
-          appId: 1:676505939287:android:d866ffaa59194ef4eda212
+          appId: 1:676505939287:android:bc95ef52561d6f9deda212
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_STAGING }}
           groups: testers
           file: app-release.apk
@@ -84,7 +84,7 @@ jobs:
       - name: Upload artifact to Firebase App Distribution
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
-          appId: 1:676505939287:ios:6c4ee86ac4d10db6eda212
+          appId: 1:676505939287:ios:50756c61679fda6aeda212
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_STAGING }}
           groups: testers
           file: app-release.ipa
