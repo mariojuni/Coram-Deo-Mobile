@@ -1,4 +1,24 @@
 import { ExpoConfig, ConfigContext } from 'expo/config';
+import { withDangerousMod } from 'expo/config-plugins';
+import * as fs from 'fs';
+import * as path from 'path';
+
+const withFirebaseSPMDisable = (config: ExpoConfig) => {
+  return withDangerousMod(config, [
+    'ios',
+    async (config) => {
+      const podfilePath = path.join(config.modRequest.platformProjectRoot, 'Podfile');
+      if (fs.existsSync(podfilePath)) {
+        let contents = fs.readFileSync(podfilePath, 'utf-8');
+        if (!contents.includes('$RNFirebaseDisableSPM = true')) {
+          contents = "$RNFirebaseDisableSPM = true\n" + contents;
+          fs.writeFileSync(podfilePath, contents);
+        }
+      }
+      return config;
+    },
+  ]);
+};
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   const isProd = process.env.EXPO_PUBLIC_APP_ENV === 'production';
@@ -45,6 +65,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       favicon: "./assets/images/favicon.png"
     },
     plugins: [
+      withFirebaseSPMDisable,
       [
         "expo-build-properties",
         {
