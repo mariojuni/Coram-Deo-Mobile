@@ -106,9 +106,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     extra: {
       router: {},
       eas: {
-        projectId: "5355c6b6-c940-422e-8184-be77e4d9ca07"
+        projectId: "23bdb368-b237-4ec3-94c5-991fb625547b"
       }
-    }
+    },
+    owner: "maryow"
   };
 
   return withFirebaseSPMDisable(baseConfig);
