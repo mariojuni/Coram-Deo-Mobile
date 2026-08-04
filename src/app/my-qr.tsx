@@ -63,7 +63,6 @@ export default function MyQRScreen() {
             </View>
             <View style={styles.userInfo}>
               <Text style={styles.name}>{qrName}</Text>
-              <Text style={styles.role}>{qrRole}</Text>
             </View>
           </View>
         </View>

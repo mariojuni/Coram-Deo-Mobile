@@ -1,4 +1,5 @@
 import { initializeApp } from 'firebase/app';
+import { initAppCheck } from './config/appCheck';
 // @ts-ignore
 import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
 
@@ -19,6 +20,9 @@ const firebaseConfig = {
 };
 
 export const app = initializeApp(firebaseConfig);
+
+// Initialize App Check before Auth, Firestore, and Storage
+initAppCheck(app);
 
 export const auth = initializeAuth(app, {
   persistence: getReactNativePersistence(AsyncStorage)

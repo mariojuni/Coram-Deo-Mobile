@@ -20,6 +20,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<AuthCredentialResult>;
   loginWithGoogle: () => Promise<AuthCredentialResult>;
   logout: () => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<void>;
   initializeAuthListener: () => void;
   updateUserProfile: (updates: Partial<UserAccount>) => void;
 }
@@ -44,6 +45,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   initialized: false,
   signup: (payload) => authRepository.signup(payload),
   login: (email, password) => authRepository.login(email, password),
+  sendPasswordReset: (email) => authRepository.sendPasswordReset(email),
   loginWithGoogle: async () => {
     try {
       const result = await authRepository.loginWithGoogle();

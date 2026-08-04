@@ -1,0 +1,174 @@
+env: load .env
+env: export EXPO_PUBLIC_FIREBASE_API_KEY EXPO_PUBLIC_FIREBASE_APP_ID EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID EXPO_PUBLIC_FIREBASE_PROJECT_ID EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET
+› Skipping dev server
+› Planning build
+› Preparing expo-dev-menu-interface Pods/expo-dev-menu-interface » expo-dev-menu-interface-Info.plist
+› Preparing @react-native-google-signin/google-signin Pods/RecaptchaInterop » RecaptchaInterop-Info.plist
+› Preparing Pods/RNCAsyncStorage-RNCAsyncStorage_resources » ResourceBundle-RNCAsyncStorage_resources-RNCAsyncStorage-Info.plist
+› Preparing Pods/RNSVG-RNSVGFilters » ResourceBundle-RNSVGFilters-RNSVG-Info.plist
+› Preparing Pods/PromisesObjC-FBLPromises_Privacy » ResourceBundle-FBLPromises_Privacy-PromisesObjC-Info.plist
+› Preparing Pods/GoogleUtilities-GoogleUtilities_Privacy » ResourceBundle-GoogleUtilities_Privacy-GoogleUtilities-Info.plist
+› Preparing @react-native-google-signin/google-signin Pods/GoogleSignIn-GoogleSignIn » ResourceBundle-GoogleSignIn-GoogleSignIn-Info.plist
+› Preparing Pods/GTMSessionFetcher-GTMSessionFetcher_Core_Privacy » ResourceBundle-GTMSessionFetcher_Core_Privacy-GTMSessionFetcher-Info.plist
+› Preparing Pods/ExpoDevice-ExpoDevice_privacy » ResourceBundle-ExpoDevice_privacy-ExpoDevice-Info.plist
+› Preparing expo-json-utils Pods/EXJSONUtils » EXJSONUtils-Info.plist
+› Preparing Pods/EXConstants-ExpoConstants_privacy » ResourceBundle-ExpoConstants_privacy-EXConstants-Info.plist
+› Preparing Pods/ExpoSystemUI-ExpoSystemUI_privacy » ResourceBundle-ExpoSystemUI_privacy-ExpoSystemUI-Info.plist
+› Preparing Pods/AppAuth-AppAuthCore_Privacy » ResourceBundle-AppAuthCore_Privacy-AppAuth-Info.plist
+› Executing react-native Pods/hermes-engine » [CP-User] [Hermes] Replace Hermes for the right configuration, if needed
+› Executing react-native Pods/ReactNativeDependencies » [CP-User] [RNDeps] Replace React Native Dependencies for the right configuration, if needed
+› Preparing Pods/ExpoFileSystem-ExpoFileSystem_privacy » ResourceBundle-ExpoFileSystem_privacy-ExpoFileSystem-Info.plist
+› Preparing Pods/expo-dev-launcher-EXDevLauncher » ResourceBundle-EXDevLauncher-expo-dev-launcher-Info.plist
+› Preparing Pods/expo-dev-menu-EXDevMenu » ResourceBundle-EXDevMenu-expo-dev-menu-Info.plist
+› Preparing Pods/React-cxxreact-React-cxxreact_privacy » ResourceBundle-React-cxxreact_privacy-React-cxxreact-Info.plist
+› Preparing Pods/React-Core-React-Core_privacy » ResourceBundle-React-Core_privacy-React-Core-Info.plist
+› Preparing Pods/PromisesSwift-Promises_Privacy » ResourceBundle-Promises_Privacy-PromisesSwift-Info.plist
+› Preparing Pods/GTMAppAuth-GTMAppAuth_Privacy » ResourceBundle-GTMAppAuth_Privacy-GTMAppAuth-Info.plist
+› Preparing expo-constants Pods/EXConstants-EXConstants » ResourceBundle-EXConstants-EXConstants-Info.plist
+› Preparing @react-native-google-signin/google-signin Pods/PromisesObjC » PromisesObjC-Info.plist
+› Preparing Pods/GoogleUtilities » GoogleUtilities-Info.plist
+› Preparing Pods/GTMSessionFetcher » GTMSessionFetcher-Info.plist
+› Preparing @react-native-google-signin/google-signin Pods/AppAuth » AppAuth-Info.plist
+› Preparing @react-native-google-signin/google-signin Pods/PromisesSwift » PromisesSwift-Info.plist
+› Creating  Pods/expo-dev-launcher-EXDevLauncher » EXDevLauncher.bundle
+› Creating  Pods/expo-dev-menu-EXDevMenu » EXDevMenu.bundle
+› Compiling @react-native-google-signin/google-signin Pods/GoogleSignIn » GoogleSignIn_vers.c
+› Compiling @react-native-google-signin/google-signin Pods/GTMAppAuth » GTMAppAuth_vers.c
+› Executing react-native Pods/hermes-engine » [CP] Copy XCFrameworks
+› Executing react-native Pods/ReactNativeDependencies » [CP] Copy XCFrameworks
+› Compiling @react-native-google-signin/google-signin Pods/GTMAppAuth » GTMAppAuth-dummy.m
+› Executing react-native Pods/React-Core-prebuilt » [CP-User] [RNCore] Replace React Native Core for the right configuration, if needed
+› Preparing @react-native-google-signin/google-signin Pods/GTMAppAuth » GTMAppAuth-Info.plist
+› Preparing @react-native-google-signin/google-signin Pods/AppCheckCore » AppCheckCore-Info.plist
+› Executing react-native Pods/React-Core-prebuilt » [CP] Copy XCFrameworks
+› Signing   @react-native-google-signin/google-signin Pods/GTMAppAuth » GTMAppAuth.framework
+› Creating  @react-native-google-signin/google-signin Pods/GTMAppAuth » GTMAppAuth.framework
+› Preparing @react-native-google-signin/google-signin Pods/GoogleSignIn » GoogleSignIn-Info.plist
+› Executing expo-modules-jsi Pods/ExpoModulesJSI » [CP-User] Build ExpoModulesJSI xcframework
+
+❌  error: precompiled file '/Users/maryow/Coram Deo - Mobile/node_modules/expo-modules-jsi/apple/.DerivedData/ModuleCache.noindex/S8KRYIVF7B0Y/SwiftShims-ETMZL06LU75E.pcm' was compiled with module cache path '/Users/maryow/ChurchAppNative/node_modules/expo-modules-jsi/apple/.DerivedData/ModuleCache.noindex/S8KRYIVF7B0Y', but the path is currently /Users/maryow/Coram Deo - Mobile/node_modules/expo-modules-jsi/apple/.DerivedData/ModuleCache.noindex/S8KRYIVF7B0Y
+
+
+
+❌  error: precompiled file '/Users/maryow/Coram Deo - Mobile/node_modules/expo-modules-jsi/apple/.DerivedData/ModuleCache.noindex/S8KRYIVF7B0Y/SwiftShims-ETMZL06LU75E.pcm' was compiled with module cache path '/Users/maryow/ChurchAppNative/node_modules/expo-modules-jsi/apple/.DerivedData/ModuleCache.noindex/S8KRYIVF7B0Y', but the path is currently /Users/maryow/Coram Deo - Mobile/node_modules/expo-modules-jsi/apple/.DerivedData/ModuleCache.noindex/S8KRYIVF7B0Y
+
+
+› Executing react-native Pods/React-RCTFBReactNativeSpec » [CP-User] [RN]Check FBReactNativeSpec
+› Executing @expo/log-box Pods/ExpoLogBox » Copy generated compatibility header
+› Executing churchappnative Pods/ReactCodegen » [CP-User] Generate Specs
+› Compiling @react-native-google-signin/google-signin Pods/GoogleSignIn » GIDFakeAuthStateMigration.m
+› Compiling @react-native-google-signin/google-signin Pods/GoogleSignIn » GIDConfiguration.m
+› Compiling @react-native-google-signin/google-signin Pods/GoogleSignIn » GIDClaim.m
+› Compiling @react-native-google-signin/google-signin Pods/GoogleSignIn » GIDCallbackQueue.m
+› Compiling @react-native-google-signin/google-signin Pods/GoogleSignIn » GIDProfileData.m
+› Compiling @react-native-google-signin/google-signin Pods/GoogleSignIn » GoogleSignIn-dummy.m
+› Compiling @react-native-google-signin/google-signin Pods/GoogleSignIn » GIDToken.m
+› Compiling @react-native-google-signin/google-signin Pods/GoogleSignIn » GIDSignInStrings.m
+› Compiling @react-native-google-signin/google-signin Pods/GoogleSignIn » GIDSignInPreferences.m
+› Compiling @react-native-google-signin/google-signin Pods/GoogleSignIn » GIDSignInCallbackSchemes.m
+› Compiling @react-native-google-signin/google-signin Pods/GoogleSignIn » GIDScopes.m
+› Compiling @react-native-google-signin/google-signin Pods/GoogleSignIn » GIDMDMPasscodeState.m
+› Executing churchappnative Pods/ReactCodegen » [Expo] Remove duplicate codegen output
+› Compiling @react-native-community/slider Pods/react-native-slider » RNCSliderComponentView.mm
+› Compiling react-native-safe-area-context Pods/react-native-safe-area-context » RNCSafeAreaViewComponentView.mm
+› Compiling @react-native-community/netinfo Pods/react-native-netinfo » RNCNetInfo.mm
+› Compiling react-native-safe-area-context Pods/react-native-safe-area-context » RNCSafeAreaProviderComponentView.mm
+› Compiling react-native-safe-area-context Pods/react-native-safe-area-context » RNCSafeAreaViewShadowNode.cpp
+› Compiling react-native-worklets Pods/RNWorklets » WorkletsModule.mm
+› Compiling react-native-worklets Pods/RNWorklets » WorkletsModuleProxy.cpp
+› Compiling react-native-worklets Pods/RNWorklets » WorkletsMessageThread.mm
+› Compiling react-native-worklets Pods/RNWorklets » WorkletsJSIUtils.cpp
+› Compiling react-native-worklets Pods/RNWorklets » WorkletRuntimeRegistry.cpp
+› Compiling react-native-worklets Pods/RNWorklets » WorkletRuntimeDecorator.cpp
+› Compiling react-native-worklets Pods/RNWorklets » WorkletRuntime.cpp
+› Compiling react-native-worklets Pods/RNWorklets » WorkletHermesRuntime.cpp
+› Compiling react-native-worklets Pods/RNWorklets » WorkletEventHandler.cpp
+› Compiling react-native-worklets Pods/RNWorklets » VersionUtils.cpp
+› Compiling react-native-worklets Pods/RNWorklets » UIScheduler.cpp
+› Compiling react-native-worklets Pods/RNWorklets » UIRuntimeDecorator.cpp
+› Compiling react-native-worklets Pods/RNWorklets » SynchronizableUnpacker.cpp
+› Compiling react-native-worklets Pods/RNWorklets » SynchronizableAccess.cpp
+› Compiling react-native-worklets Pods/RNWorklets » Synchronizable.cpp
+› Compiling react-native-worklets Pods/RNWorklets » StableApi.cpp
+› Compiling react-native-worklets Pods/RNWorklets » SlowAnimations.mm
+› Compiling react-native-worklets Pods/RNWorklets » ShareableHostUnpacker.cpp
+› Compiling react-native-worklets Pods/RNWorklets » ShareableGuestUnpacker.cpp
+› Compiling react-native-worklets Pods/RNWorklets » Shareable.cpp
+› Compiling react-native-worklets Pods/RNWorklets » SerializableFactory.cpp
+› Compiling react-native-worklets Pods/RNWorklets » Serializable.cpp
+› Compiling react-native-worklets Pods/RNWorklets » RuntimeManager.cpp
+› Compiling react-native-worklets Pods/RNWorklets » RuntimeData.cpp
+› Compiling react-native-worklets Pods/RNWorklets » RNRuntimeWorkletDecorator.cpp
+› Compiling react-native-worklets Pods/RNWorklets » PlatformLogger.mm
+› Compiling react-native-worklets Pods/RNWorklets » MemoryManager.cpp
+› Compiling react-native-worklets Pods/RNWorklets » JSScheduler.cpp
+› Compiling react-native-worklets Pods/RNWorklets » JSLogger.cpp
+› Compiling react-native-worklets Pods/RNWorklets » JSIWorkletsModuleProxy.cpp
+› Compiling react-native-worklets Pods/RNWorklets » JSISerializer.cpp
+› Compiling react-native-worklets Pods/RNWorklets » IOSUIScheduler.mm
+› Compiling react-native-worklets Pods/RNWorklets » HermesProfiling.cpp
+› Compiling react-native-worklets Pods/RNWorklets » FeatureFlags.cpp
+› Compiling react-native-worklets Pods/RNWorklets » EventLoop.cpp
+› Compiling react-native-worklets Pods/RNWorklets » EventHandlerRegistry.cpp
+› Compiling react-native-worklets Pods/RNWorklets » CustomSerializableUnpacker.cpp
+› Compiling react-native-worklets Pods/RNWorklets » AsyncQueueImpl.cpp
+› Compiling react-native-worklets Pods/RNWorklets » AnimationFrameQueue.mm
+› Compiling react-native-worklets Pods/RNWorklets » AnimationFrameBatchinator.cpp
+› Packaging churchappnative Pods/ReactAppDependencyProvider » libReactAppDependencyProvider.a
+› Compiling react-native-svg Pods/RNSVG » RNSVGViewBox.mm
+› Compiling react-native-svg Pods/RNSVG » RNSVGUseManager.mm
+› Compiling react-native-svg Pods/RNSVG » RNSVGUse.mm
+› Compiling react-native-svg Pods/RNSVG » RNSVGTopAlignedLabel.ios.mm
+› Compiling @react-native-community/slider Pods/react-native-slider » RNCSlider.m
+› Compiling react-native-safe-area-context Pods/react-native-safe-area-context » RNCSafeAreaViewMode.m
+› Packaging @react-native-community/slider Pods/react-native-slider » libreact-native-slider.a
+› Compiling react-native-safe-area-context Pods/react-native-safe-area-context » RNCSafeAreaViewManager.m
+› Compiling react-native-safe-area-context Pods/react-native-safe-area-context » RNCSafeAreaViewLocalData.m
+› Compiling react-native-safe-area-context Pods/react-native-safe-area-context » RNCSafeAreaViewEdges.m
+› Compiling react-native-safe-area-context Pods/react-native-safe-area-context » RNCSafeAreaViewEdgeMode.m
+› Compiling react-native-safe-area-context Pods/react-native-safe-area-context » RNCSafeAreaView.m
+› Compiling react-native-safe-area-context Pods/react-native-safe-area-context » RNCSafeAreaUtils.m
+› Compiling react-native-safe-area-context Pods/react-native-safe-area-context » RNCSafeAreaShadowView.m
+› Compiling react-native-safe-area-context Pods/react-native-safe-area-context » RNCSafeAreaProviderManager.m
+› Compiling react-native-safe-area-context Pods/react-native-safe-area-context » RNCSafeAreaProvider.m
+› Compiling react-native-safe-area-context Pods/react-native-safe-area-context » RNCOnInsetsChangeEvent.m
+› Compiling @react-native-community/netinfo Pods/react-native-netinfo » RNCConnectionStateWatcher.m
+› Compiling @react-native-community/netinfo Pods/react-native-netinfo » RNCConnectionState.m
+› Compiling react-native-svg Pods/RNSVG » RNSVGTextProperties.mm
+› Compiling react-native-svg Pods/RNSVG » RNSVGTextPathManager.mm
+› Compiling react-native-svg Pods/RNSVG » RNSVGTextPath.mm
+› Compiling react-native-svg Pods/RNSVG » RNSVGTextManager.mm
+› Compiling react-native-svg Pods/RNSVG » RNSVGText.mm
+› Packaging react-native-safe-area-context Pods/react-native-safe-area-context » libreact-native-safe-area-context.a
+› Compiling react-native-svg Pods/RNSVG » RNSVGTSpanManager.mm
+› Packaging @react-native-community/netinfo Pods/react-native-netinfo » libreact-native-netinfo.a
+› Compiling react-native-svg Pods/RNSVG » RNSVGTSpan.mm
+› Compiling react-native-svg Pods/RNSVG » RNSVGSymbolManager.mm
+› Compiling react-native-svg Pods/RNSVG » RNSVGSymbol.mm
+› Compiling react-native-svg Pods/RNSVG » RNSVGSvgViewModule.mm
+› Compiling react-native-svg Pods/RNSVG » RNSVGSvgViewManager.mm
+› Compiling react-native-svg Pods/RNSVG » RNSVGSvgView.mm
+› Compiling react-native-svg Pods/RNSVG » RNSVGSolidColorBrush.mm
+› Compiling react-native-svg Pods/RNSVG » RNSVGShadowNodes.cpp
+› Compiling react-native-svg Pods/RNSVG » RNSVGRenderableModule.mm
+› Compiling react-native-svg Pods/RNSVG » RNSVGRenderableManager.mm
+› Compiling react-native-svg Pods/RNSVG » RNSVGRenderable.mm
+› Compiling react-native-svg Pods/RNSVG » RNSVGRenderUtils.mm
+› Compiling react-native-svg Pods/RNSVG » RNSVGRectManager.mm
+› Compiling react-native-svg Pods/RNSVG » RNSVGRect.mm
+› Compiling react-native-svg Pods/RNSVG » RNSVGRadialGradientManager.mm
+› Compiling react-native-svg Pods/RNSVG » RNSVGRadialGradient.mm
+› Compiling react-native-svg Pods/RNSVG » RNSVGPropHelper.mm
+› Compiling react-native-svg Pods/RNSVG » RNSVGPatternManager.mm
+› Compiling react-native-svg Pods/RNSVG » RNSVGPattern.mm
+⚠️  Script has ambiguous dependencies causing it to run on every build.
+   To fix, go to: Xcode » CoramDeoStaging/CoramDeoStaging » Build Phases » '[Expo Dev Launcher] Strip Local Network Keys for Release'
+   Either: Uncheck "Based on dependency analysis", or select output files to trigger the script
+
+⚠️  Pods/PromisesObjC-FBLPromises_Privacy: iOS@9.0 deployment version mismatch, expected >= 2.0 <= 26.5.99
+⚠️  Pods/GTMSessionFetcher-GTMSessionFetcher_Core_Privacy: iOS@10.0 deployment version mismatch, expected >= 2.0 <= 26.5.99
+⚠️  Pods/PromisesSwift-Promises_Privacy: iOS@9.0 deployment version mismatch, expected >= 2.0 <= 26.5.99
+
+› 2 error(s), and 4 warning(s)
+
+CommandError: Failed to build iOS project. "xcodebuild" exited with error code 65.

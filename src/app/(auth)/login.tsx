@@ -108,6 +108,12 @@ export default function LoginScreen() {
               </View>
             </View>
 
+            <View style={styles.forgotPasswordContainer}>
+              <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')} activeOpacity={0.8}>
+                <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+              </TouchableOpacity>
+            </View>
+
             <TouchableOpacity onPress={handleLogin} disabled={isLoading} activeOpacity={0.8} style={{ marginTop: 8 }}>
               <LinearGradient colors={['#FF6596', '#B66DFF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.primaryButton}>
                 {isLoading ? (
@@ -207,6 +213,15 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#1a1a1a',
+  },
+  forgotPasswordContainer: {
+    alignItems: 'flex-end',
+    marginBottom: 20,
+  },
+  forgotPasswordText: {
+    color: '#B66DFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
   primaryButton: {
     height: 56,

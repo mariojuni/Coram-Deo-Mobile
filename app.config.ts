@@ -3,7 +3,7 @@ import { ExpoConfig, ConfigContext } from 'expo/config';
 export default ({ config }: ConfigContext): ExpoConfig => {
   const isProd = process.env.EXPO_PUBLIC_APP_ENV === 'production';
   const appName = isProd ? "Coram Deo" : "Coram Deo Staging";
-  const bundleIdentifier = isProd ? "com.coramdeo.app" : "com.coramdeo.app.staging";
+  const bundleIdentifier = isProd ? "com.coramdeo.app.prod" : "com.coramdeo.app.staging";
 
   return {
     ...config,
@@ -19,7 +19,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       bundleIdentifier,
       googleServicesFile: isProd ? "./credentials/production/GoogleService-Info.plist" : "./credentials/staging/GoogleService-Info.plist",
       infoPlist: {
-        CFBundleDisplayName: appName
+        CFBundleDisplayName: appName,
+        ITSAppUsesNonExemptEncryption: false
       }
     },
     android: {
@@ -52,6 +53,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           }
         }
       ],
+      "@react-native-firebase/app",
       "expo-router",
       [
         "@react-native-google-signin/google-signin",

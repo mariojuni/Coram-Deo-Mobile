@@ -3,6 +3,7 @@ import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   signInWithCredential,
   signInWithEmailAndPassword,
   signOut,
@@ -376,6 +377,38 @@ let isRegistering = false;
 export const authRepository = {
   checkUsernameTaken,
   checkEmailTaken,
+
+  async sendPasswordReset(email: string): Promise<void> {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) {
+      throw new Error("Email address is required.");
+    }
+    
+    // Simple regex validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      throw new Error("Please enter a valid email address.");
+    }
+
+    try {
+      await sendPasswordResetEmail(auth, cleanEmail);
+    } catch (error: any) {
+      console.warn("[Auth Repository] Error sending password reset email:", error);
+      
+      // We intentionally do not throw 'auth/user-not-found' to prevent email enumeration.
+      // We only throw generic network or internal errors.
+      if (
+        error?.code === "auth/network-request-failed" ||
+        error?.code === "auth/internal-error" ||
+        error?.code === "auth/too-many-requests"
+      ) {
+        throw new Error("We could not send the reset link right now. Please try again later.");
+      }
+      
+      // For any other error (including user-not-found), resolve silently.
+      return;
+    }
+  },
 
   async signup(payload: RegistrationPayload): Promise<AuthCredentialResult> {
     isRegistering = true;
