@@ -43,6 +43,7 @@ export function SermonVideoPlayer({
   const [progressBarWidth, setProgressBarWidth] = useState(0);
   const [initialSeekDone, setInitialSeekDone] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [playerError, setPlayerError] = useState<string | null>(null);
   const controlsTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const player = useVideoPlayer(videoSource ? { uri: videoSource } : null, (p) => {
@@ -64,9 +65,10 @@ export function SermonVideoPlayer({
   });
 
   // Listen to status changes
-  useEventListener(player, 'statusChange', ({ status }) => {
+  useEventListener(player, 'statusChange', ({ status, error }) => {
     if (status === 'loading') {
       setPlayerState('loading');
+      setPlayerError(null);
     } else if (status === 'readyToPlay') {
       setDurationMs((player.duration ?? 0) * 1000);
       if (!initialSeekDone) {
@@ -79,6 +81,7 @@ export function SermonVideoPlayer({
       }
     } else if (status === 'error') {
       setPlayerState('error');
+      setPlayerError(error?.message || 'Unknown player error');
     }
   });
 
@@ -208,15 +211,16 @@ export function SermonVideoPlayer({
             <View style={styles.errorBox}>
               <AlertCircle size={32} color="#fff" />
               <Text style={styles.errorText}>Failed to load video</Text>
-              {player.error?.message ? (
+              {playerError ? (
                 <Text style={{ color: '#fff', fontSize: 12, textAlign: 'center', marginHorizontal: 20 }}>
-                  {player.error.message}
+                  {playerError}
                 </Text>
               ) : null}
               <TouchableOpacity
                 style={styles.retryBtn}
                 onPress={() => {
                   setPlayerState('loading');
+                  setPlayerError(null);
                   player.play();
                 }}
               >
