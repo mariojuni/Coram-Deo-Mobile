@@ -22,7 +22,7 @@ const withFirebaseSPMDisable = (config: ExpoConfig) => {
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   const isProd = process.env.EXPO_PUBLIC_APP_ENV === 'production';
-  const appName = isProd ? "Coram Deo" : "Coram Deo Staging";
+  const appName = isProd ? "Coram Deo" : "CoramDeo - DEV";
   const bundleIdentifier = isProd ? "com.coramdeo.app.prod" : "com.coramdeo.app.staging";
 
   const baseConfig: ExpoConfig = {
