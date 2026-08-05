@@ -7,3 +7,5 @@ git_source(:github) {|repo_name| "https://github.com/#{repo_name}" }
 # gem "rails"
 gem 'fastlane'
 gem 'cocoapods'
+gem 'fastlane-plugin-firebase_app_distribution'
+
