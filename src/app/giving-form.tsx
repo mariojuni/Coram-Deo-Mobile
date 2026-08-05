@@ -209,6 +209,7 @@ export default function GivingFormScreen() {
               autoCorrect={false}
               spellCheck={false}
               contextMenuHidden={true}
+              autoCapitalize="none"
             />
           </View>
         </View>

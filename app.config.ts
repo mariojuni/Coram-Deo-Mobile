@@ -3,6 +3,24 @@ import { withDangerousMod } from 'expo/config-plugins';
 import * as fs from 'fs';
 import * as path from 'path';
 
+const withAndroidSigningFix = (config: ExpoConfig) => {
+  return withDangerousMod(config, [
+    'android',
+    async (config) => {
+      const buildGradlePath = path.join(config.modRequest.platformProjectRoot, 'app', 'build.gradle');
+      if (fs.existsSync(buildGradlePath)) {
+        let contents = fs.readFileSync(buildGradlePath, 'utf-8');
+        contents = contents.replace(
+          /storeFile file\(project\.property\('android\.injected\.signing\.store\.file'\)\)/g,
+          "def storeFilePath = project.property('android.injected.signing.store.file')\n                storeFile rootProject.file(storeFilePath)"
+        );
+        fs.writeFileSync(buildGradlePath, contents);
+      }
+      return config;
+    },
+  ]);
+};
+
 const withFirebaseSPMDisable = (config: ExpoConfig) => {
   return withDangerousMod(config, [
     'ios',
@@ -113,5 +131,5 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     owner: "maryow"
   };
 
-  return withFirebaseSPMDisable(baseConfig);
+  return withAndroidSigningFix(withFirebaseSPMDisable(baseConfig));
 };
