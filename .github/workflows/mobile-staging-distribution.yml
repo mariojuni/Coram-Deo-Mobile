@@ -88,10 +88,6 @@ jobs:
           ruby-version: '3.2'
           bundler-cache: true
           
-      - name: Install Pods
-        run: |
-          cd ios
-          pod install
 
       - name: Decode Firebase Service Account
         env:
@@ -111,7 +107,6 @@ jobs:
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
         run: |
           EXPO_PUBLIC_APP_ENV=development npx expo prebuild --platform ios --clean
-          cd ios && pod install && cd ..
           bundle exec fastlane ios staging
 
       - name: Cleanup Service Account
