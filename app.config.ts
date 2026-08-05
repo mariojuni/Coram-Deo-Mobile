@@ -10,10 +10,33 @@ const withAndroidSigningFix = (config: ExpoConfig) => {
       const buildGradlePath = path.join(config.modRequest.platformProjectRoot, 'app', 'build.gradle');
       if (fs.existsSync(buildGradlePath)) {
         let contents = fs.readFileSync(buildGradlePath, 'utf-8');
+        
+        const releaseSigningBlock = `        release {
+            if (project.hasProperty('android.injected.signing.store.file')) {
+                def storeFilePath = project.property('android.injected.signing.store.file')
+                storeFile file(storeFilePath)
+                storePassword project.property('android.injected.signing.store.password')
+                keyAlias project.property('android.injected.signing.key.alias')
+                keyPassword project.property('android.injected.signing.key.password')
+            } else {
+                storeFile file('debug.keystore')
+                storePassword 'android'
+                keyAlias 'androiddebugkey'
+                keyPassword 'android'
+            }
+        }`;
+
+        if (!contents.includes('signingConfigs {')) {
+          contents = contents.replace('android {', `android {\n    signingConfigs {\n${releaseSigningBlock}\n    }`);
+        } else if (!contents.includes('release {') || !contents.includes('android.injected.signing.store.file')) {
+          contents = contents.replace('signingConfigs {', `signingConfigs {\n${releaseSigningBlock}`);
+        }
+
         contents = contents.replace(
-          /storeFile file\(project\.property\('android\.injected\.signing\.store\.file'\)\)/g,
-          "def storeFilePath = project.property('android.injected.signing.store.file')\n                storeFile rootProject.file(storeFilePath)"
+          /buildTypes\s*\{\s*debug\s*\{[^\}]*\}\s*release\s*\{\s*\/\/[^\n]*\n\s*\/\/[^\n]*\n\s*signingConfig signingConfigs\.debug/,
+          `buildTypes {\n        debug {\n            signingConfig signingConfigs.debug\n        }\n        release {\n            signingConfig signingConfigs.release`
         );
+
         fs.writeFileSync(buildGradlePath, contents);
       }
       return config;

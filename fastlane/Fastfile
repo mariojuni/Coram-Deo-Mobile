@@ -6,7 +6,7 @@ platform :android do
       task: "assemble",
       build_type: "Release",
       properties: {
-        "android.injected.signing.store.file" => File.expand_path("fastlane/staging-upload-key.keystore"),
+        "android.injected.signing.store.file" => File.expand_path("staging-upload-key.keystore", __dir__),
         "android.injected.signing.store.password" => ENV["ANDROID_KEYSTORE_PASSWORD"],
         "android.injected.signing.key.alias" => ENV["ANDROID_KEY_ALIAS"],
         "android.injected.signing.key.password" => ENV["ANDROID_KEY_PASSWORD"]
