@@ -46,7 +46,6 @@ platform :ios do
     )
 
     gym(
-      project: "ios/CoramDeo.xcodeproj",
       workspace: "ios/CoramDeo.xcworkspace",
       scheme: "CoramDeo",
       export_method: "ad-hoc"
