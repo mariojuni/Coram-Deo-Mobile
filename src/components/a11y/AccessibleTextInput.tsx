@@ -31,8 +31,9 @@ export const AccessibleTextInput = React.forwardRef<TextInput, AccessibleTextInp
           }}
           aria-invalid={!!error}
           aria-errormessage={error}
-          // Default allowFontScaling is true in RN, ensure it's explicitly stated
           allowFontScaling={true}
+          autoCorrect={props.autoCorrect ?? false}
+          spellCheck={props.spellCheck ?? false}
           {...props}
         />
         {error ? (

@@ -4,7 +4,6 @@ import {
   Animated,
   Modal,
   Platform,
-  Pressable,
   ScrollView,
   StyleProp,
   StyleSheet,
@@ -16,6 +15,10 @@ import {
   ViewStyle,
   useColorScheme
 } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { BounceCard } from '@/components/ui/BounceCard';
+import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
+import { Colors } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export interface DropdownOption<T = string> {
@@ -36,6 +39,7 @@ export interface ModernDropdownProps<T = string> {
   searchPlaceholder?: string;
   renderTrigger?: (selectedOption: DropdownOption<T> | undefined, handleOpen: () => void) => React.ReactNode;
   clearable?: boolean;
+  disableDarkMode?: boolean;
 }
 
 export function ModernDropdown<T = string>({
@@ -50,9 +54,15 @@ export function ModernDropdown<T = string>({
   searchPlaceholder = 'Search...',
   renderTrigger,
   clearable = false,
+  disableDarkMode = false,
 }: ModernDropdownProps<T>) {
-  const colors = useTheme();
-  const colorScheme = useColorScheme();
+  const systemColors = useTheme();
+  const systemColorScheme = useColorScheme();
+
+  const colorScheme = disableDarkMode ? 'light' : systemColorScheme;
+  const colors = disableDarkMode ? Colors.light : systemColors;
+  const isDarkMode = colorScheme === 'dark';
+
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
 
@@ -116,7 +126,11 @@ export function ModernDropdown<T = string>({
 
   return (
     <View style={[styles.container, containerStyle]}>
-      {label && !renderTrigger && <Text style={[styles.label, { color: colors.textSecondary }]}>{label}</Text>}
+      {label && !renderTrigger && (
+        <Text style={[styles.label, { color: isDarkMode ? colors.textSecondary : '#1a1a1a' }]}>
+          {label}
+        </Text>
+      )}
       
       {renderTrigger ? (
         renderTrigger(selectedOption, handleOpen)
@@ -125,8 +139,8 @@ export function ModernDropdown<T = string>({
           style={[
             styles.trigger,
             { 
-              backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#F8F9FB',
-              borderColor: colorScheme === 'dark' ? '#2C2C2E' : '#EBEBEB',
+              backgroundColor: isDarkMode ? '#1C1C1E' : '#fff',
+              borderColor: isDarkMode ? '#2C2C2E' : '#e5e5e5',
               opacity: disabled ? 0.5 : 1 
             }
           ]}
@@ -139,13 +153,13 @@ export function ModernDropdown<T = string>({
             <Text
               style={[
                 styles.triggerText,
-                { color: selectedOption ? colors.text : colors.textSecondary }
+                { color: selectedOption ? (isDarkMode ? colors.text : '#1a1a1a') : '#8e8e93' }
               ]}
             >
               {selectedOption ? selectedOption.label : placeholder}
             </Text>
           </View>
-          <ChevronDown size={18} color={colors.textSecondary} />
+          <ChevronDown size={18} color={isDarkMode ? colors.textSecondary : '#666'} />
         </TouchableOpacity>
       )}
 
@@ -164,99 +178,115 @@ export function ModernDropdown<T = string>({
             style={[
               styles.bottomSheet,
               { 
-                backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFF',
+                backgroundColor: isDarkMode ? '#1C1C1E' : '#FAFAFA',
                 transform: [{ translateY: slideAnim }]
               }
             ]}
           >
-            <View style={styles.grabberContainer}>
-              <View style={[styles.grabber, { backgroundColor: colors.textSecondary }]} />
-            </View>
-
-            <View style={styles.header}>
-              <Text style={[styles.sheetTitle, { color: colors.text }]}>
-                {label || placeholder}
-              </Text>
-              <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-                <X size={22} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-
-            {searchable && (
-              <View style={[styles.searchRow, { backgroundColor: colorScheme === 'dark' ? '#2C2C2E' : '#F3F4F6' }]}>
-                <Search size={18} color={colors.textSecondary} />
-                <TextInput
-                  style={[styles.searchInput, { color: colors.text }]}
-                  placeholder={searchPlaceholder}
-                  placeholderTextColor={colors.textSecondary}
-                  value={query}
-                  onChangeText={setQuery}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-                {query.length > 0 && (
-                  <TouchableOpacity onPress={() => setQuery('')}>
-                    <X size={16} color={colors.textSecondary} />
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-
-            <ScrollView 
-              style={styles.optionsList} 
-              contentContainerStyle={styles.optionsListContent}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-            >
-              {clearable && value !== undefined && value !== null && (
-                <TouchableOpacity
-                  onPress={() => handleSelect(null)}
-                  style={[
-                    styles.optionRow,
-                    { backgroundColor: 'rgba(239, 68, 68, 0.08)' }
-                  ]}
-                  activeOpacity={0.7}
+            {/* Header (Adopting EventDetailsModal pattern) */}
+            <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
+              {!isDarkMode && <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />}
+              <View style={[StyleSheet.absoluteFill, { backgroundColor: isDarkMode ? '#1C1C1E' : 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
+              <View style={[styles.dragHandle, isDarkMode && { backgroundColor: '#48484A' }]} />
+              <View style={styles.headerContent}>
+                <View style={styles.headerCirclePlaceholder} />
+                <Text style={[styles.headerTitle, { color: isDarkMode ? colors.text : '#1a1a1a' }]} numberOfLines={1}>
+                  {label || placeholder}
+                </Text>
+                <BounceCard
+                  bounceScale={0.85}
+                  style={[styles.headerCircle, isDarkMode && { backgroundColor: '#2C2C2E', borderWidth: 0, elevation: 0 }]}
+                  onPress={handleClose}
+                  hitSlop={8}
+                  activeOpacity={0.8}
                 >
-                  <View style={styles.optionContent}>
-                    <View style={styles.iconContainer}><X size={18} color="#EF4444" /></View>
-                    <Text style={[styles.optionText, { color: '#EF4444', fontWeight: '600' }]}>
-                      Clear Selection
-                    </Text>
-                  </View>
-                </TouchableOpacity>
+                  <X size={24} color={isDarkMode ? colors.text : '#111827'} strokeWidth={2} />
+                </BounceCard>
+              </View>
+            </View>
+
+            <View style={styles.modalBody}>
+              {searchable && (
+                <View style={[styles.searchRow, { backgroundColor: isDarkMode ? '#2C2C2E' : '#F3F4F6' }]}>
+                  <Search size={18} color={isDarkMode ? colors.textSecondary : '#9CA3AF'} />
+                  <TextInput
+                    style={[styles.searchInput, { color: isDarkMode ? colors.text : '#1F2937' }]}
+                    placeholder={searchPlaceholder}
+                    placeholderTextColor={isDarkMode ? colors.textSecondary : '#9CA3AF'}
+                    value={query}
+                    onChangeText={setQuery}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    spellCheck={false}
+                  />
+                  {query.length > 0 && (
+                    <TouchableOpacity onPress={() => setQuery('')}>
+                      <X size={16} color={isDarkMode ? colors.textSecondary : '#9CA3AF'} />
+                    </TouchableOpacity>
+                  )}
+                </View>
               )}
 
-              {filteredOptions.map((option, index) => {
-                const isActive = value === option.value;
-                return (
+              <ScrollView 
+                style={styles.optionsList} 
+                contentContainerStyle={styles.optionsListContent}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+              >
+                {clearable && value !== undefined && value !== null && (
                   <TouchableOpacity
-                    key={String(option.value) + index}
-                    onPress={() => handleSelect(option.value)}
+                    onPress={() => handleSelect(null)}
                     style={[
                       styles.optionRow,
-                      { backgroundColor: isActive ? (colorScheme === 'dark' ? 'rgba(255, 101, 150, 0.15)' : 'rgba(255, 101, 150, 0.08)') : 'transparent' }
+                      { backgroundColor: 'rgba(239, 68, 68, 0.08)' }
                     ]}
                     activeOpacity={0.7}
                   >
                     <View style={styles.optionContent}>
-                      {option.icon && <View style={styles.iconContainer}>{option.icon}</View>}
-                      <Text
-                        style={[
-                          styles.optionText,
-                          { 
-                            color: isActive ? '#FF6596' : colors.text,
-                            fontWeight: isActive ? '700' : '500',
-                          }
-                        ]}
-                      >
-                        {option.label}
+                      <View style={styles.iconContainer}><X size={18} color="#EF4444" /></View>
+                      <Text style={[styles.optionText, { color: '#EF4444', fontWeight: '600' }]}>
+                        Clear Selection
                       </Text>
                     </View>
-                    {isActive && <Check size={20} color="#FF6596" strokeWidth={3} />}
                   </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
+                )}
+
+                {filteredOptions.map((option, index) => {
+                  const isActive = value === option.value;
+                  return (
+                    <TouchableOpacity
+                      key={String(option.value) + index}
+                      onPress={() => handleSelect(option.value)}
+                      style={[
+                        styles.optionRow,
+                        { 
+                          backgroundColor: isActive 
+                            ? (isDarkMode ? 'rgba(255, 101, 150, 0.15)' : 'rgba(255, 101, 150, 0.08)') 
+                            : (isDarkMode ? '#2C2C2E' : '#FFF') 
+                        }
+                      ]}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.optionContent}>
+                        {option.icon && <View style={styles.iconContainer}>{option.icon}</View>}
+                        <Text
+                          style={[
+                            styles.optionText,
+                            { 
+                              color: isActive ? '#FF6596' : (isDarkMode ? colors.text : '#1F2937'),
+                              fontWeight: isActive ? '700' : '500',
+                            }
+                          ]}
+                        >
+                          {option.label}
+                        </Text>
+                      </View>
+                      {isActive && <Check size={20} color="#FF6596" strokeWidth={3} />}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
           </Animated.View>
         </View>
       </Modal>
@@ -269,18 +299,18 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   label: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
-    marginLeft: 4,
+    marginLeft: 0,
   },
   trigger: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    height: 52,
-    borderRadius: 14,
+    paddingHorizontal: 14,
+    height: 50,
+    borderRadius: 12,
     borderWidth: 1,
   },
   triggerContent: {
@@ -292,8 +322,8 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   triggerText: {
-    fontSize: 15,
-    fontWeight: '500',
+    fontSize: 16,
+    fontWeight: '400',
   },
   overlay: {
     flex: 1,
@@ -312,39 +342,62 @@ const styles = StyleSheet.create({
     maxHeight: '80%',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    paddingTop: 12,
-    paddingHorizontal: 20,
     paddingBottom: Platform.OS === 'ios' ? 40 : 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 20,
+    overflow: 'hidden',
   },
-  grabberContainer: {
-    alignItems: 'center',
-    marginBottom: 16,
+  headerContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.4)',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
   },
-  grabber: {
-    width: 36,
+  dragHandle: {
+    width: 38,
     height: 5,
-    borderRadius: 2.5,
-    opacity: 0.4,
+    backgroundColor: '#d1d5db',
+    borderRadius: 10,
+    alignSelf: 'center',
+    marginBottom: 4,
   },
-  header: {
+  headerContent: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 12,
   },
-  sheetTitle: {
-    fontSize: 18,
+  headerCirclePlaceholder: {
+    width: 40,
+    height: 40,
+  },
+  headerCircle: {
+    ...getTopBarButtonShadowStyle(20),
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    flex: 1,
+    fontSize: 16,
     fontWeight: '700',
+    textAlign: 'center',
+    marginHorizontal: 12,
   },
-  closeButton: {
-    padding: 6,
-    backgroundColor: 'rgba(0,0,0,0.04)',
-    borderRadius: 20,
+  modalBody: {
+    paddingTop: 72,
+    paddingHorizontal: 20,
   },
   optionsList: {
     flexGrow: 0,
@@ -360,6 +413,8 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 16,
     marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.04)',
   },
   optionContent: {
     flexDirection: 'row',
@@ -371,9 +426,9 @@ const styles = StyleSheet.create({
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    height: 44,
-    borderRadius: 12,
+    paddingHorizontal: 14,
+    height: 46,
+    borderRadius: 14,
     marginBottom: 16,
     gap: 8,
   },

@@ -111,7 +111,7 @@ export default function GivingInputScreen() {
             <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
           </BounceCard>
           <Text style={styles.headerTitle} numberOfLines={1}>Giving Input</Text>
-          <View style={[styles.headerCircle, { backgroundColor: 'transparent', borderWidth: 0, elevation: 0 }]} />
+          <View style={{ width: 40 }} />
         </View>
       </View>
 
@@ -140,6 +140,7 @@ export default function GivingInputScreen() {
               onSelect={(val) => setForm({ ...form, memberId: val || '' })}
               placeholder="Search and select member"
               searchable
+              disableDarkMode
             />
           </View>
         )}
@@ -152,6 +153,8 @@ export default function GivingInputScreen() {
             keyboardType="decimal-pad"
             value={form.amount}
             onChangeText={(text) => setForm({ ...form, amount: text })}
+            autoCorrect={false}
+            spellCheck={false}
           />
         </View>
 
@@ -163,6 +166,7 @@ export default function GivingInputScreen() {
             onSelect={(val) => setForm({ ...form, fundId: val || '' })}
             placeholder="Select a fund"
             searchable
+            disableDarkMode
           />
         </View>
 
@@ -174,6 +178,7 @@ export default function GivingInputScreen() {
             onSelect={(val) => setForm({ ...form, campaignId: val || '' })}
             placeholder="Select a campaign"
             clearable
+            disableDarkMode
           />
         </View>
 
@@ -199,6 +204,8 @@ export default function GivingInputScreen() {
             placeholder="Transaction ID / Check #"
             value={form.referenceNumber}
             onChangeText={(text) => setForm({ ...form, referenceNumber: text })}
+            autoCorrect={false}
+            spellCheck={false}
           />
         </View>
 
@@ -210,6 +217,8 @@ export default function GivingInputScreen() {
             multiline
             value={form.note}
             onChangeText={(text) => setForm({ ...form, note: text })}
+            autoCorrect={false}
+            spellCheck={false}
           />
         </View>
 

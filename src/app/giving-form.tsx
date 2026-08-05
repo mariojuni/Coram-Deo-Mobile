@@ -1,12 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { BounceCard } from '@/components/ui/BounceCard';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Animated } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { ChevronLeft, Upload, CheckCircle2 } from 'lucide-react-native';
 import { useAuthStore } from '../store/useAuthStore';
 import { useGiving } from '../features/giving/presentation/hooks/useGiving';
 import { submitGivingRecord, uploadProofOfPayment } from '../features/giving/data/giving.repository';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
@@ -20,7 +19,6 @@ export default function GivingFormScreen() {
   const { userProfile, currentUser } = useAuthStore();
   const { funds, paymentMethods, campaigns } = useGiving();
   const insets = useSafeAreaInsets();
-  const scrollY = useRef(new Animated.Value(0)).current;
 
   const [amount, setAmount] = useState('');
   const [selectedFundId, setSelectedFundId] = useState('');
@@ -31,8 +29,6 @@ export default function GivingFormScreen() {
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const successScale = useRef(new Animated.Value(0)).current;
-  const successOpacity = useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
     if (fundId && funds.some((f: any) => f.id === fundId)) {
@@ -69,21 +65,9 @@ export default function GivingFormScreen() {
     }
   };
 
-  const isDebouncing = useRef(false);
-  const withDebounce = (callback: Function, delay: number = 1000) => {
-    return (...args: any[]) => {
-      if (isDebouncing.current) return;
-      isDebouncing.current = true;
-      callback(...args);
-      setTimeout(() => {
-        isDebouncing.current = false;
-      }, delay);
-    };
-  };
-
-  const handlePickImageDebounced = withDebounce(pickImage);
-
   const handleSubmit = async () => {
+    if (isSubmitting) return;
+
     if (!churchId || !userId) {
       Alert.alert('Error', 'Missing church or user information.');
       return;
@@ -133,23 +117,17 @@ export default function GivingFormScreen() {
       });
       
       setIsSuccess(true);
-      Animated.parallel([
-        Animated.spring(successScale, { toValue: 1, friction: 5, useNativeDriver: true }),
-        Animated.timing(successOpacity, { toValue: 1, duration: 400, useNativeDriver: true })
-      ]).start();
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to submit giving record.');
       setIsSubmitting(false);
     }
   };
 
-  const handleSubmitDebounced = withDebounce(handleSubmit, 2000);
-
   if (isSuccess) {
     return (
       <View style={styles.successContainer}>
         <LinearGradient colors={['#FDF2F8', '#FFF']} style={StyleSheet.absoluteFill} />
-        <Animated.View style={{ opacity: successOpacity, transform: [{ scale: successScale }], alignItems: 'center' }}>
+        <View style={{ alignItems: 'center' }}>
           <View style={styles.successIconWrap}>
             <CheckCircle2 size={64} color="#22C55E" />
           </View>
@@ -160,7 +138,7 @@ export default function GivingFormScreen() {
           <TouchableOpacity 
             activeOpacity={0.8} 
             style={styles.doneBtn} 
-            onPress={withDebounce(() => router.replace('/my-giving?fromSuccess=true'))}
+            onPress={() => router.replace('/my-giving?fromSuccess=true')}
           >
             <LinearGradient 
               colors={['#FF6596', '#C084FC']} 
@@ -170,7 +148,7 @@ export default function GivingFormScreen() {
             />
             <Text style={styles.doneBtnText}>View My Giving</Text>
           </TouchableOpacity>
-        </Animated.View>
+        </View>
       </View>
     );
   }
@@ -178,38 +156,28 @@ export default function GivingFormScreen() {
   const selectedCampaign = campaigns.find((c: any) => c.id === campaignId);
   const isCampaignInactive = Boolean(campaignId && !selectedCampaign);
 
-  const headerOpacity = scrollY.interpolate({
-    inputRange: [0, 50],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
-
   return (
     <View style={styles.container}>
       <LinearGradient colors={['#FAFAFA', '#FAFAFA']} style={StyleSheet.absoluteFill} />
       <Stack.Screen options={{ headerShown: false }} />
       
-      <View style={[styles.header, { paddingTop: Math.max(insets.top, 24), paddingBottom: 16, position: 'absolute', width: '100%', zIndex: 10 }]}>
-        <Animated.View style={[StyleSheet.absoluteFill, { opacity: headerOpacity }]}>
-          <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
-          <View style={[StyleSheet.absoluteFill, { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.5)' }]} />
-        </Animated.View>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, 24) }]}>
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.95)', borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.05)' }]} />
         <View style={styles.headerContent}>
-          <BounceCard bounceScale={0.85} style={styles.backBtn} onPress={withDebounce(() => router.back())}>
+          <BounceCard bounceScale={0.85} style={styles.backBtn} onPress={() => router.back()}>
             <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
           </BounceCard>
-          <Animated.Text style={[styles.headerTitleCenter, { opacity: headerOpacity }]}>
-            Make a Gift
-          </Animated.Text>
+          <Text style={styles.headerTitleCenter}>Make a Gift</Text>
+          <View style={{ width: 40 }} />
         </View>
       </View>
 
-      <Animated.ScrollView 
+      <ScrollView 
         style={styles.content} 
         showsVerticalScrollIndicator={false}
-        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
-        scrollEventThrottle={16}
-        contentContainerStyle={{ paddingTop: insets.top + 80, paddingBottom: 100 }}
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets={true}
+        contentContainerStyle={{ paddingTop: insets.top + 70, paddingBottom: insets.bottom + 120 }}
       >
         {selectedCampaign && (
           <View style={styles.campaignInfo}>
@@ -228,21 +196,26 @@ export default function GivingFormScreen() {
         )}
 
         <View style={styles.formGroup}>
-          <AccessibleTextInput
-            label="Amount (₱)"
-            style={styles.amountInput}
-            containerStyle={styles.amountInputWrap}
-            keyboardType="decimal-pad"
-            placeholder="0.00"
-            placeholderTextColor="#9CA3AF"
-            value={amount}
-            onChangeText={setAmount}
-          />
+          <Text style={styles.label}>Amount (₱)</Text>
+          <View style={styles.amountInputWrap}>
+            <Text style={styles.currencySymbol}>₱</Text>
+            <TextInput
+              style={styles.amountInput}
+              keyboardType="number-pad"
+              placeholder="0.00"
+              placeholderTextColor="#9CA3AF"
+              value={amount}
+              onChangeText={setAmount}
+              autoCorrect={false}
+              spellCheck={false}
+              contextMenuHidden={true}
+            />
+          </View>
         </View>
 
         <View style={styles.formGroup}>
           <Text style={styles.label}>Fund</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={styles.horizontalScroll}>
             {funds.filter((f: any) => f.visibility !== 'admin_only' && f.visibility !== 'finance_only').map((fund: any) => {
               const isActive = selectedFundId === fund.id;
               return (
@@ -264,7 +237,7 @@ export default function GivingFormScreen() {
 
         <View style={styles.formGroup}>
           <Text style={styles.label}>Payment Method</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={styles.horizontalScroll}>
             {paymentMethods.map((method: any) => {
               const isActive = selectedPaymentMethod === method.id;
               return (
@@ -292,6 +265,9 @@ export default function GivingFormScreen() {
             placeholderTextColor="#9CA3AF"
             value={referenceNumber}
             onChangeText={setReferenceNumber}
+            autoCorrect={false}
+            spellCheck={false}
+            contextMenuHidden={true}
           />
         </View>
 
@@ -299,7 +275,7 @@ export default function GivingFormScreen() {
           <Text style={styles.label}>
             Proof of Payment {requiresProof && <Text style={{ color: '#EF4444' }}>*</Text>}
           </Text>
-          <TouchableOpacity activeOpacity={0.8} style={styles.uploadBtn} onPress={handlePickImageDebounced}>
+          <TouchableOpacity activeOpacity={0.8} style={styles.uploadBtn} onPress={pickImage}>
             <LinearGradient colors={['rgba(255,101,150,0.05)', 'rgba(255,101,150,0.02)']} style={[StyleSheet.absoluteFill, { borderRadius: 16 }]} />
             {proofUri ? (
               <CheckCircle2 size={24} color="#FF6596" />
@@ -322,18 +298,20 @@ export default function GivingFormScreen() {
             numberOfLines={3}
             value={note}
             onChangeText={setNote}
+            autoCorrect={false}
+            spellCheck={false}
+            contextMenuHidden={true}
           />
         </View>
-      </Animated.ScrollView>
+      </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom + 16, 32) }]}>
-        <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.65)', borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)' }]} pointerEvents="none" />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.95)', borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)' }]} pointerEvents="none" />
 
         <AccessibleButton 
           activeOpacity={0.8}
           style={[styles.submitBtnWrap, (isSubmitting || isCampaignInactive) && styles.submitBtnDisabled]} 
-          onPress={handleSubmitDebounced}
+          onPress={handleSubmit}
           disabled={isSubmitting || isCampaignInactive}
           loading={isSubmitting}
           accessibilityLabel={isCampaignInactive ? 'Campaign Ended' : 'Submit Giving'}
@@ -357,38 +335,35 @@ export default function GivingFormScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAFAFA' },
   header: { 
+    zIndex: 10,
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     width: '100%',
     paddingHorizontal: 20,
+    paddingBottom: 14,
     marginTop: 8,
   },
   headerTitleCenter: {
     fontSize: 18,
     fontWeight: '700',
     color: '#1a1a1a',
-    position: 'absolute',
-    left: 0,
-    right: 0,
     textAlign: 'center',
-    zIndex: 1,
-    paddingHorizontal: 60,
-    pointerEvents: 'none',
+    flex: 1,
   },
   backBtn: {
     ...getTopBarButtonShadowStyle(20),
     width: 40, height: 40,
     alignItems: 'center', justifyContent: 'center',
-    zIndex: 10,
   },
   content: { flex: 1, paddingHorizontal: 24 },
   
   campaignInfo: {
     padding: 20,
     borderRadius: 16,
-    marginBottom: 28,
+    marginBottom: 24,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.8)',
     shadowColor: '#FF6596',
@@ -411,7 +386,7 @@ const styles = StyleSheet.create({
   },
 
   formGroup: {
-    marginBottom: 28,
+    marginBottom: 24,
   },
   label: {
     fontSize: 15,
@@ -425,6 +400,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
+    backgroundColor: '#fff',
+    borderRadius: 16,
   },
   currencySymbol: {
     fontSize: 28,
@@ -434,16 +411,18 @@ const styles = StyleSheet.create({
   },
   amountInput: {
     flex: 1,
-    fontSize: 36,
+    fontSize: 32,
     fontWeight: '800',
     color: '#1a1a1a',
-    paddingVertical: 20,
+    paddingVertical: 16,
   },
   textInput: {
     ...(getSoftShadowStyle(16) as any),
     fontSize: 16,
     color: '#1a1a1a',
     padding: 16,
+    backgroundColor: '#fff',
+    borderRadius: 14,
   },
   textArea: {
     height: 120,

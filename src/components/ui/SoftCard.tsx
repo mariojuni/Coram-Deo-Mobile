@@ -1,5 +1,5 @@
 import React from 'react';
-import { Animated, StyleProp, StyleSheet, View, ViewProps, ViewStyle } from 'react-native';
+import { Animated, Platform, StyleProp, StyleSheet, View, ViewProps, ViewStyle } from 'react-native';
 
 export interface SoftCardProps extends ViewProps {
   children: React.ReactNode;
@@ -44,9 +44,18 @@ export const SoftCard = React.forwardRef<any, SoftCardProps>(({
 });
 
 export const getSoftShadowStyle = (borderRadius?: number): ViewStyle => {
-  const baseStyle: ViewStyle = {
+  const baseStyle: ViewStyle = Platform.OS === 'web' ? {
     backgroundColor: '#FFFFFF',
     boxShadow: '0px 4px 12px rgba(164, 164, 164, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.8)',
+  } : {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#a4a4a4',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.8)',
   };
@@ -59,9 +68,18 @@ export const getSoftShadowStyle = (borderRadius?: number): ViewStyle => {
 };
 
 export const getTopBarButtonShadowStyle = (borderRadius?: number): ViewStyle => {
-  const baseStyle: ViewStyle = {
+  const baseStyle: ViewStyle = Platform.OS === 'web' ? {
     backgroundColor: '#FFFFFF',
     boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+  } : {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.05)',
   };
