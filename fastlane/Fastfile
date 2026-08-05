@@ -1,0 +1,62 @@
+platform :android do
+  desc "Build and upload staging to Firebase App Distribution"
+  lane :staging do
+    gradle(
+      project_dir: "android",
+      task: "assemble",
+      build_type: "Release",
+      properties: {
+        "android.injected.signing.store.file" => "../fastlane/staging-upload-key.keystore",
+        "android.injected.signing.store.password" => ENV["ANDROID_KEYSTORE_PASSWORD"],
+        "android.injected.signing.key.alias" => ENV["ANDROID_KEY_ALIAS"],
+        "android.injected.signing.key.password" => ENV["ANDROID_KEY_PASSWORD"]
+      }
+    )
+
+    firebase_app_distribution(
+      app: ENV["FIREBASE_ANDROID_APP_ID_STAGING"],
+      service_credentials_file: "fastlane/service-account.json",
+      groups: "church-testers",
+      release_notes: "Built from GitHub Actions (Commit: #{ENV['GITHUB_SHA']})"
+    )
+  end
+end
+
+platform :ios do
+  desc "Build and upload staging to Firebase App Distribution"
+  lane :staging do
+    setup_ci
+    
+    app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
+      key_content: ENV["APP_STORE_CONNECT_API_KEY_CONTENT"],
+      in_house: false
+    )
+
+    match(
+      type: "adhoc",
+      app_identifier: "com.coramdeo.app.staging",
+      readonly: true
+    )
+
+    increment_build_number(
+      build_number: ENV["GITHUB_RUN_NUMBER"],
+      xcodeproj: "ios/CoramDeo.xcodeproj"
+    )
+
+    gym(
+      project: "ios/CoramDeo.xcodeproj",
+      workspace: "ios/CoramDeo.xcworkspace",
+      scheme: "CoramDeo",
+      export_method: "ad-hoc"
+    )
+
+    firebase_app_distribution(
+      app: ENV["FIREBASE_IOS_APP_ID_STAGING"],
+      service_credentials_file: "fastlane/service-account.json",
+      groups: "church-testers",
+      release_notes: "Built from GitHub Actions (Commit: #{ENV['GITHUB_SHA']})"
+    )
+  end
+end
