@@ -48,7 +48,7 @@ platform :ios do
     update_code_signing_settings(
       use_automatic_signing: false,
       path: "ios/CoramDeo.xcodeproj",
-      team_id: lane_context[SharedValues::SIGH_TEAM]
+      team_id: lane_context[:SIGH_TEAM]
     )
 
     gym(
@@ -60,7 +60,7 @@ platform :ios do
         method: "ad-hoc",
         signingStyle: "manual",
         provisioningProfiles: {
-          "com.coramdeo.app.staging" => lane_context[SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING]["com.coramdeo.app.staging"]
+          "com.coramdeo.app.staging" => lane_context[:MATCH_PROVISIONING_PROFILE_MAPPING]["com.coramdeo.app.staging"]
         }
       }
     )
