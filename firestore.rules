@@ -175,7 +175,7 @@ service cloud.firestore {
     }
 
     match /givingCampaigns/{campaignId} {
-      allow read: if isSignedIn() && (resource == null || resource.data.churchId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.churchId);
+      allow read: if isSignedIn();
       allow write: if isFinanceOrChurchAdmin(request.resource.data.churchId) && (resource == null || isFinanceOrChurchAdmin(resource.data.churchId));
     }
 

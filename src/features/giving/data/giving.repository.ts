@@ -8,11 +8,15 @@ export async function fetchActiveCampaigns(churchId: string): Promise<GivingCamp
   try {
     const q = query(
       collection(db, 'givingCampaigns'),
-      where('churchId', '==', churchId),
-      where('status', '==', 'active')
+      where('churchId', '==', churchId)
     );
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GivingCampaign));
+    return snapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() } as GivingCampaign))
+      .filter(c => {
+        const s = (c.status || '').toLowerCase();
+        return s === 'active' || (s !== 'archived' && s !== 'completed' && s !== 'draft');
+      });
   } catch (err) {
     console.warn('Error fetching campaigns:', err);
     return [];
@@ -23,11 +27,16 @@ export function subscribeToActiveCampaigns(churchId: string, callback: (campaign
   if (!churchId) return () => {};
   const q = query(
     collection(db, 'givingCampaigns'),
-    where('churchId', '==', churchId),
-    where('status', '==', 'active')
+    where('churchId', '==', churchId)
   );
   return onSnapshot(q, (snapshot) => {
-    callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GivingCampaign)));
+    const active = snapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() } as GivingCampaign))
+      .filter(c => {
+        const s = (c.status || '').toLowerCase();
+        return s === 'active' || (s !== 'archived' && s !== 'completed' && s !== 'draft');
+      });
+    callback(active);
   }, (err) => {
     console.warn('Error subscribing to campaigns:', err);
     callback([]);
