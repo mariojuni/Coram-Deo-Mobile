@@ -28,34 +28,27 @@ export default function AppModal({ isOpen, onClose, title, children, containerSt
 
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
-  // Compute dynamic max height for the modal sheet
+  // Compute max height for the modal sheet based on screen height ratio
   const windowHeight = Dimensions.get('window').height;
-  const maxSheetHeight = avoidKeyboard
-    ? Math.min(windowHeight * heightRatio, windowHeight - keyboardHeight - 20)
-    : windowHeight * heightRatio;
+  const maxSheetHeight = windowHeight * heightRatio;
 
   useEffect(() => {
+    if (!avoidKeyboard) return;
+
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-    const changeEvent = Platform.OS === 'ios' ? 'keyboardWillChangeFrame' : 'keyboardDidChangeFrame';
 
     const showListener = Keyboard.addListener(showEvent, (e) => {
       setKeyboardHeight(e.endCoordinates.height);
-    });
-    const changeListener = Keyboard.addListener(changeEvent, (e) => {
-      if (e.endCoordinates.height > 0) {
-        setKeyboardHeight(e.endCoordinates.height);
-      }
     });
     const hideListener = Keyboard.addListener(hideEvent, () => {
       setKeyboardHeight(0);
     });
     return () => {
       showListener.remove();
-      changeListener.remove();
       hideListener.remove();
     };
-  }, []);
+  }, [avoidKeyboard]);
 
   useEffect(() => {
     if (isOpen) {

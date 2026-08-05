@@ -203,7 +203,8 @@ export default function ExpenseTrackerScreen() {
         title="Add Expense"
         hideHeader={true}
         hideDragHandle={true}
-        containerStyle={{ paddingHorizontal: 0, paddingBottom: 0, height: 600 }}
+        heightRatio={0.85}
+        containerStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}
       >
         <View style={styles.modalContainer}>
           {/* Header matching Event Details style exactly */}

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { BounceCard } from '@/components/ui/BounceCard';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, KeyboardAvoidingView, Platform, Animated } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { ChevronLeft, Upload, CheckCircle2 } from 'lucide-react-native';
 import { useAuthStore } from '../store/useAuthStore';
@@ -29,6 +29,14 @@ export default function GivingFormScreen() {
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  const headerTitleOpacity = scrollY.interpolate({
+    inputRange: [15, 45],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
 
   React.useEffect(() => {
     if (fundId && funds.some((f: any) => f.id === fundId)) {
@@ -157,7 +165,7 @@ export default function GivingFormScreen() {
   const isCampaignInactive = Boolean(campaignId && !selectedCampaign);
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <LinearGradient colors={['#FAFAFA', '#FAFAFA']} style={StyleSheet.absoluteFill} />
       <Stack.Screen options={{ headerShown: false }} />
       
@@ -167,17 +175,23 @@ export default function GivingFormScreen() {
           <BounceCard bounceScale={0.85} style={styles.backBtn} onPress={() => router.back()}>
             <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
           </BounceCard>
-          <Text style={styles.headerTitleCenter}>Make a Gift</Text>
+          <Animated.Text style={[styles.headerTitleCenter, { opacity: headerTitleOpacity }]}>
+            Make a Gift
+          </Animated.Text>
           <View style={{ width: 40 }} />
         </View>
       </View>
 
-      <ScrollView 
+      <Animated.ScrollView 
         style={styles.content} 
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        automaticallyAdjustKeyboardInsets={true}
-        contentContainerStyle={{ paddingTop: insets.top + 70, paddingBottom: insets.bottom + 120 }}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
+        scrollEventThrottle={16}
+        contentContainerStyle={{ paddingTop: Math.max(insets.top, 24) + 76, paddingBottom: insets.bottom + 140 }}
       >
         {selectedCampaign && (
           <View style={styles.campaignInfo}>
@@ -208,7 +222,6 @@ export default function GivingFormScreen() {
               onChangeText={setAmount}
               autoCorrect={false}
               spellCheck={false}
-              contextMenuHidden={true}
               autoCapitalize="none"
             />
           </View>
@@ -268,7 +281,6 @@ export default function GivingFormScreen() {
             onChangeText={setReferenceNumber}
             autoCorrect={false}
             spellCheck={false}
-            contextMenuHidden={true}
           />
         </View>
 
@@ -301,10 +313,9 @@ export default function GivingFormScreen() {
             onChangeText={setNote}
             autoCorrect={false}
             spellCheck={false}
-            contextMenuHidden={true}
           />
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
 
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom + 16, 32) }]}>
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.95)', borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)' }]} pointerEvents="none" />
@@ -329,13 +340,17 @@ export default function GivingFormScreen() {
           </LinearGradient>
         </AccessibleButton>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAFAFA' },
   header: { 
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     zIndex: 10,
   },
   headerContent: {
@@ -401,21 +416,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
+    height: 64,
     backgroundColor: '#fff',
     borderRadius: 16,
   },
   currencySymbol: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '800',
     color: '#1a1a1a',
-    marginRight: 8,
+    marginRight: 10,
   },
   amountInput: {
     flex: 1,
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '800',
     color: '#1a1a1a',
-    paddingVertical: 16,
+    height: '100%',
+    paddingVertical: 0,
   },
   textInput: {
     ...(getSoftShadowStyle(16) as any),

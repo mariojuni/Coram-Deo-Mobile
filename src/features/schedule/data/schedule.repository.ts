@@ -95,7 +95,7 @@ export const scheduleRepository = {
             const setlistMap: Record<string, string> = {}; // eventId -> setlistId
             setlistsSnap.docs.forEach((d) => {
               const data = d.data();
-              if (data.eventId && data.status === 'published') {
+              if (data.eventId) {
                 setlistMap[data.eventId] = d.id;
               }
             });

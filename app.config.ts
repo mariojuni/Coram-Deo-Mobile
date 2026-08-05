@@ -74,7 +74,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     orientation: "portrait",
     icon: "./assets/images/icon.png",
     scheme: "coramdeoapp",
-    userInterfaceStyle: "automatic",
+    userInterfaceStyle: "light",
+    backgroundColor: "#FAFAFA",
     ios: {
       appleTeamId: "267GZU5SHN",
       icon: "./assets/expo.icon",
@@ -129,6 +130,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         "expo-splash-screen",
         {
           "backgroundColor": "#FAFAFA",
+          "dark": {
+            "backgroundColor": "#FAFAFA"
+          },
           "android": {
             "image": "./assets/images/splash-icon.png",
             "imageWidth": 76

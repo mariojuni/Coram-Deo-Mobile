@@ -339,6 +339,7 @@ const styles = StyleSheet.create({
   },
   bottomSheet: {
     width: '100%',
+    height: '80%',
     maxHeight: '80%',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
@@ -396,11 +397,12 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
   },
   modalBody: {
+    flex: 1,
     paddingTop: 72,
     paddingHorizontal: 20,
   },
   optionsList: {
-    flexGrow: 0,
+    flex: 1,
   },
   optionsListContent: {
     paddingBottom: 20,
