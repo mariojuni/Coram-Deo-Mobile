@@ -37,7 +37,7 @@ platform :ios do
     match(
       type: "adhoc",
       app_identifier: "com.coramdeo.app.staging",
-      readonly: false
+      readonly: ENV["CI"] ? true : false
     )
 
     increment_build_number(
