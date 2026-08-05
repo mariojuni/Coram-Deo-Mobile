@@ -40,7 +40,7 @@ platform :ios do
       readonly: ENV["CI"] ? true : false
     )
 
-    scheme_name = "CoramDeo-DEV"
+    scheme_name = "CoramDeoDEV"
     team_id = lane_context[:MATCH_TEAM_ID] || lane_context[:SIGH_TEAM] || ENV["APPLE_TEAM_ID"]
 
     increment_build_number(
