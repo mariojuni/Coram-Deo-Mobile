@@ -45,10 +45,12 @@ platform :ios do
       xcodeproj: "ios/CoramDeo.xcodeproj"
     )
 
+    team_id = lane_context[:MATCH_TEAM_ID] || lane_context[:SIGH_TEAM]
+
     update_code_signing_settings(
       use_automatic_signing: false,
       path: "ios/CoramDeo.xcodeproj",
-      team_id: lane_context[:SIGH_TEAM],
+      team_id: team_id,
       profile_name: lane_context[:MATCH_PROVISIONING_PROFILE_MAPPING]["com.coramdeo.app.staging"],
       code_sign_identity: "Apple Distribution"
     )
@@ -58,6 +60,7 @@ platform :ios do
       scheme: "CoramDeo",
       export_method: "ad-hoc",
       clean: true,
+      xcargs: "DEVELOPMENT_TEAM=#{team_id}",
       export_options: {
         method: "ad-hoc",
         signingStyle: "manual",
