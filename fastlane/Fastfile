@@ -13,12 +13,13 @@ platform :android do
       }
     )
 
-    firebase_app_distribution(
+    android_firebase_opts = {
       app: ENV["FIREBASE_ANDROID_APP_ID_STAGING"],
       service_credentials_file: "fastlane/service-account.json",
-      groups: "church-testers",
       release_notes: "Built from GitHub Actions (Commit: #{ENV['GITHUB_SHA']})"
-    )
+    }
+    android_firebase_opts[:groups] = ENV["FIREBASE_TESTER_GROUPS"] if ENV["FIREBASE_TESTER_GROUPS"] && !ENV["FIREBASE_TESTER_GROUPS"].empty?
+    firebase_app_distribution(android_firebase_opts)
   end
 end
 
@@ -74,11 +75,12 @@ platform :ios do
 
     gym(gym_opts)
 
-    firebase_app_distribution(
+    ios_firebase_opts = {
       app: ENV["FIREBASE_IOS_APP_ID_STAGING"],
       service_credentials_file: "fastlane/service-account.json",
-      groups: "church-testers",
       release_notes: "Built from GitHub Actions (Commit: #{ENV['GITHUB_SHA']})"
-    )
+    }
+    ios_firebase_opts[:groups] = ENV["FIREBASE_TESTER_GROUPS"] if ENV["FIREBASE_TESTER_GROUPS"] && !ENV["FIREBASE_TESTER_GROUPS"].empty?
+    firebase_app_distribution(ios_firebase_opts)
   end
 end
