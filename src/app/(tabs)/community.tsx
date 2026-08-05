@@ -1212,6 +1212,12 @@ export default function CommunityScreen() {
     extrapolate: 'clamp',
   });
 
+  const accentLineOpacity = scrollY.interpolate({
+    inputRange: [0, 40],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+
   const handleTabLayout = (index: number, x: number, width: number) => {
     tabLayouts.current[index] = { x, width };
     // Seed the indicator when the active tab's layout is first measured
@@ -1298,14 +1304,14 @@ export default function CommunityScreen() {
         />
 
         {/* Gradient accent line */}
-        <View style={styles.accentLine}>
+        <Animated.View style={[styles.accentLine, { opacity: accentLineOpacity }]}>
           <LinearGradient
             colors={['#FF6596', '#B66DFF', '#6DC8FF']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={StyleSheet.absoluteFill}
           />
-        </View>
+        </Animated.View>
 
         {/* Title row */}
         <Animated.View style={[styles.headerContent, { opacity: titleOpacity }]}>

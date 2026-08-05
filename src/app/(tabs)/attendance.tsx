@@ -72,6 +72,12 @@ export default function AttendanceScreen() {
     extrapolate: 'clamp',
   });
 
+  const accentLineOpacity = scrollY.interpolate({
+    inputRange: [0, 40],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
     { useNativeDriver: true }
@@ -125,14 +131,14 @@ export default function AttendanceScreen() {
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.6)' }]} pointerEvents="none" />
 
-        <View style={styles.accentLine}>
+        <Animated.View style={[styles.accentLine, { opacity: accentLineOpacity }]}>
           <LinearGradient
             colors={['#FF6596', '#B66DFF', '#6DC8FF']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={StyleSheet.absoluteFill}
           />
-        </View>
+        </Animated.View>
 
         <Animated.View style={[styles.headerContent, { opacity: titleOpacity }]}>
           <View style={styles.headerLeft}>

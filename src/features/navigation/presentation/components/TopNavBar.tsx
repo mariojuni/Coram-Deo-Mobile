@@ -31,7 +31,7 @@ export function TopNavBar({ leftText, onLeftPress, rightText, onRightPress, scro
 
   const accentLineOpacity = scrollY ? scrollY.interpolate({
     inputRange: [0, COLLAPSE_RANGE],
-    outputRange: [1, 0.4],
+    outputRange: [1, 0],
     extrapolate: 'clamp',
   }) : 1;
 

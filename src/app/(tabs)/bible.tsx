@@ -7,7 +7,7 @@ import {
 import { useFocusEffect, useRouter } from 'expo-router';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import React, { useEffect, useState, useRef } from 'react';
-import { Animated, StyleSheet, View } from 'react-native';
+import { Animated, ActivityIndicator, StyleSheet, View } from 'react-native';
 import BibleReader from '../../components/Bible/BibleReader';
 import BooksModal from '../../components/Bible/BooksModal';
 import TopNavBar from '../../components/Navigation/TopNavBar';
@@ -132,7 +132,13 @@ export default function BibleScreen() {
   const safePreferences = preferences || DEFAULT_PREFERENCES;
   const { leftText, rightText } = useBibleTopNav(books, safePreferences, savedVersions);
 
-  if (!preferences) return null;
+  if (!preferences) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#FF6596" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>

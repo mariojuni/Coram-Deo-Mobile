@@ -1,11 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter, useSegments } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
-import { useColorScheme, View, Text } from 'react-native';
+import { useColorScheme, View, Text, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import BootSplash from 'react-native-bootsplash';
 import 'react-native-reanimated';
+import { AnimatedSplashScreen } from '@/features/splash/AnimatedSplashScreen';
 import { VersionProvider } from '@/features/bible/presentation/context/VersionManagerContext';
 import { AudioProvider } from '../features/sermons/presentation/context/AudioContext';
 import '../global.css';
@@ -16,16 +17,10 @@ import { canAccessMobileApp } from '../permissions/mobilePermissions';
 import PrayerRequestModal from '../features/prayer/presentation/components/PrayerRequestModal';
 import { useUIStore } from '../store/useUIStore';
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-try {
-  SplashScreen.preventAutoHideAsync();
-} catch (e) {
-  // Ignore splash screen errors on Android/native initialization
-}
-
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [loaded] = useFonts({});
+  const [showAnimatedSplash, setShowAnimatedSplash] = useState(true);
 
   const { prayerModalOpen, editingPrayer, closePrayerModal } = useUIStore();
 
@@ -81,11 +76,12 @@ export default function RootLayout() {
     initOfflineBible();
   }, []);
 
+  const appReady = loaded && initialized && hasSeenWalkthrough !== null;
+
   useEffect(() => {
-    if (loaded && initialized && hasSeenWalkthrough !== null) {
-      SplashScreen.hideAsync().catch(() => {});
-    }
-  }, [loaded, initialized, hasSeenWalkthrough]);
+    BootSplash.hide({ fade: true }).catch(() => {});
+  }, []);
+
 
 
   useEffect(() => {
@@ -120,10 +116,6 @@ export default function RootLayout() {
       router.replace('/(tabs)');
     }
   }, [currentUser, userProfile, initialized, hasSeenWalkthrough, segments, router]);
-
-  if (!loaded || !initialized || hasSeenWalkthrough === null) {
-    return null;
-  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -180,6 +172,11 @@ export default function RootLayout() {
           )}
         </AudioProvider>
       </ThemeProvider>
+      {showAnimatedSplash && (
+        <View pointerEvents="none" style={[StyleSheet.absoluteFill, { flex: 1, alignItems: 'center', justifyContent: 'center', zIndex: 99999, elevation: 99999, backgroundColor: '#FAFAFA' }]}>
+          <AnimatedSplashScreen onAnimationFinish={() => setShowAnimatedSplash(false)} />
+        </View>
+      )}
     </GestureHandlerRootView>
   );
 }

@@ -1,0 +1,30 @@
+<svg width="400" height="400" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Outer Arch Gradient (Purple to Magenta/Coral) -->
+    <linearGradient id="archGradient" x1="80" y1="80" x2="320" y2="320" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4F3894"/>
+      <stop offset="45%" stop-color="#8B4FB3"/>
+      <stop offset="75%" stop-color="#E84F7A"/>
+      <stop offset="100%" stop-color="#FF5252"/>
+    </linearGradient>
+
+    <!-- Center Glow Gradient -->
+    <radialGradient id="centerGlow" cx="200" cy="200" r="28" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="35%" stop-color="#FF94B8"/>
+      <stop offset="70%" stop-color="#E84F7A"/>
+      <stop offset="100%" stop-color="#E84F7A" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Arch Container Path -->
+  <!-- Outer curve with bottom notch cut -->
+  <path d="M 100,320 L 100,180 A 100,100 0 0,1 300,180 L 300,320 L 200,270 Z" fill="url(#archGradient)"/>
+
+  <!-- Inner Soft Beige / Light Background Cutout matching inner arch -->
+  <path d="M 145,270 L 145,180 A 55,55 0 0,1 255,180 L 255,270 Z" fill="#F6F2EA"/>
+
+  <!-- Glowing Center Dot -->
+  <circle cx="200" cy="200" r="20" fill="url(#centerGlow)"/>
+  <circle cx="200" cy="200" r="7" fill="#FFFFFF"/>
+</svg>

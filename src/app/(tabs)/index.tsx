@@ -128,7 +128,7 @@ export default function HomeScreen() {
   });
   const accentLineOpacity = scrollY.interpolate({
     inputRange: [0, COLLAPSE_RANGE],
-    outputRange: [1, 0.4],
+    outputRange: [1, 0],
     extrapolate: 'clamp',
   });
   const avatarScale = scrollY.interpolate({

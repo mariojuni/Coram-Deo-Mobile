@@ -406,27 +406,40 @@ const defaultPrefs = {
 
 export const getUserPreferences = async () => {
   let data = null;
-  
-  if (auth.currentUser) {
-    try {
-      const docRef = doc(db, 'users', auth.currentUser.uid, 'bible', 'preferences');
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        data = docSnap.data();
-        await AsyncStorage.setItem('bible_prefs', JSON.stringify(data));
-      }
-    } catch (error: any) {
-      if (error?.message?.includes('offline') || error?.code === 'unavailable') {
-        console.log('Client offline, using local bible preferences.');
-      } else {
-        console.warn('Failed to load preferences from Firestore:', error);
-      }
-    }
-  }
 
-  if (!data) {
+  try {
     const prefs = await AsyncStorage.getItem('bible_prefs');
     if (prefs) data = JSON.parse(prefs);
+  } catch (e) {
+    console.warn('Failed to read bible_prefs from AsyncStorage:', e);
+  }
+
+  if (auth.currentUser) {
+    if (!data) {
+      try {
+        const docRef = doc(db, 'users', auth.currentUser.uid, 'bible', 'preferences');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          data = docSnap.data();
+          await AsyncStorage.setItem('bible_prefs', JSON.stringify(data));
+        }
+      } catch (error: any) {
+        if (error?.message?.includes('offline') || error?.code === 'unavailable') {
+          console.log('Client offline, using local bible preferences.');
+        } else {
+          console.warn('Failed to load preferences from Firestore:', error);
+        }
+      }
+    } else {
+      // Async background sync from Firestore so UI isn't blocked
+      getDoc(doc(db, 'users', auth.currentUser.uid, 'bible', 'preferences'))
+        .then((docSnap) => {
+          if (docSnap.exists()) {
+            AsyncStorage.setItem('bible_prefs', JSON.stringify(docSnap.data()));
+          }
+        })
+        .catch(() => {});
+    }
   }
 
   const merged = { ...defaultPrefs };
