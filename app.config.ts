@@ -35,6 +35,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     scheme: "coramdeoapp",
     userInterfaceStyle: "automatic",
     ios: {
+      appleTeamId: "267GZU5SHN",
       icon: "./assets/expo.icon",
       bundleIdentifier,
       googleServicesFile: isProd ? "./credentials/production/GoogleService-Info.plist" : "./credentials/staging/GoogleService-Info.plist",

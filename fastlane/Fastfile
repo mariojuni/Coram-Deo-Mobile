@@ -41,7 +41,7 @@ platform :ios do
     )
 
     scheme_name = "CoramDeoDEV"
-    team_id = lane_context[:MATCH_TEAM_ID] || lane_context[:SIGH_TEAM] || ENV["APPLE_TEAM_ID"]
+    team_id = lane_context[:MATCH_TEAM_ID] || lane_context[:SIGH_TEAM] || ENV["APPLE_TEAM_ID"] || "267GZU5SHN"
 
     increment_build_number(
       build_number: ENV["GITHUB_RUN_NUMBER"],
