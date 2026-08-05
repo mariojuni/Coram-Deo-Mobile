@@ -27,7 +27,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
   const baseConfig: ExpoConfig = {
     ...config,
-    name: "Coram Deo", // Keep this static so the Xcode project folder is always 'CoramDeo'
+    name: isProd ? "CoramDeo" : "CoramDeo-DEV",
     slug: "CoramDeoApp",
     version: "1.0.0",
     orientation: "portrait",

@@ -40,27 +40,28 @@ platform :ios do
       readonly: ENV["CI"] ? true : false
     )
 
+    scheme_name = "CoramDeo-DEV"
+    team_id = lane_context[:MATCH_TEAM_ID] || lane_context[:SIGH_TEAM] || ENV["APPLE_TEAM_ID"]
+
     increment_build_number(
       build_number: ENV["GITHUB_RUN_NUMBER"],
-      xcodeproj: "ios/CoramDeo.xcodeproj"
+      xcodeproj: "ios/#{scheme_name}.xcodeproj"
     )
 
-    team_id = lane_context[:MATCH_TEAM_ID] || lane_context[:SIGH_TEAM]
-
-    update_code_signing_settings(
+    signing_opts = {
       use_automatic_signing: false,
-      path: "ios/CoramDeo.xcodeproj",
-      team_id: team_id,
+      path: "ios/#{scheme_name}.xcodeproj",
       profile_name: lane_context[:MATCH_PROVISIONING_PROFILE_MAPPING]["com.coramdeo.app.staging"],
       code_sign_identity: "Apple Distribution"
-    )
+    }
+    signing_opts[:team_id] = team_id if team_id && !team_id.to_s.empty?
+    update_code_signing_settings(signing_opts)
 
-    gym(
-      workspace: "ios/CoramDeo.xcworkspace",
-      scheme: "CoramDeo",
+    gym_opts = {
+      workspace: "ios/#{scheme_name}.xcworkspace",
+      scheme: scheme_name,
       export_method: "ad-hoc",
       clean: true,
-      xcargs: "DEVELOPMENT_TEAM=#{team_id}",
       export_options: {
         method: "ad-hoc",
         signingStyle: "manual",
@@ -68,7 +69,10 @@ platform :ios do
           "com.coramdeo.app.staging" => lane_context[:MATCH_PROVISIONING_PROFILE_MAPPING]["com.coramdeo.app.staging"]
         }
       }
-    )
+    }
+    gym_opts[:xcargs] = "DEVELOPMENT_TEAM=#{team_id}" if team_id && !team_id.to_s.empty?
+
+    gym(gym_opts)
 
     firebase_app_distribution(
       app: ENV["FIREBASE_IOS_APP_ID_STAGING"],
