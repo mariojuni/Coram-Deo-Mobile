@@ -78,8 +78,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         "@react-native-google-signin/google-signin",
         {
-          iosUrlScheme: isProd 
-            ? "YOUR_PROD_REVERSED_CLIENT_ID_HERE" // Update this once production GoogleService-Info.plist has CLIENT_ID
+          iosUrlScheme: (isProd && process.env.EXPO_PUBLIC_IOS_REVERSED_CLIENT_ID_PROD)
+            ? process.env.EXPO_PUBLIC_IOS_REVERSED_CLIENT_ID_PROD
             : "com.googleusercontent.apps.676505939287-dudp40gr0pns1kpff4fc1ohu6qt4ha92"
         }
       ],
