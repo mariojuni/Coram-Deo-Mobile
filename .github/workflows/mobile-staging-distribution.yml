@@ -107,6 +107,8 @@ jobs:
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
         run: |
           EXPO_PUBLIC_APP_ENV=development npx expo prebuild --platform ios --clean
+          CLEAN_URL=$(echo "${{ secrets.MATCH_GIT_URL }}" | tr -d "'\"\r\n ")
+          export MATCH_GIT_URL="$CLEAN_URL"
           RAW_AUTH="${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}"
           CLEAN_AUTH=$(echo "$RAW_AUTH" | tr -d '\r\n ' | sed 's/^Basic//I')
           if [ -n "$CLEAN_AUTH" ]; then
