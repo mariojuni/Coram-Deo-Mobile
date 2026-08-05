@@ -45,10 +45,22 @@ platform :ios do
       xcodeproj: "ios/CoramDeo.xcodeproj"
     )
 
+    update_code_signing_settings(
+      use_automatic_signing: false,
+      path: "ios/CoramDeo.xcodeproj"
+    )
+
     gym(
       workspace: "ios/CoramDeo.xcworkspace",
       scheme: "CoramDeo",
-      export_method: "ad-hoc"
+      export_method: "ad-hoc",
+      clean: true,
+      export_options: {
+        method: "ad-hoc",
+        provisioningProfiles: {
+          "com.coramdeo.app.staging" => lane_context[SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING]["com.coramdeo.app.staging"]
+        }
+      }
     )
 
     firebase_app_distribution(
