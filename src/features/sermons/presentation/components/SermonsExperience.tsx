@@ -150,7 +150,7 @@ export function SermonsExperience({
   if (!loading && sermons.length === 0) {
     return (
       <View style={styles.centerBox}>
-        <BookOpen size={56} color="#D1C4B0" strokeWidth={1.5} />
+        <BookOpen size={56} color="#FF6596" strokeWidth={1.5} />
         <Text style={styles.emptyTitle}>No Sermons Yet</Text>
         <Text style={styles.emptySubtitle}>
           Check back soon — new sermons will appear here as they're published.
@@ -485,16 +485,17 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   emptyTitle: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '800',
-    color: NAVY,
+    color: '#1F2937',
     textAlign: 'center',
+    marginBottom: 4,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: '#6B7280',
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 20,
   },
   searchWrap: {
     paddingHorizontal: 20,

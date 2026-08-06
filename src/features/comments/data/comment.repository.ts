@@ -1,4 +1,4 @@
-import { db } from '@/firebase';
+import { getActiveDb } from '@/firebase';
 import { 
   collection, doc, getDoc, getDocs, query, where, orderBy, 
   limit, startAfter, runTransaction, Timestamp, DocumentData, QueryDocumentSnapshot, onSnapshot 
@@ -17,7 +17,7 @@ export const commentRepository = {
     lastDoc?: QueryDocumentSnapshot<DocumentData>
   ) {
     let q = query(
-      collection(db, COMMENTS_COLLECTION),
+      collection(getActiveDb(), COMMENTS_COLLECTION),
       where('churchId', '==', churchId),
       where('targetType', '==', targetType),
       where('targetId', '==', targetId),
@@ -52,7 +52,7 @@ export const commentRepository = {
     onUpdate: (replies: Comment[]) => void
   ) {
     const q = query(
-      collection(db, COMMENTS_COLLECTION),
+      collection(getActiveDb(), COMMENTS_COLLECTION),
       where('churchId', '==', churchId),
       where('targetType', '==', targetType),
       where('targetId', '==', targetId),
@@ -77,11 +77,11 @@ export const commentRepository = {
   async addComment(
     data: Omit<Comment, 'id' | 'createdAt' | 'updatedAt' | 'likeCount' | 'replyCount' | 'status'>
   ): Promise<Comment> {
-    const commentRef = doc(collection(db, COMMENTS_COLLECTION));
+    const commentRef = doc(collection(getActiveDb(), COMMENTS_COLLECTION));
     const now = Timestamp.now();
 
     const parentCollection = data.targetType === 'prayer_request' ? 'prayer_requests' : 'sermons';
-    const parentDocRef = doc(db, 'churches', data.churchId, parentCollection, data.targetId);
+    const parentDocRef = doc(getActiveDb(), 'churches', data.churchId, parentCollection, data.targetId);
 
     const newCommentData = {
       ...data,
@@ -92,13 +92,13 @@ export const commentRepository = {
       updatedAt: now,
     };
 
-    await runTransaction(db, async (transaction) => {
+    await runTransaction(getActiveDb(), async (transaction) => {
       let pDoc = null;
       let parentCommentRef = null;
 
       // 1. ALL READS FIRST
       if (data.parentCommentId) {
-        parentCommentRef = doc(db, COMMENTS_COLLECTION, data.parentCommentId);
+        parentCommentRef = doc(getActiveDb(), COMMENTS_COLLECTION, data.parentCommentId);
         pDoc = await transaction.get(parentCommentRef);
       }
 
@@ -129,15 +129,15 @@ export const commentRepository = {
   },
 
   async deleteComment(churchId: string, targetType: CommentTargetType, targetId: string, commentId: string, parentCommentId: string | null) {
-    const commentRef = doc(db, COMMENTS_COLLECTION, commentId);
+    const commentRef = doc(getActiveDb(), COMMENTS_COLLECTION, commentId);
     const parentCollection = targetType === 'prayer_request' ? 'prayer_requests' : 'sermons';
-    const parentDocRef = doc(db, 'churches', churchId, parentCollection, targetId);
+    const parentDocRef = doc(getActiveDb(), 'churches', churchId, parentCollection, targetId);
 
     // If deleting a parent comment, query all nested replies to delete them as well
     let replySnapshots: QueryDocumentSnapshot<DocumentData>[] = [];
     if (!parentCommentId) {
       const repliesQuery = query(
-        collection(db, COMMENTS_COLLECTION),
+        collection(getActiveDb(), COMMENTS_COLLECTION),
         where('churchId', '==', churchId),
         where('targetType', '==', targetType),
         where('targetId', '==', targetId),
@@ -147,7 +147,7 @@ export const commentRepository = {
       replySnapshots = res.docs;
     }
 
-    await runTransaction(db, async (transaction) => {
+    await runTransaction(getActiveDb(), async (transaction) => {
       const cDoc = await transaction.get(commentRef);
       if (!cDoc.exists() || cDoc.data().status === 'deleted') return;
 
@@ -160,7 +160,7 @@ export const commentRepository = {
 
       // Decrement replyCount on parent comment if this is a reply
       if (parentCommentId) {
-        const parentCommentRef = doc(db, COMMENTS_COLLECTION, parentCommentId);
+        const parentCommentRef = doc(getActiveDb(), COMMENTS_COLLECTION, parentCommentId);
         const pDoc = await transaction.get(parentCommentRef);
         if (pDoc.exists() && parentCommentRef) {
           const currentReplies = pDoc.data().replyCount || 0;
@@ -193,8 +193,8 @@ export const commentRepository = {
   },
 
   async hideComment(commentId: string) {
-    const commentRef = doc(db, COMMENTS_COLLECTION, commentId);
-    await runTransaction(db, async (transaction) => {
+    const commentRef = doc(getActiveDb(), COMMENTS_COLLECTION, commentId);
+    await runTransaction(getActiveDb(), async (transaction) => {
       const cDoc = await transaction.get(commentRef);
       if (cDoc.exists()) {
         transaction.update(commentRef, { status: 'hidden' });

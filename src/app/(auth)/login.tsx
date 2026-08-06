@@ -1,12 +1,30 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { AlertCircle, Lock, Mail, Eye, EyeOff } from 'lucide-react-native';
-import { useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useState, useRef } from 'react';
+import {
+  ActivityIndicator,
+  DevSettings,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAuthStore } from '../../store/useAuthStore';
-
+import { useAuthStore, clearAllCachesAndReset } from '../../store/useAuthStore';
+import EnvironmentSwitcherModal from '../../components/EnvironmentSwitcherModal';
+import {
+  BUILD_ENV,
+  AppEnvironment,
+  setSavedEnvironment,
+} from '../../config/environments';
+import { currentActiveFirebaseEnv, reinitFirebaseForEnv } from '../../firebase';
 
 export default function LoginScreen() {
   const [identifier, setIdentifier] = useState('');
@@ -14,10 +32,44 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  
+  const [isEnvModalOpen, setIsEnvModalOpen] = useState(false);
+
+  const tapTimesRef = useRef<number[]>([]);
   const router = useRouter();
   const login = useAuthStore((state) => state.login);
   const loginWithGoogle = useAuthStore((state) => state.loginWithGoogle);
+
+  const handleScreenTap = () => {
+    // In production build, triple tap does nothing
+    if (BUILD_ENV === 'production') return;
+
+    const now = Date.now();
+    // Keep taps occurring within ~900ms window
+    const recentTaps = [...tapTimesRef.current, now].filter((t) => now - t <= 900);
+    tapTimesRef.current = recentTaps;
+
+    if (recentTaps.length >= 3) {
+      tapTimesRef.current = [];
+      setIsEnvModalOpen(true);
+    }
+  };
+
+  const handleApplyEnvironment = async (targetEnv: AppEnvironment) => {
+    await clearAllCachesAndReset();
+    await setSavedEnvironment(targetEnv);
+    await reinitFirebaseForEnv(targetEnv);
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.location.reload();
+    } else {
+      try {
+        DevSettings.reload();
+      } catch (e) {
+        console.warn('DevSettings reload failed, navigating', e);
+        router.replace('/(auth)/login');
+      }
+    }
+  };
 
   const handleLogin = async () => {
     if (!identifier.trim() || !password) {
@@ -49,104 +101,121 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      {/* <AuthGeometricHeader /> */}
-      <SafeAreaView style={{ flex: 1 }}>
-        <KeyboardAvoidingView 
-          style={{ flex: 1 }} 
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-          <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-            
-            <View style={styles.spacer} />
+    <TouchableWithoutFeedback accessibilityRole="none" onPress={handleScreenTap}>
+      <View style={styles.container}>
+        {BUILD_ENV !== 'production' && (
+          <View pointerEvents="none" style={styles.envBadge}>
+            <Text style={styles.envBadgeText}>{currentActiveFirebaseEnv.toUpperCase()}</Text>
+          </View>
+        )}
 
-            <View style={styles.authHeader}>
-              <Text style={styles.title}>Welcome Back</Text>
-              <Text style={styles.subtitle}>Please enter your information below to sign in.</Text>
-            </View>
+        <SafeAreaView style={{ flex: 1 }}>
+          <KeyboardAvoidingView 
+            style={{ flex: 1 }} 
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
+            <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+              
+              <View style={styles.spacer} />
 
-            {!!errorMsg && (
-                <View style={styles.errorContainer}>
-                  <AlertCircle size={16} color="#EF4444" />
-                  <Text style={styles.errorText}>{errorMsg}</Text>
-                </View>
-            )}
-
-            <View style={styles.formGroup}>
-              <View style={styles.inputWrapper}>
-                <Mail size={18} color="#888" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Email or Username"
-                  placeholderTextColor="#888"
-                  value={identifier}
-                  onChangeText={setIdentifier}
-                  autoCapitalize="none"
-                />
+              <View style={styles.authHeader}>
+                <Text style={styles.title}>Welcome Back</Text>
+                <Text style={styles.subtitle}>Please enter your information below to sign in.</Text>
               </View>
-            </View>
 
-            <View style={styles.formGroup}>
-              <View style={styles.inputWrapper}>
-                <Lock size={18} color="#888" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Password"
-                  placeholderTextColor="#888"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                />
-                <TouchableOpacity
-                  onPress={() => setShowPassword(!showPassword)}
-                  style={{ padding: 8 }}
-                  activeOpacity={0.7}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  {showPassword ? <EyeOff size={20} color="#888" /> : <Eye size={20} color="#888" />}
+              {!!errorMsg && (
+                  <View style={styles.errorContainer}>
+                    <AlertCircle size={16} color="#EF4444" />
+                    <Text style={styles.errorText}>{errorMsg}</Text>
+                  </View>
+              )}
+
+              <View style={styles.formGroup}>
+                <View style={styles.inputWrapper}>
+                  <Mail size={18} color="#888" style={styles.inputIcon} />
+                  <TextInput
+                    accessibilityRole="text"
+                    style={styles.input}
+                    placeholder="Email or Username"
+                    placeholderTextColor="#888"
+                    value={identifier}
+                    onChangeText={setIdentifier}
+                    autoCapitalize="none"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.formGroup}>
+                <View style={styles.inputWrapper}>
+                  <Lock size={18} color="#888" style={styles.inputIcon} />
+                  <TextInput
+                    accessibilityRole="text"
+                    style={styles.input}
+                    placeholder="Password"
+                    placeholderTextColor="#888"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowPassword(!showPassword)}
+                    style={{ padding: 8 }}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    accessibilityRole="button"
+                  >
+                    {showPassword ? <EyeOff size={20} color="#888" /> : <Eye size={20} color="#888" />}
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.forgotPasswordContainer}>
+                <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')} activeOpacity={0.8} accessibilityRole="button">
+                  <Text style={styles.forgotPasswordText}>Forgot password?</Text>
                 </TouchableOpacity>
               </View>
-            </View>
 
-            <View style={styles.forgotPasswordContainer}>
-              <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')} activeOpacity={0.8}>
-                <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+              <TouchableOpacity onPress={handleLogin} disabled={isLoading} activeOpacity={0.8} style={{ marginTop: 8 }} accessibilityRole="button">
+                <LinearGradient colors={['#FF6596', '#B66DFF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.primaryButton}>
+                  {isLoading ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.primaryButtonText}>Sign In</Text>
+                  )}
+                </LinearGradient>
               </TouchableOpacity>
-            </View>
 
-            <TouchableOpacity onPress={handleLogin} disabled={isLoading} activeOpacity={0.8} style={{ marginTop: 8 }}>
-              <LinearGradient colors={['#FF6596', '#B66DFF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.primaryButton}>
-                {isLoading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.primaryButtonText}>Sign In</Text>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
+              <View style={styles.dividerContainer}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>or sign in with</Text>
+                <View style={styles.dividerLine} />
+              </View>
 
-            <View style={styles.dividerContainer}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or sign in with</Text>
-              <View style={styles.dividerLine} />
-            </View>
+              <View style={styles.socialButtonsRow}>
+                <TouchableOpacity style={styles.socialIconBtn} onPress={handleGoogleLogin} disabled={isLoading} activeOpacity={0.8} accessibilityRole="button">
+                  <Image source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png' }} style={styles.socialIcon} contentFit="contain" />
+                </TouchableOpacity>
+              </View>
 
-            <View style={styles.socialButtonsRow}>
-              <TouchableOpacity style={styles.socialIconBtn} onPress={handleGoogleLogin} disabled={isLoading} activeOpacity={0.8}>
-                <Image source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png' }} style={styles.socialIcon} contentFit="contain" />
-              </TouchableOpacity>
-            </View>
+              <View style={styles.footer}>
+                <Text style={styles.footerText}>Don&apos;t have an account? </Text>
+                <TouchableOpacity onPress={() => router.push('/(auth)/register')} activeOpacity={0.8} accessibilityRole="button">
+                  <Text style={styles.footerLink}>Register</Text>
+                </TouchableOpacity>
+              </View>
 
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>Don&apos;t have an account? </Text>
-              <TouchableOpacity onPress={() => router.push('/(auth)/register')} activeOpacity={0.8}>
-                <Text style={styles.footerLink}>Register</Text>
-              </TouchableOpacity>
-            </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
 
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </View>
+        <EnvironmentSwitcherModal
+          isOpen={isEnvModalOpen}
+          onClose={() => setIsEnvModalOpen(false)}
+          onApplyEnv={handleApplyEnvironment}
+          currentActiveEnv={currentActiveFirebaseEnv}
+        />
+      </View>
+    </TouchableWithoutFeedback>
   );
 }
 
@@ -154,6 +223,24 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
+  },
+  envBadge: {
+    position: 'absolute',
+    top: 50,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(182, 109, 255, 0.15)',
+    borderWidth: 1,
+    borderColor: '#B66DFF',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    zIndex: 99,
+  },
+  envBadgeText: {
+    color: '#7C3AED',
+    fontWeight: '800',
+    fontSize: 11,
+    letterSpacing: 0.5,
   },
   scrollContent: {
     flexGrow: 1,
@@ -290,3 +377,4 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 });
+

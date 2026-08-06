@@ -207,13 +207,15 @@ export default function BiblePlansScreen() {
   );
 
   const renderEmptyState = (title: string, subtitle: string) => (
-    <SoftCard innerStyle={styles.stateCardInner}>
-      <View style={styles.emptyIconWrap}>
-        <BookOpen size={30} color="#B7BEC9" strokeWidth={2.2} />
-      </View>
-      <Text style={styles.stateTitle}>{title}</Text>
-      <Text style={styles.stateSubtitle}>{subtitle}</Text>
-    </SoftCard>
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 12, marginTop: -20 }}>
+      <BookOpen size={56} color="#FF6596" strokeWidth={1.5} />
+      <Text style={{ fontSize: 18, fontWeight: '800', color: '#1F2937', textAlign: 'center', marginBottom: 4 }}>
+        {title}
+      </Text>
+      <Text style={{ fontSize: 14, color: '#6B7280', textAlign: 'center', lineHeight: 20 }}>
+        {subtitle}
+      </Text>
+    </View>
   );
 
   return (

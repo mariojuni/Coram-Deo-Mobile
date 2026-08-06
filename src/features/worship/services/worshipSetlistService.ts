@@ -1,5 +1,5 @@
 import { collection, doc, getDoc, getDocs, query, where, orderBy } from 'firebase/firestore';
-import { db } from '../../../firebase';
+import { getActiveDb } from '../../../firebase';
 import type { Song, SongVersion, WorshipSetlist, WorshipSetlistItem } from '../domain/worship.types';
 import type { UserAccount } from '../../auth/domain/auth.types';
 import type { Ministry } from '../../ministry/domain/ministry.types';
@@ -16,7 +16,7 @@ export const worshipSetlistService = {
     if (!user?.churchId) return [];
 
     const q = query(
-      collection(db, 'worshipSetlists'),
+      collection(getActiveDb(), 'worshipSetlists'),
       where('churchId', '==', user.churchId)
     );
     const snapshot = await getDocs(q);
@@ -45,7 +45,7 @@ export const worshipSetlistService = {
     setlistId: string
   ): Promise<WorshipSetlist | null> => {
     if (!churchId || !setlistId) return null;
-    const docRef = doc(db, 'worshipSetlists', setlistId);
+    const docRef = doc(getActiveDb(), 'worshipSetlists', setlistId);
     const snap = await getDoc(docRef);
     if (!snap.exists()) return null;
     const data = { id: snap.id, ...snap.data() } as WorshipSetlist;
@@ -62,7 +62,7 @@ export const worshipSetlistService = {
   ): Promise<WorshipSetlist | null> => {
     if (!churchId || !eventId) return null;
     const q = query(
-      collection(db, 'worshipSetlists'),
+      collection(getActiveDb(), 'worshipSetlists'),
       where('churchId', '==', churchId),
       where('eventId', '==', eventId)
     );
@@ -80,7 +80,7 @@ export const worshipSetlistService = {
   ): Promise<WorshipSetlistItem[]> => {
     if (!churchId || !setlistId) return [];
     const q = query(
-      collection(db, 'worshipSetlistItems'),
+      collection(getActiveDb(), 'worshipSetlistItems'),
       where('churchId', '==', churchId),
       where('setlistId', '==', setlistId),
       orderBy('order', 'asc')
@@ -93,7 +93,7 @@ export const worshipSetlistService = {
     const enriched = await Promise.all(
       items.map(async (item) => {
         if (item.songId) {
-          const songDocRef = doc(db, 'songs', item.songId);
+          const songDocRef = doc(getActiveDb(), 'songs', item.songId);
           const songDoc = await getDoc(songDocRef);
           if (songDoc.exists()) {
             item.song = { id: songDoc.id, ...songDoc.data() } as Song;
@@ -111,7 +111,7 @@ export const worshipSetlistService = {
    */
   getSongById: async (songId: string): Promise<Song | null> => {
     if (!songId) return null;
-    const docRef = doc(db, 'songs', songId);
+    const docRef = doc(getActiveDb(), 'songs', songId);
     const snap = await getDoc(docRef);
     if (!snap.exists()) return null;
     return { id: snap.id, ...snap.data() } as Song;
@@ -122,7 +122,7 @@ export const worshipSetlistService = {
    */
   getSongVersionById: async (songVersionId: string): Promise<SongVersion | null> => {
     if (!songVersionId) return null;
-    const docRef = doc(db, 'songVersions', songVersionId);
+    const docRef = doc(getActiveDb(), 'songVersions', songVersionId);
     const snap = await getDoc(docRef);
     if (!snap.exists()) return null;
     return { id: snap.id, ...snap.data() } as SongVersion;
@@ -134,7 +134,7 @@ export const worshipSetlistService = {
   getAllSongs: async (churchId: string): Promise<Song[]> => {
     if (!churchId) return [];
     const q = query(
-      collection(db, 'songs'),
+      collection(getActiveDb(), 'songs'),
       where('churchId', '==', churchId)
     );
     const snapshot = await getDocs(q);
@@ -146,7 +146,7 @@ export const worshipSetlistService = {
    */
   createWorshipSetlist: async (data: Omit<WorshipSetlist, 'id'>): Promise<string> => {
     const { addDoc } = await import('firebase/firestore');
-    const docRef = await addDoc(collection(db, 'worshipSetlists'), {
+    const docRef = await addDoc(collection(getActiveDb(), 'worshipSetlists'), {
       ...data,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -159,7 +159,7 @@ export const worshipSetlistService = {
    */
   updateWorshipSetlist: async (setlistId: string, data: Partial<WorshipSetlist>): Promise<void> => {
     const { updateDoc } = await import('firebase/firestore');
-    const docRef = doc(db, 'worshipSetlists', setlistId);
+    const docRef = doc(getActiveDb(), 'worshipSetlists', setlistId);
     await updateDoc(docRef, {
       ...data,
       updatedAt: new Date().toISOString(),
@@ -171,13 +171,13 @@ export const worshipSetlistService = {
    */
   deleteWorshipSetlist: async (setlistId: string): Promise<void> => {
     const { writeBatch, deleteDoc } = await import('firebase/firestore');
-    const batch = writeBatch(db);
+    const batch = writeBatch(getActiveDb());
 
-    const setlistRef = doc(db, 'worshipSetlists', setlistId);
+    const setlistRef = doc(getActiveDb(), 'worshipSetlists', setlistId);
     batch.delete(setlistRef);
 
     const itemsQuery = query(
-      collection(db, 'worshipSetlistItems'),
+      collection(getActiveDb(), 'worshipSetlistItems'),
       where('setlistId', '==', setlistId)
     );
     const itemsSnapshot = await getDocs(itemsQuery);
@@ -193,7 +193,7 @@ export const worshipSetlistService = {
    */
   createWorshipSetlistItem: async (itemData: Omit<WorshipSetlistItem, 'id'>): Promise<string> => {
     const { addDoc } = await import('firebase/firestore');
-    const docRef = await addDoc(collection(db, 'worshipSetlistItems'), {
+    const docRef = await addDoc(collection(getActiveDb(), 'worshipSetlistItems'), {
       ...itemData,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -206,7 +206,7 @@ export const worshipSetlistService = {
    */
   updateWorshipSetlistItem: async (itemId: string, itemData: Partial<WorshipSetlistItem>): Promise<void> => {
     const { updateDoc } = await import('firebase/firestore');
-    const docRef = doc(db, 'worshipSetlistItems', itemId);
+    const docRef = doc(getActiveDb(), 'worshipSetlistItems', itemId);
     await updateDoc(docRef, {
       ...itemData,
       updatedAt: new Date().toISOString(),
@@ -218,7 +218,7 @@ export const worshipSetlistService = {
    */
   deleteWorshipSetlistItem: async (itemId: string): Promise<void> => {
     const { deleteDoc } = await import('firebase/firestore');
-    const docRef = doc(db, 'worshipSetlistItems', itemId);
+    const docRef = doc(getActiveDb(), 'worshipSetlistItems', itemId);
     await deleteDoc(docRef);
   },
 };

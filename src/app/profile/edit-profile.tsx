@@ -9,7 +9,7 @@ import { ArrowLeft, Camera, Check, X } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../../firebase';
+import { getActiveDb, storage } from '../../firebase';
 import { useAuthStore } from '@/store/useAuthStore';
 import { canEditOwnProfile } from '@/permissions/mobilePermissions';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -109,11 +109,11 @@ export default function EditProfileScreen() {
         updates.photoUrl = finalPhotoUrl;
       }
 
-      const userRef = doc(db, 'users', userProfile.uid);
+      const userRef = doc(getActiveDb(), 'users', userProfile.uid);
       await updateDoc(userRef, updates);
 
       if (userProfile.memberId && userProfile.memberId !== userProfile.uid) {
-        const memberRef = doc(db, 'users', userProfile.memberId);
+        const memberRef = doc(getActiveDb(), 'users', userProfile.memberId);
         await updateDoc(memberRef, updates);
       }
       

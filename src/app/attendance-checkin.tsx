@@ -9,7 +9,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { attendanceRepository } from '../features/attendance/data/attendance.repository';
 import { canSelfCheckIn } from '../permissions/attendancePermissions';
 import { getDoc, doc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { getActiveDb } from '../firebase';
 import type { EventModel } from '../features/attendance/domain/attendance.types';
 
 export default function AttendanceCheckInScreen() {
@@ -63,7 +63,7 @@ export default function AttendanceCheckInScreen() {
       const eventId = match[1];
 
       // Fetch Event from events collection
-      const eventRef = doc(db, 'events', eventId);
+      const eventRef = doc(getActiveDb(), 'events', eventId);
       const eventSnap = await getDoc(eventRef);
       
       if (!eventSnap.exists()) {

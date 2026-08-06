@@ -2,9 +2,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { useColorScheme, View, Text, StyleSheet } from 'react-native';
+import { useColorScheme, View, Text, StyleSheet, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import BootSplash from 'react-native-bootsplash';
+// BootSplash imported conditionally below to avoid web crashes
 import 'react-native-reanimated';
 import { AnimatedSplashScreen } from '@/features/splash/AnimatedSplashScreen';
 import { VersionProvider } from '@/features/bible/presentation/context/VersionManagerContext';
@@ -41,7 +41,16 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    initializeAuthListener();
+    const initEnvAndAuth = async () => {
+      try {
+        const { ensureFirebaseEnvironmentLoaded } = await import('../firebase');
+        await ensureFirebaseEnvironmentLoaded();
+      } catch (e) {
+        console.warn('Failed to ensure firebase environment loaded on layout mount:', e);
+      }
+      initializeAuthListener();
+    };
+    initEnvAndAuth();
   }, [initializeAuthListener]);
 
   // Load active Bible translation once on app start — global source of truth
@@ -79,7 +88,10 @@ export default function RootLayout() {
   const appReady = loaded && initialized && hasSeenWalkthrough !== null;
 
   useEffect(() => {
-    BootSplash.hide({ fade: true }).catch(() => {});
+    if (Platform.OS !== 'web') {
+      const BootSplash = require('react-native-bootsplash').default;
+      BootSplash.hide({ fade: true }).catch(() => {});
+    }
   }, []);
 
 
@@ -155,7 +167,7 @@ export default function RootLayout() {
             onClose={closePrayerModal} 
             initialData={editingPrayer} 
           />
-          {process.env.EXPO_PUBLIC_APP_ENV === 'staging' && (
+          {process.env.EXPO_PUBLIC_APP_ENV !== 'production' && (
             <View pointerEvents="none" style={{
               position: 'absolute',
               top: 40, // Below status bar usually
@@ -167,7 +179,9 @@ export default function RootLayout() {
               zIndex: 9999,
               elevation: 9999,
             }}>
-              <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 12 }}>STAGING ENVIRONMENT</Text>
+              <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 12 }}>
+                {require('../firebase').currentActiveFirebaseEnv.toUpperCase()} ENVIRONMENT
+              </Text>
             </View>
           )}
         </AudioProvider>

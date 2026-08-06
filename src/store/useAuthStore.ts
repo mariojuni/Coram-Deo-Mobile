@@ -25,7 +25,7 @@ interface AuthState {
   updateUserProfile: (updates: Partial<UserAccount>) => void;
 }
 
-const clearAllStoreListeners = () => {
+export const clearAllStoreListeners = () => {
   useMemberStore.getState().initializeMembersListener(null);
   useMemberStore.getState().initializeServicesListener(null);
   useScheduleStore.getState().clearSchedulesListener();
@@ -36,6 +36,16 @@ const clearAllStoreListeners = () => {
   useDiscipleshipGroupStore.getState().clearActiveGroup();
   useMinistryStore.getState().clearMinistryListeners();
   useSermonStore.setState({ sermons: [], loading: false, currentSermon: null });
+};
+
+export const clearAllCachesAndReset = async () => {
+  try {
+    clearAllStoreListeners();
+    await clearSensitiveCache();
+    await authRepository.logout();
+  } catch (e) {
+    console.warn('Failed during clearAllCachesAndReset', e);
+  }
 };
 
 export const useAuthStore = create<AuthState>((set) => ({

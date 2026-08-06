@@ -1,5 +1,5 @@
 import { addDoc, collection, deleteDoc, doc, getDoc, onSnapshot, orderBy, query, runTransaction, serverTimestamp, updateDoc, where } from 'firebase/firestore';
-import { db } from '../../../firebase';
+import { getActiveDb } from '../../../firebase';
 import { worshipRepository } from '../../worship/data/worship.repository';
 import type { WorshipSetlistItem } from '../../worship/domain/worship.types';
 import type { Duty, Rsvp, Schedule } from '../domain/schedule.types';
@@ -62,7 +62,7 @@ function toSchedule(docId: string, data: Record<string, unknown>): Schedule {
 
 export const scheduleRepository = {
   subscribeToSchedules(churchId: string | undefined, onData: SchedulesListener, onError: ErrorListener): () => void {
-    const scheduleQuery = query(collection(db, 'events'), orderBy('date', 'asc'));
+    const scheduleQuery = query(collection(getActiveDb(), 'events'), orderBy('date', 'asc'));
 
     let setlistUnsubscribers: (() => void)[] = [];
 
@@ -88,7 +88,7 @@ export const scheduleRepository = {
         if (!churchId) return;
 
         // Set up real-time listener for setlists of these events
-        const setlistsQuery = query(collection(db, 'worshipSetlists'), where('churchId', '==', churchId));
+        const setlistsQuery = query(collection(getActiveDb(), 'worshipSetlists'), where('churchId', '==', churchId));
         const unsubSetlists = onSnapshot(
           setlistsQuery,
           (setlistsSnap) => {
@@ -101,7 +101,7 @@ export const scheduleRepository = {
             });
 
             // Set up real-time listener for all worshipSetlistItems
-            const setlistItemsQuery = query(collection(db, 'worshipSetlistItems'), where('churchId', '==', churchId), orderBy('order', 'asc'));
+            const setlistItemsQuery = query(collection(getActiveDb(), 'worshipSetlistItems'), where('churchId', '==', churchId), orderBy('order', 'asc'));
             const unsubItems = onSnapshot(
               setlistItemsQuery,
               async (itemsSnap) => {
@@ -112,7 +112,7 @@ export const scheduleRepository = {
                   rawItems.map(async (item) => {
                     if (item.songId) {
                       try {
-                        const songDoc = await getDoc(doc(db, 'songs', item.songId));
+                        const songDoc = await getDoc(doc(getActiveDb(), 'songs', item.songId));
                         if (songDoc.exists()) {
                           item.song = { id: songDoc.id, ...songDoc.data() } as any;
                         }
@@ -163,9 +163,9 @@ export const scheduleRepository = {
   },
 
   async updateRsvp(eventId: string, userId: string, status: Rsvp['status']): Promise<void> {
-    const scheduleDocRef = doc(db, 'events', eventId);
+    const scheduleDocRef = doc(getActiveDb(), 'events', eventId);
 
-    await runTransaction(db, async (transaction) => {
+    await runTransaction(getActiveDb(), async (transaction) => {
       const snapshot = await transaction.get(scheduleDocRef);
       if (!snapshot.exists()) {
         throw new Error(`Schedule with id "${eventId}" was not found`);
@@ -190,7 +190,7 @@ export const scheduleRepository = {
 
 
   async createSchedule(data: Pick<Schedule, 'title' | 'date' | 'time' | 'endTime' | 'location'>): Promise<string> {
-    const ref = await addDoc(collection(db, 'events'), {
+    const ref = await addDoc(collection(getActiveDb(), 'events'), {
       ...data,
       duties: [],
       rsvps: [],
@@ -200,10 +200,10 @@ export const scheduleRepository = {
   },
 
   async updateSchedule(id: string, data: Partial<Pick<Schedule, 'title' | 'date' | 'time' | 'endTime' | 'location'>>): Promise<void> {
-    await updateDoc(doc(db, 'events', id), { ...data, updatedAt: serverTimestamp() });
+    await updateDoc(doc(getActiveDb(), 'events', id), { ...data, updatedAt: serverTimestamp() });
   },
 
   async deleteSchedule(id: string): Promise<void> {
-    await deleteDoc(doc(db, 'events', id));
+    await deleteDoc(doc(getActiveDb(), 'events', id));
   },
 };

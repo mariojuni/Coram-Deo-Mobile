@@ -10,7 +10,7 @@ import {
     updateDoc,
     deleteDoc,
 } from 'firebase/firestore';
-import { db } from '../../../firebase';
+import { getActiveDb } from '../../../firebase';
 import type { Prayer } from '../domain/prayer.types';
 
 type PrayersListener = (prayers: Prayer[]) => void;
@@ -43,7 +43,7 @@ function toPrayerModel(data: Record<string, unknown>, id: string): Prayer {
 export const prayerRepository = {
   subscribeToPrayers(churchId: string | undefined | null, onData: PrayersListener, onError: ErrorListener): () => void {
     if (!churchId) return () => {};
-    const prayerQuery = query(collection(db, `churches/${churchId}/prayer_requests`), orderBy('createdAt', 'desc'));
+    const prayerQuery = query(collection(getActiveDb(), `churches/${churchId}/prayer_requests`), orderBy('createdAt', 'desc'));
 
     return onSnapshot(
       prayerQuery,
@@ -63,7 +63,7 @@ export const prayerRepository = {
     onError: ErrorListener
   ): () => void {
     if (!churchId) return () => {};
-    const latestPrayerQuery = query(collection(db, `churches/${churchId}/prayer_requests`), orderBy('createdAt', 'desc'), limit(1));
+    const latestPrayerQuery = query(collection(getActiveDb(), `churches/${churchId}/prayer_requests`), orderBy('createdAt', 'desc'), limit(1));
 
     return onSnapshot(
       latestPrayerQuery,
@@ -82,9 +82,9 @@ export const prayerRepository = {
   },
 
   async togglePrayerLike(churchId: string, prayerId: string, userId: string): Promise<void> {
-    const prayerDocRef = doc(db, `churches/${churchId}/prayer_requests`, prayerId);
+    const prayerDocRef = doc(getActiveDb(), `churches/${churchId}/prayer_requests`, prayerId);
 
-    await runTransaction(db, async (transaction) => {
+    await runTransaction(getActiveDb(), async (transaction) => {
       const snapshot = await transaction.get(prayerDocRef);
       if (!snapshot.exists()) {
         throw new Error(`Prayer with id "${prayerId}" was not found`);
@@ -103,7 +103,7 @@ export const prayerRepository = {
   },
 
   async togglePrayerAnswered(churchId: string, prayerId: string, currentValue: boolean): Promise<void> {
-    const prayerDocRef = doc(db, `churches/${churchId}/prayer_requests`, prayerId);
+    const prayerDocRef = doc(getActiveDb(), `churches/${churchId}/prayer_requests`, prayerId);
     const nextValue = !currentValue;
     await updateDoc(prayerDocRef, { 
       answered: nextValue,
@@ -112,7 +112,7 @@ export const prayerRepository = {
   },
 
   async addPrayer(churchId: string, payload: { requestText: string; requesterName: string; userId: string; createdAt?: string }): Promise<string> {
-    const docRef = await addDoc(collection(db, `churches/${churchId}/prayer_requests`), {
+    const docRef = await addDoc(collection(getActiveDb(), `churches/${churchId}/prayer_requests`), {
       requestText: payload.requestText,
       requesterName: payload.requesterName,
       userId: payload.userId,
@@ -128,7 +128,7 @@ export const prayerRepository = {
 
   async submitPrayerRequest(payload: Omit<Prayer, 'id' | 'likes' | 'likedBy' | 'answered'>): Promise<string> {
     if (!payload.churchId) throw new Error('churchId is required');
-    const docRef = await addDoc(collection(db, `churches/${payload.churchId}/prayer_requests`), {
+    const docRef = await addDoc(collection(getActiveDb(), `churches/${payload.churchId}/prayer_requests`), {
       churchId: payload.churchId,
       userId: payload.userId,
       memberId: payload.memberId || null,
@@ -156,7 +156,7 @@ export const prayerRepository = {
   },
 
   async updatePrayerRequest(churchId: string, prayerId: string, payload: Partial<Prayer>): Promise<void> {
-    const docRef = doc(db, `churches/${churchId}/prayer_requests`, prayerId);
+    const docRef = doc(getActiveDb(), `churches/${churchId}/prayer_requests`, prayerId);
     
     // Ensure we also update legacy fields if title/content changes
     const updates: any = {
@@ -171,7 +171,7 @@ export const prayerRepository = {
   },
 
   async deletePrayerRequest(churchId: string, prayerId: string): Promise<void> {
-    const docRef = doc(db, `churches/${churchId}/prayer_requests`, prayerId);
+    const docRef = doc(getActiveDb(), `churches/${churchId}/prayer_requests`, prayerId);
     await deleteDoc(docRef);
   },
 };

@@ -1,5 +1,5 @@
 import { collection, doc, getDoc, getDocs, query, where, setDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../../../firebase';
+import { getActiveDb } from '../../../../firebase';
 
 export interface DiscipleshipPlan {
   id: string;
@@ -50,7 +50,7 @@ export class DiscipleshipService {
     if (!churchId) return [];
     
     const q = query(
-      collection(db, 'discipleshipPlans'),
+      collection(getActiveDb(), 'discipleshipPlans'),
       where('churchId', '==', churchId),
       where('status', '==', 'published')
     );
@@ -66,7 +66,7 @@ export class DiscipleshipService {
 
   static async getPlan(churchId: string, planId: string): Promise<DiscipleshipPlan | null> {
     if (!churchId) return null;
-    const docRef = doc(db, 'discipleshipPlans', planId);
+    const docRef = doc(getActiveDb(), 'discipleshipPlans', planId);
     const docSnap = await getDoc(docRef);
     
     if (docSnap.exists() && docSnap.data().churchId === churchId) {
@@ -78,7 +78,7 @@ export class DiscipleshipService {
   static async getWeeks(churchId: string, planId: string): Promise<DiscipleshipWeek[]> {
     if (!churchId) return [];
     const q = query(
-      collection(db, 'discipleshipWeeks'),
+      collection(getActiveDb(), 'discipleshipWeeks'),
       where('churchId', '==', churchId),
       where('planId', '==', planId),
       where('status', '==', 'published')
@@ -91,7 +91,7 @@ export class DiscipleshipService {
   static async getProgress(churchId: string, planId: string, userId: string): Promise<DiscipleshipProgress[]> {
     if (!churchId || !userId) return [];
     const q = query(
-      collection(db, 'discipleshipProgress'),
+      collection(getActiveDb(), 'discipleshipProgress'),
       where('churchId', '==', churchId),
       where('planId', '==', planId),
       where('userId', '==', userId)
@@ -113,7 +113,7 @@ export class DiscipleshipService {
 
     // Check existing by weekId or lessonId
     const q = query(
-      collection(db, 'discipleshipProgress'),
+      collection(getActiveDb(), 'discipleshipProgress'),
       where('churchId', '==', churchId),
       where('planId', '==', planId),
       where('weekId', '==', weekId),
@@ -125,7 +125,7 @@ export class DiscipleshipService {
       // Toggle existing document state
       const existingDoc = snapshot.docs[0];
       const currentCompleted = !!existingDoc.data().isCompleted;
-      await setDoc(doc(db, 'discipleshipProgress', existingDoc.id), {
+      await setDoc(doc(getActiveDb(), 'discipleshipProgress', existingDoc.id), {
         isCompleted: !currentCompleted,
         completedAt: !currentCompleted ? serverTimestamp() : null,
         updatedAt: serverTimestamp(),
@@ -136,7 +136,7 @@ export class DiscipleshipService {
     }
 
     const docId = groupId && memberId ? `${groupId}_${weekId}_${memberId}` : undefined;
-    const newDocRef = docId ? doc(db, 'discipleshipProgress', docId) : doc(collection(db, 'discipleshipProgress'));
+    const newDocRef = docId ? doc(getActiveDb(), 'discipleshipProgress', docId) : doc(collection(getActiveDb(), 'discipleshipProgress'));
 
     const payload: any = {
       churchId,

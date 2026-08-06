@@ -1,4 +1,4 @@
-import { CalendarPlus, Clock, MapPin, Pencil } from 'lucide-react-native';
+import { CalendarPlus, Clock, MapPin, Pencil, CalendarDays } from 'lucide-react-native';
 import { useEffect, useCallback, useMemo, useState } from 'react';
 import { FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native';
 import { useMemberStore } from '../../store/useMemberStore';
@@ -210,8 +210,14 @@ export default function ScheduleTab({
               <CalendarPlus size={24} color="#FF6596" />
             </TouchableOpacity>
           </View>
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No upcoming schedules found.</Text>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 12 }}>
+            <CalendarDays size={56} color="#FF6596" strokeWidth={1.5} />
+            <Text style={{ fontSize: 18, fontWeight: '800', color: '#1F2937', textAlign: 'center', marginBottom: 4 }}>
+              No Events Yet
+            </Text>
+            <Text style={{ fontSize: 14, color: '#6B7280', textAlign: 'center', lineHeight: 20 }}>
+              You haven't added any event schedules yet.{'\n'}Tap the + icon above to create one.
+            </Text>
           </View>
         </Animated.ScrollView>
       ) : (

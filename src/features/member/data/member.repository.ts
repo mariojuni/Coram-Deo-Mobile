@@ -1,5 +1,5 @@
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
-import { db } from '../../../firebase';
+import { getActiveDb } from '../../../firebase';
 import type { Member, Service } from '../domain/member.types';
 
 type MembersListener = (members: Member[]) => void;
@@ -16,7 +16,7 @@ function mapDocWithId<T extends Record<string, unknown>>(docData: Record<string,
 export const memberRepository = {
   subscribeToMembers(churchId: string | undefined | null, onData: MembersListener, onError: ErrorListener): () => void {
     if (!churchId) return () => {};
-    const membersQuery = query(collection(db, 'users'), where('churchId', '==', churchId));
+    const membersQuery = query(collection(getActiveDb(), 'users'), where('churchId', '==', churchId));
     return onSnapshot(
       membersQuery,
       (snapshot) => {
@@ -31,7 +31,7 @@ export const memberRepository = {
 
   subscribeToServices(churchId: string | undefined | null, onData: ServicesListener, onError: ErrorListener): () => void {
     if (!churchId) return () => {};
-    const servicesQuery = query(collection(db, 'services'), where('churchId', '==', churchId));
+    const servicesQuery = query(collection(getActiveDb(), 'services'), where('churchId', '==', churchId));
     return onSnapshot(
       servicesQuery,
       (snapshot) => {

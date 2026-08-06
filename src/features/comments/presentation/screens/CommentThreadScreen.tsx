@@ -21,7 +21,7 @@ import { prayerRepository } from '@/features/prayer/data/prayer.repository';
 import { useUIStore } from '@/store/useUIStore';
 import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
 
-import { db } from '@/firebase';
+import { getActiveDb } from '@/firebase';
 import { doc, getDoc, onSnapshot, DocumentSnapshot, DocumentData } from 'firebase/firestore';
 
 export function CommentThreadScreen() {
@@ -76,7 +76,7 @@ export function CommentThreadScreen() {
 
     setLoadingParent(true);
     const parentCollection = targetType === 'prayer_request' ? 'prayer_requests' : 'sermons';
-    const docRef = doc(db, 'churches', churchId, parentCollection, targetId);
+    const docRef = doc(getActiveDb(), 'churches', churchId, parentCollection, targetId);
 
     const unsubscribe = onSnapshot(docRef, (snapshot: DocumentSnapshot<DocumentData>) => {
       if (snapshot.exists()) {

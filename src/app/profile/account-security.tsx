@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, X, ShieldAlert, Check } from 'lucide-react-native';
-import { auth, db } from '../../firebase';
+import { getActiveAuth, getActiveDb } from '../../firebase';
 import { EmailAuthProvider, reauthenticateWithCredential, updateEmail, updatePassword, linkWithCredential } from 'firebase/auth';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -57,7 +57,7 @@ export default function AccountSecurityScreen() {
         await linkWithCredential(currentUser, credential);
         
         if (userProfile?.uid) {
-           const userRef = doc(db, 'users', userProfile.uid);
+           const userRef = doc(getActiveDb(), 'users', userProfile.uid);
            const currentProviders = userProfile.providers || [];
            if (!currentProviders.includes('password')) {
              await updateDoc(userRef, { providers: [...currentProviders, 'password'], updatedAt: serverTimestamp() });
@@ -72,11 +72,11 @@ export default function AccountSecurityScreen() {
           await updateEmail(currentUser, newValue);
           
           if (userProfile?.uid) {
-            const userRef = doc(db, 'users', userProfile.uid);
+            const userRef = doc(getActiveDb(), 'users', userProfile.uid);
             await updateDoc(userRef, { email: newValue, updatedAt: serverTimestamp() });
           }
           if (userProfile?.memberId && userProfile.memberId !== userProfile.uid) {
-            const memberRef = doc(db, 'users', userProfile.memberId);
+            const memberRef = doc(getActiveDb(), 'users', userProfile.memberId);
             await updateDoc(memberRef, { email: newValue, updatedAt: serverTimestamp() });
           }
           
@@ -91,11 +91,11 @@ export default function AccountSecurityScreen() {
     } catch (error: any) {
       console.error('Security update failed:', error);
       let msg = 'Failed to update. Please try again.';
-      if (error.code === 'auth/wrong-password') msg = 'Incorrect current password.';
-      if (error.code === 'auth/invalid-email') msg = 'The new email is invalid.';
-      if (error.code === 'auth/email-already-in-use') msg = 'The new email is already in use.';
-      if (error.code === 'auth/weak-password') msg = 'The new password is too weak.';
-      if (error.code === 'auth/credential-already-in-use') msg = 'This credential is already in use.';
+      if (error.code === 'getActiveAuth()/wrong-password') msg = 'Incorrect current password.';
+      if (error.code === 'getActiveAuth()/invalid-email') msg = 'The new email is invalid.';
+      if (error.code === 'getActiveAuth()/email-already-in-use') msg = 'The new email is already in use.';
+      if (error.code === 'getActiveAuth()/weak-password') msg = 'The new password is too weak.';
+      if (error.code === 'getActiveAuth()/credential-already-in-use') msg = 'This credential is already in use.';
       Alert.alert('Error', msg);
     } finally {
       setLoading(false);

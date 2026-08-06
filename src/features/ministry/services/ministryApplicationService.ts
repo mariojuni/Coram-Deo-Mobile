@@ -1,4 +1,4 @@
-import { db } from '@/firebase';
+import { getActiveDb } from '@/firebase';
 import {
   arrayUnion,
   doc,
@@ -52,7 +52,7 @@ export const ministryApplicationService = {
     const churchId = user.churchId;
     const isFullAdmin = hasAnyRole(user, ['super_admin', 'church_admin', 'pastor']);
 
-    const q = query(collection(db, 'ministryApplications'), where('churchId', '==', churchId));
+    const q = query(collection(getActiveDb(), 'ministryApplications'), where('churchId', '==', churchId));
 
     return onSnapshot(q, (snapshot) => {
       let apps = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as MinistryApplication));
@@ -91,14 +91,14 @@ export const ministryApplicationService = {
 
     const now = new Date().toISOString();
     const memberDocId = `${application.ministryId}_${application.memberId}`;
-    const applicationRef = doc(db, 'ministryApplications', application.id);
-    const memberRef = application.memberId ? doc(db, 'members', application.memberId) : null;
-    const ministryMemberRef = doc(db, 'ministryMembers', memberDocId);
-    const userRef = application.userId ? doc(db, 'users', application.userId) : null;
+    const applicationRef = doc(getActiveDb(), 'ministryApplications', application.id);
+    const memberRef = application.memberId ? doc(getActiveDb(), 'members', application.memberId) : null;
+    const ministryMemberRef = doc(getActiveDb(), 'ministryMembers', memberDocId);
+    const userRef = application.userId ? doc(getActiveDb(), 'users', application.userId) : null;
 
     const assignedRole = payload.assignedRole || (application.preferredRoleNames?.[0] || 'Member');
 
-    await runTransaction(db, async (transaction) => {
+    await runTransaction(getActiveDb(), async (transaction) => {
       // 1. ALL READS FIRST
       const appSnap = await transaction.get(applicationRef);
       if (!appSnap.exists()) {
@@ -173,9 +173,9 @@ export const ministryApplicationService = {
     }
 
     const now = new Date().toISOString();
-    const applicationRef = doc(db, 'ministryApplications', application.id);
+    const applicationRef = doc(getActiveDb(), 'ministryApplications', application.id);
 
-    await runTransaction(db, async (transaction) => {
+    await runTransaction(getActiveDb(), async (transaction) => {
       const appSnap = await transaction.get(applicationRef);
       if (!appSnap.exists()) {
         throw new Error('Application document not found.');

@@ -711,7 +711,7 @@ const styles = StyleSheet.create({
   restrictedCard: { ...getTopBarButtonShadowStyle(16), margin: 24, padding: 32, alignItems: 'center', borderColor: '#FF6596', borderStyle: 'dashed' },
   restrictedTitle: { fontSize: 16, fontWeight: '700', marginTop: 16, marginBottom: 8, color: '#1a1a1a' },
   restrictedText: { fontSize: 13, color: '#666', textAlign: 'center', lineHeight: 20 },
-  searchWrapper: { ...getTopBarButtonShadowStyle(16), flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 48, marginBottom: 24 },
+  searchWrapper: { ...getSoftShadowStyle(16), backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: '#f0f0f0', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 48, marginBottom: 24 },
   searchIcon: { marginRight: 8 },
   searchInput: { flex: 1, fontSize: 15, fontWeight: '600', color: '#1a1a1a' },
   loadingSpinner: { position: 'absolute', right: 16 },

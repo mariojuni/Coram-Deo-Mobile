@@ -2,7 +2,7 @@ import { addDoc, collection, doc, serverTimestamp, updateDoc } from 'firebase/fi
 import { Calendar as CalendarIcon, Clock, X } from 'lucide-react-native';
 import { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { db } from '../../firebase';
+import { getActiveDb } from '../../firebase';
 import type { Schedule } from '../../features/schedule/domain/schedule.types';
 import CustomDatePicker from '../CustomDatePicker';
 import CustomTimePicker from '../CustomTimePicker';
@@ -92,9 +92,9 @@ export default function AddScheduleModal({ isOpen, onClose, eventToEdit }: AddSc
         location: location.trim(),
       };
       if (eventToEdit) {
-        await updateDoc(doc(db, 'events', eventToEdit.id), payload);
+        await updateDoc(doc(getActiveDb(), 'events', eventToEdit.id), payload);
       } else {
-        await addDoc(collection(db, 'events'), { ...payload, duties: [], createdAt: serverTimestamp() });
+        await addDoc(collection(getActiveDb(), 'events'), { ...payload, duties: [], createdAt: serverTimestamp() });
       }
       onClose();
     } catch (e) {

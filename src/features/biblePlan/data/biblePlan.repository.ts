@@ -7,7 +7,7 @@ import {
     query,
     where,
 } from 'firebase/firestore';
-import { db } from '../../../firebase';
+import { getActiveDb } from '../../../firebase';
 import type { BiblePlan, BiblePlanDay, PlanReading } from '../domain/biblePlan.types';
 import { deriveDays } from '../domain/biblePlan.types';
 
@@ -60,7 +60,7 @@ export const biblePlanRepository = {
       if (!churchId) return [];
       console.log('[biblePlanRepository] fetching plans for churchId:', churchId);
       const q = query(
-        collection(db, 'churches', churchId, 'bible_plans'),
+        collection(getActiveDb(), 'churches', churchId, 'bible_plans'),
         where('status', '==', 'active')
       );
       const snap = await getDocs(q);
@@ -90,7 +90,7 @@ export const biblePlanRepository = {
       }
       console.log('[biblePlanRepository] subscribing to plans for churchId:', churchId);
       const q = query(
-        collection(db, 'churches', churchId, 'bible_plans'),
+        collection(getActiveDb(), 'churches', churchId, 'bible_plans'),
         where('status', '==', 'active')
       );
       return onSnapshot(
@@ -120,7 +120,7 @@ export const biblePlanRepository = {
      */
     async getPlanById(planId: string, churchId: string): Promise<BiblePlan | null> {
       if (!planId || !churchId) return null;
-      const snap = await getDoc(doc(db, 'churches', churchId, 'bible_plans', planId));
+      const snap = await getDoc(doc(getActiveDb(), 'churches', churchId, 'bible_plans', planId));
       if (!snap.exists()) return null;
       const data = snap.data() as Record<string, unknown>;
       if (data.status !== 'active') return null;

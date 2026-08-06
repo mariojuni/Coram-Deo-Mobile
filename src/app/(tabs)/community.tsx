@@ -463,6 +463,20 @@ function EventsTab({ searchQuery }: SubScreenProps) {
     }
   };
 
+  if (!schedulesLoading && todaysEvents.length === 0 && upcomingList.length === 0) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 12 }}>
+        <CalendarDays size={56} color="#FF6596" strokeWidth={1.5} />
+        <Text style={{ fontSize: 18, fontWeight: '800', color: '#1F2937', textAlign: 'center', marginBottom: 4 }}>
+          No Events Yet
+        </Text>
+        <Text style={{ fontSize: 14, color: '#6B7280', textAlign: 'center', lineHeight: 20 }}>
+          Check back soon to connect with your community!
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <View style={eventsStyles.wrap}>
       {schedulesLoading ? (
@@ -582,7 +596,7 @@ function EventsTab({ searchQuery }: SubScreenProps) {
             </View>
           )}
         </View>
-      ) : (
+      ) : upcomingList.length > 0 ? (
         <BounceCard activeOpacity={0.95} style={{ marginBottom: 10 }}>
           <SoftCard innerStyle={eventsStyles.emptyTodayCardInner}>
             <View style={eventsStyles.emptyTodayIconRing}>
@@ -594,7 +608,7 @@ function EventsTab({ searchQuery }: SubScreenProps) {
             </Text>
           </SoftCard>
         </BounceCard>
-      )}
+      ) : null}
 
       <View style={eventsStyles.sectionHeadRow}>
         <View>
@@ -807,8 +821,8 @@ function MembersTab({ searchQuery }: SubScreenProps) {
           <Text style={placeholder.subtitle}>Try another search term.</Text>
         </View>
       ) : (
-        filteredMembers.map((member) => (
-          <BounceCard key={member.id} style={{ marginBottom: 8 }}>
+        filteredMembers.map((member, index) => (
+          <BounceCard key={`${member.id}-${index}`} style={{ marginBottom: 8 }}>
             <SoftCard innerStyle={membersStyles.card}>
               <View style={membersStyles.avatarWrap}>
                 <Image

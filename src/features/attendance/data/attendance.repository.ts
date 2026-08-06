@@ -1,5 +1,5 @@
 import { collection, deleteDoc, doc, onSnapshot, query, serverTimestamp, setDoc, where, getDoc, writeBatch, increment } from 'firebase/firestore';
-import { db } from '../../../firebase';
+import { getActiveDb } from '../../../firebase';
 import type { AttendanceRecord, CreateAttendanceRecordInput } from '../domain/attendance.types';
 
 type AttendanceRecordsListener = (records: AttendanceRecord[]) => void;
@@ -27,7 +27,7 @@ function toAttendanceRecordModel(id: string, data: Record<string, unknown>): Att
 export const attendanceRepository = {
   subscribeByEventId(eventId: string, churchId: string, onData: AttendanceRecordsListener, onError: ErrorListener): () => void {
     const attendanceQuery = query(
-      collection(db, 'attendance_sessions', eventId, 'records')
+      collection(getActiveDb(), 'attendance_sessions', eventId, 'records')
     );
 
     return onSnapshot(
@@ -45,7 +45,7 @@ export const attendanceRepository = {
   subscribeMyAttendance(memberId: string, churchId: string, onData: AttendanceRecordsListener, onError: ErrorListener): () => void {
     const { collectionGroup } = require('firebase/firestore');
     const attendanceQuery = query(
-      collectionGroup(db, 'records'),
+      collectionGroup(getActiveDb(), 'records'),
       where('memberId', '==', memberId),
       where('churchId', '==', churchId)
     );
@@ -62,7 +62,7 @@ export const attendanceRepository = {
   },
 
   async createAttendanceRecord(input: CreateAttendanceRecordInput): Promise<void> {
-    const sessionRef = doc(db, 'attendance_sessions', input.eventId);
+    const sessionRef = doc(getActiveDb(), 'attendance_sessions', input.eventId);
     await setDoc(sessionRef, {
       id: input.eventId,
       churchId: input.churchId,
@@ -72,7 +72,7 @@ export const attendanceRepository = {
       updatedAt: serverTimestamp()
     }, { merge: true });
 
-    const recordRef = doc(db, 'attendance_sessions', input.eventId, 'records', input.memberId);
+    const recordRef = doc(getActiveDb(), 'attendance_sessions', input.eventId, 'records', input.memberId);
     
     const docSnap = await getDoc(recordRef);
     if (docSnap.exists()) {
@@ -97,10 +97,10 @@ export const attendanceRepository = {
     const chunkSize = 250;
     for (let i = 0; i < inputs.length; i += chunkSize) {
       const chunk = inputs.slice(i, i + chunkSize);
-      const batch = writeBatch(db);
+      const batch = writeBatch(getActiveDb());
 
       for (const input of chunk) {
-        const sessionRef = doc(db, 'attendance_sessions', input.eventId);
+        const sessionRef = doc(getActiveDb(), 'attendance_sessions', input.eventId);
         batch.set(sessionRef, {
           id: input.eventId,
           churchId: input.churchId,
@@ -114,7 +114,7 @@ export const attendanceRepository = {
           updatedAt: serverTimestamp()
         }, { merge: true });
 
-        const recordRef = doc(db, 'attendance_sessions', input.eventId, 'records', input.memberId);
+        const recordRef = doc(getActiveDb(), 'attendance_sessions', input.eventId, 'records', input.memberId);
         const now = new Date().toISOString();
         batch.set(recordRef, {
           ...input,
@@ -135,7 +135,7 @@ export const attendanceRepository = {
     // Assuming recordId is passed as 'eventId_memberId' for delete operations from UI
     if (recordId.includes('_')) {
       const [eventId, memberId] = recordId.split('_');
-      const recordRef = doc(db, 'attendance_sessions', eventId, 'records', memberId);
+      const recordRef = doc(getActiveDb(), 'attendance_sessions', eventId, 'records', memberId);
       
       const snap = await getDoc(recordRef);
       if (snap.exists()) {
@@ -144,7 +144,7 @@ export const attendanceRepository = {
         
         await deleteDoc(recordRef);
         
-        const sessionRef = doc(db, 'attendance_sessions', eventId);
+        const sessionRef = doc(getActiveDb(), 'attendance_sessions', eventId);
         await setDoc(sessionRef, {
           metrics: {
             [status]: increment(-1)

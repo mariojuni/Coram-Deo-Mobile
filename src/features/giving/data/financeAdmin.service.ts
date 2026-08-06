@@ -1,4 +1,4 @@
-import { db } from '../../../firebase';
+import { getActiveDb } from '../../../firebase';
 import { 
   collection, 
   doc, 
@@ -23,13 +23,13 @@ export async function createManualGivingRecord(
   data: Partial<GivingRecord>, 
   currentUserId: string
 ): Promise<string> {
-  const newRef = doc(collection(db, GIVING_COLLECTION));
+  const newRef = doc(collection(getActiveDb(), GIVING_COLLECTION));
   const recordId = newRef.id;
 
-  await runTransaction(db, async (transaction) => {
+  await runTransaction(getActiveDb(), async (transaction) => {
     // If it belongs to a campaign, we need to increment the raisedAmount
     if (data.campaignId) {
-      const campaignRef = doc(db, CAMPAIGN_COLLECTION, data.campaignId);
+      const campaignRef = doc(getActiveDb(), CAMPAIGN_COLLECTION, data.campaignId);
       const campaignSnap = await transaction.get(campaignRef);
       if (campaignSnap.exists()) {
         const currentAmount = campaignSnap.data().raisedAmount || 0;
@@ -77,7 +77,7 @@ export async function createManualGivingRecord(
 
 export async function getPendingGivingRecords(churchId: string): Promise<GivingRecord[]> {
   const q = query(
-    collection(db, GIVING_COLLECTION),
+    collection(getActiveDb(), GIVING_COLLECTION),
     where('churchId', '==', churchId),
     where('status', '==', 'pending'),
     orderBy('submittedAt', 'desc')
@@ -89,7 +89,7 @@ export async function getPendingGivingRecords(churchId: string): Promise<GivingR
 
   try {
     // Fetch users to map donor names correctly, just like finance summary
-    const uq = query(collection(db, 'users'), where('churchId', '==', churchId));
+    const uq = query(collection(getActiveDb(), 'users'), where('churchId', '==', churchId));
     const usnap = await getDocs(uq);
     const usersMap: Record<string, string> = {};
     usnap.forEach(d => {
@@ -118,9 +118,9 @@ export async function approveGivingRecord(
   amount: number, 
   currentUserId: string
 ): Promise<void> {
-  const recordRef = doc(db, GIVING_COLLECTION, recordId);
+  const recordRef = doc(getActiveDb(), GIVING_COLLECTION, recordId);
   
-  await runTransaction(db, async (transaction) => {
+  await runTransaction(getActiveDb(), async (transaction) => {
     const recordSnap = await transaction.get(recordRef);
     if (!recordSnap.exists()) throw new Error("Record not found");
     const recordData = recordSnap.data();
@@ -128,7 +128,7 @@ export async function approveGivingRecord(
     if (recordData.status !== 'pending') throw new Error("Record is not pending");
 
     if (campaignId) {
-      const campaignRef = doc(db, CAMPAIGN_COLLECTION, campaignId);
+      const campaignRef = doc(getActiveDb(), CAMPAIGN_COLLECTION, campaignId);
       const campaignSnap = await transaction.get(campaignRef);
       if (campaignSnap.exists()) {
         const currentAmount = campaignSnap.data().raisedAmount || 0;
@@ -144,7 +144,7 @@ export async function approveGivingRecord(
     const fundId = recordData.fundId;
     if (fundId) {
       try {
-        const fundRef = doc(db, 'givingFunds', fundId);
+        const fundRef = doc(getActiveDb(), 'givingFunds', fundId);
         const fundSnap = await transaction.get(fundRef);
         if (fundSnap.exists() && fundSnap.data().name) {
           fundType = fundSnap.data().name;
@@ -171,7 +171,7 @@ export async function rejectGivingRecord(
   reason: string,
   currentUserId: string
 ): Promise<void> {
-  const recordRef = doc(db, GIVING_COLLECTION, recordId);
+  const recordRef = doc(getActiveDb(), GIVING_COLLECTION, recordId);
   
   // We don't necessarily need a transaction here if we aren't modifying campaign totals, 
   // but we can just use updateDoc.
@@ -189,7 +189,7 @@ export async function createExpense(
   data: Partial<GivingExpense>, 
   currentUserId: string
 ): Promise<string> {
-  const newRef = doc(collection(db, EXPENSE_COLLECTION));
+  const newRef = doc(collection(getActiveDb(), EXPENSE_COLLECTION));
   const expenseId = newRef.id;
 
   const expense: Partial<GivingExpense> = {
@@ -207,7 +207,7 @@ export async function createExpense(
 
 export async function getRecentExpenses(churchId: string, maxCount: number = 20): Promise<GivingExpense[]> {
   const q = query(
-    collection(db, EXPENSE_COLLECTION),
+    collection(getActiveDb(), EXPENSE_COLLECTION),
     where('churchId', '==', churchId),
     orderBy('date', 'desc'),
     limit(maxCount)
@@ -228,7 +228,7 @@ export async function getMonthlyFinanceSummary(churchId: string, startOfMonthIso
   
   // Fetch approved/completed giving for this month
   const givingQ = query(
-    collection(db, GIVING_COLLECTION),
+    collection(getActiveDb(), GIVING_COLLECTION),
     where('churchId', '==', churchId),
     where('status', 'in', ['approved', 'completed']),
     where('date', '>=', startOfMonthDate)
@@ -236,14 +236,14 @@ export async function getMonthlyFinanceSummary(churchId: string, startOfMonthIso
   
   // Fetch expenses for this month
   const expenseQ = query(
-    collection(db, EXPENSE_COLLECTION),
+    collection(getActiveDb(), EXPENSE_COLLECTION),
     where('churchId', '==', churchId),
     where('date', '>=', startOfMonthDate)
   );
 
   // Fetch pending count
   const pendingQ = query(
-    collection(db, GIVING_COLLECTION),
+    collection(getActiveDb(), GIVING_COLLECTION),
     where('churchId', '==', churchId),
     where('status', '==', 'pending')
   );
@@ -266,7 +266,7 @@ export async function getMonthlyFinanceSummary(churchId: string, startOfMonthIso
   const usersMap = new Map<string, string>();
   if (userIds.length > 0) {
     try {
-      const usersQ = query(collection(db, 'users'), where('churchId', '==', churchId));
+      const usersQ = query(collection(getActiveDb(), 'users'), where('churchId', '==', churchId));
       const uSnap = await getDocs(usersQ);
       uSnap.forEach(u => {
         const data = u.data();

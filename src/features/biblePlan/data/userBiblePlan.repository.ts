@@ -9,12 +9,12 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore';
-import { db } from '../../../firebase';
+import { getActiveDb } from '../../../firebase';
 import type { StartPlanPayload, UserBiblePlan, UserBiblePlanStatus } from '../domain/biblePlan.types';
 
 // ─── Collection path helper ────────────────────────────────────────────────────
 const userBiblePlansCol = (churchId: string) =>
-  collection(db, 'churches', churchId, 'userBiblePlans');
+  collection(getActiveDb(), 'churches', churchId, 'userBiblePlans');
 
 // ─── Mapper ────────────────────────────────────────────────────────────────────
 
@@ -83,7 +83,7 @@ export const userBiblePlanRepository = {
    * Cancel an active Bible plan for a user.
    */
   async cancelPlan(userBiblePlanId: string, churchId: string): Promise<void> {
-    const planRef = doc(db, 'churches', churchId, 'userBiblePlans', userBiblePlanId);
+    const planRef = doc(getActiveDb(), 'churches', churchId, 'userBiblePlans', userBiblePlanId);
     await updateDoc(planRef, {
       status: 'cancelled',
       updatedAt: new Date().toISOString(),
@@ -141,7 +141,7 @@ export const userBiblePlanRepository = {
     churchId: string,
     data: Partial<Omit<UserBiblePlan, 'id'>>
   ): Promise<void> {
-    await updateDoc(doc(db, 'churches', churchId, 'userBiblePlans', id), {
+    await updateDoc(doc(getActiveDb(), 'churches', churchId, 'userBiblePlans', id), {
       ...data,
       updatedAt: new Date().toISOString(),
     });
@@ -158,14 +158,14 @@ export const userBiblePlanRepository = {
     completedDaysCount: number,
     totalDays: number
   ): Promise<void> {
-    const planRef = doc(db, 'churches', churchId, 'userBiblePlans', userBiblePlanId);
+    const planRef = doc(getActiveDb(), 'churches', churchId, 'userBiblePlans', userBiblePlanId);
     const progressPercentage = totalDays > 0
       ? Math.round((completedDaysCount / totalDays) * 100)
       : 0;
     const isCompleted = completedDaysCount >= totalDays;
     const now = new Date().toISOString();
 
-    await runTransaction(db, async (transaction) => {
+    await runTransaction(getActiveDb(), async (transaction) => {
       const snap = await transaction.get(planRef);
       if (!snap.exists()) throw new Error('UserBiblePlan not found');
       transaction.update(planRef, {

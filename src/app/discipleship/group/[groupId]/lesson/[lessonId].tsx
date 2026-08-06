@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../../../../firebase';
+import { getActiveDb } from '../../../../../firebase';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
@@ -84,7 +84,7 @@ export default function DiscipleshipLessonDetailScreen() {
       const fetchDirectDoc = async () => {
         try {
           // Check discipleshipLessons doc
-          const lessonRef = doc(db, 'discipleshipLessons', lessonId);
+          const lessonRef = doc(getActiveDb(), 'discipleshipLessons', lessonId);
           const lessonSnap = await getDoc(lessonRef);
           if (lessonSnap.exists()) {
             setFetchedLesson({ ...lessonSnap.data(), id: lessonSnap.id } as DiscipleshipLesson);
@@ -92,7 +92,7 @@ export default function DiscipleshipLessonDetailScreen() {
           }
 
           // Check discipleshipWeeks doc
-          const weekRef = doc(db, 'discipleshipWeeks', lessonId);
+          const weekRef = doc(getActiveDb(), 'discipleshipWeeks', lessonId);
           const weekSnap = await getDoc(weekRef);
           if (weekSnap.exists()) {
             const data = weekSnap.data();

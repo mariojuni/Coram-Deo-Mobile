@@ -19,7 +19,7 @@ import {
   onSnapshot,
 } from 'firebase/firestore';
 import * as FileSystem from 'expo-file-system';
-import { db, storage, auth } from '@/firebase';
+import { getActiveDb, storage, getActiveAuth } from '@/firebase';
 import { ref, getDownloadURL } from 'firebase/storage';
 import type {
   Sermon,
@@ -46,8 +46,8 @@ class SermonRepository {
       return pathOrUrl;
     }
     try {
-      if (auth) {
-        await auth.authStateReady();
+      if (getActiveAuth()) {
+        await getActiveAuth().authStateReady();
       }
       const storageRef = ref(storage, pathOrUrl);
       return await getDownloadURL(storageRef);
@@ -63,7 +63,7 @@ class SermonRepository {
     pageSize = 20,
     lastDoc?: QueryDocumentSnapshot<DocumentData>
   ) {
-    const sermonsRef = collection(db, SERMONS_COLLECTION);
+    const sermonsRef = collection(getActiveDb(), SERMONS_COLLECTION);
     let q = query(
       sermonsRef,
       where('status', '==', 'published')
@@ -113,7 +113,7 @@ class SermonRepository {
     onData: (sermons: Sermon[]) => void,
     onError: (error: Error) => void
   ) {
-    const sermonsRef = collection(db, SERMONS_COLLECTION);
+    const sermonsRef = collection(getActiveDb(), SERMONS_COLLECTION);
     let q = query(
       sermonsRef,
       where('status', '==', 'published')
@@ -152,7 +152,7 @@ class SermonRepository {
     filters: SermonFilters,
     pageSize = 20
   ) {
-    const sermonsRef = collection(db, SERMONS_COLLECTION);
+    const sermonsRef = collection(getActiveDb(), SERMONS_COLLECTION);
     
     // For simple search, we'll fetch all published sermons and filter client-side
     // In production, you'd use Algolia or similar for better search
@@ -200,14 +200,14 @@ class SermonRepository {
   }
 
   async fetchSermonById(id: string): Promise<Sermon | null> {
-    const docRef = doc(db, SERMONS_COLLECTION, id);
+    const docRef = doc(getActiveDb(), SERMONS_COLLECTION, id);
     const docSnap = await getDoc(docRef);
     return docSnap.exists() ? this.mapDocToSermon(docSnap) : null;
   }
 
   // Increment view count
   async incrementViewCount(sermonId: string) {
-    const sermonRef = doc(db, SERMONS_COLLECTION, sermonId);
+    const sermonRef = doc(getActiveDb(), SERMONS_COLLECTION, sermonId);
     await updateDoc(sermonRef, {
       viewCount: increment(1),
     });
@@ -216,13 +216,13 @@ class SermonRepository {
   // Favorites
   async toggleFavorite(userId: string, sermonId: string): Promise<boolean> {
     const favId = `${userId}_${sermonId}`;
-    const favRef = doc(db, FAVORITES_COLLECTION, favId);
+    const favRef = doc(getActiveDb(), FAVORITES_COLLECTION, favId);
     const favSnap = await getDoc(favRef);
 
     if (favSnap.exists()) {
       await deleteDoc(favRef);
       // Decrement favorite count on sermon
-      const sermonRef = doc(db, SERMONS_COLLECTION, sermonId);
+      const sermonRef = doc(getActiveDb(), SERMONS_COLLECTION, sermonId);
       await updateDoc(sermonRef, {
         favoriteCount: increment(-1),
       });
@@ -234,7 +234,7 @@ class SermonRepository {
         createdAt: Timestamp.now(),
       });
       // Increment favorite count on sermon
-      const sermonRef = doc(db, SERMONS_COLLECTION, sermonId);
+      const sermonRef = doc(getActiveDb(), SERMONS_COLLECTION, sermonId);
       await updateDoc(sermonRef, {
         favoriteCount: increment(1),
       });
@@ -244,7 +244,7 @@ class SermonRepository {
 
   async fetchFavorites(userId: string): Promise<Sermon[]> {
     const favsQuery = query(
-      collection(db, FAVORITES_COLLECTION),
+      collection(getActiveDb(), FAVORITES_COLLECTION),
       where('userId', '==', userId)
     );
     const snapshot = await getDocs(favsQuery);
@@ -259,7 +259,7 @@ class SermonRepository {
 
   async isFavorited(userId: string, sermonId: string): Promise<boolean> {
     const favId = `${userId}_${sermonId}`;
-    const favRef = doc(db, FAVORITES_COLLECTION, favId);
+    const favRef = doc(getActiveDb(), FAVORITES_COLLECTION, favId);
     const favSnap = await getDoc(favRef);
     return favSnap.exists();
   }
@@ -274,7 +274,7 @@ class SermonRepository {
     durationSeconds: number
   ) {
     const progressId = `${userId}_${sermonId}`;
-    const progressRef = doc(db, PROGRESS_COLLECTION, progressId);
+    const progressRef = doc(getActiveDb(), PROGRESS_COLLECTION, progressId);
     const progressPercent = durationSeconds > 0 ? (positionSeconds / durationSeconds) * 100 : 0;
     const completed = progressPercent >= 95;
 
@@ -295,7 +295,7 @@ class SermonRepository {
 
   async fetchProgress(userId: string, sermonId: string): Promise<SermonPlaybackProgress | null> {
     const progressId = `${userId}_${sermonId}`;
-    const progressRef = doc(db, PROGRESS_COLLECTION, progressId);
+    const progressRef = doc(getActiveDb(), PROGRESS_COLLECTION, progressId);
     const snap = await getDoc(progressRef);
     if (!snap.exists()) return null;
     const data = snap.data();
@@ -317,7 +317,7 @@ class SermonRepository {
 
   async fetchAllProgresses(userId: string): Promise<SermonPlaybackProgress[]> {
     const q = query(
-      collection(db, PROGRESS_COLLECTION),
+      collection(getActiveDb(), PROGRESS_COLLECTION),
       where('userId', '==', userId),
       orderBy('lastPlayedAt', 'desc'),
       limit(20)
@@ -343,7 +343,7 @@ class SermonRepository {
   }
 
   async fetchRelatedSermons(sermon: Sermon, maxResults = 6): Promise<Sermon[]> {
-    const sermonsRef = collection(db, SERMONS_COLLECTION);
+    const sermonsRef = collection(getActiveDb(), SERMONS_COLLECTION);
     const results: Sermon[] = [];
     const seenIds = new Set<string>([sermon.id]);
 
@@ -406,7 +406,7 @@ class SermonRepository {
 
   // Notes
   async saveNote(note: Omit<SermonNote, 'id' | 'createdAt' | 'updatedAt'>) {
-    await addDoc(collection(db, NOTES_COLLECTION), {
+    await addDoc(collection(getActiveDb(), NOTES_COLLECTION), {
       ...note,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
@@ -414,7 +414,7 @@ class SermonRepository {
   }
 
   async updateNote(noteId: string, content: string) {
-    const noteRef = doc(db, NOTES_COLLECTION, noteId);
+    const noteRef = doc(getActiveDb(), NOTES_COLLECTION, noteId);
     await updateDoc(noteRef, {
       content,
       updatedAt: Timestamp.now(),
@@ -422,13 +422,13 @@ class SermonRepository {
   }
 
   async deleteNote(noteId: string) {
-    const noteRef = doc(db, NOTES_COLLECTION, noteId);
+    const noteRef = doc(getActiveDb(), NOTES_COLLECTION, noteId);
     await deleteDoc(noteRef);
   }
 
   async fetchNotes(userId: string, sermonId: string): Promise<SermonNote[]> {
     const notesQuery = query(
-      collection(db, NOTES_COLLECTION),
+      collection(getActiveDb(), NOTES_COLLECTION),
       where('userId', '==', userId),
       where('sermonId', '==', sermonId),
       orderBy('timestamp', 'asc')
@@ -446,7 +446,7 @@ class SermonRepository {
     if (!userId) return [];
     try {
       let q = query(
-        collection(db, NOTES_COLLECTION),
+        collection(getActiveDb(), NOTES_COLLECTION),
         where('userId', '==', userId)
       );
       if (churchId) {
@@ -511,7 +511,7 @@ class SermonRepository {
   }
 
   async saveDownloadRecord(userId: string, sermon: Sermon, fileUri: string): Promise<void> {
-    const downloadRef = doc(db, DOWNLOADS_COLLECTION, `${userId}_${sermon.id}`);
+    const downloadRef = doc(getActiveDb(), DOWNLOADS_COLLECTION, `${userId}_${sermon.id}`);
     await setDoc(downloadRef, {
       userId,
       sermonId: sermon.id,
@@ -522,12 +522,12 @@ class SermonRepository {
   }
 
   async deleteDownloadRecord(userId: string, sermonId: string): Promise<void> {
-    const downloadRef = doc(db, DOWNLOADS_COLLECTION, `${userId}_${sermonId}`);
+    const downloadRef = doc(getActiveDb(), DOWNLOADS_COLLECTION, `${userId}_${sermonId}`);
     await deleteDoc(downloadRef);
   }
 
   async getDownloadedSermons(userId: string): Promise<SermonDownload[]> {
-    const downloadsRef = collection(db, DOWNLOADS_COLLECTION);
+    const downloadsRef = collection(getActiveDb(), DOWNLOADS_COLLECTION);
     const q = query(downloadsRef, where('userId', '==', userId));
     const snapshot = await getDocs(q);
 
@@ -539,7 +539,7 @@ class SermonRepository {
   }
 
   async deleteDownload(userId: string, sermonId: string): Promise<void> {
-    const downloadRef = doc(db, DOWNLOADS_COLLECTION, `${userId}_${sermonId}`);
+    const downloadRef = doc(getActiveDb(), DOWNLOADS_COLLECTION, `${userId}_${sermonId}`);
     const downloadDoc = await getDoc(downloadRef);
 
     if (downloadDoc.exists()) {
@@ -557,7 +557,7 @@ class SermonRepository {
   }
 
   async checkIfDownloaded(userId: string, sermonId: string): Promise<boolean> {
-    const downloadRef = doc(db, DOWNLOADS_COLLECTION, `${userId}_${sermonId}`);
+    const downloadRef = doc(getActiveDb(), DOWNLOADS_COLLECTION, `${userId}_${sermonId}`);
     const downloadDoc = await getDoc(downloadRef);
     
     if (!downloadDoc.exists()) {
@@ -571,7 +571,7 @@ class SermonRepository {
   }
 
   async getDownloadUri(userId: string, sermonId: string): Promise<string | null> {
-    const downloadRef = doc(db, DOWNLOADS_COLLECTION, `${userId}_${sermonId}`);
+    const downloadRef = doc(getActiveDb(), DOWNLOADS_COLLECTION, `${userId}_${sermonId}`);
     const downloadDoc = await getDoc(downloadRef);
     
     if (!downloadDoc.exists()) {

@@ -1,4 +1,4 @@
-import { db, storage } from '@/firebase';
+import { getActiveDb, storage } from '@/firebase';
 import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, orderBy, getDoc, onSnapshot } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { GivingFund, GivingCampaign, GivingRecord, PaymentMethod } from '../domain/giving.types';
@@ -7,7 +7,7 @@ export async function fetchActiveCampaigns(churchId: string): Promise<GivingCamp
   if (!churchId) return [];
   try {
     const q = query(
-      collection(db, 'givingCampaigns'),
+      collection(getActiveDb(), 'givingCampaigns'),
       where('churchId', '==', churchId)
     );
     const snapshot = await getDocs(q);
@@ -26,7 +26,7 @@ export async function fetchActiveCampaigns(churchId: string): Promise<GivingCamp
 export function subscribeToActiveCampaigns(churchId: string, callback: (campaigns: GivingCampaign[]) => void): () => void {
   if (!churchId) return () => {};
   const q = query(
-    collection(db, 'givingCampaigns'),
+    collection(getActiveDb(), 'givingCampaigns'),
     where('churchId', '==', churchId)
   );
   return onSnapshot(q, (snapshot) => {
@@ -47,7 +47,7 @@ export async function fetchGivingFunds(churchId: string): Promise<GivingFund[]> 
   if (!churchId) return [];
   try {
     const q = query(
-      collection(db, 'givingFunds'),
+      collection(getActiveDb(), 'givingFunds'),
       where('churchId', '==', churchId)
     );
     const snapshot = await getDocs(q);
@@ -64,7 +64,7 @@ export async function fetchGivingFunds(churchId: string): Promise<GivingFund[]> 
 export function subscribeToGivingFunds(churchId: string, callback: (funds: GivingFund[]) => void): () => void {
   if (!churchId) return () => {};
   const q = query(
-    collection(db, 'givingFunds'),
+    collection(getActiveDb(), 'givingFunds'),
     where('churchId', '==', churchId)
   );
   return onSnapshot(q, (snapshot) => {
@@ -89,7 +89,7 @@ export async function fetchPaymentMethods(churchId: string): Promise<PaymentMeth
   if (!churchId) return fallback;
   try {
     const q = query(
-      collection(db, 'paymentMethods'),
+      collection(getActiveDb(), 'paymentMethods'),
       where('churchId', '==', churchId),
       where('isActive', '==', true)
     );
@@ -105,7 +105,7 @@ export async function fetchPaymentMethods(churchId: string): Promise<PaymentMeth
 export async function fetchMyGivingRecords(userId: string): Promise<GivingRecord[]> {
   try {
     const q = query(
-      collection(db, 'givingRecords'),
+      collection(getActiveDb(), 'givingRecords'),
       where('userId', '==', userId),
       orderBy('createdAt', 'desc')
     );
@@ -115,7 +115,7 @@ export async function fetchMyGivingRecords(userId: string): Promise<GivingRecord
     console.warn('Error fetching my giving records (possibly missing index):', err);
     // If index is missing, try fetching without orderBy and sort in memory
     const fallbackQ = query(
-      collection(db, 'givingRecords'),
+      collection(getActiveDb(), 'givingRecords'),
       where('userId', '==', userId)
     );
     const fallbackSnapshot = await getDocs(fallbackQ);
@@ -143,7 +143,7 @@ export async function uploadProofOfPayment(churchId: string, userId: string, fil
   });
   
   const fileExt = fileUri.split('.').pop() || 'jpg';
-  const fileName = `${doc(collection(db, 'dummy')).id}.${fileExt}`;
+  const fileName = `${doc(collection(getActiveDb(), 'dummy')).id}.${fileExt}`;
   
   const storageRef = ref(storage, `receipts/${churchId}/${userId}/proofs/${fileName}`);
   await uploadBytes(storageRef, blob);
@@ -152,7 +152,7 @@ export async function uploadProofOfPayment(churchId: string, userId: string, fil
 }
 
 export async function submitGivingRecord(record: Omit<GivingRecord, 'id' | 'createdAt' | 'updatedAt' | 'submittedAt' | 'status'>): Promise<string> {
-  const recordRef = doc(collection(db, 'givingRecords'));
+  const recordRef = doc(collection(getActiveDb(), 'givingRecords'));
   const recordId = recordRef.id;
   
   const fullRecord = {

@@ -21,9 +21,27 @@ import {
   deleteField,
   serverTimestamp,
 } from "firebase/firestore";
-import { auth, db } from "../../../firebase";
-import type { AuthCredentialResult, UserAccount } from "../domain/auth.types";
-import type { Member } from "../../member/domain/member.types";
+import { currentActiveFirebaseEnv, getActiveAuth, getActiveDb } from "../../../firebase";
+import { getFirebaseConfigForEnv } from "../../../config/environments";
+import type { Member } from "@/features/member/domain/member.types";
+import type { UserAccount, AuthCredentialResult } from "../domain/auth.types";
+
+function configureGoogleSigninForCurrentEnv() {
+  try {
+    const config = getFirebaseConfigForEnv(currentActiveFirebaseEnv);
+    const options: { webClientId?: string; iosClientId?: string } = {
+      webClientId: config.googleWebClientId,
+    };
+    if (config.googleIosClientId) {
+      options.iosClientId = config.googleIosClientId;
+    }
+    GoogleSignin.configure(options);
+  } catch (e) {
+    console.warn("Failed to configure GoogleSignin", e);
+  }
+}
+
+configureGoogleSigninForCurrentEnv();
 
 export interface RegistrationPayload {
   email?: string;
@@ -57,29 +75,35 @@ async function findMemberByEmailOrPhone(
   email?: string,
   phone?: string
 ): Promise<Member | null> {
-  const usersRef = collection(db, "users");
+  const usersRef = collection(getActiveDb(), "users");
   let matchedDoc: any = null;
 
   if (email) {
     const cleanEmail = email.trim().toLowerCase();
     const qEmail = query(usersRef, where("email", "==", cleanEmail));
-    const snap = await getDocs(qEmail);
-    if (!snap.empty) {
-      matchedDoc = snap.docs.find(d => d.data().churchId) || snap.docs[0];
-    } else {
-      // Fallback: search all users for case-insensitive and space-insensitive match
-      // In case the admin added the email with trailing spaces or uppercase
-      const allUsersSnap = await getDocs(usersRef);
-      const matches = allUsersSnap.docs.filter(d => {
-        const data = d.data();
-        return typeof data.email === 'string' && data.email.trim().toLowerCase() === cleanEmail;
-      });
-      if (matches.length > 0) {
-        const match = matches.find(d => d.data().churchId) || matches[0];
-        matchedDoc = match;
-        // Auto-fix the dirty data in Firestore
-        await updateDoc(doc(db, "users", match.id), { email: cleanEmail }).catch(() => {});
+    try {
+      const snap = await getDocs(qEmail);
+      if (!snap.empty) {
+        matchedDoc = snap.docs.find(d => d.data().churchId) || snap.docs[0];
+      } else {
+        // Fallback: search all users for case-insensitive and space-insensitive match
+        // In case the admin added the email with trailing spaces or uppercase
+        const allUsersSnap = await getDocs(usersRef).catch(() => null);
+        if (allUsersSnap) {
+          const matches = allUsersSnap.docs.filter(d => {
+            const data = d.data();
+            return typeof data.email === 'string' && data.email.trim().toLowerCase() === cleanEmail;
+          });
+          if (matches.length > 0) {
+            const match = matches.find(d => d.data().churchId) || matches[0];
+            matchedDoc = match;
+            // Auto-fix the dirty data in Firestore
+            await updateDoc(doc(getActiveDb(), "users", match.id), { email: cleanEmail }).catch(() => {});
+          }
+        }
       }
+    } catch (e) {
+      // Proceed if query or collection scan fails
     }
   }
 
@@ -122,15 +146,21 @@ async function findMemberByEmailOrPhone(
 
       // 2. Fallback scan: normalize database phone numbers (checking both phoneNumber and phone)
       if (!matchedDoc) {
-        const allUsersSnap = await getDocs(usersRef);
-        const match = allUsersSnap.docs.find(d => {
-          const data = d.data();
-          const dbPhone = data.phoneNumber || data.phone;
-          if (typeof dbPhone !== 'string' || !dbPhone.trim()) return false;
-          return extractCorePhoneDigits(dbPhone) === coreDigits;
-        });
-        if (match) {
-          matchedDoc = match;
+        try {
+          const allUsersSnap = await getDocs(usersRef).catch(() => null);
+          if (allUsersSnap) {
+            const match = allUsersSnap.docs.find(d => {
+              const data = d.data();
+              const dbPhone = data.phoneNumber || data.phone;
+              if (typeof dbPhone !== 'string' || !dbPhone.trim()) return false;
+              return extractCorePhoneDigits(dbPhone) === coreDigits;
+            });
+            if (match) {
+              matchedDoc = match;
+            }
+          }
+        } catch (e) {
+          // proceed
         }
       }
     }
@@ -145,25 +175,23 @@ async function findMemberByEmailOrPhone(
 async function checkUsernameTaken(username: string): Promise<boolean> {
   if (!username || !username.trim()) return false;
   const cleanUsername = username.trim().toLowerCase();
-  const usersRef = collection(db, "users");
+  const usersRef = collection(getActiveDb(), "users");
 
   try {
     const q1 = query(usersRef, where("username", "==", username.trim()));
     const snap1 = await getDocs(q1);
     if (!snap1.empty) return true;
 
-    const q2 = query(usersRef, where("username", "==", cleanUsername));
-    const snap2 = await getDocs(q2);
-    if (!snap2.empty) return true;
-
-    const allUsers = await getDocs(usersRef);
-    return allUsers.docs.some((d) => {
-      const u = d.data().username;
-      return typeof u === "string" && u.trim().toLowerCase() === cleanUsername;
-    });
+    if (cleanUsername !== username.trim()) {
+      const q2 = query(usersRef, where("username", "==", cleanUsername));
+      const snap2 = await getDocs(q2);
+      if (!snap2.empty) return true;
+    }
   } catch (e) {
+    // If querying fails (e.g. index/permission rule restriction), allow account creation flow to proceed to Firebase Auth
     return false;
   }
+  return false;
 }
 
 async function checkEmailTaken(_email: string): Promise<boolean> {
@@ -189,12 +217,12 @@ function normalizeLegacyRole(
 }
 
 export async function fetchUserAccount(user: User): Promise<UserAccount | null> {
-  let profileDocRef = doc(db, 'users', user.uid);
+  let profileDocRef = doc(getActiveDb(), 'users', user.uid);
   let profileSnapshot = await getDoc(profileDocRef);
 
   if (!profileSnapshot.exists()) {
     // Search users collection by authUid for linked imported members
-    const usersRef = collection(db, "users");
+    const usersRef = collection(getActiveDb(), "users");
     const qAuth = query(usersRef, where("authUid", "==", user.uid));
     const snapAuth = await getDocs(qAuth);
 
@@ -212,7 +240,7 @@ export async function fetchUserAccount(user: User): Promise<UserAccount | null> 
         if (matchedMember) {
           const churchId = matchedMember.churchId ?? null;
           const status = matchedMember.churchId ? "active" : "pending_church_link";
-          const memberRef = doc(db, "users", matchedMember.id);
+          const memberRef = doc(getActiveDb(), "users", matchedMember.id);
 
           await updateDoc(memberRef, {
             authUid: user.uid,
@@ -231,7 +259,7 @@ export async function fetchUserAccount(user: User): Promise<UserAccount | null> 
             churchId,
             updatedAt: new Date().toISOString(),
           };
-          await setDoc(doc(db, "users", user.uid), userAccountData, { merge: true }).catch(() => {});
+          await setDoc(doc(getActiveDb(), "users", user.uid), userAccountData, { merge: true }).catch(() => {});
 
           profileSnapshot = await getDoc(profileDocRef);
           if (!profileSnapshot.exists()) {
@@ -297,16 +325,9 @@ export async function fetchUserAccount(user: User): Promise<UserAccount | null> 
   } as unknown as UserAccount;
 }
 
-GoogleSignin.configure({
-  webClientId:
-    "676505939287-eqsoa6bc8tkgkun3bmqtdmu2418hnu7m.apps.googleusercontent.com",
-  iosClientId:
-    "676505939287-dudp40gr0pns1kpff4fc1ohu6qt4ha92.apps.googleusercontent.com",
-});
-
 async function findUserAccountByEmail(email: string) {
   const cleanEmail = email.trim().toLowerCase();
-  const usersRef = collection(db, "users");
+  const usersRef = collection(getActiveDb(), "users");
   
   // 1. Try emailLowercase
   const q1 = query(usersRef, where("emailLowercase", "==", cleanEmail));
@@ -391,16 +412,16 @@ export const authRepository = {
     }
 
     try {
-      await sendPasswordResetEmail(auth, cleanEmail);
+      await sendPasswordResetEmail(getActiveAuth(), cleanEmail);
     } catch (error: any) {
       console.warn("[Auth Repository] Error sending password reset email:", error);
       
-      // We intentionally do not throw 'auth/user-not-found' to prevent email enumeration.
+      // We intentionally do not throw 'getActiveAuth()/user-not-found' to prevent email enumeration.
       // We only throw generic network or internal errors.
       if (
-        error?.code === "auth/network-request-failed" ||
-        error?.code === "auth/internal-error" ||
-        error?.code === "auth/too-many-requests"
+        error?.code === "getActiveAuth()/network-request-failed" ||
+        error?.code === "getActiveAuth()/internal-error" ||
+        error?.code === "getActiveAuth()/too-many-requests"
       ) {
         throw new Error("We could not send the reset link right now. Please try again later.");
       }
@@ -437,18 +458,18 @@ export const authRepository = {
       let authCredential;
       try {
         authCredential = await createUserWithEmailAndPassword(
-          auth,
+          getActiveAuth(),
           payload.email || "",
           payload.password
         );
       } catch (authErr: any) {
-        if (authErr?.code === "auth/email-already-in-use") {
+        if (authErr?.code === "getActiveAuth()/email-already-in-use") {
           throw new Error("An account with this email already exists. Please log in instead.");
         }
-        if (authErr?.code === "auth/weak-password") {
+        if (authErr?.code === "getActiveAuth()/weak-password") {
           throw new Error("Password should be at least 6 characters.");
         }
-        if (authErr?.code === "auth/password-does-not-meet-requirements") {
+        if (authErr?.code === "getActiveAuth()/password-does-not-meet-requirements") {
           let msg = "Password does not meet requirements. Please include numbers and a special character (e.g. !@#$).";
           if (authErr?.message) {
             const match = authErr.message.match(/\[(.*?)\]/);
@@ -458,7 +479,7 @@ export const authRepository = {
           }
           throw new Error(msg);
         }
-        if (authErr?.code === "auth/invalid-email") {
+        if (authErr?.code === "getActiveAuth()/invalid-email") {
           throw new Error("The email address provided is invalid.");
         }
         throw authErr;
@@ -480,7 +501,7 @@ export const authRepository = {
           // Link and update the existing member document directly (single document, no duplicates)
           const churchId = matchedMember.churchId ?? null;
           const status: "active" | "pending_church_link" = matchedMember.churchId ? "active" : "pending_church_link";
-          const memberRef = doc(db, "users", matchedMember.id);
+          const memberRef = doc(getActiveDb(), "users", matchedMember.id);
           const updates = buildMemberUpdates(user.uid, payload, cleanEmail);
 
           updates.status = status;
@@ -498,7 +519,7 @@ export const authRepository = {
             ...updates,
             updatedAt: new Date().toISOString(),
           };
-          await setDoc(doc(db, "users", user.uid), userAccountData, { merge: true }).catch(() => {});
+          await setDoc(doc(getActiveDb(), "users", user.uid), userAccountData, { merge: true }).catch(() => {});
         } else {
           // Create new UserAccount document at user.uid only if no existing member was matched
           const userAccount: Omit<UserAccount, "uid"> = {
@@ -528,15 +549,15 @@ export const authRepository = {
             primaryRole: "member" as import("../domain/auth.types").SystemRole,
             role: "member", // legacy compat
           };
-          await setDoc(doc(db, "users", user.uid), userAccount);
+          await setDoc(doc(getActiveDb(), "users", user.uid), userAccount);
         }
 
         // Sign out so user is redirected to Login screen instead of pending-church-link
-        await signOut(auth).catch(() => {});
+        await signOut(getActiveAuth()).catch(() => {});
 
         return authCredential;
       } catch (error) {
-        console.error("[Registration Error] Post-auth setup failed:", error);
+        console.error("[Registration Error] Post-getActiveAuth() setup failed:", error);
         // Clean up newly created Auth user if post-registration setup fails
         await user.delete().catch(() => {});
         throw error;
@@ -551,7 +572,7 @@ export const authRepository = {
 
     if (!emailToUse.includes("@")) {
       const cleanUsername = emailToUse.toLowerCase();
-      const usersRef = collection(db, "users");
+      const usersRef = collection(getActiveDb(), "users");
 
       try {
         let foundEmail: string | null = null;
@@ -602,16 +623,16 @@ export const authRepository = {
     }
 
     try {
-      return await signInWithEmailAndPassword(auth, emailToUse, password);
+      return await signInWithEmailAndPassword(getActiveAuth(), emailToUse, password);
     } catch (authErr: any) {
       if (
-        authErr?.code === "auth/invalid-credential" ||
-        authErr?.code === "auth/user-not-found" ||
-        authErr?.code === "auth/wrong-password"
+        authErr?.code === "getActiveAuth()/invalid-credential" ||
+        authErr?.code === "getActiveAuth()/user-not-found" ||
+        authErr?.code === "getActiveAuth()/wrong-password"
       ) {
         throw new Error("Invalid email/username or password.");
       }
-      if (authErr?.code === "auth/invalid-email") {
+      if (authErr?.code === "getActiveAuth()/invalid-email") {
         throw new Error("Please enter a valid email address or username.");
       }
       throw authErr;
@@ -619,6 +640,7 @@ export const authRepository = {
   },
 
   async loginWithGoogle(): Promise<AuthCredentialResult> {
+    configureGoogleSigninForCurrentEnv();
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
     const response = await GoogleSignin.signIn();
     const idToken = response.data?.idToken;
@@ -628,7 +650,11 @@ export const authRepository = {
     }
 
     const googleCredential = GoogleAuthProvider.credential(idToken);
-    const authCredential = await signInWithCredential(auth, googleCredential);
+    
+    const currentAuth = getActiveAuth();
+    console.log("[Auth Repository] Calling signInWithCredential with app:", currentAuth.app.name, "projectId:", currentAuth.app.options.projectId, "senderId:", currentAuth.app.options.messagingSenderId);
+    
+    const authCredential = await signInWithCredential(currentAuth, googleCredential);
     const user = authCredential.user;
 
     const email = user.email || undefined;
@@ -636,7 +662,7 @@ export const authRepository = {
     
     // Check if user account already exists by email
     const existingUserDoc = cleanEmail ? await findUserAccountByEmail(cleanEmail) : null;
-    const userDocRefByUid = doc(db, "users", user.uid);
+    const userDocRefByUid = doc(getActiveDb(), "users", user.uid);
     const userDocByUid = await getDoc(userDocRefByUid);
 
     if (existingUserDoc) {
@@ -678,7 +704,7 @@ export const authRepository = {
           updates.churchId = matchedMember.churchId ?? null;
           updates.memberId = matchedMember.id ?? null;
 
-          const memberRef = doc(db, 'users', matchedMember.id);
+          const memberRef = doc(getActiveDb(), 'users', matchedMember.id);
           await updateDoc(memberRef, {
             accountId: user.uid,
             authUid: user.uid,
@@ -708,7 +734,7 @@ export const authRepository = {
       const churchId = matchedMember?.churchId ?? null;
       if (matchedMember) {
         // Link and update the existing member document directly (single document, no duplicates)
-        const memberRef = doc(db, "users", matchedMember.id);
+        const memberRef = doc(getActiveDb(), "users", matchedMember.id);
         const nameParts = (user.displayName || "").split(" ");
         const firstName = nameParts[0] || "";
         const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
@@ -768,7 +794,7 @@ export const authRepository = {
   },
 
   logout(): Promise<void> {
-    return signOut(auth);
+    return signOut(getActiveAuth());
   },
 
   subscribeToAuthState(
@@ -776,7 +802,7 @@ export const authRepository = {
     onError: (error: Error) => void
   ): () => void {
     return onAuthStateChanged(
-      auth,
+      getActiveAuth(),
       async (user) => {
         if (!user || isRegistering) {
           onData({ user: null, profile: null });
@@ -789,13 +815,16 @@ export const authRepository = {
             onData({ user: null, profile: null });
             return;
           }
+          if (!profile) {
+            console.warn('[Auth] User profile not found in current environment database. Signing out...');
+            await signOut(getActiveAuth()).catch(() => {});
+            onData({ user: null, profile: null });
+            return;
+          }
           onData({ user, profile });
         } catch (error: any) {
-          if (error?.message?.includes('offline') || error?.code === 'unavailable') {
-            console.log('Client offline, cannot fetch user account from Firestore right now.');
-          } else {
-            onError(error as Error);
-          }
+          console.warn('[Auth] Error fetching user account in current environment:', error);
+          await signOut(getActiveAuth()).catch(() => {});
           onData({ user: null, profile: null });
         }
       },

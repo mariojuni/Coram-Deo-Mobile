@@ -83,7 +83,17 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       googleServicesFile: isProd ? "./credentials/production/GoogleService-Info.plist" : "./credentials/staging/GoogleService-Info.plist",
       infoPlist: {
         CFBundleDisplayName: appName,
-        ITSAppUsesNonExemptEncryption: false
+        ITSAppUsesNonExemptEncryption: false,
+        CFBundleURLTypes: [
+          {
+            CFBundleURLSchemes: isProd
+              ? [(process.env.EXPO_PUBLIC_IOS_REVERSED_CLIENT_ID_PROD || "com.googleusercontent.apps.130463348213-7fqr37i68h4u3jt7hjj30gag2t8ntv1k")]
+              : [
+                  "com.googleusercontent.apps.676505939287-dudp40gr0pns1kpff4fc1ohu6qt4ha92",
+                  (process.env.EXPO_PUBLIC_IOS_REVERSED_CLIENT_ID_PROD || "com.googleusercontent.apps.130463348213-7fqr37i68h4u3jt7hjj30gag2t8ntv1k")
+                ]
+          }
+        ]
       }
     },
     android: {

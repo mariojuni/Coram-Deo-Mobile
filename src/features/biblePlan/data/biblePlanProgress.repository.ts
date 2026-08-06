@@ -9,13 +9,13 @@ import {
     where,
     deleteDoc,
 } from 'firebase/firestore';
-import { db } from '../../../firebase';
+import { getActiveDb } from '../../../firebase';
 import type { BiblePlanProgress, MarkDayCompletedPayload } from '../domain/biblePlan.types';
 import { userBiblePlanRepository } from './userBiblePlan.repository';
 
 // ─── Collection path helper ────────────────────────────────────────────────────
 const progressCol = (churchId: string) =>
-  collection(db, 'churches', churchId, 'biblePlanProgress');
+  collection(getActiveDb(), 'churches', churchId, 'biblePlanProgress');
 
 // ─── Mapper ────────────────────────────────────────────────────────────────────
 
@@ -89,7 +89,7 @@ export const biblePlanProgressRepository = {
       const existing = existingSnap.docs[0];
       if (!existing.data().isCompleted) {
         await updateDoc(
-          doc(db, 'churches', churchId, 'biblePlanProgress', existing.id),
+          doc(getActiveDb(), 'churches', churchId, 'biblePlanProgress', existing.id),
           { isCompleted: true, completedAt: now, updatedAt: now }
         );
       }

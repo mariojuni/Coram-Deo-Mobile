@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '@/firebase';
+import { getActiveDb } from '@/firebase';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useBiblePlanStore } from '@/store/useBiblePlanStore';
 import { useMinistryStore } from '@/store/useMinistryStore';
@@ -117,7 +117,7 @@ export function useProfileDashboardData() {
         const memSet = new Set<string>();
 
         if (memberId || userId) {
-          const qRef = collection(db, 'ministryMembers');
+          const qRef = collection(getActiveDb(), 'ministryMembers');
           const qConstraints = [where('churchId', '==', churchId), where('status', '==', 'active')];
           
           let docsSnap: any[] = [];

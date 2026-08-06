@@ -11,7 +11,7 @@ import { Animated, ActivityIndicator, StyleSheet, View } from 'react-native';
 import BibleReader from '../../components/Bible/BibleReader';
 import BooksModal from '../../components/Bible/BooksModal';
 import TopNavBar from '../../components/Navigation/TopNavBar';
-import { db } from '../../firebase';
+import { getActiveDb } from '../../firebase';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useBibleVersionStore } from '../../store/useBibleVersionStore';
 import { useUIStore } from '../../store/useUIStore';
@@ -86,7 +86,7 @@ export default function BibleScreen() {
     if (!userProfile?.uid) return;
     const fetchUserHighlights = async () => {
       try {
-        const docRef = doc(db, 'users', userProfile.uid, 'bible', 'preferences');
+        const docRef = doc(getActiveDb(), 'users', userProfile.uid, 'bible', 'preferences');
         const docSnap = await getDoc(docRef);
         if (docSnap.exists() && docSnap.data().highlights) {
           const remoteHighlights = docSnap.data().highlights as Record<string, Record<string, string>>;
@@ -121,7 +121,7 @@ export default function BibleScreen() {
 
       // Sync highlights to Firestore
       if (updates.highlights && userProfile?.uid) {
-        const docRef = doc(db, 'users', userProfile.uid, 'bible', 'preferences');
+        const docRef = doc(getActiveDb(), 'users', userProfile.uid, 'bible', 'preferences');
         setDoc(docRef, { highlights: updates.highlights }, { merge: true })
           .catch(err => console.error('Error saving Bible highlights to Firebase:', err));
       }

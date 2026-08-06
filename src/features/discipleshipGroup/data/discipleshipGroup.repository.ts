@@ -11,7 +11,7 @@ import {
   where,
   orderBy
 } from 'firebase/firestore';
-import { db } from '../../../firebase';
+import { getActiveDb } from '../../../firebase';
 import type { UserAccount } from '../../auth/domain/auth.types';
 import type {
   DiscipleshipGroup,
@@ -36,7 +36,7 @@ export class DiscipleshipGroupRepository {
       return () => {};
     }
 
-    const groupsRef = collection(db, 'discipleshipGroups');
+    const groupsRef = collection(getActiveDb(), 'discipleshipGroups');
     const isAdminOrPastor = hasAnyRole(user, ['super_admin', 'church_admin', 'pastor']);
     const memberId = user.memberId;
     const uid = user.uid;
@@ -100,7 +100,7 @@ export class DiscipleshipGroupRepository {
   async getGroup(churchId: string, groupId: string): Promise<DiscipleshipGroup | null> {
     if (!churchId || !groupId) return null;
     try {
-      const docRef = doc(db, 'discipleshipGroups', groupId);
+      const docRef = doc(getActiveDb(), 'discipleshipGroups', groupId);
       const snap = await getDoc(docRef);
       if (snap.exists() && snap.data().churchId === churchId) {
         return { ...snap.data(), id: snap.id } as DiscipleshipGroup;
@@ -121,7 +121,7 @@ export class DiscipleshipGroupRepository {
     if (!churchId || !planId) return { plan: null, lessons: [] };
 
     try {
-      const planRef = doc(db, 'discipleshipPlans', planId);
+      const planRef = doc(getActiveDb(), 'discipleshipPlans', planId);
       const planSnap = await getDoc(planRef);
       const plan = planSnap.exists()
         ? ({ ...planSnap.data(), id: planSnap.id } as DiscipleshipPlan)
@@ -129,7 +129,7 @@ export class DiscipleshipGroupRepository {
 
       // 1. Try discipleshipWeeks by planId
       const weeksQuery = query(
-        collection(db, 'discipleshipWeeks'),
+        collection(getActiveDb(), 'discipleshipWeeks'),
         where('planId', '==', planId)
       );
       const weeksSnap = await getDocs(weeksQuery);
@@ -153,7 +153,7 @@ export class DiscipleshipGroupRepository {
       // 2. Fallback to discipleshipLessons by planId
       if (lessons.length === 0) {
         const lessonsQuery = query(
-          collection(db, 'discipleshipLessons'),
+          collection(getActiveDb(), 'discipleshipLessons'),
           where('planId', '==', planId)
         );
         const lessonsSnap = await getDocs(lessonsQuery);
@@ -178,7 +178,7 @@ export class DiscipleshipGroupRepository {
       // 3. Fallback: query all discipleshipWeeks for churchId if planId field is string/number mismatch or missing
       if (lessons.length === 0 && churchId) {
         const allWeeksQuery = query(
-          collection(db, 'discipleshipWeeks'),
+          collection(getActiveDb(), 'discipleshipWeeks'),
           where('churchId', '==', churchId)
         );
         const allWeeksSnap = await getDocs(allWeeksQuery);
@@ -226,7 +226,7 @@ export class DiscipleshipGroupRepository {
       return () => {};
     }
     const q = query(
-      collection(db, 'discipleshipProgress'),
+      collection(getActiveDb(), 'discipleshipProgress'),
       where('churchId', '==', churchId),
       where('groupId', '==', groupId)
     );
@@ -258,7 +258,7 @@ export class DiscipleshipGroupRepository {
     reflectionNote?: string;
   }): Promise<void> {
     const docId = `${payload.groupId}_${payload.lessonId}_${payload.memberId}`;
-    const docRef = doc(db, 'discipleshipProgress', docId);
+    const docRef = doc(getActiveDb(), 'discipleshipProgress', docId);
 
     const snap = await getDoc(docRef);
     if (snap.exists()) {
@@ -301,7 +301,7 @@ export class DiscipleshipGroupRepository {
     leaderNote: string
   ): Promise<void> {
     const docId = `${groupId}_${lessonId}_${memberId}`;
-    const docRef = doc(db, 'discipleshipProgress', docId);
+    const docRef = doc(getActiveDb(), 'discipleshipProgress', docId);
 
     const snap = await getDoc(docRef);
     if (snap.exists()) {
@@ -342,7 +342,7 @@ export class DiscipleshipGroupRepository {
       return () => {};
     }
     const q = query(
-      collection(db, 'discipleshipGroupPosts'),
+      collection(getActiveDb(), 'discipleshipGroupPosts'),
       where('churchId', '==', churchId),
       where('groupId', '==', groupId)
     );
@@ -369,7 +369,7 @@ export class DiscipleshipGroupRepository {
    * Create a group post.
    */
   async createGroupPost(post: Omit<DiscipleshipGroupPost, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    const postRef = doc(collection(db, 'discipleshipGroupPosts'));
+    const postRef = doc(collection(getActiveDb(), 'discipleshipGroupPosts'));
     await setDoc(postRef, {
       ...post,
       createdAt: serverTimestamp(),
@@ -382,7 +382,7 @@ export class DiscipleshipGroupRepository {
    * Advance group current week and lesson ID.
    */
   async advanceGroupWeek(churchId: string, groupId: string, nextWeekNumber: number, nextLessonId?: string | null, userId?: string): Promise<void> {
-    const docRef = doc(db, 'discipleshipGroups', groupId);
+    const docRef = doc(getActiveDb(), 'discipleshipGroups', groupId);
     await updateDoc(docRef, {
       currentWeekNumber: nextWeekNumber,
       currentLessonId: nextLessonId || null,
@@ -395,7 +395,7 @@ export class DiscipleshipGroupRepository {
    * Detach plan from group.
    */
   async removeGroupPlan(churchId: string, groupId: string, userId?: string): Promise<void> {
-    const docRef = doc(db, 'discipleshipGroups', groupId);
+    const docRef = doc(getActiveDb(), 'discipleshipGroups', groupId);
     await updateDoc(docRef, {
       planId: null,
       planTitle: null,

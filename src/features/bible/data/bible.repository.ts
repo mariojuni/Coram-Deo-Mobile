@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../../../firebase';
+import { getActiveAuth, getActiveDb } from '../../../firebase';
 import { deleteOfflineBible, getBibleIndex, getChapter, saveBibleIndex, saveChapter } from './offlineDb.repository';
 
 const API_BASE = 'https://api.youversion.com/v1';
@@ -226,7 +226,7 @@ export const fetchBibleIndex = async (translationId: string | number) => {
   } catch (error) {
     console.error(`Error fetching index from YouVersion for ${translationId}, falling back to Firestore:`, error);
     try {
-      const docRef = doc(db, 'bibles', String(translationId));
+      const docRef = doc(getActiveDb(), 'bibles', String(translationId));
       const docSnap = await getDoc(docRef);
       if (docSnap.exists() && docSnap.data().index) {
         const fallbackData = docSnap.data().index;
@@ -286,7 +286,7 @@ export const fetchChapterData = async (translationId: string | number, passageId
   } catch (error) {
     console.error(`Error fetching chapter ${passageId} for ${translationId} from YouVersion, falling back to Firestore:`, error);
     try {
-      const docRef = doc(db, 'bibles', String(translationId), 'chapters', passageId);
+      const docRef = doc(getActiveDb(), 'bibles', String(translationId), 'chapters', passageId);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists() && docSnap.data().verses) {
         let fallbackVerses = docSnap.data().verses;
@@ -414,10 +414,10 @@ export const getUserPreferences = async () => {
     console.warn('Failed to read bible_prefs from AsyncStorage:', e);
   }
 
-  if (auth.currentUser) {
+  if (getActiveAuth().currentUser) {
     if (!data) {
       try {
-        const docRef = doc(db, 'users', auth.currentUser.uid, 'bible', 'preferences');
+        const docRef = doc(getActiveDb(), 'users', getActiveAuth().currentUser.uid, 'bible', 'preferences');
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           data = docSnap.data();
@@ -432,7 +432,7 @@ export const getUserPreferences = async () => {
       }
     } else {
       // Async background sync from Firestore so UI isn't blocked
-      getDoc(doc(db, 'users', auth.currentUser.uid, 'bible', 'preferences'))
+      getDoc(doc(getActiveDb(), 'users', getActiveAuth().currentUser.uid, 'bible', 'preferences'))
         .then((docSnap) => {
           if (docSnap.exists()) {
             AsyncStorage.setItem('bible_prefs', JSON.stringify(docSnap.data()));
@@ -457,9 +457,9 @@ export const getUserPreferences = async () => {
 export const saveUserPreferences = async (prefs: any) => {
   await AsyncStorage.setItem('bible_prefs', JSON.stringify(prefs));
 
-  if (auth.currentUser) {
+  if (getActiveAuth().currentUser) {
     try {
-      const docRef = doc(db, 'users', auth.currentUser.uid, 'bible', 'preferences');
+      const docRef = doc(getActiveDb(), 'users', getActiveAuth().currentUser.uid, 'bible', 'preferences');
       await setDoc(docRef, prefs, { merge: true });
     } catch (error) {
       console.warn('Failed to save preferences to Firestore:', error);

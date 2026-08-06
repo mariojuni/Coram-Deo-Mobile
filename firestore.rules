@@ -284,6 +284,35 @@ service cloud.firestore {
       }
     }
 
+    // ── UserAccounts ──────────────────────────────────────────────────────────
+    // userAccounts mirrors the users collection and serves as the primary
+    // profile source for the admin dashboard and mobile app.
+    match /userAccounts/{userId} {
+      // Any authenticated user can read their own account document.
+      allow read: if isOwner(userId) || isSuperAdmin() || isRoleAdmin(resource.data.churchId);
+
+      allow create: if isSignedIn();
+
+      // Owner can update their own doc but may NOT change roles or churchId.
+      // super_admin can update any account. church_admin can update accounts in their church.
+      allow update: if isSignedIn() && (
+        (isOwner(userId) &&
+          request.resource.data.get('systemRoles', null) == resource.data.get('systemRoles', null) &&
+          request.resource.data.get('primaryRole', null) == resource.data.get('primaryRole', null) &&
+          request.resource.data.get('role', null) == resource.data.get('role', null) &&
+          request.resource.data.get('churchId', null) == resource.data.get('churchId', null) &&
+          request.resource.data.get('status', null) == resource.data.get('status', null)) ||
+        (isSuperAdmin() && request.auth.uid != userId) ||
+        (isRoleAdmin(resource.data.churchId) &&
+          request.resource.data.churchId == resource.data.churchId &&
+          !(request.resource.data.systemRoles != null && request.resource.data.systemRoles.hasAll(['super_admin'])) &&
+          request.resource.data.role != 'super_admin' &&
+          request.auth.uid != userId)
+      );
+
+      allow delete: if isSuperAdmin();
+    }
+
     // ── Comments ─────────────────────────────────────────────────────────────
     match /comments/{commentId} {
       allow read: if isSignedIn();

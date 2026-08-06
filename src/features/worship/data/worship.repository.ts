@@ -1,16 +1,16 @@
 import { collection, doc, getDoc, getDocs, limit, orderBy, query, where, updateDoc, onSnapshot } from 'firebase/firestore';
-import { db } from '../../../firebase';
+import { getActiveDb } from '../../../firebase';
 import { Song, WorshipSetlist, WorshipSetlistItem } from '../domain/worship.types';
 
 export const worshipRepository = {
   getSongs: async (churchId: string): Promise<Song[]> => {
-    const q = query(collection(db, 'songs'), where('churchId', '==', churchId));
+    const q = query(collection(getActiveDb(), 'songs'), where('churchId', '==', churchId));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Song));
   },
 
   getSetlists: async (churchId: string): Promise<WorshipSetlist[]> => {
-    const q = query(collection(db, 'worshipSetlists'), where('churchId', '==', churchId));
+    const q = query(collection(getActiveDb(), 'worshipSetlists'), where('churchId', '==', churchId));
     const snapshot = await getDocs(q);
     const setlists = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as WorshipSetlist));
     return setlists.sort((a, b) => {
@@ -21,7 +21,7 @@ export const worshipRepository = {
   },
 
   subscribeToSetlists: (churchId: string, onUpdate: (setlists: WorshipSetlist[]) => void, onError: (error: Error) => void) => {
-    const q = query(collection(db, 'worshipSetlists'), where('churchId', '==', churchId));
+    const q = query(collection(getActiveDb(), 'worshipSetlists'), where('churchId', '==', churchId));
     return onSnapshot(
       q,
       (snapshot) => {
@@ -38,7 +38,7 @@ export const worshipRepository = {
   },
 
   updateSetlistItem: async (itemId: string, data: Partial<WorshipSetlistItem>): Promise<void> => {
-    const ref = doc(db, 'worshipSetlistItems', itemId);
+    const ref = doc(getActiveDb(), 'worshipSetlistItems', itemId);
     await updateDoc(ref, {
       ...data,
       updatedAt: new Date().toISOString()
@@ -46,14 +46,14 @@ export const worshipRepository = {
   },
 
   getSetlistItem: async (itemId: string): Promise<WorshipSetlistItem | null> => {
-    const docRef = doc(db, 'worshipSetlistItems', itemId);
+    const docRef = doc(getActiveDb(), 'worshipSetlistItems', itemId);
     const docSnap = await getDoc(docRef);
     if (!docSnap.exists()) return null;
     return { id: docSnap.id, ...docSnap.data() } as WorshipSetlistItem;
   },
 
   getSong: async (songId: string): Promise<Song | null> => {
-    const docRef = doc(db, 'songs', songId);
+    const docRef = doc(getActiveDb(), 'songs', songId);
     const docSnap = await getDoc(docRef);
     if (!docSnap.exists()) return null;
     return { id: docSnap.id, ...docSnap.data() } as Song;
@@ -61,7 +61,7 @@ export const worshipRepository = {
 
   getPublishedSetlistForEvent: async (churchId: string, eventId: string): Promise<WorshipSetlist | null> => {
     const q = query(
-      collection(db, 'worshipSetlists'),
+      collection(getActiveDb(), 'worshipSetlists'),
       where('churchId', '==', churchId),
       where('eventId', '==', eventId),
       where('status', '==', 'published'),
@@ -75,7 +75,7 @@ export const worshipRepository = {
 
   getSetlistForEvent: async (churchId: string, eventId: string): Promise<WorshipSetlist | null> => {
     const q = query(
-      collection(db, 'worshipSetlists'),
+      collection(getActiveDb(), 'worshipSetlists'),
       where('churchId', '==', churchId),
       where('eventId', '==', eventId),
       limit(1)
@@ -88,7 +88,7 @@ export const worshipRepository = {
 
   subscribeToSetlistForEvent: (churchId: string, eventId: string, onUpdate: (setlist: WorshipSetlist | null) => void, onError: (error: Error) => void) => {
     const q = query(
-      collection(db, 'worshipSetlists'),
+      collection(getActiveDb(), 'worshipSetlists'),
       where('churchId', '==', churchId),
       where('eventId', '==', eventId),
       limit(1)
@@ -108,7 +108,7 @@ export const worshipRepository = {
 
   getSetlistItems: async (churchId: string, setlistId: string): Promise<WorshipSetlistItem[]> => {
     const q = query(
-      collection(db, 'worshipSetlistItems'),
+      collection(getActiveDb(), 'worshipSetlistItems'),
       where('churchId', '==', churchId),
       where('setlistId', '==', setlistId),
       orderBy('order', 'asc')
@@ -118,7 +118,7 @@ export const worshipRepository = {
     const items = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as WorshipSetlistItem));
     
     const enrichedItems = await Promise.all(items.map(async (item) => {
-      const songDocRef = doc(db, 'songs', item.songId);
+      const songDocRef = doc(getActiveDb(), 'songs', item.songId);
       const songDoc = await getDoc(songDocRef);
       if (songDoc.exists()) {
         item.song = { id: songDoc.id, ...songDoc.data() } as Song;
@@ -131,7 +131,7 @@ export const worshipRepository = {
 
   subscribeToSetlistItems: (churchId: string, setlistId: string, onUpdate: (items: WorshipSetlistItem[]) => void, onError: (error: Error) => void) => {
     const q = query(
-      collection(db, 'worshipSetlistItems'),
+      collection(getActiveDb(), 'worshipSetlistItems'),
       where('churchId', '==', churchId),
       where('setlistId', '==', setlistId),
       orderBy('order', 'asc')
@@ -143,7 +143,7 @@ export const worshipRepository = {
         
         // Enrich items with song data
         const enrichedItems = await Promise.all(items.map(async (item) => {
-          const songDocRef = doc(db, 'songs', item.songId);
+          const songDocRef = doc(getActiveDb(), 'songs', item.songId);
           const songDoc = await getDoc(songDocRef);
           if (songDoc.exists()) {
             item.song = { id: songDoc.id, ...songDoc.data() } as Song;
@@ -159,7 +159,7 @@ export const worshipRepository = {
 
   subscribeToCommunitySongs: (churchId: string, onUpdate: (songs: Song[]) => void, onError: (error: Error) => void) => {
     const q = query(
-      collection(db, 'songs'),
+      collection(getActiveDb(), 'songs'),
       where('churchId', '==', churchId)
     );
     return onSnapshot(

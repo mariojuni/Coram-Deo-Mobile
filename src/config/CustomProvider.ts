@@ -3,7 +3,7 @@ import { CustomProvider, AppCheckToken } from 'firebase/app-check';
 
 // This file creates a CustomProvider for the Firebase JS SDK
 // that delegates to the React Native Firebase App Check module.
-export const createReactNativeCustomProvider = (): CustomProvider => {
+export const createReactNativeCustomProvider = (rnfbAppCheckInstance: any): CustomProvider => {
   return new CustomProvider({
     getToken: async (): Promise<AppCheckToken> => {
       if (Platform.OS === 'web') {
@@ -11,11 +11,7 @@ export const createReactNativeCustomProvider = (): CustomProvider => {
       }
 
       try {
-        // Dynamically import to avoid breaking web builds
-        const { firebase: rnfirebase } = require('@react-native-firebase/app');
-        require('@react-native-firebase/app-check');
-        
-        const tokenResult = await rnfirebase.appCheck().getToken();
+        const tokenResult = await rnfbAppCheckInstance.getToken(false);
         
         return {
           token: tokenResult.token,
@@ -23,10 +19,9 @@ export const createReactNativeCustomProvider = (): CustomProvider => {
         };
       } catch (error) {
         console.error('Failed to get App Check token from React Native Firebase', error);
-        return {
-          token: '',
-          expireTimeMillis: 0,
-        };
+        // Add an artificial delay to prevent immediate infinite loops if the JS SDK retries instantly
+        await new Promise(resolve => setTimeout(resolve, 10000));
+        throw error;
       }
     },
   });

@@ -1,12 +1,12 @@
 import { addDoc, collection, deleteDoc, doc, getDocs, onSnapshot, query, updateDoc, where } from 'firebase/firestore';
-import { db } from '../../../firebase';
+import { getActiveDb } from '../../../firebase';
 import type { Ministry, MinistryApplication, MinistryAssignment } from '../domain/ministry.types';
 
 export const ministryRepository = {
   async getMinistries(churchId: string): Promise<Ministry[]> {
     console.log('Fetching ministries for churchId:', churchId);
     if (!churchId) return [];
-    const q = query(collection(db, 'ministries'), where('churchId', '==', churchId));
+    const q = query(collection(getActiveDb(), 'ministries'), where('churchId', '==', churchId));
     const snap = await getDocs(q);
     const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Ministry));
     console.log('Fetched raw ministries:', docs);
@@ -16,7 +16,7 @@ export const ministryRepository = {
   },
 
   subscribeToMinistryAssignmentsByEvent(eventId: string, onData: (assignments: MinistryAssignment[]) => void): () => void {
-    const q = query(collection(db, 'ministryAssignments'), where('eventId', '==', eventId));
+    const q = query(collection(getActiveDb(), 'ministryAssignments'), where('eventId', '==', eventId));
     return onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as MinistryAssignment));
       onData(data);
@@ -24,7 +24,7 @@ export const ministryRepository = {
   },
 
   subscribeToMinistryAssignmentsByUser(userId: string, onData: (assignments: MinistryAssignment[]) => void): () => void {
-    const q = query(collection(db, 'ministryAssignments'), where('memberId', '==', userId));
+    const q = query(collection(getActiveDb(), 'ministryAssignments'), where('memberId', '==', userId));
     return onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as MinistryAssignment));
       onData(data);
@@ -37,7 +37,7 @@ export const ministryRepository = {
     onData: (assignments: MinistryAssignment[]) => void
   ): () => void {
     const q = query(
-      collection(db, 'ministryAssignments'),
+      collection(getActiveDb(), 'ministryAssignments'),
       where('churchId', '==', churchId),
       where('memberId', '==', memberId)
     );
@@ -48,7 +48,7 @@ export const ministryRepository = {
   },
 
   subscribeToAllMinistryAssignments(churchId: string, onData: (assignments: MinistryAssignment[]) => void): () => void {
-    const q = query(collection(db, 'ministryAssignments'), where('churchId', '==', churchId));
+    const q = query(collection(getActiveDb(), 'ministryAssignments'), where('churchId', '==', churchId));
     return onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as MinistryAssignment));
       onData(data);
@@ -56,16 +56,16 @@ export const ministryRepository = {
   },
 
   async createAssignment(assignment: Omit<MinistryAssignment, 'id'>): Promise<string> {
-    const ref = await addDoc(collection(db, 'ministryAssignments'), assignment);
+    const ref = await addDoc(collection(getActiveDb(), 'ministryAssignments'), assignment);
     return ref.id;
   },
 
   async updateAssignment(id: string, data: Partial<MinistryAssignment>): Promise<void> {
-    await updateDoc(doc(db, 'ministryAssignments', id), { ...data, updatedAt: new Date().toISOString() });
+    await updateDoc(doc(getActiveDb(), 'ministryAssignments', id), { ...data, updatedAt: new Date().toISOString() });
   },
 
   async deleteAssignment(id: string): Promise<void> {
-    await deleteDoc(doc(db, 'ministryAssignments', id));
+    await deleteDoc(doc(getActiveDb(), 'ministryAssignments', id));
   },
 
   // ── Ministry Applications ──────────────────────────────────────────────────
@@ -76,7 +76,7 @@ export const ministryRepository = {
     onData: (applications: MinistryApplication[]) => void
   ): () => void {
     const q = query(
-      collection(db, 'ministryApplications'),
+      collection(getActiveDb(), 'ministryApplications'),
       where('churchId', '==', churchId),
       where('memberId', '==', memberId)
     );
@@ -87,12 +87,12 @@ export const ministryRepository = {
   },
 
   async submitApplication(data: Omit<MinistryApplication, 'id'>): Promise<string> {
-    const ref = await addDoc(collection(db, 'ministryApplications'), data);
+    const ref = await addDoc(collection(getActiveDb(), 'ministryApplications'), data);
     return ref.id;
   },
 
   async withdrawApplication(id: string): Promise<void> {
-    await updateDoc(doc(db, 'ministryApplications', id), {
+    await updateDoc(doc(getActiveDb(), 'ministryApplications', id), {
       status: 'withdrawn',
       withdrawnAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
