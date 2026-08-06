@@ -1,12 +1,25 @@
 name: Distribute Staging App to Firebase Testers
 
 on:
-  push:
-    branches:
-      - development
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to build'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - both
+          - ios
+          - android
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   android-staging:
+    if: github.event.inputs.platform == 'both' || github.event.inputs.platform == 'android'
     name: Build and Distribute Android Staging
     runs-on: ubuntu-latest
     environment: staging
@@ -66,6 +79,7 @@ jobs:
           rm -f fastlane/service-account.json
 
   ios-staging:
+    if: github.event.inputs.platform == 'both' || github.event.inputs.platform == 'ios'
     name: Build and Distribute iOS Staging
     runs-on: macos-latest
     environment: staging
