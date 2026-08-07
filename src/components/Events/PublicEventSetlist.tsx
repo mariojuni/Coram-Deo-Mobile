@@ -51,7 +51,7 @@ export function PublicEventSetlist({
           userProfile.churchId,
           eventId
         );
-        if (!sl) {
+        if (!sl || sl.status === 'draft') {
           if (isMounted) setLoading(false);
           return;
         }

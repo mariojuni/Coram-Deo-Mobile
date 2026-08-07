@@ -101,10 +101,12 @@ export const scheduleRepository = {
           setlistsQuery,
           (setlistsSnap) => {
             const setlistMap: Record<string, string> = {}; // eventId -> setlistId
+            const setlistStatusMap: Record<string, string> = {}; // eventId -> setlistStatus
             setlistsSnap.docs.forEach((d) => {
               const data = d.data();
               if (data.eventId) {
                 setlistMap[data.eventId] = d.id;
+                setlistStatusMap[data.eventId] = data.status || 'published';
               }
             });
 
@@ -146,6 +148,7 @@ export const scheduleRepository = {
                   return {
                     ...schedule,
                     songList: setlistItems,
+                    setlistStatus: setlistStatusMap[schedule.id],
                   };
                 });
 

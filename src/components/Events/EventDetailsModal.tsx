@@ -126,12 +126,14 @@ export function EventDetailsModal({
         </View>
 
         {/* Public Worship Setlist */}
-        <PublicEventSetlist 
-          eventId={event.id} 
-          title={isToday(event.date) ? "Today's Songs" : "Event Songs"} 
-          onCloseModal={onClose} 
-          preloadedSongList={event.songList}
-        />
+        {event.setlistStatus !== 'draft' && (
+          <PublicEventSetlist 
+            eventId={event.id} 
+            title={isToday(event.date) ? "Today's Songs" : "Event Songs"} 
+            onCloseModal={onClose} 
+            preloadedSongList={event.songList}
+          />
+        )}
 
         <View style={styles.rsvpSection}>
           <Text style={styles.rsvpTitle}>Your Response</Text>
