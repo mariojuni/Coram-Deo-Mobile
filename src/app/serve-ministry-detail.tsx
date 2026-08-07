@@ -259,7 +259,7 @@ export default function ServeMinistryDetailScreen() {
         </View>
 
         {/* ─── Members ─── */}
-        {ministry.members && ministry.members.length > 0 ? (
+        {false && ministry?.members && ministry.members.length > 0 ? (
           <SoftCard style={{ marginBottom: 0, borderRadius: 24 }} innerStyle={{ borderRadius: 23 }}>
             <View style={styles.card}>
               <TouchableOpacity 
@@ -275,7 +275,7 @@ export default function ServeMinistryDetailScreen() {
                 )}
               </TouchableOpacity>
               
-              {membersExpanded && (
+              {membersExpanded && ministry?.members && (
                 <View style={[styles.listContainer, { marginTop: 12 }]}>
                   {ministry.members.map((member) => (
                     <View key={member.memberId} style={styles.memberRow}>

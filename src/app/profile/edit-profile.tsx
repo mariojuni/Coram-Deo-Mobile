@@ -8,8 +8,8 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft, Camera, Check, X } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { getActiveDb, storage } from '../../firebase';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { getActiveDb, getActiveStorage } from '../../firebase';
 import { useAuthStore } from '@/store/useAuthStore';
 import { canEditOwnProfile } from '@/permissions/mobilePermissions';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -74,7 +74,7 @@ export default function EditProfileScreen() {
       
       const response = await fetch(uri);
       const blob = await response.blob();
-      const storageRef = ref(storage, `churches/${churchId}/members/${memberId}/avatar/profile.jpg`);
+      const storageRef = ref(getActiveStorage(), `images/churches/${churchId}/members/${memberId}/avatar/profile.jpg`);
       await uploadBytes(storageRef, blob);
       const downloadUrl = await getDownloadURL(storageRef);
       return downloadUrl;
@@ -93,6 +93,21 @@ export default function EditProfileScreen() {
       const uploadedUrl = await uploadAvatar(photoUrl);
       if (uploadedUrl) {
         finalPhotoUrl = uploadedUrl;
+        
+        // Clean up old avatar if it is a Firebase Storage URL and different from the new one
+        if (
+          userProfile.photoUrl && 
+          userProfile.photoUrl.includes('firebasestorage.googleapis.com') &&
+          userProfile.photoUrl !== uploadedUrl
+        ) {
+          try {
+            const oldRef = ref(getActiveStorage(), userProfile.photoUrl);
+            await deleteObject(oldRef);
+            console.log('Old avatar deleted successfully');
+          } catch (err) {
+            console.log('Failed to delete old avatar, might already be deleted or overwritten:', err);
+          }
+        }
       }
 
       const updates: any = {

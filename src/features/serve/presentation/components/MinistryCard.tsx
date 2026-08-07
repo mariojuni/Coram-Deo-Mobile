@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronRight, Users } from 'lucide-react-native';
 import { useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export interface MinistryCardProps {
   ministry: Ministry;
@@ -14,6 +15,11 @@ export interface MinistryCardProps {
 export function MinistryCard({ ministry, onPress }: MinistryCardProps) {
   const memberCount = ministry.memberCount ?? ministry.members?.length ?? 0;
   const roleCount = ministry.roles?.length ?? 0;
+
+  const userProfile = useAuthStore((s) => s.userProfile);
+  const currentUser = useAuthStore((s) => s.currentUser);
+  const memberId = userProfile?.memberId ?? currentUser?.uid ?? null;
+  const isMember = !!(memberId && ministry.members?.some((m) => m.memberId === memberId));
 
   return (
     <BounceCard onPress={onPress} activeOpacity={1} style={{ marginBottom: 12 }}>
@@ -45,6 +51,11 @@ export function MinistryCard({ ministry, onPress }: MinistryCardProps) {
                 <Text style={cs.leader} numberOfLines={1}>Led by {ministry.leaderName}</Text>
               ) : null}
             </View>
+            {isMember && (
+              <View style={cs.joinedBadge}>
+                <Text style={cs.joinedText}>Joined</Text>
+              </View>
+            )}
             <ChevronRight size={16} color="#C4C9D4" />
           </View>
 
@@ -95,6 +106,17 @@ const cs = StyleSheet.create({
     fontSize: 15, fontWeight: '800', color: '#1F2937', letterSpacing: -0.3,
   },
   leader: { fontSize: 12, color: '#9CA3AF', fontWeight: '500', marginTop: 1 },
+  joinedBadge: {
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  joinedText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#059669',
+  },
   description: { fontSize: 13, color: '#6B7280', lineHeight: 18 },
   footer: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
   pill: {

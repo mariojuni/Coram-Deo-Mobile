@@ -66,13 +66,26 @@ export const syncUserNameOnUpdate = functions.firestore
         }
       });
 
-      // 2. Update Comments
+      // 2. Update Comments (new schema uses authorUserId, authorDisplayName, authorPhotoUrl)
       const commentsSnapshot = await db
-        .collection('comments') // From your repository, it looks like comments is a root collection
-        .where('userId', '==', userId)
+        .collection('comments')
+        .where('authorUserId', '==', userId)
         .get();
 
       commentsSnapshot.forEach((doc) => {
+        const updates: any = {};
+        if (nameChanged) updates.authorDisplayName = newName;
+        if (photoChanged) updates.authorPhotoUrl = newPhotoUrl;
+        batch.update(doc.ref, updates);
+      });
+
+      // 2.b Update Comments (fallback for old schema using userId, userName, userPhotoUrl)
+      const oldCommentsSnapshot = await db
+        .collection('comments')
+        .where('userId', '==', userId)
+        .get();
+
+      oldCommentsSnapshot.forEach((doc) => {
         const updates: any = {};
         if (nameChanged) updates.userName = newName;
         if (photoChanged) updates.userPhotoUrl = newPhotoUrl;
@@ -126,6 +139,19 @@ export const syncUserNameOnUpdate = functions.firestore
         if (updated) {
           batch.update(doc.ref, { members: updatedMembers });
         }
+      });
+
+      // 6. Update Ministry Applications
+      const applicationsSnapshot = await db
+        .collection('ministryApplications')
+        .where('userId', '==', userId)
+        .get();
+
+      applicationsSnapshot.forEach((doc) => {
+        const updates: any = {};
+        if (nameChanged) updates.applicantName = newName;
+        if (photoChanged) updates.applicantPhotoUrl = newPhotoUrl;
+        batch.update(doc.ref, updates);
       });
 
       await batch.commit();
