@@ -33,12 +33,12 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteCommentsOnPrayerDelete = exports.syncUserNameOnUpdate = void 0;
-const functions = __importStar(require("firebase-functions"));
+exports.syncUserNameOnUpdate = void 0;
+const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
 admin.initializeApp();
 const db = admin.firestore();
-exports.syncUserNameOnUpdate = functions.firestore
+exports.syncUserNameOnUpdate = functions.region('asia-southeast1').firestore
     .document('users/{userId}')
     .onUpdate(async (change, context) => {
     const beforeData = change.before.data();
@@ -91,12 +91,25 @@ exports.syncUserNameOnUpdate = functions.firestore
                 batch.update(doc.ref, updates);
             }
         });
-        // 2. Update Comments
+        // 2. Update Comments (new schema uses authorUserId, authorDisplayName, authorPhotoUrl)
         const commentsSnapshot = await db
-            .collection('comments') // From your repository, it looks like comments is a root collection
-            .where('userId', '==', userId)
+            .collection('comments')
+            .where('authorUserId', '==', userId)
             .get();
         commentsSnapshot.forEach((doc) => {
+            const updates = {};
+            if (nameChanged)
+                updates.authorDisplayName = newName;
+            if (photoChanged)
+                updates.authorPhotoUrl = newPhotoUrl;
+            batch.update(doc.ref, updates);
+        });
+        // 2.b Update Comments (fallback for old schema using userId, userName, userPhotoUrl)
+        const oldCommentsSnapshot = await db
+            .collection('comments')
+            .where('userId', '==', userId)
+            .get();
+        oldCommentsSnapshot.forEach((doc) => {
             const updates = {};
             if (nameChanged)
                 updates.userName = newName;
@@ -143,38 +156,24 @@ exports.syncUserNameOnUpdate = functions.firestore
                 batch.update(doc.ref, { members: updatedMembers });
             }
         });
+        // 6. Update Ministry Applications
+        const applicationsSnapshot = await db
+            .collection('ministryApplications')
+            .where('userId', '==', userId)
+            .get();
+        applicationsSnapshot.forEach((doc) => {
+            const updates = {};
+            if (nameChanged)
+                updates.applicantName = newName;
+            if (photoChanged)
+                updates.applicantPhotoUrl = newPhotoUrl;
+            batch.update(doc.ref, updates);
+        });
         await batch.commit();
         console.log(`Successfully synced name for user ${userId}`);
     }
     catch (error) {
         console.error('Error syncing user names:', error);
-    }
-    return null;
-});
-exports.deleteCommentsOnPrayerDelete = functions.firestore
-    .document('churches/{churchId}/prayer_requests/{prayerId}')
-    .onDelete(async (snap, context) => {
-    const prayerId = context.params.prayerId;
-    console.log(`Prayer request ${prayerId} deleted. Deleting associated comments...`);
-    try {
-        const commentsSnapshot = await db
-            .collection('comments')
-            .where('targetType', '==', 'prayer_request')
-            .where('targetId', '==', prayerId)
-            .get();
-        if (commentsSnapshot.empty) {
-            console.log('No comments found for this prayer request.');
-            return null;
-        }
-        const batch = db.batch();
-        commentsSnapshot.forEach((doc) => {
-            batch.delete(doc.ref);
-        });
-        await batch.commit();
-        console.log(`Successfully deleted ${commentsSnapshot.size} comments.`);
-    }
-    catch (error) {
-        console.error('Error deleting associated comments:', error);
     }
     return null;
 });

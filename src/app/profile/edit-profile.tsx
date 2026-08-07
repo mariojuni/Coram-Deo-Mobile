@@ -73,12 +73,23 @@ export default function EditProfileScreen() {
       const churchId = userProfile?.churchId || 'default';
       const memberId = userProfile?.memberId || userProfile?.uid;
       
-      const response = await fetch(uri);
-      const blob = await response.blob();
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.onload = function() {
+          resolve(xhr.response as Blob);
+        };
+        xhr.onerror = function(e) {
+          reject(new TypeError('Network request failed'));
+        };
+        xhr.responseType = 'blob';
+        xhr.open('GET', uri, true);
+        xhr.send(null);
+      });
+      
       const storageRef = ref(getActiveStorage(), `images/churches/${churchId}/members/${memberId}/avatar/profile.jpg`);
-      await uploadBytes(storageRef, blob);
+      await uploadBytes(storageRef, blob, { contentType: blob.type || 'image/jpeg' });
       const downloadUrl = await getDownloadURL(storageRef);
-      return downloadUrl;
+      return `${downloadUrl}&t=${Date.now()}`;
     } catch (e) {
       console.error('Upload failed:', e);
       return null;
@@ -95,20 +106,7 @@ export default function EditProfileScreen() {
       if (uploadedUrl) {
         finalPhotoUrl = uploadedUrl;
         
-        // Clean up old avatar if it is a Firebase Storage URL and different from the new one
-        if (
-          userProfile.photoUrl && 
-          userProfile.photoUrl.includes('firebasestorage.googleapis.com') &&
-          userProfile.photoUrl !== uploadedUrl
-        ) {
-          try {
-            const oldRef = ref(getActiveStorage(), userProfile.photoUrl);
-            await deleteObject(oldRef);
-            console.log('Old avatar deleted successfully');
-          } catch (err) {
-            console.log('Failed to delete old avatar, might already be deleted or overwritten:', err);
-          }
-        }
+
       }
 
       const updates: any = {

@@ -116,7 +116,13 @@ export default function LoginScreen() {
           >
             <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
               
-              <View style={styles.spacer} />
+              <View style={[styles.spacer, { justifyContent: 'center', alignItems: 'center' }]}>
+                <Image 
+                  source={require('../../../assets/images/logo.png')} 
+                  style={{ width: 100, height: 100 }} 
+                  contentFit="contain"
+                />
+              </View>
 
               <View style={styles.authHeader}>
                 <Text style={styles.title}>Welcome Back</Text>

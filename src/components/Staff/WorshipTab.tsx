@@ -87,8 +87,12 @@ export default function WorshipTab() {
     try {
       const data = await worshipSetlistService.getUpcomingWorshipSetlistsForUser(userProfile, userMinistries);
       setSetlists(data);
-    } catch (err) {
-      console.error('Error loading worship setlists:', err);
+    } catch (err: any) {
+      if (err?.code === 'permission-denied' || (err instanceof Error && err.message.includes('Missing or insufficient permissions'))) {
+        console.log('Permission denied loading setlists (likely logged out)');
+      } else {
+        console.error('Error loading worship setlists:', err);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);

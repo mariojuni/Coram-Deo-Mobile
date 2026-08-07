@@ -4,7 +4,7 @@ import * as admin from 'firebase-admin';
 admin.initializeApp();
 const db = admin.firestore();
 
-export const syncUserNameOnUpdate = functions.firestore
+export const syncUserNameOnUpdate = functions.region('asia-southeast1').firestore
   .document('users/{userId}')
   .onUpdate(async (change, context) => {
     const beforeData = change.before.data();
@@ -163,35 +163,3 @@ export const syncUserNameOnUpdate = functions.firestore
     return null;
   });
 
-export const deleteCommentsOnPrayerDelete = functions.firestore
-  .document('churches/{churchId}/prayer_requests/{prayerId}')
-  .onDelete(async (snap, context) => {
-    const prayerId = context.params.prayerId;
-    
-    console.log(`Prayer request ${prayerId} deleted. Deleting associated comments...`);
-
-    try {
-      const commentsSnapshot = await db
-        .collection('comments')
-        .where('targetType', '==', 'prayer_request')
-        .where('targetId', '==', prayerId)
-        .get();
-
-      if (commentsSnapshot.empty) {
-        console.log('No comments found for this prayer request.');
-        return null;
-      }
-
-      const batch = db.batch();
-      commentsSnapshot.forEach((doc) => {
-        batch.delete(doc.ref);
-      });
-
-      await batch.commit();
-      console.log(`Successfully deleted ${commentsSnapshot.size} comments.`);
-    } catch (error) {
-      console.error('Error deleting associated comments:', error);
-    }
-
-    return null;
-  });
