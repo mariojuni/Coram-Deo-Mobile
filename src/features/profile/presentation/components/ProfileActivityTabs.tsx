@@ -119,6 +119,7 @@ export function ProfileActivityTabs({
       return <Text style={styles.loadingText}>Loading highlights...</Text>;
     }
     if (highlights.length === 0) {
+      if (activeTab !== 'highlights') return null;
       return (
         <SoftCard style={styles.emptyCard}>
           <View style={styles.emptyContainer}>
@@ -208,6 +209,7 @@ export function ProfileActivityTabs({
     handleOpenBiblePassage,
     handleShareHighlight,
     router,
+    activeTab,
   ]);
 
   // Memoized Notes Items
@@ -216,6 +218,7 @@ export function ProfileActivityTabs({
       return <Text style={styles.loadingText}>Loading notes...</Text>;
     }
     if (notes.length === 0) {
+      if (activeTab !== 'notes') return null;
       return (
         <SoftCard style={styles.emptyCard}>
           <View style={styles.emptyContainer}>
@@ -244,7 +247,7 @@ export function ProfileActivityTabs({
         </View>
       </SoftCard>
     ));
-  }, [notes, notesLoading]);
+  }, [notes, notesLoading, activeTab]);
 
   // Memoized Plans Items
   const renderedPlans = useMemo(() => {
@@ -252,6 +255,7 @@ export function ProfileActivityTabs({
       return <Text style={styles.loadingText}>Loading plans...</Text>;
     }
     if (activePlans.length === 0) {
+      if (activeTab !== 'plans') return null;
       return (
         <SoftCard style={styles.emptyCard}>
           <View style={styles.emptyContainer}>
@@ -307,7 +311,7 @@ export function ProfileActivityTabs({
         </BounceCard>
       );
     });
-  }, [activePlans, plansLoading, plansMeta, router]);
+  }, [activePlans, plansLoading, plansMeta, router, activeTab]);
 
   const handleTabChange = useCallback((key: ActivityTabKey) => {
     setActiveTab(key);
