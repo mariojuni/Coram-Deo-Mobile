@@ -671,11 +671,6 @@ export default function HomeScreen() {
                       colors={['transparent', 'rgba(0,0,0,0.75)']}
                       style={styles.sermonThumbOverlay}
                     />
-                    {/* Type badge */}
-                    <View style={[styles.sermonTypeBadge, isVideo ? styles.sermonTypeBadgeVideo : styles.sermonTypeBadgeAudio]}>
-                      <Play size={8} color="#fff" fill="#fff" />
-                      <Text style={styles.sermonTypeBadgeText}>{isVideo ? 'VIDEO' : 'AUDIO'}</Text>
-                    </View>
                     <View style={styles.sermonCardInfo}>
                       <Text style={styles.sermonCardTitle} numberOfLines={2}>{sermon.title}</Text>
                       <Text style={styles.sermonCardSpeaker} numberOfLines={1}>

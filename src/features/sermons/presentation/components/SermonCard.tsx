@@ -1,11 +1,13 @@
 import { Image } from 'expo-image';
 import { View, Text, Pressable, StyleSheet, TouchableOpacity } from 'react-native';
 import Animated, { useAnimatedStyle, withTiming, useSharedValue } from 'react-native-reanimated';
-import { Heart, Clock, User } from 'lucide-react-native';
+import { Heart, Clock, User, Cloud } from 'lucide-react-native';
 import { useTheme } from '@/hooks/use-theme';
 import { Spacing } from '@/constants/theme';
 import type { Sermon } from '../../domain/sermon.types';
 import * as Haptics from 'expo-haptics';
+import { useSermonStore } from '@/store/useSermonStore';
+import { CircularProgress } from './CircularProgress';
 
 interface SermonCardProps {
   sermon: Sermon;
@@ -16,6 +18,13 @@ interface SermonCardProps {
 
 export function SermonCard({ sermon, onPress, onFavorite, isFavorited }: SermonCardProps) {
   const colors = useTheme();
+  const { downloadedSermons, downloads } = useSermonStore();
+  
+  const downloadKey = `${sermon.id}_${sermon.mediaType === 'video' ? 'video' : 'audio'}`;
+  const isDownloaded = downloadedSermons.has(downloadKey);
+  const downloadState = downloads.get(downloadKey);
+  const isDownloading = !!downloadState?.isDownloading;
+  const downloadProgress = downloadState?.progress || 0;
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -104,9 +113,13 @@ export function SermonCard({ sermon, onPress, onFavorite, isFavorited }: SermonC
           
           {/* Content */}
           <View style={styles.content}>
-            <Text style={[styles.title, { color: colors.text }]} numberOfLines={2}>
-              {sermon.title}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+              <Text style={[styles.title, { color: colors.text, flex: 1 }]} numberOfLines={2}>
+                {sermon.title}
+              </Text>
+              {isDownloaded && <Cloud size={18} color={colors.textSecondary} style={{ marginTop: 2 }} />}
+              {isDownloading && <CircularProgress progress={downloadProgress} size={18} color={colors.textSecondary} />}
+            </View>
             
             <View style={styles.meta}>
               <View style={styles.metaItem}>

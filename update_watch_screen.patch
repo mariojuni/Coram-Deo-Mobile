@@ -1,0 +1,130 @@
+--- /Users/maryow/CoramDeoMobile/src/features/sermons/presentation/screens/SermonWatchScreen.tsx
++++ /Users/maryow/CoramDeoMobile/src/features/sermons/presentation/screens/SermonWatchScreen.tsx
+@@ -13,7 +13,7 @@
+ } from 'react-native';
+ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+ import { useSafeAreaInsets } from 'react-native-safe-area-context';
+-import { ArrowLeft, BookOpen, User, Calendar, ChevronDown, ChevronUp, Share2 } from 'lucide-react-native';
++import { ArrowLeft, BookOpen, User, Calendar, ChevronDown, ChevronUp, Share2, MoreVertical, Cloud } from 'lucide-react-native';
+ import * as Haptics from 'expo-haptics';
+ 
+ import { useSermonStore } from '@/store/useSermonStore';
+@@ -23,6 +23,7 @@
+ import { SermonVideoPlayer } from '../components/SermonVideoPlayer';
+ import { SermonActionBar } from '../components/SermonActionBar';
+ import { RelatedSermonCard } from '../components/RelatedSermonCard';
++import { SermonActionMenu } from '../components/SermonActionMenu';
+ 
+ const NAVY = '#1A1A1A';
+ const GOLD = '#FF6596';
+@@ -48,6 +49,7 @@
+     downloads,
+     checkIfDownloaded,
++    deleteDownload,
+   } = useSermonStore();
+ 
+   const { loadProgress, updateProgress, getProgress, unhideSermon } = useSermonPlaybackStore();
+@@ -58,6 +60,7 @@
+   const [isDownloading, setIsDownloading] = useState(false);
+   const [isProgressLoaded, setIsProgressLoaded] = useState(false);
++  const [isActionMenuVisible, setIsActionMenuVisible] = useState(false);
+   const progressInterval = useRef<ReturnType<typeof setTimeout> | null>(null);
+ 
+@@ -105,7 +108,7 @@
+   useEffect(() => {
+     if (!currentUser || !currentSermon) return;
+-    checkIfDownloaded(currentUser.uid, currentSermon.id, 'audio').then(setIsDownloaded);
++    checkIfDownloaded(currentUser.uid, currentSermon.id).then(setIsDownloaded);
+   }, [currentUser, currentSermon, downloadedSermons]);
+ 
+@@ -152,18 +155,30 @@
+     router.push(`/audio-player?id=${currentSermon.id}`);
+   };
+ 
+-  const handleDownloadAudio = async () => {
+-    if (!currentUser || !currentSermon || !currentSermon.audioStoragePath) return;
++  const handleDownload = async () => {
++    if (!currentUser || !currentSermon) return;
++    // Both audio and video support downloading
+     setIsDownloading(true);
+     try {
+-      await downloadSermon(currentUser.uid, currentSermon, 'audio');
++      await downloadSermon(currentUser.uid, currentSermon);
+       setIsDownloaded(true);
+     } catch (e) {
+       console.error('Download failed:', e);
+     } finally {
+       setIsDownloading(false);
+     }
+   };
++
++  const handleRemoveDownload = async () => {
++    if (!currentUser || !currentSermon) return;
++    try {
++      await deleteDownload(currentUser.uid, currentSermon.id);
++      setIsDownloaded(false);
++    } catch (e) {
++      console.error('Remove download failed:', e);
++    }
++  };
+ 
+   const handleRelatedPress = (sermonId: string) => {
+@@ -271,11 +286,20 @@
+ 
+         {/* Title and Share */}
+         <View style={styles.titleRow}>
+-          <Text style={styles.title}>{currentSermon.title}</Text>
+-          <TouchableOpacity onPress={handleShare} style={styles.shareBtnCompact} activeOpacity={0.7}>
+-            <Share2 size={20} color={NAVY} />
+-          </TouchableOpacity>
++          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingRight: 12 }}>
++            <Text style={styles.title} numberOfLines={2}>{currentSermon.title}</Text>
++            {isDownloaded && <Cloud size={20} color="#9CA3AF" />}
++            {isDownloading && <ActivityIndicator size="small" color="#9CA3AF" />}
++          </View>
++          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
++            <TouchableOpacity onPress={() => setIsActionMenuVisible(true)} style={styles.shareBtnCompact} activeOpacity={0.7}>
++              <MoreVertical size={20} color={NAVY} />
++            </TouchableOpacity>
++          </View>
+         </View>
+ 
+         {/* Scripture reference */}
+@@ -304,7 +328,7 @@
+             sermon={currentSermon}
+             onWatch={handleWatch}
+             onListen={handleListen}
+-            onDownloadAudio={handleDownloadAudio}
++            onDownloadAudio={handleDownload}
+             isDownloading={isDownloading}
+             isDownloaded={isDownloaded}
+           />
+@@ -359,6 +383,16 @@
+           </View>
+         )}
+       </ScrollView>
++
++      <SermonActionMenu
++        visible={isActionMenuVisible}
++        onClose={() => setIsActionMenuVisible(false)}
++        onShare={handleShare}
++        onDownload={handleDownload}
++        onRemoveDownload={handleRemoveDownload}
++        isDownloaded={isDownloaded}
++        isDownloading={isDownloading}
++      />
+     </View>
+   );
+ }
+@@ -440,8 +474,9 @@
+   },
+   title: {
+-    flex: 1,
++    flexShrink: 1,
+     fontSize: 22,
+     fontWeight: '900',
+     color: NAVY,
+     letterSpacing: -0.3,
+     lineHeight: 30,
+-    paddingRight: 12,
+   },

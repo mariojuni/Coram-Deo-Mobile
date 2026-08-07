@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, BookOpen, User, Calendar, ChevronDown, ChevronUp, Share2 } from 'lucide-react-native';
+import { ArrowLeft, BookOpen, User, Calendar, ChevronDown, ChevronUp, Share2, MoreVertical, Download } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 import { useSermonStore } from '@/store/useSermonStore';
@@ -21,8 +21,10 @@ import { useSermonPlaybackStore } from '@/store/useSermonPlaybackStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { getLocalSermonMediaUri } from '@/features/sermons/services/sermonDownloadService';
 import { SermonVideoPlayer } from '../components/SermonVideoPlayer';
+import { CircularProgress } from '../components/CircularProgress';
 import { SermonActionBar } from '../components/SermonActionBar';
 import { RelatedSermonCard } from '../components/RelatedSermonCard';
+import { SermonActionMenu } from '../components/SermonActionMenu';
 
 const NAVY = '#1A1A1A';
 const GOLD = '#FF6596';
@@ -48,6 +50,7 @@ export function SermonWatchScreen() {
     downloadedSermons,
     downloads,
     checkIfDownloaded,
+    deleteDownload,
   } = useSermonStore();
 
   const { loadProgress, updateProgress, getProgress, unhideSermon } = useSermonPlaybackStore();
@@ -55,8 +58,8 @@ export function SermonWatchScreen() {
   const [videoSource, setVideoSource] = useState<string | null>(null);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [isDownloaded, setIsDownloaded] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
   const [isProgressLoaded, setIsProgressLoaded] = useState(false);
+  const [isActionMenuVisible, setIsActionMenuVisible] = useState(false);
   const progressInterval = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load sermon
@@ -105,10 +108,13 @@ export function SermonWatchScreen() {
   // Check download status
   useEffect(() => {
     if (!currentUser || !currentSermon) return;
-    checkIfDownloaded(currentUser.uid, currentSermon.id, 'audio').then(setIsDownloaded);
+    checkIfDownloaded(currentUser.uid, currentSermon.id).then(setIsDownloaded);
   }, [currentUser, currentSermon, downloadedSermons]);
 
   const savedProgress = id ? getProgress(id) : undefined;
+  
+  const downloadKey = currentSermon ? `${currentSermon.id}_${currentSermon.mediaType === 'video' ? 'video' : 'audio'}` : '';
+  const downloadProgress = downloads.get(downloadKey)?.progress || 0;
 
   const handleVideoProgress = (positionSec: number, durationSec: number) => {
     if (!currentUser || !currentSermon) return;
@@ -152,16 +158,27 @@ export function SermonWatchScreen() {
     router.push(`/audio-player?id=${currentSermon.id}`);
   };
 
-  const handleDownloadAudio = async () => {
-    if (!currentUser || !currentSermon || !currentSermon.audioStoragePath) return;
-    setIsDownloading(true);
-    try {
-      await downloadSermon(currentUser.uid, currentSermon, 'audio');
+  const isDownloadingStore = downloads.has(downloadKey);
+
+  const handleDownload = () => {
+    if (!currentUser || !currentSermon) return;
+    if (isDownloadingStore) return;
+    
+    // Fire and forget the download so UI doesn't block
+    downloadSermon(currentUser.uid, currentSermon).then(() => {
       setIsDownloaded(true);
-    } catch (e) {
+    }).catch((e) => {
       console.error('Download failed:', e);
-    } finally {
-      setIsDownloading(false);
+    });
+  };
+
+  const handleRemoveDownload = async () => {
+    if (!currentUser || !currentSermon) return;
+    try {
+      await deleteDownload(currentUser.uid, currentSermon.id);
+      setIsDownloaded(false);
+    } catch (e) {
+      console.error('Remove download failed:', e);
     }
   };
 
@@ -271,10 +288,16 @@ export function SermonWatchScreen() {
 
         {/* Title and Share */}
         <View style={styles.titleRow}>
-          <Text style={styles.title}>{currentSermon.title}</Text>
-          <TouchableOpacity onPress={handleShare} style={styles.shareBtnCompact} activeOpacity={0.7}>
-            <Share2 size={20} color={NAVY} />
-          </TouchableOpacity>
+          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingRight: 12 }}>
+            <Text style={styles.title} numberOfLines={2}>{currentSermon.title}</Text>
+            {isDownloaded && <Download size={20} color="#9CA3AF" />}
+            {isDownloadingStore && <CircularProgress progress={downloadProgress} size={20} color="#9CA3AF" />}
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity onPress={() => setIsActionMenuVisible(true)} style={styles.shareBtnCompact} activeOpacity={0.7}>
+              <MoreVertical size={20} color={NAVY} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Scripture reference */}
@@ -304,8 +327,8 @@ export function SermonWatchScreen() {
             sermon={currentSermon}
             onWatch={handleWatch}
             onListen={handleListen}
-            onDownloadAudio={handleDownloadAudio}
-            isDownloading={isDownloading}
+            onDownloadAudio={handleDownload}
+            isDownloading={isDownloadingStore}
             isDownloaded={isDownloaded}
           />
         </View>
@@ -342,23 +365,35 @@ export function SermonWatchScreen() {
         ) : null}
 
         {/* Related Sermons */}
-        {(relatedSermons.length > 0 || relatedLoading) && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Related Sermons</Text>
-            {relatedLoading ? (
-              <ActivityIndicator size="small" color={GOLD} style={{ marginTop: 12 }} />
-            ) : (
-              relatedSermons.map((s) => (
-                <RelatedSermonCard
-                  key={s.id}
-                  sermon={s}
-                  onPress={() => handleRelatedPress(s.id)}
-                />
-              ))
-            )}
-          </View>
-        )}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Related Sermons</Text>
+          {relatedLoading ? (
+            <ActivityIndicator size="small" color={GOLD} style={{ marginTop: 12 }} />
+          ) : relatedSermons.length > 0 ? (
+            relatedSermons.map((s) => (
+              <RelatedSermonCard
+                key={s.id}
+                sermon={s}
+                onPress={() => handleRelatedPress(s.id)}
+              />
+            ))
+          ) : (
+            <Text style={{ color: '#6B7280', marginTop: 12, fontStyle: 'italic' }}>
+              No related sermons found.
+            </Text>
+          )}
+        </View>
       </ScrollView>
+
+      <SermonActionMenu
+        visible={isActionMenuVisible}
+        onClose={() => setIsActionMenuVisible(false)}
+        onShare={handleShare}
+        onDownload={handleDownload}
+        onRemoveDownload={handleRemoveDownload}
+        isDownloaded={isDownloaded}
+        isDownloading={isDownloadingStore}
+      />
     </View>
   );
 }
@@ -440,13 +475,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   title: {
-    flex: 1,
+    flexShrink: 1,
     fontSize: 22,
     fontWeight: '900',
     color: NAVY,
     letterSpacing: -0.3,
     lineHeight: 30,
-    paddingRight: 12,
   },
   shareBtnCompact: {
     width: 40,

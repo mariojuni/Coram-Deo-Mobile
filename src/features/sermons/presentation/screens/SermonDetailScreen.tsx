@@ -3,7 +3,7 @@ import { BounceCard } from '@/components/ui/BounceCard';
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Share, Modal } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { Play, Heart, Share2, Clock, Calendar, User as UserIcon, BookOpen, FileText, ArrowLeft } from 'lucide-react-native';
+import { Play, Heart, Share2, Clock, Calendar, User as UserIcon, BookOpen, FileText, ArrowLeft, MoreVertical, Download } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -12,9 +12,10 @@ import { useSermonStore } from '@/store/useSermonStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTheme } from '@/hooks/use-theme';
 import { Spacing } from '@/constants/theme';
+import { CircularProgress } from '../components/CircularProgress';
 import { NotesSheet } from '../components/NotesSheet';
-import { DownloadButton } from '../components/DownloadButton';
 import { CommentButton } from '@/features/comments/presentation/components/CommentButton';
+import { SermonActionMenu } from '../components/SermonActionMenu';
 
 export function SermonDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -34,11 +35,20 @@ export function SermonDetailScreen() {
     addNote,
     updateNote,
     deleteNote,
+    downloadSermon,
+    checkIfDownloaded,
+    deleteDownload,
   } = useSermonStore();
   
   const currentUser = useAuthStore((state) => state.currentUser);
   const [sharing, setSharing] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
+  const [isActionMenuVisible, setIsActionMenuVisible] = useState(false);
+  const [isDownloaded, setIsDownloaded] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const downloadKey = currentSermon ? `${currentSermon.id}_${currentSermon.mediaType === 'video' ? 'video' : 'audio'}` : '';
+  const downloadProgress = downloads.get(downloadKey)?.progress || 0;
 
   useEffect(() => {
     if (id) fetchSermonById(id);
@@ -47,6 +57,7 @@ export function SermonDetailScreen() {
   useEffect(() => {
     if (currentUser && currentSermon) {
       fetchNotes(currentUser.uid, currentSermon.id);
+      checkIfDownloaded(currentUser.uid, currentSermon.id).then(setIsDownloaded);
     }
   }, [currentUser, currentSermon]);
 
@@ -79,6 +90,29 @@ export function SermonDetailScreen() {
       console.error('Error sharing:', error);
     } finally {
       setSharing(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    if (!currentUser || !currentSermon) return;
+    setIsDownloading(true);
+    try {
+      await downloadSermon(currentUser.uid, currentSermon);
+      setIsDownloaded(true);
+    } catch (e) {
+      console.error('Download failed:', e);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleRemoveDownload = async () => {
+    if (!currentUser || !currentSermon) return;
+    try {
+      await deleteDownload(currentUser.uid, currentSermon.id);
+      setIsDownloaded(false);
+    } catch (e) {
+      console.error('Remove download failed:', e);
     }
   };
 
@@ -141,7 +175,16 @@ export function SermonDetailScreen() {
               </View>
             </View>
             
-            <Text style={styles.heroTitle} numberOfLines={2}>{currentSermon.title}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={[styles.heroTitle, { flexShrink: 1 }]} numberOfLines={2}>{currentSermon.title}</Text>
+                {isDownloaded && <Download size={20} color="#D1D5DB" />}
+                {isDownloading && <CircularProgress progress={downloadProgress} size={20} color="#D1D5DB" />}
+              </View>
+              <TouchableOpacity onPress={() => setIsActionMenuVisible(true)} style={styles.moreButtonHero} activeOpacity={0.7}>
+                <MoreVertical size={24} color="#FFF" />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
@@ -162,10 +205,6 @@ export function SermonDetailScreen() {
             </TouchableOpacity>
             
             <View style={styles.iconBtn}>
-              <DownloadButton sermon={currentSermon} variant="icon-only" />
-            </View>
-
-            <View style={styles.iconBtn}>
               <CommentButton 
                 count={currentSermon.commentCount || 0}
                 variant="icon-only"
@@ -174,10 +213,6 @@ export function SermonDetailScreen() {
                 onPress={() => router.push(`/comment-thread?targetType=sermon&targetId=${currentSermon.id}`)}
               />
             </View>
-
-            <TouchableOpacity style={styles.iconBtn} onPress={handleShare} activeOpacity={0.8} disabled={sharing}>
-              <Share2 size={22} color="#4B5563" />
-            </TouchableOpacity>
 
             <TouchableOpacity style={styles.iconBtn} onPress={() => setShowNotes(true)} activeOpacity={0.8}>
               <FileText size={22} color="#4B5563" />
@@ -244,6 +279,16 @@ export function SermonDetailScreen() {
           />
         </View>
       )}
+
+      <SermonActionMenu
+        visible={isActionMenuVisible}
+        onClose={() => setIsActionMenuVisible(false)}
+        onShare={handleShare}
+        onDownload={handleDownload}
+        onRemoveDownload={handleRemoveDownload}
+        isDownloaded={isDownloaded}
+        isDownloading={isDownloading}
+      />
     </View>
   );
 }
@@ -368,6 +413,14 @@ const styles = StyleSheet.create({
   iconBtn: {
     width: 44,
     height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  moreButtonHero: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },

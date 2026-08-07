@@ -313,9 +313,10 @@ const path = __importStar(require("path"));
 const os = __importStar(require("os"));
 const fs = __importStar(require("fs"));
 exports.optimizeSermonVideo = (0, storage_1.onObjectFinalized)({
-    region: 'asia-southeast1',
-    memory: '1GiB', // Allocate enough memory for copying large files
-    timeoutSeconds: 540,
+    bucket: 'coramdeo-prod.firebasestorage.app',
+    region: 'us-east1',
+    memory: '4GiB', // Increased to handle larger video buffering
+    timeoutSeconds: 540, // Max allowed timeout for Eventarc background triggers
 }, async (event) => {
     // Require ffmpeg inside the handler to prevent Firebase CLI from crashing during local deployment analysis
     const ffmpeg = require('fluent-ffmpeg');
@@ -325,8 +326,12 @@ exports.optimizeSermonVideo = (0, storage_1.onObjectFinalized)({
     const filePath = event.data.name;
     const contentType = event.data.contentType;
     const metadata = event.data.metadata || {};
-    // Trigger only for MP4 files in the sermons raw media path
-    if (!filePath.includes('/sermons/') || !filePath.includes('/media/raw/') || !filePath.endsWith('.mp4')) {
+    // Trigger only for files in the sermons raw media path
+    if (!filePath.includes('/sermons/') || !filePath.includes('/media/raw/')) {
+        return;
+    }
+    // Must be a video
+    if (!contentType || !contentType.startsWith('video/')) {
         return;
     }
     // Prevent infinite loops

@@ -7,11 +7,22 @@ import type {
   SermonNote,
   SermonDownload,
 } from '../features/sermons/domain/sermon.types';
+import { useAuthStore } from './useAuthStore';
 
 interface DownloadProgress {
   progress: number;
   isDownloading: boolean;
 }
+
+const getAllowedVisibility = () => {
+  const userProfile = useAuthStore.getState().userProfile;
+  const isMember = !!userProfile?.memberId || (userProfile?.systemRoles || []).includes('member') || userProfile?.role === 'member';
+  const isLeader = (userProfile?.systemRoles || []).some(r => ['super_admin', 'church_admin', 'pastor', 'ministry_leader', 'secretary', 'finance_admin'].includes(r));
+  if (isMember || isLeader) {
+    return 'all';
+  }
+  return 'public';
+};
 
 interface SermonState {
   // Sermons list
@@ -109,8 +120,10 @@ export const useSermonStore = create<SermonState>((set, get) => ({
 
     set({ loading: true });
 
+    const activeFilters = { ...get().filters, churchId, allowedVisibility: getAllowedVisibility() };
+
     const unsubscribe = sermonRepository.subscribeSermons(
-      { ...get().filters, churchId },
+      activeFilters,
       (sermons) => {
         set({ sermons, loading: false, hasMore: false });
       },
@@ -140,7 +153,7 @@ export const useSermonStore = create<SermonState>((set, get) => ({
     set({ loading: true });
 
     try {
-      const activeFilters = { ...filters, churchId };
+      const activeFilters = { ...filters, churchId, allowedVisibility: getAllowedVisibility() };
       const result = await sermonRepository.fetchSermons(
         activeFilters,
         20,
@@ -170,7 +183,7 @@ export const useSermonStore = create<SermonState>((set, get) => ({
     }
 
     try {
-      const activeFilters = { ...filters, churchId };
+      const activeFilters = { ...filters, churchId, allowedVisibility: getAllowedVisibility() };
       const result = await sermonRepository.searchSermons(query, activeFilters, 20);
 
       set({
@@ -219,7 +232,7 @@ export const useSermonStore = create<SermonState>((set, get) => ({
   fetchRelatedSermons: async (sermon: Sermon) => {
     set({ relatedLoading: true });
     try {
-      const related = await sermonRepository.fetchRelatedSermons(sermon);
+      const related = await sermonRepository.fetchRelatedSermons(sermon, 6, getAllowedVisibility());
       set({ relatedSermons: related, relatedLoading: false });
     } catch (error) {
       console.error('Error fetching related sermons:', error);
@@ -335,13 +348,22 @@ export const useSermonStore = create<SermonState>((set, get) => ({
     set({ downloads: newDownloads });
 
     try {
-      const downloadUrl = typeToDownload === 'video' ? sermon.videoStoragePath : sermon.audioStoragePath;
-      if (!downloadUrl) throw new Error(`No ${typeToDownload} url available`);
+      const storagePath = typeToDownload === 'video' ? sermon.videoStoragePath : sermon.audioStoragePath;
+      if (!storagePath) throw new Error(`No ${typeToDownload} url available`);
+      
+      const downloadUrl = await sermonRepository.resolveMediaUrl(storagePath);
+      
+      let lastUpdateTime = 0;
       
       const localUri = await downloadSermonMedia(sermon, downloadUrl, typeToDownload, (progress) => {
-        const updatedDownloads = new Map(get().downloads);
-        updatedDownloads.set(downloadKey, { progress, isDownloading: true });
-        set({ downloads: updatedDownloads });
+        const now = Date.now();
+        // Throttle updates to every 500ms or if progress is 1 (100%)
+        if (now - lastUpdateTime > 500 || progress >= 1) {
+          lastUpdateTime = now;
+          const updatedDownloads = new Map(get().downloads);
+          updatedDownloads.set(downloadKey, { progress, isDownloading: true });
+          set({ downloads: updatedDownloads });
+        }
       });
 
       // Save to Firestore
@@ -374,7 +396,11 @@ export const useSermonStore = create<SermonState>((set, get) => ({
       }
       
       // Delete from Firestore
-      await sermonRepository.deleteDownloadRecord(userId, sermonId);
+      try {
+        await sermonRepository.deleteDownloadRecord(userId, sermonId);
+      } catch (e) {
+        console.warn('Failed to delete download record from Firestore:', e);
+      }
       
       const newDownloaded = new Set(get().downloadedSermons);
       newDownloaded.delete(downloadKey);

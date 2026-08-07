@@ -18,7 +18,7 @@ import {
   increment,
   onSnapshot,
 } from 'firebase/firestore';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { getActiveDb, getActiveStorage, getActiveAuth } from '@/firebase';
 import { ref, getDownloadURL } from 'firebase/storage';
 import type {
@@ -87,11 +87,15 @@ class SermonRepository {
       return { sermons: [], lastDoc: undefined, hasMore: false };
     }
 
+    if (filters.allowedVisibility === 'public') {
+      q = query(q, where('visibility', '==', 'public'));
+    }
+
     // Apply type filter
     if (filters.filter === 'video') {
-      q = query(q, where('type', '==', 'video'));
+      q = query(q, where('mediaType', 'in', ['video', 'both']));
     } else if (filters.filter === 'audio') {
-      q = query(q, where('type', '==', 'audio'));
+      q = query(q, where('mediaType', 'in', ['audio', 'both']));
     } else if (filters.seriesId) {
       q = query(q, where('seriesId', '==', filters.seriesId));
     }
@@ -136,10 +140,14 @@ class SermonRepository {
       return () => {};
     }
 
+    if (filters.allowedVisibility === 'public') {
+      q = query(q, where('visibility', '==', 'public'));
+    }
+
     if (filters.filter === 'video') {
-      q = query(q, where('type', '==', 'video'));
+      q = query(q, where('mediaType', 'in', ['video', 'both']));
     } else if (filters.filter === 'audio') {
-      q = query(q, where('type', '==', 'audio'));
+      q = query(q, where('mediaType', 'in', ['audio', 'both']));
     } else if (filters.seriesId) {
       q = query(q, where('seriesId', '==', filters.seriesId));
     }
@@ -174,17 +182,25 @@ class SermonRepository {
     let q = query(
       sermonsRef,
       where('status', '==', 'published'),
-      where('churchId', '==', filters.churchId),
-      orderBy(this.getSortField(filters.sort), filters.sort === 'oldest' ? 'asc' : 'desc'),
-      limit(100) // Fetch more for client-side filtering
+      where('churchId', '==', filters.churchId)
     );
+
+    if (filters.allowedVisibility === 'public') {
+      q = query(q, where('visibility', '==', 'public'));
+    }
 
     // Apply type filter
     if (filters.filter === 'video') {
-      q = query(sermonsRef, where('mediaType', 'in', ['video', 'both']), where('status', '==', 'published'));
+      q = query(q, where('mediaType', 'in', ['video', 'both']));
     } else if (filters.filter === 'audio') {
-      q = query(sermonsRef, where('mediaType', 'in', ['audio', 'both']), where('status', '==', 'published'));
+      q = query(q, where('mediaType', 'in', ['audio', 'both']));
     }
+
+    q = query(
+      q,
+      orderBy(this.getSortField(filters.sort), filters.sort === 'oldest' ? 'asc' : 'desc'),
+      limit(100) // Fetch more for client-side filtering
+    );
 
     const snapshot = await getDocs(q);
     let sermons = snapshot.docs.map((doc) => this.mapDocToSermon(doc));
@@ -352,20 +368,23 @@ class SermonRepository {
     });
   }
 
-  async fetchRelatedSermons(sermon: Sermon, maxResults = 6): Promise<Sermon[]> {
+  async fetchRelatedSermons(sermon: Sermon, maxResults = 6, allowedVisibility = 'public'): Promise<Sermon[]> {
     const sermonsRef = collection(getActiveDb(), SERMONS_COLLECTION);
     const results: Sermon[] = [];
     const seenIds = new Set<string>([sermon.id]);
 
     // 1. Same series
     if (sermon.seriesId) {
-      const seriesQuery = query(
+      let seriesQuery = query(
         sermonsRef,
         where('churchId', '==', sermon.churchId),
-        where('status', '==', 'published'),
-        where('seriesId', '==', sermon.seriesId),
-        limit(maxResults)
+        where('status', '==', 'published')
       );
+      if (allowedVisibility === 'public') {
+        seriesQuery = query(seriesQuery, where('visibility', '==', 'public'));
+      }
+      seriesQuery = query(seriesQuery, where('seriesId', '==', sermon.seriesId), limit(maxResults));
+      
       const snap = await getDocs(seriesQuery);
       snap.docs.forEach((doc) => {
         if (!seenIds.has(doc.id)) {
@@ -377,13 +396,16 @@ class SermonRepository {
 
     // 2. Same preacher
     if (results.length < maxResults && sermon.preacherId) {
-      const preacherQuery = query(
+      let preacherQuery = query(
         sermonsRef,
         where('churchId', '==', sermon.churchId),
-        where('status', '==', 'published'),
-        where('preacherId', '==', sermon.preacherId),
-        limit(maxResults)
+        where('status', '==', 'published')
       );
+      if (allowedVisibility === 'public') {
+        preacherQuery = query(preacherQuery, where('visibility', '==', 'public'));
+      }
+      preacherQuery = query(preacherQuery, where('preacherId', '==', sermon.preacherId), limit(maxResults));
+
       const snap = await getDocs(preacherQuery);
       snap.docs.forEach((doc) => {
         if (!seenIds.has(doc.id) && results.length < maxResults) {
@@ -395,13 +417,16 @@ class SermonRepository {
 
     // 3. Recent sermons as fallback
     if (results.length < maxResults) {
-      const recentQuery = query(
+      let recentQuery = query(
         sermonsRef,
         where('churchId', '==', sermon.churchId),
-        where('status', '==', 'published'),
-        orderBy('sermonDate', 'desc'),
-        limit(maxResults + 1)
+        where('status', '==', 'published')
       );
+      if (allowedVisibility === 'public') {
+        recentQuery = query(recentQuery, where('visibility', '==', 'public'));
+      }
+      recentQuery = query(recentQuery, orderBy('sermonDate', 'desc'), limit(maxResults + 1));
+
       const snap = await getDocs(recentQuery);
       snap.docs.forEach((doc) => {
         if (!seenIds.has(doc.id) && results.length < maxResults) {

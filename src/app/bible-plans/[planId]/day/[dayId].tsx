@@ -20,10 +20,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    Animated,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -127,6 +128,7 @@ export default function BiblePlanDayScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { planId, dayId } = useLocalSearchParams<{ planId: string; dayId: string }>();
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   const userProfile = useAuthStore((s) => s.userProfile);
   const currentUser = useAuthStore((s) => s.currentUser);
@@ -310,6 +312,7 @@ export default function BiblePlanDayScreen() {
         books={books}
         hideChapterNav
         scrollToVerse={currentPassage?.scrollToVerse}
+        scrollY={scrollY}
       />
 
       {/* ─── Top nav bar (existing — book/chapter + version pill) */}
@@ -318,6 +321,7 @@ export default function BiblePlanDayScreen() {
         onLeftPress={() => setIsBooksModalOpen(true)}
         rightText={rightText}
         onRightPress={() => router.push('/version-manager' as any)}
+        scrollY={scrollY}
       />
 
       {/* ─── Back button overlaid top-left */}

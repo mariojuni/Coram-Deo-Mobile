@@ -150,8 +150,8 @@ const styles = StyleSheet.create({
   },
   compactContainer: {
     position: 'absolute',
-    left: 16,
     bottom: 12,
+    alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
     padding: 4,

@@ -5,7 +5,7 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { ChevronLeft, Upload, CheckCircle2 } from 'lucide-react-native';
 import { useAuthStore } from '../store/useAuthStore';
 import { useGiving } from '../features/giving/presentation/hooks/useGiving';
-import { submitGivingRecord, uploadProofOfPayment } from '../features/giving/data/giving.repository';
+import { submitGivingRecord, uploadProofOfPayment, generateGivingRecordId } from '../features/giving/data/giving.repository';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
@@ -103,9 +103,10 @@ export default function GivingFormScreen() {
 
     setIsSubmitting(true);
     try {
+      const recordId = generateGivingRecordId();
       let uploadedProofUrl = '';
       if (proofUri) {
-        uploadedProofUrl = await uploadProofOfPayment(churchId, userId, proofUri);
+        uploadedProofUrl = await uploadProofOfPayment(churchId, recordId, proofUri);
       }
 
       const method = paymentMethods.find((m: any) => m.id === selectedPaymentMethod);
@@ -122,7 +123,7 @@ export default function GivingFormScreen() {
         referenceNumber,
         proofOfPaymentUrl: uploadedProofUrl,
         note,
-      });
+      }, recordId);
       
       setIsSuccess(true);
     } catch (error: any) {

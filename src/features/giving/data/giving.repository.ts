@@ -128,7 +128,11 @@ export async function fetchMyGivingRecords(userId: string): Promise<GivingRecord
   }
 }
 
-export async function uploadProofOfPayment(churchId: string, userId: string, fileUri: string): Promise<string> {
+export function generateGivingRecordId(): string {
+  return doc(collection(getActiveDb(), 'givingRecords')).id;
+}
+
+export async function uploadProofOfPayment(churchId: string, recordId: string, fileUri: string): Promise<string> {
   const blob = await new Promise<Blob>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.onload = function() {
@@ -143,21 +147,21 @@ export async function uploadProofOfPayment(churchId: string, userId: string, fil
   });
   
   const fileExt = fileUri.split('.').pop() || 'jpg';
-  const fileName = `${doc(collection(getActiveDb(), 'dummy')).id}.${fileExt}`;
+  const fileName = `${recordId}.${fileExt}`;
   
-  const storageRef = ref(storage, `receipts/${churchId}/${userId}/proofs/${fileName}`);
+  const storageRef = ref(storage, `churches/${churchId}/receipt/${recordId}/${fileName}`);
   await uploadBytes(storageRef, blob);
   
   return await getDownloadURL(storageRef);
 }
 
-export async function submitGivingRecord(record: Omit<GivingRecord, 'id' | 'createdAt' | 'updatedAt' | 'submittedAt' | 'status'>): Promise<string> {
-  const recordRef = doc(collection(getActiveDb(), 'givingRecords'));
-  const recordId = recordRef.id;
+export async function submitGivingRecord(record: Omit<GivingRecord, 'id' | 'createdAt' | 'updatedAt' | 'submittedAt' | 'status'>, recordId?: string): Promise<string> {
+  const finalRecordId = recordId || doc(collection(getActiveDb(), 'givingRecords')).id;
+  const recordRef = doc(getActiveDb(), 'givingRecords', finalRecordId);
   
   const fullRecord = {
     ...record,
-    id: recordId,
+    id: finalRecordId,
     status: 'pending',
     submittedAt: serverTimestamp(),
     createdAt: serverTimestamp(),

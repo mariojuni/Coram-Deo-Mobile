@@ -86,7 +86,7 @@ export default function EditProfileScreen() {
         xhr.send(null);
       });
       
-      const storageRef = ref(getActiveStorage(), `images/churches/${churchId}/members/${memberId}/avatar/profile.jpg`);
+      const storageRef = ref(getActiveStorage(), `user/${currentUser?.uid}/avatar`);
       await uploadBytes(storageRef, blob, { contentType: blob.type || 'image/jpeg' });
       const downloadUrl = await getDownloadURL(storageRef);
       return `${downloadUrl}&t=${Date.now()}`;

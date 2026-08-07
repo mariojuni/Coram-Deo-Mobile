@@ -939,6 +939,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 10,
   },
   createBtnModalHeaderText: {
     color: '#FFF',

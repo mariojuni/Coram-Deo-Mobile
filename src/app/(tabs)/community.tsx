@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   ChevronRight,
   Clock,
-  Download,
   Heart,
   HeartHandshake,
   HelpCircle,
@@ -20,19 +19,16 @@ import {
   Search,
   User,
   Users,
-  UsersRound,
   X,
   XCircle
 } from 'lucide-react-native';
-import { GroupsTab } from '../../features/discipleshipGroup/presentation/components/GroupsTab';
-import { canAccessGroupsTab } from '../../permissions/discipleshipGroupPermissions';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActionSheetIOS,
   Alert,
   Animated,
   Dimensions,
-  Modal,
+  Image,
   Platform,
   ScrollView,
   Share,
@@ -40,29 +36,29 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
-import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EventDetailsModal } from '../../components/Events/EventDetailsModal';
 import { CommunitySongDetailModal } from '../../components/Worship/CommunitySongDetailModal';
 import { BounceCard } from '../../components/ui/BounceCard';
 import { SoftCard } from '../../components/ui/SoftCard';
 import { CommentButton } from '../../features/comments/presentation/components/CommentButton';
-import { Song } from '../../features/worship/domain/worship.types';
-import { worshipRepository } from '../../features/worship/data/worship.repository';
-import {
-  canViewCommunitySongs,
-  canViewSongInDirectory,
-  canViewLyricsInDirectory,
-} from '../../permissions/communitySongsPermissions';
 import type { Member } from '../../features/member/domain/member.types';
 import { formatPrayerTimeAgo, getFilteredPrayers } from '../../features/prayer/domain/prayer.selectors';
 import type { Prayer, PrayerFilter } from '../../features/prayer/domain/prayer.types';
 import { usePrayerFeed } from '../../features/prayer/presentation/hooks/usePrayerFeed';
 import type { Schedule } from '../../features/schedule/domain/schedule.types';
 import { SermonsExperience } from '../../features/sermons/presentation/components/SermonsExperience';
+import { worshipRepository } from '../../features/worship/data/worship.repository';
+import { Song } from '../../features/worship/domain/worship.types';
+import {
+  canViewCommunitySongs,
+  canViewLyricsInDirectory,
+  canViewSongInDirectory,
+} from '../../permissions/communitySongsPermissions';
 import { useAuthStore } from '../../store/useAuthStore';
+import { Image as ExpoImage } from 'expo-image';
 import { useMemberStore } from '../../store/useMemberStore';
 import { useMinistryStore } from '../../store/useMinistryStore';
 import {
@@ -141,7 +137,7 @@ function PrayerCardItem({ req, currentUser, handlePray, handleAnswered, openPray
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center', marginRight: 10, overflow: 'hidden' }}>
                   {req.userPhotoUrl ? (
-                    <Image source={{ uri: req.userPhotoUrl }} style={{ width: 36, height: 36 }} />
+                    <ExpoImage source={{ uri: req.userPhotoUrl }} style={{ width: 36, height: 36 }} />
                   ) : (
                     <User size={20} color="#9CA3AF" />
                   )}
@@ -364,7 +360,7 @@ function EventsTab({ searchQuery }: SubScreenProps) {
   const searchableEvents = useMemo(() => {
     // Only show published events in the community tab
     const activeEvents = schedules.filter((e) => e.status?.toLowerCase() === 'published');
-    
+
     const query = searchQuery.trim().toLowerCase();
     if (!query) return activeEvents;
 
@@ -502,7 +498,7 @@ function EventsTab({ searchQuery }: SubScreenProps) {
               setActiveTodaySlide(slide);
             }}
           >
-{todaysEvents.map((todayEvent) => {
+            {todaysEvents.map((todayEvent) => {
               const rsvpStatus = currentUser ? getUserRsvpStatus(todayEvent, currentUser.uid) : null;
               const dateParts = getEventDateParts(todayEvent);
               return (
@@ -642,46 +638,46 @@ function EventsTab({ searchQuery }: SubScreenProps) {
         ) : (
           upcomingList.map((event) => (
             <BounceCard key={event.id} activeOpacity={0.82} onPress={() => setSelectedEvent(event)} style={{ marginBottom: 10 }}>
-            <SoftCard innerStyle={eventsStyles.listCardInner}>
-              <View style={eventsStyles.listDateBlock}>
-                <Text style={eventsStyles.listDateMonth}>{getEventDateParts(event).month}</Text>
-                <Text style={eventsStyles.listDateDay}>
-                  {getEventDateParts(event).day}
-                </Text>
-                <Text style={eventsStyles.listDateWeekday}>
-                  {getEventDateParts(event).weekday.slice(0, 3).toUpperCase()}
-                </Text>
-              </View>
-
-              <View style={eventsStyles.listDivider} />
-
-              <View style={eventsStyles.listDetailsBlock}>
-                <Text style={eventsStyles.listEventTitle} numberOfLines={2}>
-                  {event.title || 'Church Event'}
-                </Text>
-
-                <View style={eventsStyles.listTimePill}>
-                  <Clock size={11} color="#9CA3AF" />
-                  <Text style={eventsStyles.listTimePillText}>
-                    {event.time || '9:00 AM'}{event.endTime ? ` – ${event.endTime}` : ''}
+              <SoftCard innerStyle={eventsStyles.listCardInner}>
+                <View style={eventsStyles.listDateBlock}>
+                  <Text style={eventsStyles.listDateMonth}>{getEventDateParts(event).month}</Text>
+                  <Text style={eventsStyles.listDateDay}>
+                    {getEventDateParts(event).day}
+                  </Text>
+                  <Text style={eventsStyles.listDateWeekday}>
+                    {getEventDateParts(event).weekday.slice(0, 3).toUpperCase()}
                   </Text>
                 </View>
 
-                <View style={eventsStyles.locationRow}>
-                  <MapPin size={11} color="#B0B6C8" />
-                  <Text style={eventsStyles.listLocationText} numberOfLines={1}>
-                    {event.location || 'Main Sanctuary'}
-                  </Text>
-                </View>
-              </View>
+                <View style={eventsStyles.listDivider} />
 
-              <View style={eventsStyles.listChevronWrap}>
-                <ChevronRight size={18} color="#C0C8D8" strokeWidth={2.5} />
-              </View>
-            </SoftCard>
-          </BounceCard>
-        ))
-      )}
+                <View style={eventsStyles.listDetailsBlock}>
+                  <Text style={eventsStyles.listEventTitle} numberOfLines={2}>
+                    {event.title || 'Church Event'}
+                  </Text>
+
+                  <View style={eventsStyles.listTimePill}>
+                    <Clock size={11} color="#9CA3AF" />
+                    <Text style={eventsStyles.listTimePillText}>
+                      {event.time || '9:00 AM'}{event.endTime ? ` – ${event.endTime}` : ''}
+                    </Text>
+                  </View>
+
+                  <View style={eventsStyles.locationRow}>
+                    <MapPin size={11} color="#B0B6C8" />
+                    <Text style={eventsStyles.listLocationText} numberOfLines={1}>
+                      {event.location || 'Main Sanctuary'}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={eventsStyles.listChevronWrap}>
+                  <ChevronRight size={18} color="#C0C8D8" strokeWidth={2.5} />
+                </View>
+              </SoftCard>
+            </BounceCard>
+          ))
+        )}
       </View>
 
       <EventDetailsModal
@@ -906,7 +902,7 @@ function SongsTab({ searchQuery }: SubScreenProps) {
 
     const q = searchQuery.trim().toLowerCase();
     if (q) {
-      result = result.filter(s => 
+      result = result.filter(s =>
         s.title?.toLowerCase().includes(q) ||
         s.artist?.toLowerCase().includes(q) ||
         s.composer?.toLowerCase().includes(q) ||

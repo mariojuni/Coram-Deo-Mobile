@@ -92,4 +92,5 @@ export interface SermonFilters {
     start: Date;
     end: Date;
   };
+  allowedVisibility?: string;
 }

@@ -383,30 +383,34 @@ service cloud.firestore {
     // ── Sermons ──────────────────────────────────────────────────────────────
     match /sermons/{sermonId} {
       allow read: if isSignedIn();
-      allow create, update: if isSignedIn() && isPastorOrAdmin(request.resource.data.churchId != null
+      allow create, update: if isSignedIn() && isChurchAdmin(request.resource.data.churchId != null
         ? request.resource.data.churchId
         : resource.data.churchId);
-      allow delete: if isSignedIn() && isPastorOrAdmin(resource.data.churchId);
+      allow delete: if isSignedIn() && isChurchAdmin(resource.data.churchId);
     }
 
     match /sermon_notes/{docId} {
       allow read: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid);
-      allow write: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow create, update: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
     match /sermon_favorites/{docId} {
       allow read: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid);
-      allow write: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow create, update: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
     match /sermon_downloads/{docId} {
       allow read: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid);
-      allow write: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow create, update: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
     match /sermon_progress/{docId} {
       allow read: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid);
-      allow write: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow create, update: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
     // ── Attendance ───────────────────────────────────────────────────────────
