@@ -34,8 +34,8 @@ export function PublicEventSetlist({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (Array.isArray(preloadedSongList) && preloadedSongList.length > 0) {
-      setItems(preloadedSongList);
+    if (preloadedSongList !== undefined) {
+      setItems(Array.isArray(preloadedSongList) ? preloadedSongList : []);
       setLoading(false);
       return;
     }
@@ -99,7 +99,7 @@ export function PublicEventSetlist({
     userProfile &&
     canViewMobileWorshipSetlist(userProfile, setlist, userMinistries);
 
-  const hasPreloaded = Array.isArray(preloadedSongList) && preloadedSongList.length > 0;
+  const hasPreloaded = preloadedSongList !== undefined;
 
   const publicItems = hasPreloaded
     ? items
