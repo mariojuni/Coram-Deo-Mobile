@@ -1,14 +1,7 @@
 name: Deploy Firebase Configuration
 
 on:
-  push:
-    branches:
-      - release
-      - development
-    paths:
-      - 'firestore.rules'
-      - 'firestore.indexes.json'
-      - 'firebase.json'
+  workflow_dispatch:
 
 jobs:
   deploy_staging:
