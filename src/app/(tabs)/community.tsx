@@ -32,7 +32,6 @@ import {
   Alert,
   Animated,
   Dimensions,
-  Image,
   Modal,
   Platform,
   ScrollView,
@@ -43,6 +42,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EventDetailsModal } from '../../components/Events/EventDetailsModal';
 import { CommunitySongDetailModal } from '../../components/Worship/CommunitySongDetailModal';
@@ -748,7 +748,7 @@ function MembersTab({ searchQuery }: SubScreenProps) {
 
   const filteredMembers = useMemo(() => {
     if (!members) return [];
-    let filtered = members;
+    let filtered = members.filter(m => m.status?.toLowerCase() !== 'archived' && m.membershipStatus?.toLowerCase() !== 'archived');
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter((m) => {

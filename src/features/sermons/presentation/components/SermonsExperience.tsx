@@ -18,6 +18,7 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Animated, TouchableWithoutFeedback } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Sermon } from '../../domain/sermon.types';
+import { sermonRepository } from '../../data/sermon.repository';
 
 // ─── Design Tokens ─────────────────────────────────────────────────────────────
 const NAVY = '#1A1A1A';
@@ -65,6 +66,25 @@ export function SermonsExperience({
       loadAllProgresses(currentUser.uid);
     }
   }, [currentUser]);
+
+  // ── Background Prefetching ───────────────────────────────────────────────
+  useEffect(() => {
+    if (sermons.length === 0) return;
+    
+    // Fire and forget requests to warm up the URL cache
+    const prefetchVideos = async () => {
+      // Pick first 6 sermons to prefetch their video URLs
+      const toPrefetch = sermons.slice(0, 6);
+      toPrefetch.forEach((s) => {
+        if (s.videoStoragePath) {
+          // We don't await because we want them all to fetch in parallel in the background
+          sermonRepository.resolveMediaUrl(s.videoStoragePath).catch(() => {});
+        }
+      });
+    };
+    
+    prefetchVideos();
+  }, [sermons]);
 
   // ── Filter & Search ────────────────────────────────────────────────────────
   const filteredSermons = useMemo(() => {

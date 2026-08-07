@@ -40,6 +40,7 @@ export function SermonVideoPlayer({
   const [showControls, setShowControls] = useState(false);
   const [positionMs, setPositionMs] = useState(0);
   const [durationMs, setDurationMs] = useState(0);
+  const [bufferedPositionMs, setBufferedPositionMs] = useState(0);
   const [progressBarWidth, setProgressBarWidth] = useState(0);
   const [initialSeekDone, setInitialSeekDone] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -48,7 +49,7 @@ export function SermonVideoPlayer({
 
   const player = useVideoPlayer(videoSource ? { uri: videoSource } : null, (p) => {
     p.loop = false;
-    p.pause();
+    p.play(); // Auto-play like YouTube
     p.timeUpdateEventInterval = 0.5; // Update every half second
   });
 
@@ -76,8 +77,7 @@ export function SermonVideoPlayer({
           player.currentTime = savedProgress.positionSeconds;
         }
         setInitialSeekDone(true);
-        setPlayerState('paused');
-        setShowControls(true);
+        // Do not pause here, let it auto-play
       }
     } else if (status === 'error') {
       setPlayerState('error');
@@ -86,9 +86,11 @@ export function SermonVideoPlayer({
   });
 
   // Track time
-  useEventListener(player, 'timeUpdate', ({ currentTime }) => {
+  useEventListener(player, 'timeUpdate', ({ currentTime, bufferedPosition }) => {
     const posMs = currentTime * 1000;
     setPositionMs(posMs);
+    setBufferedPositionMs(bufferedPosition * 1000);
+    
     const durMs = (player.duration ?? 0) * 1000;
 
     // Check completion
@@ -154,6 +156,7 @@ export function SermonVideoPlayer({
   };
 
   const progress = durationMs > 0 ? positionMs / durationMs : 0;
+  const bufferedProgress = durationMs > 0 ? bufferedPositionMs / durationMs : 0;
   const isIdle = playerState === 'idle' || playerState === 'paused';
 
   if (!videoSource) {
@@ -189,8 +192,8 @@ export function SermonVideoPlayer({
           onFullscreenExit={() => setIsFullscreen(false)}
         />
 
-        {/* Thumbnail overlay when idle */}
-        {playerState === 'idle' && sermon.thumbnailUrl && !showControls && !isFullscreen && (
+        {/* Thumbnail overlay before playback starts */}
+        {(!initialSeekDone || playerState === 'idle') && sermon.thumbnailUrl && !isFullscreen && (
           <Image
             source={{ uri: sermon.thumbnailUrl }}
             style={[StyleSheet.absoluteFill, { backgroundColor: '#000' }]}
@@ -291,6 +294,7 @@ export function SermonVideoPlayer({
                 onPress={(e) => handleSeekToProgress(e.nativeEvent.locationX)}
               >
                 <View style={styles.progressTrack} />
+                <View style={[styles.progressBuffered, { width: `${bufferedProgress * 100}%` }]} />
                 <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
                 <View style={[styles.progressThumb, { left: `${progress * 100}%` }]} />
               </TouchableOpacity>
@@ -432,6 +436,14 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
     backgroundColor: 'rgba(255,255,255,0.3)',
+    position: 'absolute',
+    left: 0,
+    top: 13,
+  },
+  progressBuffered: {
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.6)',
     position: 'absolute',
     left: 0,
     top: 13,

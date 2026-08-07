@@ -172,7 +172,7 @@ export function SermonWatchScreen() {
   const formatDate = (date: Date) =>
     date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
-  if (loading || !currentSermon || !isProgressLoaded) {
+  if (loading && !currentSermon) {
     return (
       <View style={styles.screen}>
         <Stack.Screen options={{ headerShown: false }} />
@@ -223,7 +223,7 @@ export function SermonWatchScreen() {
                 );
               }
             }}
-            videoSource={hasVideo ? videoSource : null}
+            videoSource={(hasVideo && isProgressLoaded) ? videoSource : null}
           />
           {/* Back button overlay - Rendered after video so it stays on top */}
           <View style={[styles.backBtnWrapper, { top: insets.top + 12 }]}>

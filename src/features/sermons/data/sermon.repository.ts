@@ -19,7 +19,7 @@ import {
   onSnapshot,
 } from 'firebase/firestore';
 import * as FileSystem from 'expo-file-system';
-import { getActiveDb, storage, getActiveAuth } from '@/firebase';
+import { getActiveDb, getActiveStorage, getActiveAuth } from '@/firebase';
 import { ref, getDownloadURL } from 'firebase/storage';
 import type {
   Sermon,
@@ -36,6 +36,8 @@ const FAVORITES_COLLECTION = 'sermon_favorites';
 const DOWNLOADS_COLLECTION = 'sermon_downloads';
 
 class SermonRepository {
+  private resolvedUrlCache: Record<string, string> = {};
+
   /**
    * Resolves a raw Firebase Storage path to a playable download URL.
    * If the URL is already an HTTP or local file path, it returns it as is.
@@ -45,12 +47,20 @@ class SermonRepository {
     if (pathOrUrl.startsWith('http') || pathOrUrl.startsWith('file://') || pathOrUrl.startsWith('content://')) {
       return pathOrUrl;
     }
+    
+    // Return cached URL immediately if available to prevent network delay
+    if (this.resolvedUrlCache[pathOrUrl]) {
+      return this.resolvedUrlCache[pathOrUrl];
+    }
+
     try {
       if (getActiveAuth()) {
         await getActiveAuth().authStateReady();
       }
-      const storageRef = ref(storage, pathOrUrl);
-      return await getDownloadURL(storageRef);
+      const storageRef = ref(getActiveStorage(), pathOrUrl);
+      const url = await getDownloadURL(storageRef);
+      this.resolvedUrlCache[pathOrUrl] = url;
+      return url;
     } catch (error) {
       console.warn('Failed to resolve media URL:', error);
       return pathOrUrl;

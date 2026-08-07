@@ -2,7 +2,8 @@ import { BlurView } from 'expo-blur';
 import { BounceCard } from '@/components/ui/BounceCard';
 import { HeartHandshake, Search, X, Pencil, Trash2, MoreHorizontal, User, CheckCircle2, MessageCircle } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert, ActionSheetIOS, Platform, Image } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert, ActionSheetIOS, Platform } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { formatPrayerTimeAgo, getFilteredPrayers } from '../../features/prayer/domain/prayer.selectors';
@@ -17,6 +18,7 @@ const PRAYER_FILTERS: PrayerFilter[] = ['Recent', 'My Requests'];
 
 export default function PrayerScreen() {
   const currentUser = useAuthStore((state) => state.currentUser);
+  const userProfile = useAuthStore((state) => state.userProfile);
   const openPrayerModal = useUIStore((state) => state.openPrayerModal);
   const { prayers, loading, togglePrayerLike, deletePrayer } = usePrayerFeed();
   const [search, setSearch] = useState('');
@@ -101,6 +103,9 @@ export default function PrayerScreen() {
         ) : (
           filteredRequests.map((req: Prayer) => {
             const isLiked = currentUser && req.likedBy ? req.likedBy.includes(currentUser.uid) : false;
+            const displayPhotoUrl = req.userId === currentUser?.uid 
+              ? (userProfile?.photoUrl || currentUser?.photoURL || req.userPhotoUrl) 
+              : req.userPhotoUrl;
             return (
               <View key={req.id} style={styles.prayerCardOuter}>
                 <View style={styles.prayerCardInner}>
@@ -116,8 +121,8 @@ export default function PrayerScreen() {
                       <View style={styles.prayerTop}>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                           <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center', marginRight: 10, overflow: 'hidden' }}>
-                            {req.userPhotoUrl ? (
-                              <Image source={{ uri: req.userPhotoUrl }} style={{ width: 36, height: 36 }} />
+                            {displayPhotoUrl ? (
+                              <Image source={{ uri: displayPhotoUrl as string }} style={{ width: 36, height: 36 }} />
                             ) : (
                               <User size={20} color="#9CA3AF" />
                             )}
