@@ -38,7 +38,11 @@ export const useScheduleStore = create<ScheduleStore>((set) => ({
           set({ schedules: nextSchedules, schedulesLoading: false });
         },
         (error: any) => {
-          if (error?.code === 'permission-denied' || error?.message?.includes('permission')) {
+          if (
+            error?.code === 'permission-denied' || 
+            error?.message?.includes('permission') ||
+            error?.message?.includes('Firestore shutting down')
+          ) {
             set({ schedulesLoading: false });
             return;
           }

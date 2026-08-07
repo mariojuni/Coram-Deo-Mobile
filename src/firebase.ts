@@ -1,7 +1,7 @@
 import { initializeApp, deleteApp, getApps } from 'firebase/app';
 import { initAppCheck, clearAppCheck } from './config/appCheck';
 // @ts-ignore
-import { initializeAuth, getReactNativePersistence, getAuth } from 'firebase/auth';
+import { initializeAuth, getReactNativePersistence, getAuth, browserLocalPersistence, indexedDBLocalPersistence } from 'firebase/auth';
 
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
@@ -21,9 +21,9 @@ const initialConfig = getFirebaseConfigForEnv(currentActiveFirebaseEnv);
 let activeApp = initializeApp(initialConfig);
 initAppCheck(activeApp);
 
-let activeAuth = initializeAuth(activeApp, {
-  persistence: getReactNativePersistence(AsyncStorage),
-});
+let activeAuth = Platform.OS === 'web' 
+  ? initializeAuth(activeApp, { persistence: [indexedDBLocalPersistence, browserLocalPersistence] })
+  : initializeAuth(activeApp, { persistence: getReactNativePersistence(AsyncStorage) });
 let activeDb = initialConfig.firestoreDatabaseId
   ? getFirestore(activeApp, initialConfig.firestoreDatabaseId)
   : getFirestore(activeApp);
@@ -63,9 +63,9 @@ export const reinitFirebaseForEnv = async (targetEnv: AppEnvironment) => {
   initAppCheck(activeApp);
 
   try {
-    activeAuth = initializeAuth(activeApp, {
-      persistence: getReactNativePersistence(AsyncStorage),
-    });
+    activeAuth = Platform.OS === 'web'
+      ? initializeAuth(activeApp, { persistence: [indexedDBLocalPersistence, browserLocalPersistence] })
+      : initializeAuth(activeApp, { persistence: getReactNativePersistence(AsyncStorage) });
   } catch (e) {
     activeAuth = getAuth(activeApp);
   }

@@ -20,6 +20,8 @@ export function useHomeScreenData() {
   const userProfile = useAuthStore((state) => state.userProfile);
   const schedules = useScheduleStore((state) => state.schedules);
   const initializeSchedulesListener = useScheduleStore((state) => state.initializeSchedulesListener);
+  const activeSchedules = useMemo(() => schedules.filter(s => s.status?.toLowerCase() === 'published'), [schedules]);
+
   const { assignments, initializeAssignmentsListener, fetchMinistries } = useMinistryStore();
   const [latestPrayer, setLatestPrayer] = useState<Prayer | null>(null);
   const [hasError, setHasError] = useState<boolean>(false);
@@ -29,9 +31,10 @@ export function useHomeScreenData() {
   const initializeUserBiblePlansListener = useBiblePlanStore((s) => s.initializeUserBiblePlansListener);
 
   useEffect(() => {
+    if (!userProfile?.churchId) return;
     const unsubscribe = initializeSchedulesListener();
     return () => unsubscribe();
-  }, [initializeSchedulesListener]);
+  }, [initializeSchedulesListener, userProfile?.churchId]);
 
   useEffect(() => {
     const churchId = userProfile?.churchId;
@@ -81,7 +84,6 @@ export function useHomeScreenData() {
     }, [userProfile?.churchId, currentUser?.uid, initializePlansListener, initializeUserBiblePlansListener])
   );
 
-  const upcomingEvents = useMemo(() => getUpcomingSchedules(schedules, 20), [schedules]);
 
   const todayString = useMemo(() => {
     const now = new Date();
@@ -108,14 +110,16 @@ export function useHomeScreenData() {
 
   const todaysEvents = useMemo(
     () =>
-      schedules
+      activeSchedules
         .filter((event) => normalizeDateToYmd(event.date) === todayString)
         .sort((a, b) => parseTimeTo24h(a.time || '9:00 AM').localeCompare(parseTimeTo24h(b.time || '9:00 AM'))),
      
-    [schedules, todayString]
+    [activeSchedules, todayString]
   );
 
-  const todaysEventIds = useMemo(() => new Set(todaysEvents.map((e) => e.id)), [todaysEvents]);
+  const todaysEventIds = useMemo(() => new Set(todaysEvents.map((event) => event.id)), [todaysEvents]);
+
+  const upcomingEvents = useMemo(() => getUpcomingSchedules(activeSchedules, 20), [activeSchedules]);
 
   const upcomingList = useMemo(
     () => upcomingEvents.filter((e) => !todaysEventIds.has(e.id)),

@@ -56,13 +56,18 @@ function toSchedule(docId: string, data: Record<string, unknown>): Schedule {
     duties,
     rsvps,
     songList: Array.isArray(data.songList) ? data.songList : undefined,
+    status: typeof data.status === 'string' ? data.status : 'Published',
     createdAt: data.createdAt,
   };
 }
 
 export const scheduleRepository = {
   subscribeToSchedules(churchId: string | undefined, onData: SchedulesListener, onError: ErrorListener): () => void {
-    const scheduleQuery = query(collection(getActiveDb(), 'events'), orderBy('date', 'asc'));
+
+    const scheduleQuery = query(
+      collection(getActiveDb(), 'events'),
+      where('churchId', '==', churchId)
+    );
 
     let setlistUnsubscribers: (() => void)[] = [];
 
@@ -81,6 +86,9 @@ export const scheduleRepository = {
           sched.songList = [];
           return sched;
         });
+
+        // Sort schedules manually to avoid needing a composite index
+        currentSchedules.sort((a, b) => a.date.localeCompare(b.date));
 
         // Emit initial schedules immediately
         onData([...currentSchedules]);

@@ -362,10 +362,13 @@ function EventsTab({ searchQuery }: SubScreenProps) {
   const [activeTodaySlide, setActiveTodaySlide] = useState(0);
 
   const searchableEvents = useMemo(() => {
+    // Only show published events in the community tab
+    const activeEvents = schedules.filter((e) => e.status?.toLowerCase() === 'published');
+    
     const query = searchQuery.trim().toLowerCase();
-    if (!query) return schedules;
+    if (!query) return activeEvents;
 
-    return schedules.filter((event) => {
+    return activeEvents.filter((event) => {
       const haystack = `${event.title} ${event.location} ${event.time}`.toLowerCase();
       return haystack.includes(query);
     });
@@ -382,10 +385,13 @@ function EventsTab({ searchQuery }: SubScreenProps) {
   const screenWidth = Dimensions.get('window').width;
   const heroCardHorizontalMargin = 0;
 
+  const userProfile = useAuthStore((state) => state.userProfile);
+
   useEffect(() => {
+    if (!userProfile?.churchId) return;
     const unsubscribe = initializeSchedulesListener();
     return () => unsubscribe();
-  }, [initializeSchedulesListener]);
+  }, [initializeSchedulesListener, userProfile?.churchId]);
 
   const normalizeDateToYmd = (value: string): string | null => {
     if (!value) return null;

@@ -4,7 +4,6 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter, useSegments }
 import { useEffect, useState } from 'react';
 import { useColorScheme, View, Text, StyleSheet, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-// BootSplash imported conditionally below to avoid web crashes
 import 'react-native-reanimated';
 import { AnimatedSplashScreen } from '@/features/splash/AnimatedSplashScreen';
 import { VersionProvider } from '@/features/bible/presentation/context/VersionManagerContext';
@@ -87,12 +86,7 @@ export default function RootLayout() {
 
   const appReady = loaded && initialized && hasSeenWalkthrough !== null;
 
-  useEffect(() => {
-    if (Platform.OS !== 'web') {
-      const BootSplash = require('react-native-bootsplash').default;
-      BootSplash.hide({ fade: true }).catch(() => {});
-    }
-  }, []);
+
 
 
 

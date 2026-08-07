@@ -24,5 +24,6 @@ export interface Schedule {
   duties: Duty[];
   rsvps: Rsvp[];
   songList?: any[];
+  status?: string;
   createdAt?: unknown;
 }
