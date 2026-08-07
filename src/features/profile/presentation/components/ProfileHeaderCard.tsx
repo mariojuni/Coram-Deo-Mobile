@@ -3,9 +3,9 @@ import {
   StyleSheet,
   Text,
   View,
-  Image,
   TouchableOpacity,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Settings2 } from 'lucide-react-native';
 import { getSoftShadowStyle } from '@/components/ui/SoftCard';

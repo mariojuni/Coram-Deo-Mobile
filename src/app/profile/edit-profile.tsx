@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { BounceCard } from '@/components/ui/BounceCard';
 import AppModal from '@/components/ui/AppModal';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Image, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
