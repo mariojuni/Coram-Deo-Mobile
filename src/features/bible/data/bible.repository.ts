@@ -381,11 +381,79 @@ export const getSavedVersions = async () => {
 export const saveVersion = async (version: any) => {
   const saved = await getSavedVersions();
   if (!saved.some((v: any) => String(v.id) === String(version.id))) {
-    const newSaved = [...saved, version];
+    // Always persist contentVersion so we can detect updates later
+    const versionWithMeta = {
+      ...version,
+      _localContentVersion: version.contentVersion ?? null,
+      _downloadedAt: Date.now(),
+    };
+    const newSaved = [...saved, versionWithMeta];
     await AsyncStorage.setItem('my_bible_versions', JSON.stringify(newSaved));
     return newSaved;
   }
   return saved;
+};
+
+/**
+ * Fetches the latest contentVersion from Firestore for each saved version
+ * and compares against the locally stored _localContentVersion.
+ * Returns a map of versionId -> { hasUpdate: boolean, remoteVersion: number }
+ */
+export const checkForVersionUpdates = async (): Promise<Record<string, { hasUpdate: boolean; remoteVersion: number }>> => {
+  const saved = await getSavedVersions();
+  const result: Record<string, { hasUpdate: boolean; remoteVersion: number }> = {};
+
+  await Promise.allSettled(
+    saved.map(async (v: any) => {
+      // Only check Firestore-sourced versions (they have a numeric translationId stored as string)
+      const id = String(v.id);
+      const localVersion: number = v._localContentVersion ?? 0;
+      try {
+        const docRef = doc(getActiveDb(), 'bibleVersions', id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const remoteVersion: number = docSnap.data().contentVersion ?? 1;
+          result[id] = {
+            hasUpdate: remoteVersion > localVersion,
+            remoteVersion,
+          };
+        }
+      } catch {
+        // Silently skip — don't block UI if offline
+      }
+    })
+  );
+
+  return result;
+};
+
+/**
+ * Re-downloads a bible version from Firestore (to apply an update).
+ * Updates the stored _localContentVersion after successful download.
+ */
+export const redownloadVersion = async (versionId: string | number, remoteVersion: number): Promise<boolean> => {
+  try {
+    // Clear the cached offline data so it re-fetches
+    await deleteOfflineBible(versionId);
+
+    // Download fresh copy
+    const { bibleDataService } = await import('./BibleDataService');
+    const success = await bibleDataService.downloadVersion(String(versionId));
+    if (!success) return false;
+
+    // Update stored _localContentVersion
+    const saved = await getSavedVersions();
+    const updated = saved.map((v: any) =>
+      String(v.id) === String(versionId)
+        ? { ...v, _localContentVersion: remoteVersion, _downloadedAt: Date.now() }
+        : v
+    );
+    await AsyncStorage.setItem('my_bible_versions', JSON.stringify(updated));
+    return true;
+  } catch (e) {
+    console.warn('redownloadVersion failed:', e);
+    return false;
+  }
 };
 
 export const removeVersion = async (versionId: string | number) => {
