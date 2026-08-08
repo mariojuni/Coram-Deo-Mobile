@@ -245,8 +245,7 @@ export async function fetchUserAccount(user: User): Promise<UserAccount | null> 
           await updateDoc(memberRef, {
             authUid: user.uid,
             accountId: user.uid,
-            status,
-            churchId,
+            churchId: null, // Hide old doc from directories to prevent duplicates
             updatedAt: serverTimestamp(),
           }).catch(() => {});
 
@@ -513,10 +512,14 @@ export const authRepository = {
           updates.providers = Array.from(new Set([...(matchedMember.providers || []), "password"]));
           updates.lastLoginAt = new Date().toISOString();
 
-          await updateDoc(memberRef, updates);
+          await updateDoc(memberRef, {
+            ...updates,
+            churchId: null, // Hide old doc from directories to prevent duplicates
+          });
           const userAccountData = {
             ...matchedMember,
             ...updates,
+            churchId: churchId, // Ensure the new doc HAS the churchId
             updatedAt: new Date().toISOString(),
           };
           await setDoc(doc(getActiveDb(), "users", user.uid), userAccountData, { merge: true }).catch(() => {});
