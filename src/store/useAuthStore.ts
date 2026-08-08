@@ -42,6 +42,7 @@ export const clearAllCachesAndReset = async () => {
   try {
     clearAllStoreListeners();
     await clearSensitiveCache();
+    await import('@react-native-async-storage/async-storage').then(m => m.default.removeItem('bible_prefs'));
     await authRepository.logout();
   } catch (e) {
     console.warn('Failed during clearAllCachesAndReset', e);
@@ -83,6 +84,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       clearAllStoreListeners();
       await clearSensitiveCache();
+      await import('@react-native-async-storage/async-storage').then(m => m.default.removeItem('bible_prefs'));
     } catch (e) {
       console.warn('Failed to clear sensitive cache on logout', e);
     }
