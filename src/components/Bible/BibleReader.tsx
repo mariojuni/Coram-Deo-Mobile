@@ -44,6 +44,10 @@ const sanitizeVerseText = (text: string): string => {
     .replace(/[\u200B-\u200D\uFEFF]/g, '')
     // Remove any remaining HTML tags
     .replace(/<[^>]*>/g, '')
+    // Strip # section/paragraph markers from source data.
+    // # never appears as legitimate Bible text, so remove ALL occurrences
+    // regardless of what precedes them (e.g. after a closing quote mark ").
+    .replace(/#+\s*/g, '')
     // Decode common HTML entities
     .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')
@@ -55,6 +59,15 @@ const sanitizeVerseText = (text: string): string => {
     .replace(/\s+/g, ' ')
     .trim();
 };
+
+// Convert a verse number string to Unicode superscript characters
+// e.g. "12" → "¹²" — these render above the baseline naturally in any font
+const SUPERSCRIPT_MAP: Record<string, string> = {
+  '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴',
+  '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹',
+};
+const toSuperscript = (num: string) =>
+  num.split('').map(d => SUPERSCRIPT_MAP[d] ?? d).join('');
 
 export default function BibleReader({ preferences, updatePreferences, books, hideChapterNav = false, scrollToVerse, controlsTabBar = false, scrollY }: BibleReaderProps) {
   const scrollRef = useRef<ScrollView>(null);
@@ -280,10 +293,12 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
                     </Text>
                     {hasNotes && (
                       <Text
+                        suppressHighlighting
                         onPress={() => setActiveVerse(verse)}
+                        style={{ backgroundColor: 'transparent' }}
                       >
                         {' '}
-                        <MessageSquareText size={16} color="#888" style={{ marginTop: 2 }} />
+                        <MessageSquareText size={12} color="#aaa" style={{ marginTop: 2 }} />
                       </Text>
                     )}
                     {' '}
@@ -302,7 +317,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
                     isSelected && styles.verseSelected,
                   ]}
                 >
-                  {verse.verseNumber}{'\u2060'}
+                  {toSuperscript(verse.verseNumber)}{'\u2060'}
                 </Text>,
                 // Level-2b — verse content. Leaf node, backgroundColor safe here.
                 renderVerseContent(verse, sanitizedContent, hasHighlight, highlightColorValue, isSelected),
@@ -371,7 +386,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
             <View style={styles.noteModalHeaderContent}>
               <View style={styles.noteModalHeaderSpacer} />
               <Text style={styles.noteModalHeaderTitle}>
-                {activeBookObj?.localTitle || activeBookObj?.title || activeBook} {activeChapter}:{activeVerse?.verseNumber}
+                {activeBookObj?.longName || activeBookObj?.name || activeBookObj?.localTitle || activeBookObj?.title || activeBook} {activeChapter}:{activeVerse?.verseNumber}
               </Text>
               <BounceCard bounceScale={0.85} style={styles.noteModalCloseBtn} onPress={() => setActiveVerse(null)} hitSlop={8} activeOpacity={0.8}>
                 <X size={20} color="#111827" strokeWidth={2} />
@@ -379,7 +394,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
             </View>
           </View>
 
-          <ScrollView contentContainerStyle={[styles.noteModalScroll, { paddingTop: 70 }]} showsVerticalScrollIndicator={false}>
+          <ScrollView contentContainerStyle={[styles.noteModalScroll, { paddingTop: 82 }]} showsVerticalScrollIndicator={false}>
             {/* Verse preview card */}
             <View style={styles.noteVerseCard}>
               <Text style={styles.noteVerseText}>
@@ -430,8 +445,8 @@ const styles = StyleSheet.create({  container: { flex: 1, backgroundColor: '#faf
     textDecorationColor: '#FF6596',
   },
   verseLabel: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
     color: '#FF6596',
     fontFamily: 'Inter',
   },

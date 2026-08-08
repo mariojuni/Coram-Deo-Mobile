@@ -30,6 +30,7 @@ type ChapterData = {
 
 type Book = {
   chapters?: { id: string | number }[];
+  chapterCount?: number;
   id: string;
 };
 
@@ -111,55 +112,72 @@ export function useBibleReader(
     [passageId, preferences.highlights, selectedVerses, updatePreferences]
   );
 
+  // Derive an effective chapter list for a book — Firestore books expose only
+  // `chapterCount` (no `chapters` array), so we generate it on the fly.
+  // This mirrors the same pattern used in BooksModal.
+  const getEffectiveChapters = useCallback(
+    (book: Book): { id: string }[] => {
+      if (book.chapters && book.chapters.length > 0) {
+        return book.chapters as { id: string }[];
+      }
+      const count = book.chapterCount;
+      if (count && count > 0) {
+        return Array.from({ length: count }, (_, i) => ({ id: String(i + 1) }));
+      }
+      return [];
+    },
+    []
+  );
+
   const handlePrevChapter = useCallback(() => {
     const bookIndex = books.findIndex((book) => book.id === activeBook);
     if (bookIndex === -1) return;
     const currentBook = books[bookIndex];
-    const chapterIndex = currentBook.chapters?.findIndex((chapter) => String(chapter.id) === String(activeChapter));
+    const chapters = getEffectiveChapters(currentBook);
+    const chapterIndex = chapters.findIndex((ch) => String(ch.id) === String(activeChapter));
 
-    if (typeof chapterIndex === 'number' && chapterIndex > 0) {
-      const prevChapter = currentBook.chapters?.[chapterIndex - 1];
-      if (prevChapter) {
-        updatePreferences({ activeChapter: String(prevChapter.id) });
-      }
+    if (chapterIndex > 0) {
+      updatePreferences({ activeChapter: String(chapters[chapterIndex - 1].id) });
       return;
     }
 
+    // Already at first chapter — go to last chapter of previous book
     if (bookIndex > 0) {
       const prevBook = books[bookIndex - 1];
-      const lastChapter = prevBook.chapters?.[prevBook.chapters.length - 1];
-      if (lastChapter) {
-        updatePreferences({ activeBook: prevBook.id, activeChapter: String(lastChapter.id) });
+      const prevChapters = getEffectiveChapters(prevBook);
+      if (prevChapters.length > 0) {
+        updatePreferences({
+          activeBook: prevBook.id,
+          activeChapter: String(prevChapters[prevChapters.length - 1].id),
+        });
       }
     }
-  }, [activeBook, activeChapter, books, updatePreferences]);
+  }, [activeBook, activeChapter, books, getEffectiveChapters, updatePreferences]);
 
   const handleNextChapter = useCallback(() => {
     const bookIndex = books.findIndex((book) => book.id === activeBook);
     if (bookIndex === -1) return;
     const currentBook = books[bookIndex];
-    const chapterIndex = currentBook.chapters?.findIndex((chapter) => String(chapter.id) === String(activeChapter));
+    const chapters = getEffectiveChapters(currentBook);
+    const chapterIndex = chapters.findIndex((ch) => String(ch.id) === String(activeChapter));
 
-    if (
-      typeof chapterIndex === 'number' &&
-      chapterIndex !== -1 &&
-      chapterIndex < (currentBook.chapters?.length || 0) - 1
-    ) {
-      const nextChapter = currentBook.chapters?.[chapterIndex + 1];
-      if (nextChapter) {
-        updatePreferences({ activeChapter: String(nextChapter.id) });
-      }
+    if (chapterIndex !== -1 && chapterIndex < chapters.length - 1) {
+      updatePreferences({ activeChapter: String(chapters[chapterIndex + 1].id) });
       return;
     }
 
+    // Already at last chapter — go to first chapter of next book
     if (bookIndex < books.length - 1) {
       const nextBook = books[bookIndex + 1];
-      const firstChapter = nextBook.chapters?.[0];
-      if (firstChapter) {
-        updatePreferences({ activeBook: nextBook.id, activeChapter: String(firstChapter.id) });
+      const nextChapters = getEffectiveChapters(nextBook);
+      if (nextChapters.length > 0) {
+        updatePreferences({
+          activeBook: nextBook.id,
+          activeChapter: String(nextChapters[0].id),
+        });
       }
     }
-  }, [activeBook, activeChapter, books, updatePreferences]);
+  }, [activeBook, activeChapter, books, getEffectiveChapters, updatePreferences]);
 
   const verseBackgroundColor = useCallback(
     (verseNumber: string) => {
