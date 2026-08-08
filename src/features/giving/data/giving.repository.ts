@@ -1,4 +1,4 @@
-import { getActiveDb, storage } from '@/firebase';
+import { getActiveDb, getActiveStorage } from '@/firebase';
 import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, orderBy, getDoc, onSnapshot } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { GivingFund, GivingCampaign, GivingRecord, PaymentMethod } from '../domain/giving.types';
@@ -149,7 +149,7 @@ export async function uploadProofOfPayment(churchId: string, recordId: string, f
   const fileExt = fileUri.split('.').pop() || 'jpg';
   const fileName = `${recordId}.${fileExt}`;
   
-  const storageRef = ref(storage, `churches/${churchId}/receipt/${recordId}/${fileName}`);
+  const storageRef = ref(getActiveStorage(), `churches/${churchId}/receipt/${recordId}/${fileName}`);
   await uploadBytes(storageRef, blob);
   
   return await getDownloadURL(storageRef);
@@ -174,5 +174,5 @@ export async function submitGivingRecord(record: Omit<GivingRecord, 'id' | 'crea
   );
 
   await setDoc(recordRef, cleanRecord);
-  return recordId;
+  return finalRecordId;
 }
