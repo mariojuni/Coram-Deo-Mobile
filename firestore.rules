@@ -164,7 +164,7 @@ service cloud.firestore {
     match /ministryAssignments/{assignmentId} {
       allow read: if isSignedIn();
       allow create: if isChurchAdmin(request.resource.data.churchId);
-      allow update: if isChurchAdmin(resource.data.churchId) || isChurchAdmin(request.resource.data.churchId) || (resource != null && resource.data.memberId == request.auth.uid);
+      allow update: if isChurchAdmin(resource.data.churchId) || isChurchAdmin(request.resource.data.churchId) || (resource != null && (resource.data.memberId == request.auth.uid || (userDocExists() && resource.data.memberId == userDoc().memberId)));
       allow delete: if isChurchAdmin(resource.data.churchId);
     }
 
@@ -252,9 +252,9 @@ service cloud.firestore {
           request.resource.data.get('systemRoles', null) == resource.data.get('systemRoles', null) &&
           request.resource.data.get('primaryRole', null) == resource.data.get('primaryRole', null) &&
           request.resource.data.get('role', null) == resource.data.get('role', null) &&
-          request.resource.data.get('churchId', null) == resource.data.get('churchId', null) &&
-          request.resource.data.get('status', null) == resource.data.get('status', null) &&
-          request.resource.data.get('memberId', null) == resource.data.get('memberId', null)) ||
+          (request.resource.data.get('churchId', null) == resource.data.get('churchId', null) || resource.data.get('status', 'pending_church_link') == 'pending_church_link') &&
+          (request.resource.data.get('status', null) == resource.data.get('status', null) || resource.data.get('status', 'pending_church_link') == 'pending_church_link') &&
+          (request.resource.data.get('memberId', null) == resource.data.get('memberId', null) || resource.data.get('status', 'pending_church_link') == 'pending_church_link')) ||
 
         // Allow unlinked member document account linking during registration:
         // Allows a newly authenticated user to bind their authUid/accountId to an unlinked imported member document.
@@ -300,8 +300,8 @@ service cloud.firestore {
           request.resource.data.get('systemRoles', null) == resource.data.get('systemRoles', null) &&
           request.resource.data.get('primaryRole', null) == resource.data.get('primaryRole', null) &&
           request.resource.data.get('role', null) == resource.data.get('role', null) &&
-          request.resource.data.get('churchId', null) == resource.data.get('churchId', null) &&
-          request.resource.data.get('status', null) == resource.data.get('status', null)) ||
+          (request.resource.data.get('churchId', null) == resource.data.get('churchId', null) || resource.data.get('status', 'pending_church_link') == 'pending_church_link') &&
+          (request.resource.data.get('status', null) == resource.data.get('status', null) || resource.data.get('status', 'pending_church_link') == 'pending_church_link')) ||
         (isSuperAdmin() && request.auth.uid != userId) ||
         (isRoleAdmin(resource.data.churchId) &&
           request.resource.data.churchId == resource.data.churchId &&
