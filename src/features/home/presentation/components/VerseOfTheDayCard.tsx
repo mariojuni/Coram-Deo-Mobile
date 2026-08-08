@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
     fontSize: 165,
     lineHeight: 185,
     color: 'rgba(255,255,255,0.08)',
-    fontFamily: 'ui-serif',
+    fontFamily: Fonts?.serif ?? 'serif',
     fontWeight: '900',
   },
 

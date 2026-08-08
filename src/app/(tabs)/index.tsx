@@ -199,7 +199,8 @@ export default function HomeScreen() {
   }
 
   // Loading state handling
-  const homeLoading = prayersLoading || sermonsLoading;
+  const authLoading = useAuthStore((s) => s.loading);
+  const homeLoading = authLoading || prayersLoading || sermonsLoading;
   if (homeLoading) {
     return (
       <HomeScreenSkeleton />

@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
+import { getSoftShadowStyle } from '@/components/ui/SoftCard';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -337,18 +338,8 @@ const styles = StyleSheet.create({
 
   // ── Card ───────────────────────────────────────────────────────────────
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
     padding: 16,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#A0A8CC',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.10,
-        shadowRadius: 12,
-      },
-      android: { elevation: 3 },
-    }),
+    ...getSoftShadowStyle(20),
   },
 
   divider: {

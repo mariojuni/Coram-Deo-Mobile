@@ -284,6 +284,15 @@ service cloud.firestore {
       }
     }
 
+    // ── Bibles ───────────────────────────────────────────────────────────────
+    match /bibles/{translationId} {
+      allow read: if isSignedIn();
+      
+      match /chapters/{chapterId} {
+        allow read: if isSignedIn();
+      }
+    }
+
     // ── UserAccounts ──────────────────────────────────────────────────────────
     // userAccounts mirrors the users collection and serves as the primary
     // profile source for the admin dashboard and mobile app.

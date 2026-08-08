@@ -9,6 +9,7 @@ const API_KEY = 'RAhHurUzL1pk5kt9LwrGIaz0AdnX0obcIH6NNIayuvGogR7f';
 const getHeaders = () => ({
   'x-yvp-app-key': API_KEY,
   Accept: 'application/json',
+  'User-Agent': 'CoramDeo/1.0.0 (Android)',
 });
 
 export const fetchLanguages = async () => {
