@@ -1,11 +1,13 @@
 import { useBibleReader } from '@/features/bible/presentation/hooks/useBibleReader';
 import { useUIStore } from '@/store/useUIStore';
-import { ChevronLeft, ChevronRight, Copy, X } from 'lucide-react-native';
-import { useEffect, useMemo, useRef } from 'react';
+import { ChevronLeft, ChevronRight, Copy, X, MessageSquareText, Info } from 'lucide-react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { getSoftShadowStyle, getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 import { ActivityIndicator, Animated, NativeScrollEvent, NativeSyntheticEvent, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AppModal from '@/components/ui/AppModal';
+import { BounceCard } from '@/components/ui/BounceCard';
 
 interface BibleReaderProps {
   preferences: any;
@@ -15,16 +17,22 @@ interface BibleReaderProps {
   /** If set, after the chapter loads the reader will scroll to this verse number */
   scrollToVerse?: string;
   /** If true, hides/shows the tab bar based on scroll direction */
-  /** If true, hides/shows the tab bar based on scroll direction */
   controlsTabBar?: boolean;
   /** Optional animated value for scroll position */
   scrollY?: Animated.Value;
+}
+
+interface VerseNote {
+  index: number;
+  type: string;
+  raw: string;
 }
 
 interface Verse {
   id: string;
   verseNumber: string;
   content: string;
+  notes?: VerseNote[];
 }
 
 // Sanitize text to remove problematic Unicode characters and HTML entities
@@ -55,6 +63,10 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
   const setTabBarVisible = useUIStore((s) => s.setTabBarVisible);
   const tabBarVisible = useUIStore((s) => s.tabBarVisible);
   const insets = useSafeAreaInsets();
+  
+  const [activeVerse, setActiveVerse] = useState<Verse | null>(null);
+  const { activeBook, activeChapter } = preferences;
+  const activeBookObj = books.find(b => b.id === activeBook);
 
   // Animate nav arrows bottom: 110 (tab bar visible) ↔ 20 (tab bar hidden)
   const NAV_BOTTOM_SHOWN = 110;
@@ -69,6 +81,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
       useNativeDriver: false,
     }).start();
   }, [tabBarVisible, controlsTabBar]);
+  
   const {
     chapterData,
     highlightColors,
@@ -191,6 +204,24 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
     })
   ).current;
 
+  const renderVerseTextWithLetters = (text: string | undefined, notes: VerseNote[] | undefined) => {
+    if (!text) return null;
+    const parts = sanitizeVerseText(text).split(/(\{\{note:\d+\}\})/g);
+    return parts.map((part, index) => {
+      const match = part.match(/\{\{note:(\d+)\}\}/);
+      if (match) {
+        const noteIndex = parseInt(match[1], 10);
+        const letter = String.fromCharCode(97 + (noteIndex % 26));
+        return (
+          <Text key={index} style={styles.inlineLetterDark}>
+            {letter}
+          </Text>
+        );
+      }
+      return <Text key={index}>{part}</Text>;
+    });
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -231,6 +262,35 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
               const hasHighlight = highlightColorValue !== 'transparent';
               const sanitizedContent = sanitizeVerseText(verse.content);
 
+              const renderVerseContent = (verse: Verse, text: string, hasHighlight: boolean, highlightColorValue: string, isSelected: boolean) => {
+                const cleanText = text.replace(/\{\{note:\d+\}\}/g, '');
+                const hasNotes = verse.notes && verse.notes.length > 0;
+                
+                return (
+                  <Text
+                    key={verse.id}
+                    suppressHighlighting
+                    style={[
+                      hasHighlight && { backgroundColor: highlightColorValue },
+                      isSelected && styles.verseSelected,
+                    ]}
+                  >
+                    <Text onPress={() => toggleVerse(verse.verseNumber)}>
+                      {cleanText}
+                    </Text>
+                    {hasNotes && (
+                      <Text
+                        onPress={() => setActiveVerse(verse)}
+                      >
+                        {' '}
+                        <MessageSquareText size={16} color="#888" style={{ marginTop: 2 }} />
+                      </Text>
+                    )}
+                    {' '}
+                  </Text>
+                );
+              };
+
               return [
                 // Level-2a — verse number. Word Joiner at the end locks it to the
                 // first word of the content so the line cannot break between them.
@@ -245,17 +305,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
                   {verse.verseNumber}{'\u2060'}
                 </Text>,
                 // Level-2b — verse content. Leaf node, backgroundColor safe here.
-                <Text
-                  key={verse.id}
-                  onPress={() => toggleVerse(verse.verseNumber)}
-                  suppressHighlighting
-                  style={[
-                    hasHighlight && { backgroundColor: highlightColorValue },
-                    isSelected && styles.verseSelected,
-                  ]}
-                >
-                  {sanitizedContent}{' '}
-                </Text>,
+                renderVerseContent(verse, sanitizedContent, hasHighlight, highlightColorValue, isSelected),
               ];
             })}
           </Text>
@@ -301,6 +351,60 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
           </View>
         </View>
       )}
+      {/* Cross-Reference / Notes Bottom Sheet */}
+      <AppModal
+        isOpen={activeVerse !== null}
+        onClose={() => setActiveVerse(null)}
+        title={`${activeBookObj?.localTitle || activeBookObj?.title || activeBook} ${activeChapter}:${activeVerse?.verseNumber}`}
+        hideHeader={true}
+        hideDragHandle={true}
+        containerStyle={{ paddingHorizontal: 0, paddingBottom: 0, backgroundColor: '#FAFAFA' }}
+        heightRatio={0.6}
+        dynamicHeight={true}
+      >
+        <View style={styles.noteModalContainer}>
+          {/* Blur Header */}
+          <View style={[styles.noteModalHeader, { paddingTop: 12 }]} pointerEvents="box-none">
+            <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
+            <View style={styles.noteModalDragHandle} />
+            <View style={styles.noteModalHeaderContent}>
+              <View style={styles.noteModalHeaderSpacer} />
+              <Text style={styles.noteModalHeaderTitle}>
+                {activeBookObj?.localTitle || activeBookObj?.title || activeBook} {activeChapter}:{activeVerse?.verseNumber}
+              </Text>
+              <BounceCard bounceScale={0.85} style={styles.noteModalCloseBtn} onPress={() => setActiveVerse(null)} hitSlop={8} activeOpacity={0.8}>
+                <X size={20} color="#111827" strokeWidth={2} />
+              </BounceCard>
+            </View>
+          </View>
+
+          <ScrollView contentContainerStyle={[styles.noteModalScroll, { paddingTop: 70 }]} showsVerticalScrollIndicator={false}>
+            {/* Verse preview card */}
+            <View style={styles.noteVerseCard}>
+              <Text style={styles.noteVerseText}>
+                {renderVerseTextWithLetters(activeVerse?.content, activeVerse?.notes)}
+              </Text>
+            </View>
+
+            {/* Notes list card */}
+            <View style={styles.noteListCard}>
+              <Text style={styles.noteListSectionLabel}>Notes & Cross References</Text>
+              {activeVerse?.notes?.map((n) => {
+                const letter = String.fromCharCode(97 + (n.index % 26));
+                return (
+                  <View key={n.index} style={styles.noteRow}>
+                    <View style={styles.noteLetterBadge}>
+                      <Text style={styles.noteLetter}>{letter}</Text>
+                    </View>
+                    <Text style={styles.noteRaw}>{n.raw}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </ScrollView>
+        </View>
+      </AppModal>
     </View>
   );
 }
@@ -330,6 +434,14 @@ const styles = StyleSheet.create({  container: { flex: 1, backgroundColor: '#faf
     fontWeight: '600',
     color: '#FF6596',
     fontFamily: 'Inter',
+  },
+  noteSuperscript: {
+    fontSize: 11,
+    lineHeight: 18,
+    color: '#FF6596',
+    fontWeight: '600',
+    fontStyle: 'italic',
+    textAlignVertical: 'top',
   },
   navOverlay: {
     position: 'absolute',
@@ -395,5 +507,120 @@ const styles = StyleSheet.create({  container: { flex: 1, backgroundColor: '#faf
     borderColor: '#e1e4e8',
     alignItems: 'center',
     justifyContent: 'center'
-  }
+  },
+  noteModalContainer: { backgroundColor: '#FAFAFA' },
+  noteModalHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.4)',
+    overflow: 'hidden',
+  },
+  noteModalDragHandle: {
+    width: 40,
+    height: 5,
+    backgroundColor: '#d1d5db',
+    borderRadius: 10,
+    alignSelf: 'center',
+    marginBottom: 4,
+  },
+  noteModalHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  noteModalHeaderSpacer: { width: 40, height: 40 },
+  noteModalHeaderTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    textAlign: 'center',
+    marginHorizontal: 12,
+  },
+  noteModalCloseBtn: {
+    ...getTopBarButtonShadowStyle(20),
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noteModalScroll: {
+    paddingHorizontal: 24,
+    paddingBottom: 32,
+    paddingTop: 16,
+    gap: 12,
+  },
+  noteVerseCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.04)',
+    marginBottom: 12,
+    boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.03)',
+  },
+  noteVerseText: {
+    fontSize: 15,
+    lineHeight: 24,
+    color: '#1F2937',
+    fontFamily: 'Inter',
+  },
+  inlineLetterDark: {
+    fontSize: 10,
+    lineHeight: 14,
+    color: '#9CA3AF',
+    fontWeight: '700',
+  },
+  noteListCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.04)',
+    boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.03)',
+  },
+  noteListSectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#9CA3AF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 14,
+  },
+  noteRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  noteLetterBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 101, 150, 0.10)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+    flexShrink: 0,
+  },
+  noteLetter: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#FF6596',
+  },
+  noteRaw: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 21,
+    color: '#4B5563',
+    fontFamily: 'Inter',
+  },
 });

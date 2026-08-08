@@ -8,7 +8,7 @@ export const initDB = () => {
       translationId TEXT PRIMARY KEY,
       data TEXT
     );
-    CREATE TABLE IF NOT EXISTS bible_chapters_v2 (
+    CREATE TABLE IF NOT EXISTS bible_chapters_v3 (
       translationId TEXT,
       passageId TEXT,
       content TEXT,
@@ -50,7 +50,7 @@ export const getBibleIndex = async (translationId: string | number) => {
 export const saveChapter = async (translationId: string | number, passageId: string, chapterData: string) => {
   try {
     db.runSync(
-      'INSERT OR REPLACE INTO bible_chapters_v2 (translationId, passageId, content) VALUES (?, ?, ?)',
+      'INSERT OR REPLACE INTO bible_chapters_v3 (translationId, passageId, content) VALUES (?, ?, ?)',
       [String(translationId), passageId, chapterData]
     );
     return true;
@@ -63,7 +63,7 @@ export const saveChapter = async (translationId: string | number, passageId: str
 export const getChapter = async (translationId: string | number, passageId: string) => {
   try {
     const row = db.getFirstSync<{ content: string }>(
-      'SELECT content FROM bible_chapters_v2 WHERE translationId = ? AND passageId = ?',
+      'SELECT content FROM bible_chapters_v3 WHERE translationId = ? AND passageId = ?',
       [String(translationId), passageId]
     );
     return row ? row.content : null;
@@ -76,7 +76,7 @@ export const getChapter = async (translationId: string | number, passageId: stri
 export const deleteOfflineBible = async (translationId: string | number) => {
   try {
     db.runSync('DELETE FROM bible_indices WHERE translationId = ?', [String(translationId)]);
-    db.runSync('DELETE FROM bible_chapters_v2 WHERE translationId = ?', [String(translationId)]);
+    db.runSync('DELETE FROM bible_chapters_v3 WHERE translationId = ?', [String(translationId)]);
     return true;
   } catch (error) {
     console.error(`Failed to delete offline bible for ${translationId}:`, error);

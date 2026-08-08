@@ -307,9 +307,8 @@ export const fetchChapterData = async (translationId: string | number, passageId
 
 export const downloadBibleOffline = async (translationId: string | number) => {
   try {
-    const response = await fetch(`${API_BASE}/bibles/${translationId}/index`, { headers: getHeaders() });
-    if (!response.ok) throw new Error('Failed to fetch bible index for download');
-    const indexData = await response.json();
+    const indexData = await fetchBibleIndex(translationId);
+    if (!indexData || !indexData.books) throw new Error('Failed to fetch bible index for download');
     await saveBibleIndex(translationId, indexData);
 
     const allPassageIds: string[] = [];
@@ -415,10 +414,11 @@ export const getUserPreferences = async () => {
     console.warn('Failed to read bible_prefs from AsyncStorage:', e);
   }
 
-  if (getActiveAuth().currentUser) {
+  const currentUser = getActiveAuth().currentUser;
+  if (currentUser) {
     if (!data) {
       try {
-        const docRef = doc(getActiveDb(), 'users', getActiveAuth().currentUser.uid, 'bible', 'preferences');
+        const docRef = doc(getActiveDb(), 'users', currentUser.uid, 'bible', 'preferences');
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           data = docSnap.data();
@@ -433,7 +433,7 @@ export const getUserPreferences = async () => {
       }
     } else {
       // Async background sync from Firestore so UI isn't blocked
-      getDoc(doc(getActiveDb(), 'users', getActiveAuth().currentUser.uid, 'bible', 'preferences'))
+      getDoc(doc(getActiveDb(), 'users', currentUser.uid, 'bible', 'preferences'))
         .then((docSnap) => {
           if (docSnap.exists()) {
             AsyncStorage.setItem('bible_prefs', JSON.stringify(docSnap.data()));
@@ -458,9 +458,10 @@ export const getUserPreferences = async () => {
 export const saveUserPreferences = async (prefs: any) => {
   await AsyncStorage.setItem('bible_prefs', JSON.stringify(prefs));
 
-  if (getActiveAuth().currentUser) {
+  const currentUser = getActiveAuth().currentUser;
+  if (currentUser) {
     try {
-      const docRef = doc(getActiveDb(), 'users', getActiveAuth().currentUser.uid, 'bible', 'preferences');
+      const docRef = doc(getActiveDb(), 'users', currentUser.uid, 'bible', 'preferences');
       await setDoc(docRef, prefs, { merge: true });
     } catch (error) {
       console.warn('Failed to save preferences to Firestore:', error);

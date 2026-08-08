@@ -16,6 +16,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { useBibleVersionStore } from '../../store/useBibleVersionStore';
 import { useUIStore } from '../../store/useUIStore';
 import { fetchBibleIndex, getSavedVersions, getUserPreferences, saveUserPreferences } from '../../utils/bibleApi';
+import { bibleDataService } from '@/features/bible/data/BibleDataService';
 
 type BiblePreferencesWithHighlights = BiblePreferences & {
   highlights?: Record<string, Record<string, string>>;
@@ -75,8 +76,8 @@ export default function BibleScreen() {
   useEffect(() => {
     if (!preferences?.activeTranslation) return;
     const loadBooks = async () => {
-      const data = (await fetchBibleIndex(preferences.activeTranslation)) as BibleIndexResponse | null;
-      setBooks(data?.books ?? []);
+      const data = await bibleDataService.getBooks(String(preferences.activeTranslation));
+      setBooks(data || []);
     };
     loadBooks();
   }, [preferences?.activeTranslation]);

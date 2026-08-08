@@ -1,4 +1,5 @@
-import { downloadBibleOffline, saveVersion } from '@/features/bible/data/bible.repository';
+import { saveVersion } from '@/features/bible/data/bible.repository';
+import { bibleDataService } from '@/features/bible/data/BibleDataService';
 import { BounceCard } from '@/components/ui/BounceCard';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -26,7 +27,7 @@ export default function VersionDetailScreen() {
     if (isDownloaded) return;
 
     setIsDownloading(true);
-    const success = await downloadBibleOffline(bible.id);
+    const success = await bibleDataService.downloadVersion(bible.id);
     if (success) {
       await saveVersion(bible);
       await refreshSavedVersions();

@@ -284,7 +284,32 @@ service cloud.firestore {
       }
     }
 
-    // ── Bibles ───────────────────────────────────────────────────────────────
+    // ── Global Bible Library ─────────────────────────────────────────────────
+    match /bibleLanguages/{languageTag} {
+      allow read: if isSignedIn();
+      allow write: if false; // Managed by backend functions
+    }
+
+    match /bibleImports/{importId} {
+      allow read, write: if isSuperAdmin();
+    }
+
+    match /bibleVersions/{versionId} {
+      allow read: if isSignedIn() && (isSuperAdmin() || (resource != null && resource.data.status == 'published'));
+      allow write: if isSuperAdmin();
+      
+      match /books/{bookId} {
+        allow read: if isSignedIn();
+        allow write: if false; // Managed by backend functions
+
+        match /chapters/{chapterNumber} {
+          allow read: if isSignedIn();
+          allow write: if false; // Managed by backend functions
+        }
+      }
+    }
+
+    // Legacy Bibles fallback
     match /bibles/{translationId} {
       allow read: if isSignedIn();
       

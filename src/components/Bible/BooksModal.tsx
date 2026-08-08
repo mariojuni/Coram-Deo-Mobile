@@ -16,7 +16,9 @@ export default function BooksModal({ isOpen, onClose, books, onSelectChapter }: 
   const { collapseBook, expandedBook, setSortMode, sortMode, sortedBooks, toggleBook } = useBooksModal(books);
 
   const renderChapters = (book: any) => {
-    const chapters = book.chapters || [];
+    // Legacy support: YouVersion uses book.chapters, our new model uses book.chapterCount
+    const chapters = book.chapters || (book.chapterCount ? Array.from({ length: book.chapterCount }, (_, i) => ({ id: String(i + 1), human_reference: String(i + 1) })) : []);
+    
     return (
       <View style={styles.chapterGridContainer}>
         {chapters.map((chapter: any) => {

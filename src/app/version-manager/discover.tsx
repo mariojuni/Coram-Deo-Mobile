@@ -1,5 +1,5 @@
 
-import { fetchBiblesByLanguage } from '@/features/bible/data/bible.repository';
+import { bibleDataService } from '@/features/bible/data/BibleDataService';
 import { BounceCard } from '@/components/ui/BounceCard';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, ChevronRight, Cloud, Globe, Search } from 'lucide-react-native';
@@ -23,7 +23,7 @@ export default function DiscoverVersionsScreen() {
     if (selectedLanguage) {
       const loadBibles = async () => {
         setBiblesLoading(true);
-        const fetchedBibles = await fetchBiblesByLanguage(selectedLanguage.tag);
+        const fetchedBibles = await bibleDataService.getVersions(selectedLanguage.tag || selectedLanguage.iso6393 || selectedLanguage.id);
         setBibles(fetchedBibles);
         setBiblesLoading(false);
       };

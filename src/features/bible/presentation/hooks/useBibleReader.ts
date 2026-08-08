@@ -1,4 +1,4 @@
-import { fetchChapterData, getChapterFromCache } from '@/features/bible/data/bible.repository';
+import { bibleDataService } from '@/features/bible/data/BibleDataService';
 import * as Clipboard from 'expo-clipboard';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert } from 'react-native';
@@ -21,6 +21,11 @@ type ChapterData = {
   content: string;
   id: string;
   verseNumber: string;
+  notes?: Array<{
+    index: number;
+    type: string;
+    raw: string;
+  }>;
 };
 
 type Book = {
@@ -50,22 +55,19 @@ export function useBibleReader(
 
   useEffect(() => {
     const loadChapter = async () => {
-      // If already cached, apply immediately with no loading flash
-      const cached = getChapterFromCache(String(activeTranslation), passageId);
-      if (cached) {
-        setChapterData(cached);
-        setLoading(false);
-        setSelectedVerses([]);
-        return;
-      }
       setLoading(true);
       setSelectedVerses([]);
-      const data = await fetchChapterData(String(activeTranslation), passageId);
-      setChapterData(data || []);
+      try {
+        const chapter = await bibleDataService.getChapter(String(activeTranslation), activeBook, parseInt(activeChapter, 10));
+        setChapterData(chapter.verses as ChapterData[] || []);
+      } catch (e) {
+        console.warn('Failed to load chapter', e);
+        setChapterData([]);
+      }
       setLoading(false);
     };
     loadChapter();
-  }, [activeTranslation, passageId]);
+  }, [activeTranslation, activeBook, activeChapter]);
 
   const toggleVerse = useCallback((verseNumber: string) => {
     setSelectedVerses((previous) =>

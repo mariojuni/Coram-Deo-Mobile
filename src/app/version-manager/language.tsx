@@ -4,21 +4,30 @@ import { BounceCard } from '@/components/ui/BounceCard';
 import { styles } from '@/features/bible/presentation/version-manager/styles';
 import { useRouter } from 'expo-router';
 import { Check, ChevronLeft, Search } from 'lucide-react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, Text, TextInput, TouchableOpacity, View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
 import { BlurView } from 'expo-blur';
+import { bibleDataService } from '@/features/bible/data/BibleDataService';
 
 export default function LanguageSelectScreen() {
   const router = useRouter();
-  const { POPULAR_LANGUAGES, selectedLanguage, setSelectedLanguage } = useVersionContext();
+  const { selectedLanguage, setSelectedLanguage } = useVersionContext();
   const [search, setSearch] = useState('');
+  const [languages, setLanguages] = useState<any[]>([]);
 
-  const filteredLanguages = POPULAR_LANGUAGES.filter((l: any) => {
+  useEffect(() => {
+    const loadLanguages = async () => {
+      const globalLangs = await bibleDataService.getLanguages();
+      setLanguages(globalLangs);
+    };
+    loadLanguages();
+  }, []);
+
+  const filteredLanguages = languages.filter((l: any) => {
     if (!search) return true;
     const lower = search.toLowerCase();
-    return l.name.toLowerCase().includes(lower) || (l.local_name && l.local_name.toLowerCase().includes(lower));
+    return l.name.toLowerCase().includes(lower) || (l.localName && l.localName.toLowerCase().includes(lower)) || (l.local_name && l.local_name.toLowerCase().includes(lower));
   });
 
   const handleSelectLanguage = (lang: any) => {
