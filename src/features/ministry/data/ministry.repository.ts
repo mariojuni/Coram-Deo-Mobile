@@ -33,13 +33,17 @@ export const ministryRepository = {
 
   subscribeToMemberAssignments(
     churchId: string,
-    memberId: string,
+    memberIds: string[],
     onData: (assignments: MinistryAssignment[]) => void
   ): () => void {
+    if (!memberIds || memberIds.length === 0) {
+      onData([]);
+      return () => {};
+    }
     const q = query(
       collection(getActiveDb(), 'ministryAssignments'),
       where('churchId', '==', churchId),
-      where('memberId', '==', memberId)
+      where('memberId', 'in', memberIds)
     );
     return onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as MinistryAssignment));

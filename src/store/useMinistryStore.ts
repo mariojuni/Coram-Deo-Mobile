@@ -12,7 +12,7 @@ interface MinistryStore {
   memberAssignmentsLoading: boolean;
   fetchMinistries: (churchId: string) => Promise<void>;
   initializeAssignmentsListener: (churchId: string) => () => void;
-  initializeMemberAssignmentsListener: (churchId: string, memberId: string) => () => void;
+  initializeMemberAssignmentsListener: (churchId: string, memberIds: string[]) => () => void;
   clearMinistryListeners: () => void;
   getAssignmentsForEvent: (eventId: string) => MinistryAssignment[];
   getUserAssignments: (userId: string) => MinistryAssignment[];
@@ -101,13 +101,13 @@ export const useMinistryStore = create<MinistryStore>((set, get) => ({
     };
   },
 
-  initializeMemberAssignmentsListener: (churchId: string, memberId: string) => {
+  initializeMemberAssignmentsListener: (churchId: string, memberIds: string[]) => {
     memberAssignmentsSubscriberCount += 1;
     if (!memberAssignmentsUnsubscribe) {
       set({ memberAssignmentsLoading: true });
       memberAssignmentsUnsubscribe = ministryRepository.subscribeToMemberAssignments(
         churchId,
-        memberId,
+        memberIds,
         (data) => {
           set((state) => {
             const hasNew = data.length > state.lastViewedAssignmentCount;

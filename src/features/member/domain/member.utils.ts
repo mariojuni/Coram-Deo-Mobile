@@ -65,3 +65,17 @@ export const formatBirthday = (member: any) => {
     }
     return formatted;
 };
+
+export const createMemberIdMap = (members: any[]) => {
+    const map = new Map<string, any>();
+    for (const m of members) {
+        if (m.id) map.set(m.id, m);
+        if (m.authUid) map.set(m.authUid, m);
+    }
+    return map;
+};
+
+export const isUserInMinistry = (ministryMembers: any[] | undefined, currentUser: any, userProfile: any) => {
+    const ids = [currentUser?.uid, userProfile?.memberId].filter(Boolean);
+    return ministryMembers?.some((m) => ids.includes(m.memberId)) ?? false;
+};

@@ -21,8 +21,21 @@ function getWeekBounds() {
 }
 
 function parseAssignmentDate(dateStr: string): Date {
-  // eventDate may be 'YYYY-MM-DD' or ISO string
   if (!dateStr) return new Date(0);
+  
+  // Safely parse YYYY-MM-DD
+  const ymd = dateStr.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (ymd) {
+    return new Date(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3]));
+  }
+  
+  // Safely parse MM/DD/YYYY
+  const mdy = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (mdy) {
+    return new Date(Number(mdy[3]), Number(mdy[1]) - 1, Number(mdy[2]));
+  }
+
+  // Fallback for ISO strings or other formats
   if (dateStr.length === 10) return new Date(`${dateStr}T00:00:00`);
   return new Date(dateStr);
 }
@@ -34,15 +47,18 @@ export function useMyAssignments() {
     useMinistryStore();
 
   const churchId = userProfile?.churchId ?? null;
-  // super_admin accounts may not have a memberId set; fall back to the auth UID
-  // which is what the assignment records store as their memberId
-  const memberId = userProfile?.memberId ?? currentUser?.uid ?? null;
+  const memberIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (currentUser?.uid) ids.add(currentUser.uid);
+    if (userProfile?.memberId) ids.add(userProfile.memberId);
+    return Array.from(ids);
+  }, [currentUser?.uid, userProfile?.memberId]);
 
   useEffect(() => {
-    if (!churchId || !memberId) return;
-    const unsub = initializeMemberAssignmentsListener(churchId, memberId);
+    if (!churchId || memberIds.length === 0) return;
+    const unsub = initializeMemberAssignmentsListener(churchId, memberIds);
     return () => unsub();
-  }, [churchId, memberId, initializeMemberAssignmentsListener]);
+  }, [churchId, memberIds, initializeMemberAssignmentsListener]);
 
   const grouped = useMemo<AssignmentGroup[]>(() => {
     if (!memberAssignments.length) return [];
@@ -77,12 +93,12 @@ export function useMyAssignments() {
   }, [memberAssignments]);
 
   // If user has no church/member link, there's nothing to load — resolve immediately
-  const resolvedLoading = (!churchId || !memberId) ? false : memberAssignmentsLoading;
+  const resolvedLoading = (!churchId || memberIds.length === 0) ? false : memberAssignmentsLoading;
 
   return {
     grouped,
     allAssignments: memberAssignments,
     loading: resolvedLoading,
-    hasChurchId: !!churchId && !!memberId,
+    hasChurchId: !!churchId && memberIds.length > 0,
   };
 }

@@ -200,7 +200,7 @@ export const scheduleRepository = {
 
 
 
-  async createSchedule(data: Pick<Schedule, 'title' | 'date' | 'time' | 'endTime' | 'location'>): Promise<string> {
+  async createSchedule(data: Pick<Schedule, 'title' | 'date' | 'time' | 'endTime' | 'location'> & { churchId: string }): Promise<string> {
     const ref = await addDoc(collection(getActiveDb(), 'events'), {
       ...data,
       duties: [],

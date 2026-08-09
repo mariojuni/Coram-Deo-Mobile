@@ -182,10 +182,13 @@ export default function TabLayout() {
 
   useEffect(() => {
     const churchId = userProfile?.churchId;
-    const memberId = userProfile?.memberId ?? currentUser?.uid;
-    if (!churchId || !memberId) return;
+    const ids = new Set<string>();
+    if (currentUser?.uid) ids.add(currentUser.uid);
+    if (userProfile?.memberId) ids.add(userProfile.memberId);
+    
+    if (!churchId || ids.size === 0) return;
 
-    const unsub = initializeMemberAssignmentsListener(churchId, memberId);
+    const unsub = initializeMemberAssignmentsListener(churchId, Array.from(ids));
     return () => unsub();
   }, [userProfile?.churchId, userProfile?.memberId, currentUser?.uid, initializeMemberAssignmentsListener]);
 

@@ -20,7 +20,7 @@ import { SoftCard, getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 import AppModal from '@/components/ui/AppModal';
 import { BlurView } from 'expo-blur';
 import { BounceCard } from '@/components/ui/BounceCard';
-import { formatMemberName } from '../../features/member/domain/member.utils';
+import { formatMemberName, createMemberIdMap } from '../../features/member/domain/member.utils';
 import { useModalKeyboard } from '@/hooks/useModalKeyboard';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -128,8 +128,10 @@ function MemberPickerSheet({ roleLabel, ministry, currentUserId, onSelect, onClo
           avatar: g.avatar
         }));
 
-    if (!q) return sourceMembers;
-    return sourceMembers.filter((m) => (m.name ?? '').toLowerCase().includes(q) || (m.role ?? '').toLowerCase().includes(q));
+    const uniqueSourceMembers = Array.from(new Map(sourceMembers.map(m => [m.id, m])).values());
+
+    if (!q) return uniqueSourceMembers;
+    return uniqueSourceMembers.filter((m) => (m.name ?? '').toLowerCase().includes(q) || (m.role ?? '').toLowerCase().includes(q));
   }, [ministry, query, allMembers]);
 
   return (
@@ -248,7 +250,7 @@ interface AssignMinistriesModalProps {
 
 export default function AssignMinistriesModal({ schedule, onClose }: AssignMinistriesModalProps) {
   const members = useMemberStore((s) => s.members);
-  const memberById = useMemo(() => new Map(members.map((m) => [m.id, m])), [members]);
+  const memberById = useMemo(() => createMemberIdMap(members), [members]);
   const _currentUser = useAuthStore((s) => s.currentUser);
   const userProfile = useAuthStore((s) => s.userProfile);
   const schedules = useScheduleStore((s) => s.schedules);
@@ -345,7 +347,11 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
     // API Update
     try {
       const existing = eventAssignments.find(a => getAssignmentKey(a.ministryId, a.roleName) === key);
-      const churchId = (userProfile?.churchId as string) || 'YmEc6C69Xz4DKRQaQZBV';
+      const churchId = userProfile?.churchId as string | undefined;
+      if (!churchId) {
+        Alert.alert('Error', 'Missing church context. Cannot update assignment.');
+        return;
+      }
 
       if (userId === null) {
         if (existing) await ministryRepository.deleteAssignment(existing.id);

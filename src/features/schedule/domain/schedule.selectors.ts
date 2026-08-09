@@ -15,6 +15,21 @@ export function parseTimeTo24h(timeStr: string): string {
   return `${h.toString().padStart(2, '0')}:${minutes}`;
 }
 
+export function normalizeDateToYmd(value: string): string | null {
+  if (!value) return null;
+  const ymd = value.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (ymd) {
+    const [, y, m, d] = ymd;
+    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+  const mdy = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (mdy) {
+    const [, m, d, y] = mdy;
+    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+  return value;
+}
+
 /**
  * Returns only upcoming schedules (today's events still in progress + future),
  * sorted by date then start time.
@@ -29,8 +44,9 @@ export function getUpcomingSchedules(schedules: Schedule[], maxCount = 5): Sched
 
   return schedules
     .filter((schedule) => {
-      if (schedule.date > todayStr) return true;
-      if (schedule.date < todayStr) return false;
+      const normDate = normalizeDateToYmd(schedule.date) || schedule.date;
+      if (normDate > todayStr) return true;
+      if (normDate < todayStr) return false;
 
       let endTimeParsed = parseTimeTo24h(schedule.endTime || schedule.time);
       if (!schedule.endTime) {
@@ -42,7 +58,9 @@ export function getUpcomingSchedules(schedules: Schedule[], maxCount = 5): Sched
       return endTimeParsed >= currentTimeStr;
     })
     .sort((a, b) => {
-      if (a.date !== b.date) return a.date.localeCompare(b.date);
+      const aDate = normalizeDateToYmd(a.date) || a.date;
+      const bDate = normalizeDateToYmd(b.date) || b.date;
+      if (aDate !== bDate) return aDate.localeCompare(bDate);
       return parseTimeTo24h(a.time).localeCompare(parseTimeTo24h(b.time));
     })
     .slice(0, maxCount);
@@ -51,11 +69,12 @@ export function getUpcomingSchedules(schedules: Schedule[], maxCount = 5): Sched
 /**
  * Extracts the current user's ministerial duty roles from assignments for a schedule.
  */
-export function getUserMinisterialRoles(scheduleId: string, assignments: MinistryAssignment[], userId: string): string | null {
+export function getUserMinisterialRoles(scheduleId: string, assignments: MinistryAssignment[], userIds: string[]): string | null {
+  if (!userIds || userIds.length === 0) return null;
   const myDuties = assignments.filter(
     (a) =>
       a.eventId === scheduleId &&
-      a.memberId === userId
+      userIds.includes(a.memberId)
   );
 
   if (myDuties.length === 0) return null;
@@ -93,17 +112,20 @@ export function getMinisterialTeam(scheduleId: string, assignments: MinistryAssi
  * Returns upcoming schedules where the user has active ministerial duties,
  * ordered by date and time.
  */
-export function getUpcomingMinisterialDuties(schedules: Schedule[], assignments: MinistryAssignment[], userId: string): Schedule[] {
+export function getUpcomingMinisterialDuties(schedules: Schedule[], assignments: MinistryAssignment[], userIds: string[]): Schedule[] {
   const now = new Date();
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
   return schedules
     .filter((schedule) => {
-      if (schedule.date < todayStr) return false;
-      return getUserMinisterialRoles(schedule.id, assignments, userId) !== null;
+      const normDate = normalizeDateToYmd(schedule.date) || schedule.date;
+      if (normDate < todayStr) return false;
+      return getUserMinisterialRoles(schedule.id, assignments, userIds) !== null;
     })
     .sort((a, b) => {
-      if (a.date !== b.date) return a.date.localeCompare(b.date);
+      const aDate = normalizeDateToYmd(a.date) || a.date;
+      const bDate = normalizeDateToYmd(b.date) || b.date;
+      if (aDate !== bDate) return aDate.localeCompare(bDate);
       return (a.time || '').localeCompare(b.time || '');
     });
 }

@@ -26,7 +26,19 @@ import { EventDetailsModal } from '@/components/Events/EventDetailsModal';
 import { canModeratePrayerRequests } from '@/permissions/mobilePermissions';
 
 function isThisWeek(dateString: string) {
-  const date = new Date(dateString);
+  let date = new Date(dateString);
+  
+  // Safely parse YYYY-MM-DD or MM/DD/YYYY to avoid timezone shift
+  const ymd = dateString.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (ymd) {
+    date = new Date(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3]));
+  } else {
+    const mdy = dateString.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (mdy) {
+      date = new Date(Number(mdy[3]), Number(mdy[1]) - 1, Number(mdy[2]));
+    }
+  }
+
   const now = new Date();
   
   const currentDay = now.getDay() === 0 ? 7 : now.getDay();
@@ -102,6 +114,13 @@ export default function HomeScreen() {
   const screenWidth = Dimensions.get('window').width;
   const cardWidth = screenWidth - 48;
   const currentUserId = currentUser?.uid ?? '';
+  
+  const currentMemberIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (currentUser?.uid) ids.add(currentUser.uid);
+    if (userProfile?.memberId) ids.add(userProfile.memberId);
+    return Array.from(ids);
+  }, [currentUser?.uid, userProfile?.memberId]);
 
   // ── Scroll animation ──────────────────────────────────────────────────────
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -153,9 +172,16 @@ export default function HomeScreen() {
   const sortedDutyItems = useMemo(() => {
     const items = myUpcomingDuties.flatMap((schedule) =>
       assignments
-        .filter((a) => a.eventId === schedule.id && a.memberId === currentUserId)
+        .filter((a) => a.eventId === schedule.id && currentMemberIds.includes(a.memberId))
         .map((assignment) => ({ assignment, schedule }))
     ).filter(({ schedule }) => isThisWeek(schedule.date));
+
+    // DIAGNOSTIC LOGS
+    console.log('[DEBUG] currentUserId:', currentUserId);
+    console.log('[DEBUG] currentMemberIds:', currentMemberIds);
+    console.log('[DEBUG] assignments loaded:', assignments.length);
+    console.log('[DEBUG] myUpcomingDuties count:', myUpcomingDuties.length);
+    console.log('[DEBUG] sortedDutyItems count:', items.length);
 
     const order = (status: string) => {
       if (status === 'Pending') return 0;

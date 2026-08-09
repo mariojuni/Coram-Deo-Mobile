@@ -2,7 +2,7 @@ import { ministryRepository } from '@/features/ministry/data/ministry.repository
 import { prayerRepository } from '@/features/prayer/data/prayer.repository';
 import { formatPrayerTimeAgo } from '@/features/prayer/domain/prayer.selectors';
 import type { Prayer } from '@/features/prayer/domain/prayer.types';
-import { getUpcomingMinisterialDuties, getUpcomingSchedules, parseTimeTo24h } from '@/features/schedule/domain/schedule.selectors';
+import { getUpcomingMinisterialDuties, getUpcomingSchedules, parseTimeTo24h, normalizeDateToYmd } from '@/features/schedule/domain/schedule.selectors';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useBiblePlanStore } from '@/store/useBiblePlanStore';
 import { useMinistryStore } from '@/store/useMinistryStore';
@@ -93,20 +93,7 @@ export function useHomeScreenData() {
     return `${y}-${m}-${d}`;
   }, []);
 
-  const normalizeDateToYmd = (value: string): string | null => {
-    if (!value) return null;
-    const ymd = value.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-    if (ymd) {
-      const [, y, m, d] = ymd;
-      return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
-    }
-    const mdy = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-    if (mdy) {
-      const [, m, d, y] = mdy;
-      return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
-    }
-    return null;
-  };
+
 
   const todaysEvents = useMemo(
     () =>
@@ -127,9 +114,13 @@ export function useHomeScreenData() {
   );
 
   const myUpcomingDuties = useMemo(() => {
-    if (!currentUser) return [];
-    return getUpcomingMinisterialDuties(schedules, assignments, currentUser.uid);
-  }, [currentUser, schedules, assignments]);
+    const memberIds = new Set<string>();
+    if (currentUser?.uid) memberIds.add(currentUser.uid);
+    if (userProfile?.memberId) memberIds.add(userProfile.memberId);
+    
+    if (memberIds.size === 0) return [];
+    return getUpcomingMinisterialDuties(schedules, assignments, Array.from(memberIds));
+  }, [currentUser?.uid, userProfile?.memberId, schedules, assignments]);
 
   const rawDisplayName = [userProfile?.firstName, userProfile?.lastName].filter(Boolean).join(' ') || currentUser?.displayName || 'Guest';
   const displayName = userProfile?.firstName || rawDisplayName.split(' ')[0];

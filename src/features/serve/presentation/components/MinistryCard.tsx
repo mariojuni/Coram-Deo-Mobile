@@ -6,6 +6,7 @@ import { ChevronRight, Users } from 'lucide-react-native';
 import { useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { useAuthStore } from '@/store/useAuthStore';
+import { isUserInMinistry } from '@/features/member/domain/member.utils';
 
 export interface MinistryCardProps {
   ministry: Ministry;
@@ -18,8 +19,7 @@ export function MinistryCard({ ministry, onPress }: MinistryCardProps) {
 
   const userProfile = useAuthStore((s) => s.userProfile);
   const currentUser = useAuthStore((s) => s.currentUser);
-  const memberId = userProfile?.memberId ?? currentUser?.uid ?? null;
-  const isMember = !!(memberId && ministry.members?.some((m) => m.memberId === memberId));
+  const isMember = isUserInMinistry(ministry.members, currentUser, userProfile);
 
   return (
     <BounceCard onPress={onPress} activeOpacity={1} style={{ marginBottom: 12 }}>

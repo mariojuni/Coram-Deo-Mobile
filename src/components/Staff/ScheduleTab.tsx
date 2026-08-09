@@ -7,6 +7,7 @@ import { getMinisterialTeam, type Schedule, useScheduleStore } from '../../store
 import AddScheduleModal from './AddScheduleModal';
 import AssignMinistriesModal from './AssignMinistriesModal';
 import { useAuthStore } from '../../store/useAuthStore';
+import { createMemberIdMap } from '../../features/member/domain/member.utils';
 import { SoftCard, getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 
 type TeamMemberCard = {
@@ -37,7 +38,7 @@ export default function ScheduleTab({
   const [eventToEdit, setEventToEdit] = useState<Schedule | null>(null);
   const [assignSchedule, setAssignSchedule] = useState<Schedule | null>(null);
   const members = useMemberStore((state) => state.members);
-  const memberById = useMemo(() => new Map(members.map((member) => [member.id, member])), [members]);
+  const memberById = useMemo(() => createMemberIdMap(members), [members]);
 
   const formatDate = (dateStr: string) => {
     const normalizeDateToYmd = (value: string): string | null => {

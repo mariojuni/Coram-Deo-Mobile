@@ -3,6 +3,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useMinistryApplicationStore } from '@/store/useMinistryApplicationStore';
 import { useMinistryStore } from '@/store/useMinistryStore';
 import { useEffect } from 'react';
+import { isUserInMinistry } from '@/features/member/domain/member.utils';
 
 export type MinistryApplicationStatus = 'none' | ApplicationStatus | 'member';
 
@@ -24,10 +25,7 @@ export function useMinistryApplication(ministryId: string) {
     return () => unsub();
   }, [churchId, memberId, subscribeToMyApplications]);
 
-  const isMember = !!(
-    memberId &&
-    ministry?.members?.some((m) => m.memberId === memberId)
-  );
+  const isMember = isUserInMinistry(ministry?.members, currentUser, userProfile);
 
   const existingApplication: MinistryApplication | undefined = myApplications.find(
     (a) => a.ministryId === ministryId && a.churchId === churchId
