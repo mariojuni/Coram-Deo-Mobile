@@ -110,7 +110,8 @@ export class BibleDataService implements BibleRepository {
   async getChapter(versionId: string, bookId: string, chapter: number): Promise<BibleChapter> {
     const passageId = `${bookId}.${chapter}`;
 
-    // 1. Try to get from SQLite offline cache first
+    // 1. Try to get from SQLite offline cache first (TEMPORARILY DISABLED FOR DEBUGGING HEADINGS)
+    /*
     const offlineChapterStr = await getChapter(versionId, passageId);
     if (offlineChapterStr) {
       try {
@@ -127,6 +128,7 @@ export class BibleDataService implements BibleRepository {
         console.warn('Failed to parse offline chapter cache', e);
       }
     }
+    */
 
     try {
       // 2. Try Firestore global library
@@ -147,6 +149,7 @@ export class BibleDataService implements BibleRepository {
           verses: legacyVerses.map((v: any) => ({
             id: v.id,
             verseNumber: v.verseNumber,
+            heading: v.heading,
             content: v.content,
           }))
         };

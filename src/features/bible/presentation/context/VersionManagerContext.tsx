@@ -1,9 +1,13 @@
 import {
+    downloadBibleOffline,
+    fetchBiblesByLanguage,
     fetchOrganization,
     getSavedVersions,
     getUserPreferences,
     saveUserPreferences,
+    saveVersion,
 } from '@/features/bible/data/bible.repository';
+import { getBibleIndex } from '@/features/bible/data/offlineDb.repository';
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 type SavedVersion = {
@@ -18,6 +22,7 @@ type LanguageOption = {
   name: string;
   local_name: string;
   biblesCount: number;
+  publishedVersionCount?: number;
 };
 
 type VersionContextValue = {
@@ -61,8 +66,28 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const init = async () => {
       const prefs = await getUserPreferences();
-      setActiveTranslation(prefs?.activeTranslation || '');
+      setActiveTranslation(prefs?.activeTranslation || 59);
       await refreshSavedVersions();
+
+      // Auto-download ESV on fresh install
+      const DEFAULT_VERSION_ID = 59;
+      const alreadyDownloaded = await getBibleIndex(DEFAULT_VERSION_ID);
+      if (!alreadyDownloaded) {
+        // Ensure ESV is in saved versions list before downloading
+        const versions = await getSavedVersions();
+        const hasEsv = versions.some((v: any) => String(v.id) === String(DEFAULT_VERSION_ID));
+        if (!hasEsv) {
+          // Fetch version metadata from the API and save it
+          const englishBibles = await fetchBiblesByLanguage('eng');
+          const esvMeta = englishBibles?.find((b: any) => b.id === DEFAULT_VERSION_ID);
+          if (esvMeta) {
+            await saveVersion(esvMeta);
+            await refreshSavedVersions();
+          }
+        }
+        // Kick off background download silently
+        downloadBibleOffline(DEFAULT_VERSION_ID).catch(() => {});
+      }
     };
     init();
   }, []);

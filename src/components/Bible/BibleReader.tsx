@@ -31,6 +31,7 @@ interface VerseNote {
 interface Verse {
   id: string;
   verseNumber: string;
+  heading?: string;
   content: string;
   notes?: VerseNote[];
 }
@@ -288,7 +289,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
                       isSelected && styles.verseSelected,
                     ]}
                   >
-                    <Text onPress={() => toggleVerse(verse.verseNumber)}>
+                    <Text suppressHighlighting onPress={() => toggleVerse(verse.verseNumber)}>
                       {cleanText}
                     </Text>
                     {hasNotes && (
@@ -306,7 +307,9 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
                 );
               };
 
-              return [
+              const isFirstVerse = chapterData.indexOf(verse) === 0;
+
+              const nodes = [
                 // Level-2a — verse number. Word Joiner at the end locks it to the
                 // first word of the content so the line cannot break between them.
                 <Text
@@ -322,6 +325,19 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
                 // Level-2b — verse content. Leaf node, backgroundColor safe here.
                 renderVerseContent(verse, sanitizedContent, hasHighlight, highlightColorValue, isSelected),
               ];
+
+              if (verse.heading) {
+                console.log(`Rendering heading for verse ${verse.verseNumber}:`, verse.heading);
+                nodes.unshift(
+                  <Text key={`${verse.id}-heading`} style={styles.verseHeading}>
+                    {isFirstVerse ? '' : '\n\n'}
+                    {verse.heading}
+                    {'\n'}
+                  </Text>
+                );
+              }
+
+              return nodes;
             })}
           </Text>
         </Animated.ScrollView>
@@ -437,6 +453,12 @@ const styles = StyleSheet.create({  container: { flex: 1, backgroundColor: '#faf
     lineHeight: 29,
     fontFamily: 'Inter',
     color: '#1a1a1a',
+  },
+  verseHeading: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    fontFamily: 'Inter',
   },
   verseSelected: {
     // No backgroundColor on tap — background only appears once a highlight color is chosen.

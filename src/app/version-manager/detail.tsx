@@ -42,13 +42,20 @@ export default function VersionDetailScreen() {
   const abbr = String(bible.abbreviation || bible.localized_abbreviation || bible.id || '');
   const publisherName = bible.publisher?.name || publishers[bible.organization_id] || (bible.organization_id ? 'Loading...' : 'Public Domain');
 
-  // Estimate download size from chapterCount (~3.5 KB per chapter of Firestore JSON text)
-  const chapterCount: number = bible.chapterCount ?? bible.chapter_count ?? 0;
-  const estimatedBytes = chapterCount > 0 ? chapterCount * 3584 : 1189 * 3584; // fallback: full Bible
-  const estimatedMB = estimatedBytes / (1024 * 1024);
-  const sizeLabel = estimatedMB < 1
-    ? `~${Math.round(estimatedMB * 1024)} KB`
-    : `~${estimatedMB.toFixed(1)} MB`;
+  const sizeBytes: number | undefined = bible.sizeBytes;
+  let sizeLabel = '';
+  if (sizeBytes) {
+    const mb = sizeBytes / (1024 * 1024);
+    sizeLabel = mb < 1 ? `~${Math.round(mb * 1024)} KB` : `~${mb.toFixed(1)} MB`;
+  } else {
+    // Estimate download size from chapterCount (~3.5 KB per chapter of Firestore JSON text)
+    const chapterCount: number = bible.chapterCount ?? bible.chapter_count ?? 0;
+    const estimatedBytes = chapterCount > 0 ? chapterCount * 3584 : 1189 * 3584; // fallback: full Bible
+    const estimatedMB = estimatedBytes / (1024 * 1024);
+    sizeLabel = estimatedMB < 1
+      ? `~${Math.round(estimatedMB * 1024)} KB`
+      : `~${estimatedMB.toFixed(1)} MB`;
+  }
 
   const handleDownload = async () => {
     if (isDownloaded && !updateInfo?.hasUpdate) return;

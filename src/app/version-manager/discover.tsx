@@ -81,9 +81,11 @@ export default function DiscoverVersionsScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Globe size={18} color="#1a1a1a" />
             <Text style={{ fontSize: 15, fontWeight: '600', color: '#1a1a1a' }}>{selectedLanguage.name}</Text>
-            {selectedLanguage.biblesCount && (
+            {(bibles.length > 0 || selectedLanguage.biblesCount) && (
               <View style={{ backgroundColor: 'rgba(0,0,0,0.06)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 }}>
-                <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#666' }}>{selectedLanguage.biblesCount}</Text>
+                <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#666' }}>
+                  {bibles.length > 0 ? bibles.length : (selectedLanguage.publishedVersionCount ?? selectedLanguage.biblesCount)}
+                </Text>
               </View>
             )}
             <ChevronRight size={16} color="#999" />
@@ -121,7 +123,7 @@ export default function DiscoverVersionsScreen() {
   
                     <View style={styles.versionInfo}>
                       <Text style={styles.publisherText}>
-                        {publishers[bible.organization_id] || (bible.organization_id ? 'Loading...' : 'Public Domain')}
+                        {bible.publisher?.name || publishers[bible.organization_id] || (bible.organization_id ? 'Loading...' : 'Public Domain')}
                       </Text>
                       <Text style={styles.versionName}>
                         {bible.title || bible.localized_title}

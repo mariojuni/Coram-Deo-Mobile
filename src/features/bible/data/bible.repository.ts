@@ -14,26 +14,17 @@ const getHeaders = () => ({
 
 export const fetchLanguages = async () => {
   const cacheKey = 'bible_languages';
-  try {
-    const response = await fetch(`${API_BASE}/languages`, { headers: getHeaders() });
-    if (!response.ok) throw new Error('Failed to fetch languages');
-    const data = await response.json();
-    await AsyncStorage.setItem(cacheKey, JSON.stringify(data.data));
-    return data.data;
-  } catch {
-    console.warn('Falling back languages to cache/default due to API error');
-    const cached = await AsyncStorage.getItem(cacheKey);
-    if (cached) return JSON.parse(cached);
+  const cached = await AsyncStorage.getItem(cacheKey);
+  if (cached) return JSON.parse(cached);
 
-    return [
-      {
-        id: 39,
-        name: 'English',
-        name_local: 'English',
-        tag: 'eng',
-      },
-    ];
-  }
+  return [
+    {
+      id: 39,
+      name: 'English',
+      name_local: 'English',
+      tag: 'eng',
+    },
+  ];
 };
 
 export const fetchVerseOfTheDay = async (translationId = '111') => {
@@ -61,7 +52,12 @@ export const fetchVerseOfTheDay = async (translationId = '111') => {
     const passageRes = await fetch(`${API_BASE}/bibles/${translationId}/passages/${passageId}?format=html`, {
       headers: getHeaders(),
     });
-    if (!passageRes.ok) return null;
+    if (!passageRes.ok) {
+      if (translationId !== '111') {
+        return await fetchVerseOfTheDay('111');
+      }
+      return null;
+    }
     const passageData = await passageRes.json();
 
     const result = {
@@ -95,36 +91,23 @@ export const fetchVerseOfTheDay = async (translationId = '111') => {
 
 export const fetchBiblesByLanguage = async (languageTag: string) => {
   const cacheKey = `bibles_${languageTag}`;
-  try {
-    const response = await fetch(`${API_BASE}/bibles?language_ranges[]=${languageTag}&all_available=false`, {
-      headers: getHeaders(),
-    });
-    if (!response.ok) throw new Error('Failed to fetch bibles for language');
-    const data = await response.json();
-
-    await AsyncStorage.setItem(cacheKey, JSON.stringify(data.data));
-    return data.data;
-  } catch {
-    console.warn(`Falling back bibles for ${languageTag} to cache/default due to API error`);
-
-    const cached = await AsyncStorage.getItem(cacheKey);
-    if (cached) {
-      return JSON.parse(cached);
-    }
-
-    if (languageTag.toLowerCase().startsWith('en')) {
-      return [
-        { id: 111, abbreviation: 'NIV', localized_abbreviation: 'NIV', title: 'New International Version' },
-        { id: 59, abbreviation: 'ESV', localized_abbreviation: 'ESV', title: 'English Standard Version' },
-        { id: 1, abbreviation: 'KJV', localized_abbreviation: 'KJV', title: 'King James Version' },
-        { id: 114, abbreviation: 'NKJV', localized_abbreviation: 'NKJV', title: 'New King James Version' },
-        { id: 116, abbreviation: 'NLT', localized_abbreviation: 'NLT', title: 'New Living Translation' },
-        { id: 2692, abbreviation: 'NASB2020', localized_abbreviation: 'NASB', title: 'New American Standard Bible 2020' },
-        { id: 97, abbreviation: 'MSG', localized_abbreviation: 'MSG', title: 'The Message' },
-      ];
-    }
-    return [];
+  const cached = await AsyncStorage.getItem(cacheKey);
+  if (cached) {
+    return JSON.parse(cached);
   }
+
+  if (languageTag.toLowerCase().startsWith('en')) {
+    return [
+      { id: 111, abbreviation: 'NIV', localized_abbreviation: 'NIV', title: 'New International Version' },
+      { id: 59, abbreviation: 'ESV', localized_abbreviation: 'ESV', title: 'English Standard Version' },
+      { id: 1, abbreviation: 'KJV', localized_abbreviation: 'KJV', title: 'King James Version' },
+      { id: 114, abbreviation: 'NKJV', localized_abbreviation: 'NKJV', title: 'New King James Version' },
+      { id: 116, abbreviation: 'NLT', localized_abbreviation: 'NLT', title: 'New Living Translation' },
+      { id: 2692, abbreviation: 'NASB2020', localized_abbreviation: 'NASB', title: 'New American Standard Bible 2020' },
+      { id: 97, abbreviation: 'MSG', localized_abbreviation: 'MSG', title: 'The Message' },
+    ];
+  }
+  return [];
 };
 
 const repairSingleVerseText = (rawContent: string, passageId: string) => {
@@ -212,33 +195,22 @@ export const fetchBibleIndex = async (translationId: string | number) => {
   }
 
   try {
-    const response = await fetch(`${API_BASE}/bibles/${translationId}/index`, { headers: getHeaders() });
-    if (!response.ok) throw new Error('Failed to fetch bible index');
-    const data = await response.json();
+    const docRef = doc(getActiveDb(), 'bibles', String(translationId));
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists() && docSnap.data().index) {
+      const fallbackData = docSnap.data().index;
+      sessionCache.set(cacheKey, fallbackData);
 
-    sessionCache.set(cacheKey, data);
-
-    const savedVersions = await getSavedVersions();
-    if (savedVersions.some((v: any) => String(v.id) === String(translationId))) {
-      await saveBibleIndex(translationId, data);
-    }
-
-    return data;
-  } catch (error) {
-    console.error(`Error fetching index from YouVersion for ${translationId}, falling back to Firestore:`, error);
-    try {
-      const docRef = doc(getActiveDb(), 'bibles', String(translationId));
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists() && docSnap.data().index) {
-        const fallbackData = docSnap.data().index;
-        sessionCache.set(cacheKey, fallbackData);
-        return fallbackData;
+      const savedVersions = await getSavedVersions();
+      if (savedVersions.some((v: any) => String(v.id) === String(translationId))) {
+        await saveBibleIndex(translationId, fallbackData);
       }
-    } catch (fbError) {
-      console.error(`Error fetching index from Firestore for ${translationId}:`, fbError);
+      return fallbackData;
     }
-    return null;
+  } catch (fbError) {
+    console.error(`Error fetching index from Firestore for ${translationId}:`, fbError);
   }
+  return null;
 };
 
 export const fetchChapterData = async (translationId: string | number, passageId: string) => {
@@ -263,99 +235,41 @@ export const fetchChapterData = async (translationId: string | number, passageId
         return parsed;
       }
     } catch {
-      // Ignore parse error and fall back to online
+      // Ignore parse error and fall back
     }
   }
 
   try {
-    const res = await fetch(`${API_BASE}/bibles/${translationId}/passages/${passageId}?format=html`, { headers: getHeaders() });
-    if (!res.ok) throw new Error('Failed to fetch chapter HTML from YouVersion');
-    const payload = await res.json();
-    const content = payload.content || (payload.data && payload.data.content) || '';
-    const validVerses = parseHTMLToJSON(content, passageId);
-
-    if (validVerses.length > 0) {
-      sessionCache.set(cacheKey, validVerses);
+    const docRef = doc(getActiveDb(), 'bibles', String(translationId), 'chapters', passageId);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists() && docSnap.data().verses) {
+      let fallbackVerses = docSnap.data().verses;
+      if (fallbackVerses.length === 1 && fallbackVerses[0].verseNumber === '1') {
+        const repaired = repairSingleVerseText(fallbackVerses[0].content, passageId);
+        if (repaired) fallbackVerses = repaired;
+      }
+      sessionCache.set(cacheKey, fallbackVerses);
 
       const savedVersions = await getSavedVersions();
       if (savedVersions.some((v: any) => String(v.id) === String(translationId))) {
-        await saveChapter(translationId, passageId, JSON.stringify(validVerses));
+        await saveChapter(translationId, passageId, JSON.stringify(fallbackVerses));
       }
+      return fallbackVerses;
     }
-
-    return validVerses;
-  } catch (error) {
-    console.error(`Error fetching chapter ${passageId} for ${translationId} from YouVersion, falling back to Firestore:`, error);
-    try {
-      const docRef = doc(getActiveDb(), 'bibles', String(translationId), 'chapters', passageId);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists() && docSnap.data().verses) {
-        let fallbackVerses = docSnap.data().verses;
-        if (fallbackVerses.length === 1 && fallbackVerses[0].verseNumber === '1') {
-          const repaired = repairSingleVerseText(fallbackVerses[0].content, passageId);
-          if (repaired) fallbackVerses = repaired;
-        }
-        sessionCache.set(cacheKey, fallbackVerses);
-        return fallbackVerses;
-      }
-    } catch (fbError) {
-      console.error(`Error fetching chapter ${passageId} from Firestore:`, fbError);
-    }
-    return null;
+  } catch (fbError) {
+    console.error(`Error fetching chapter ${passageId} from Firestore:`, fbError);
   }
+  return null;
 };
 
 export const downloadBibleOffline = async (translationId: string | number) => {
-  try {
-    const indexData = await fetchBibleIndex(translationId);
-    if (!indexData || !indexData.books) throw new Error('Failed to fetch bible index for download');
-    await saveBibleIndex(translationId, indexData);
-
-    const allPassageIds: string[] = [];
-    for (const book of indexData.books) {
-      for (const chapter of book.chapters) {
-        if (chapter.passage_id) {
-          allPassageIds.push(chapter.passage_id);
-        }
-      }
-    }
-
-    startBackgroundDownload(translationId, allPassageIds);
-    return true;
-  } catch (error) {
-    console.warn('Error initiating offline download:', error);
-    return false;
-  }
+  // Legacy offline download is no longer supported directly via API.
+  // Use BibleDataService instead.
+  return false;
 };
 
 const startBackgroundDownload = async (translationId: string | number, passageIds: string[]) => {
-  const BATCH_SIZE = 5;
-  for (let i = 0; i < passageIds.length; i += BATCH_SIZE) {
-    const batch = passageIds.slice(i, i + BATCH_SIZE);
-
-    await Promise.allSettled(
-      batch.map(async (passageId) => {
-        const exists = await getChapter(translationId, passageId);
-        if (exists && exists !== '[]') return; // Skip if already downloaded
-
-        try {
-          const response = await fetch(`${API_BASE}/bibles/${translationId}/passages/${passageId}?format=html`, {
-            headers: getHeaders(),
-          });
-          if (response.ok) {
-            const payload = await response.json();
-            const content = payload.content || (payload.data && payload.data.content) || '';
-            const parsedVerses = parseHTMLToJSON(content, passageId);
-            if (parsedVerses.length > 0) {
-              await saveChapter(translationId, passageId, JSON.stringify(parsedVerses));
-            }
-          }
-        } catch {}
-      })
-    );
-
-    await new Promise((res) => setTimeout(res, 400)); // Increased delay to avoid rate limit
-  }
+  // Deprecated
 };
 
 export const getSavedVersions = async () => {
@@ -366,12 +280,12 @@ export const getSavedVersions = async () => {
   }
 
   const defaultVersion = {
-    id: 2692,
-    abbreviation: 'NASB2020',
+    id: 59,
+    abbreviation: 'ESV',
     language_tag: 'en',
-    localized_abbreviation: 'NASB2020',
-    localized_title: 'New American Standard Bible - NASB',
-    title: 'New American Standard Bible 2020',
+    localized_abbreviation: 'ESV',
+    localized_title: 'English Standard Version',
+    title: 'English Standard Version',
   };
 
   await AsyncStorage.setItem('my_bible_versions', JSON.stringify([defaultVersion]));
@@ -465,7 +379,7 @@ export const removeVersion = async (versionId: string | number) => {
 };
 
 const defaultPrefs = {
-  activeTranslation: '2692',
+  activeTranslation: '59',
   activeBook: 'GEN',
   activeChapter: '1',
   activePassageId: 'GEN.1',

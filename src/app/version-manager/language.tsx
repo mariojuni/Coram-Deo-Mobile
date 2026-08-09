@@ -95,7 +95,7 @@ export default function LanguageSelectScreen() {
                   <Check size={20} color="#FF6596" />
                 ) : (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Text style={{ fontSize: 13, color: '#999' }}>{lang.biblesCount || '?'} versions</Text>
+                    <Text style={{ fontSize: 13, color: '#999' }}>{lang.publishedVersionCount ?? lang.biblesCount ?? '?'} versions</Text>
                   </View>
                 )}
               </TouchableOpacity>

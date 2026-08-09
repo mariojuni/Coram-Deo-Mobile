@@ -21,6 +21,7 @@ type ChapterData = {
   content: string;
   id: string;
   verseNumber: string;
+  heading?: string;
   notes?: Array<{
     index: number;
     type: string;
@@ -55,19 +56,40 @@ export function useBibleReader(
   );
 
   useEffect(() => {
+    let isMounted = true;
+    
     const loadChapter = async () => {
-      setLoading(true);
+      // Delay showing the loading spinner for 150ms.
+      // If the data is already downloaded (SQLite cache), it will load in <20ms
+      // and we won't see a flashing loading screen.
+      const timer = setTimeout(() => {
+        if (isMounted) setLoading(true);
+      }, 150);
+
       setSelectedVerses([]);
       try {
         const chapter = await bibleDataService.getChapter(String(activeTranslation), activeBook, parseInt(activeChapter, 10));
-        setChapterData(chapter.verses as ChapterData[] || []);
+        if (isMounted) {
+          clearTimeout(timer);
+          setLoading(false);
+          console.log('Chapter loaded, first verse:', JSON.stringify(chapter.verses?.[0]));
+          setChapterData(chapter.verses as ChapterData[] || []);
+        }
       } catch (e) {
-        console.warn('Failed to load chapter', e);
-        setChapterData([]);
+        if (isMounted) {
+          clearTimeout(timer);
+          setLoading(false);
+          console.warn('Failed to load chapter', e);
+          setChapterData([]);
+        }
       }
-      setLoading(false);
     };
+    
     loadChapter();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [activeTranslation, activeBook, activeChapter]);
 
   const toggleVerse = useCallback((verseNumber: string) => {

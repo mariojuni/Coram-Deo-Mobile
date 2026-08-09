@@ -23,6 +23,7 @@ export interface BibleVersionSummary {
     text: boolean;
     audio: boolean;
   };
+  sizeBytes?: number;
 }
 
 export interface BibleVersionDetails extends BibleVersionSummary {
@@ -53,6 +54,7 @@ export interface BibleBook {
 export interface BibleVerse {
   id: string;
   verseNumber: string;
+  heading?: string;
   content: string;
   notes?: BibleNote[];
 }
