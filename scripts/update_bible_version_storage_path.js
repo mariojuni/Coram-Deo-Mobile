@@ -10,11 +10,18 @@ const { getFirestore, doc, setDoc, updateDoc, getDoc } = require('firebase/fires
 
 const STORAGE_URL = 'https://firebasestorage.googleapis.com/v0/b/coramdeo-prod.firebasestorage.app/o/bible_imports%2F59_1786289247917.json?alt=media&token=a54df26e-fd8a-4e71-a04e-4bc1cc958d61';
 
+const apiKey = process.env.FIREBASE_API_KEY;
+if (!apiKey) {
+  console.error('❌ Missing FIREBASE_API_KEY environment variable. Run as:');
+  console.error('   FIREBASE_API_KEY=your_key node scripts/update_bible_version_storage_path.js');
+  process.exit(1);
+}
+
 const configs = [
   {
     name: 'Production (coramdeo-prod)',
     config: {
-      apiKey: 'AIzaSyBOqlIDMBWNz2VbEbKETbMNRFGZIUlPJeU', // will read from env
+      apiKey,
       projectId: 'coramdeo-prod',
       storageBucket: 'coramdeo-prod.firebasestorage.app',
     }
@@ -22,7 +29,7 @@ const configs = [
   {
     name: 'Staging (nazarenechurch-9c030)',
     config: {
-      apiKey: 'AIzaSyBOqlIDMBWNz2VbEbKETbMNRFGZIUlPJeU', // will read from env
+      apiKey,
       projectId: 'nazarenechurch-9c030',
       storageBucket: 'nazarenechurch-9c030.appspot.com',
     }
