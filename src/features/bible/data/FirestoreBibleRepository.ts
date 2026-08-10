@@ -48,7 +48,9 @@ export class FirestoreBibleRepository implements BibleRepository {
           languageTag: data.languageTag || 'en',
           publisher: data.publisher,
           capabilities: data.capabilities,
-          sizeBytes: data.sizeBytes
+          sizeBytes: data.sizeBytes,
+          sourceStoragePath: data.sourceStoragePath,
+          contentVersion: data.contentVersion || 1,
         } as BibleVersionSummary;
       });
     } catch (e) {

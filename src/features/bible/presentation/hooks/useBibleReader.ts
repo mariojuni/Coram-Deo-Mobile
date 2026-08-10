@@ -1,7 +1,7 @@
-import { bibleDataService } from '@/features/bible/data/BibleDataService';
+import { bibleDataService, BIBLE_DOWNLOAD_COMPLETED_EVENT } from '@/features/bible/data/BibleDataService';
 import * as Clipboard from 'expo-clipboard';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, DeviceEventEmitter } from 'react-native';
 
 const highlightColors = {
   yellow: 'rgba(255, 235, 59, 0.4)',
@@ -22,10 +22,10 @@ type ChapterData = {
   id: string;
   verseNumber: string;
   heading?: string;
-  notes?: Array<{
-    index: number;
-    type: string;
-    raw: string;
+  subheading?: string;
+  crossReferences?: Array<{
+    text: string;
+    refs?: { id: string; text: string }[];
   }>;
 };
 
@@ -58,26 +58,28 @@ export function useBibleReader(
   useEffect(() => {
     let isMounted = true;
     
-    const loadChapter = async () => {
+    const loadChapter = async (showLoadingSpinner = true) => {
       // Delay showing the loading spinner for 150ms.
       // If the data is already downloaded (SQLite cache), it will load in <20ms
       // and we won't see a flashing loading screen.
-      const timer = setTimeout(() => {
+      const timer = showLoadingSpinner ? setTimeout(() => {
         if (isMounted) setLoading(true);
-      }, 150);
+      }, 150) : null;
 
-      setSelectedVerses([]);
+      if (showLoadingSpinner) {
+        setSelectedVerses([]);
+      }
       try {
         const chapter = await bibleDataService.getChapter(String(activeTranslation), activeBook, parseInt(activeChapter, 10));
         if (isMounted) {
-          clearTimeout(timer);
+          if (timer) clearTimeout(timer);
           setLoading(false);
           console.log('Chapter loaded, first verse:', JSON.stringify(chapter.verses?.[0]));
           setChapterData(chapter.verses as ChapterData[] || []);
         }
       } catch (e) {
         if (isMounted) {
-          clearTimeout(timer);
+          if (timer) clearTimeout(timer);
           setLoading(false);
           console.warn('Failed to load chapter', e);
           setChapterData([]);
@@ -85,10 +87,19 @@ export function useBibleReader(
       }
     };
     
-    loadChapter();
+    loadChapter(true);
     
+    const subscription = DeviceEventEmitter.addListener(BIBLE_DOWNLOAD_COMPLETED_EVENT, (versionId) => {
+      if (String(versionId) === String(activeTranslation)) {
+        console.log(`[useBibleReader] Download completed for ${versionId}, seamlessly reloading chapter data...`);
+        // reload silently without showing the loading spinner so it's a seamless transition
+        loadChapter(false);
+      }
+    });
+
     return () => {
       isMounted = false;
+      subscription.remove();
     };
   }, [activeTranslation, activeBook, activeChapter]);
 

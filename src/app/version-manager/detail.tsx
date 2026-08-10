@@ -1,60 +1,90 @@
-import { saveVersion } from '@/features/bible/data/bible.repository';
-import { bibleDataService } from '@/features/bible/data/BibleDataService';
-import { BounceCard } from '@/components/ui/BounceCard';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { CheckCircle, ChevronLeft, CloudDownload, Globe2, HardDrive, RefreshCw, ShieldCheck, Zap } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useVersionContext } from '@/features/bible/presentation/context/VersionManagerContext';
-import { styles } from '@/features/bible/presentation/version-manager/styles';
-import { redownloadVersion } from '@/features/bible/data/bible.repository';
-import { doc, getDoc } from 'firebase/firestore';
-import { getActiveDb } from '@/firebase';
+import { saveVersion, redownloadVersion } from "@/features/bible/data/bible.repository";
+import { bibleDataService } from "@/features/bible/data/BibleDataService";
+import { BounceCard } from "@/components/ui/BounceCard";
+import { LinearGradient } from "expo-linear-gradient";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import {
+  CheckCircle,
+  ChevronLeft,
+  CloudDownload,
+  Globe2,
+  HardDrive,
+  RefreshCw,
+} from "lucide-react-native";
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useVersionContext } from "@/features/bible/presentation/context/VersionManagerContext";
+import { doc, getDoc } from "firebase/firestore";
+import { getActiveDb } from "@/firebase";
 
 export default function VersionDetailScreen() {
   const router = useRouter();
   const { bibleStr } = useLocalSearchParams();
   const bible = bibleStr ? JSON.parse(bibleStr as string) : null;
-  const { savedVersions, refreshSavedVersions, publishers } = useVersionContext();
+  const { savedVersions, refreshSavedVersions, publishers, handleSelectVersion } = useVersionContext();
   const [isDownloading, setIsDownloading] = useState(false);
-  const [updateInfo, setUpdateInfo] = useState<{ hasUpdate: boolean; remoteVersion: number } | null>(null);
+  const [updateInfo, setUpdateInfo] = useState<{
+    hasUpdate: boolean;
+    remoteVersion: number;
+  } | null>(null);
+  const [fullBibleDetails, setFullBibleDetails] = useState<any>(null);
 
   const localVersion: number = bible?._localContentVersion ?? 0;
 
   useEffect(() => {
     if (!bible) return;
     const id = String(bible.id);
-    getDoc(doc(getActiveDb(), 'bibleVersions', id))
+    getDoc(doc(getActiveDb(), "bibleVersions", id))
       .then((snap) => {
         if (snap.exists()) {
-          const remoteVersion: number = snap.data().contentVersion ?? 1;
-          setUpdateInfo({ hasUpdate: remoteVersion > localVersion, remoteVersion });
+          const data = snap.data();
+          setFullBibleDetails(data);
+          const remoteVersion: number = data.contentVersion ?? 1;
+          setUpdateInfo({
+            hasUpdate: remoteVersion > localVersion,
+            remoteVersion,
+          });
         }
       })
       .catch(() => {});
   }, [bible?.id]);
 
   if (!bible) return null;
+  const displayBible = fullBibleDetails || bible;
 
-  const isDownloaded = savedVersions.map((v: any) => String(v.id)).includes(String(bible.id));
-  const abbr = String(bible.abbreviation || bible.localized_abbreviation || bible.id || '');
-  const publisherName = bible.publisher?.name || publishers[bible.organization_id] || (bible.organization_id ? 'Loading...' : 'Public Domain');
+  const isDownloaded = savedVersions
+    .map((v: any) => String(v.id))
+    .includes(String(bible.id));
+  const abbr = String(
+    displayBible.abbreviation || displayBible.localized_abbreviation || displayBible.id || ""
+  );
+  const publisherName =
+    displayBible.publisher?.name ||
+    publishers[displayBible.organization_id] ||
+    (displayBible.organization_id ? "Loading..." : "Public Domain");
 
-  const sizeBytes: number | undefined = bible.sizeBytes;
-  let sizeLabel = '';
+  const sizeBytes: number | undefined =
+    displayBible.sizeBytes || displayBible.size || displayBible.offline?.size;
+  let sizeLabel = "";
   if (sizeBytes) {
     const mb = sizeBytes / (1024 * 1024);
-    sizeLabel = mb < 1 ? `~${Math.round(mb * 1024)} KB` : `~${mb.toFixed(1)} MB`;
+    sizeLabel = mb < 1 ? `~${Math.round(mb * 1024)} KB` : `${mb.toFixed(1)} MB`;
   } else {
-    // Estimate download size from chapterCount (~3.5 KB per chapter of Firestore JSON text)
-    const chapterCount: number = bible.chapterCount ?? bible.chapter_count ?? 0;
-    const estimatedBytes = chapterCount > 0 ? chapterCount * 3584 : 1189 * 3584; // fallback: full Bible
+    const chapterCount: number = displayBible.chapterCount ?? displayBible.chapter_count ?? 0;
+    const estimatedBytes = chapterCount > 0 ? chapterCount * 20480 : 1189 * 20480;
     const estimatedMB = estimatedBytes / (1024 * 1024);
-    sizeLabel = estimatedMB < 1
-      ? `~${Math.round(estimatedMB * 1024)} KB`
-      : `~${estimatedMB.toFixed(1)} MB`;
+    sizeLabel =
+      estimatedMB < 1
+        ? `~${Math.round(estimatedMB * 1024)} KB`
+        : `${estimatedMB.toFixed(1)} MB`;
   }
 
   const handleDownload = async () => {
@@ -63,156 +93,186 @@ export default function VersionDetailScreen() {
     setIsDownloading(true);
 
     if (isDownloaded && updateInfo?.hasUpdate) {
-      // Re-download to apply update
       const success = await redownloadVersion(bible.id, updateInfo.remoteVersion);
       if (success) {
         await refreshSavedVersions();
-        setUpdateInfo({ hasUpdate: false, remoteVersion: updateInfo.remoteVersion });
-        Alert.alert('Updated!', `Bible updated to version ${updateInfo.remoteVersion}.`);
+        setUpdateInfo({
+          hasUpdate: false,
+          remoteVersion: updateInfo.remoteVersion,
+        });
+        Alert.alert("Updated!", `Bible updated to version ${updateInfo.remoteVersion}.`);
       } else {
-        Alert.alert('Error', 'Failed to update. Please try again.');
+        Alert.alert("Error", "Failed to update. Please try again.");
       }
     } else {
       const success = await bibleDataService.downloadVersion(bible.id);
       if (success) {
         await saveVersion(bible);
         await refreshSavedVersions();
-        Alert.alert('Success', 'Bible downloaded successfully!');
-        router.back();
+        Alert.alert("Success", "Bible downloaded successfully!");
       } else {
-        Alert.alert('Error', 'Failed to start download. Please try again.');
+        Alert.alert("Error", "Failed to start download. Please try again.");
       }
     }
 
     setIsDownloading(false);
   };
 
+  const copyrightText =
+    displayBible.copyright?.long?.text ||
+    displayBible.copyright?.long ||
+    displayBible.copyright?.longText ||
+    displayBible.copyright_long?.text ||
+    displayBible.copyright_long ||
+    displayBible.description ||
+    displayBible.localized_description ||
+    "No detailed description is available for this version yet. This translation provides a faithful rendering of the original texts.";
+
+  const languageName = displayBible.language?.name || displayBible.language?.name_local || "English";
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FAFAFA', justifyContent: 'space-between' }} edges={['top', 'bottom']}>
-      <View style={[styles.modalHeader, { backgroundColor: '#FAFAFA', borderBottomWidth: 0, zIndex: 10 }]}>
-        <View style={styles.headerLeftContainer}>
-          <BounceCard bounceScale={0.85} onPress={() => router.back()} style={{ padding: 8, backgroundColor: '#fff', borderRadius: 20, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, shadowOffset: { width: 0, height: 2 }, elevation: 2 }}>
-            <ChevronLeft size={24} color="#1a1a1a" />
-          </BounceCard>
-        </View>
-        <Text style={[styles.modalTitle, { opacity: 0 }]}>Version Info</Text>
-        <View style={styles.headerRightContainer} />
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#FAFAFA" }} edges={["top", "bottom"]}>
+      {/* Top Navigation */}
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12 }}>
+        <BounceCard
+          bounceScale={0.85}
+          onPress={() => router.back()}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            backgroundColor: "#fff",
+            justifyContent: "center",
+            alignItems: "center",
+            shadowColor: "#000",
+            shadowOpacity: 0.05,
+            shadowRadius: 10,
+            shadowOffset: { width: 0, height: 2 },
+            elevation: 2,
+          }}
+        >
+          <ChevronLeft size={24} color="#1a1a1a" />
+        </BounceCard>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 140 }}>
-        
-        {/* Modern Hero Section */}
-        <View style={{ alignItems: 'center', paddingHorizontal: 24, paddingTop: 10, paddingBottom: 32 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
+        {/* Hero Section */}
+        <View style={{ alignItems: "center", paddingHorizontal: 24, marginTop: 16 }}>
           <LinearGradient
-            colors={['#FF6596', '#FF8FB0']}
+            colors={["#FF6596", "#FF8FB0"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={{ width: 100, height: 100, borderRadius: 32, alignItems: 'center', justifyContent: 'center', marginBottom: 24, shadowColor: '#FF6596', shadowOpacity: 0.3, shadowRadius: 20, shadowOffset: { width: 0, height: 10 }, elevation: 10, transform: [{ rotate: '-5deg' }] }}
+            style={{
+              width: 140,
+              height: 140,
+              borderRadius: 16,
+              justifyContent: "center",
+              alignItems: "center",
+              marginBottom: 24,
+              shadowColor: "#FF6596",
+              shadowOpacity: 0.3,
+              shadowRadius: 20,
+              shadowOffset: { width: 0, height: 10 },
+              elevation: 10,
+            }}
           >
-            <Text style={{ fontSize: 26, fontWeight: '900', color: '#fff', transform: [{ rotate: '5deg' }] }}>{abbr}</Text>
+            <Text style={{ fontSize: 40, fontWeight: "bold", color: "#FFF", textAlign: "center" }}>
+              {abbr}
+            </Text>
           </LinearGradient>
-          
-          <Text style={{ fontSize: 28, fontWeight: '900', color: '#1a1a1a', textAlign: 'center', marginBottom: 16, letterSpacing: -0.5, lineHeight: 36 }}>
-            {bible.title || bible.localized_title}
+
+          <Text style={{ fontSize: 24, fontWeight: "bold", color: "#1a1a1a", textAlign: "center", marginBottom: 8 }}>
+            {displayBible.title || displayBible.localized_title}
           </Text>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 101, 150, 0.08)', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 12, gap: 6 }}>
-              <ShieldCheck size={16} color="#FF6596" />
-              <Text style={{ fontSize: 13, color: '#FF6596', fontWeight: '700' }}>{publisherName}</Text>
-            </View>
+          <Text style={{ fontSize: 14, color: "#666", textAlign: "center", marginBottom: 12, fontWeight: "500" }}>
+            {publisherName} • {languageName}
+          </Text>
 
-            {bible.language && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0F0F0', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 12, gap: 6 }}>
-                <Globe2 size={16} color="#666" />
-                <Text style={{ fontSize: 13, color: '#666', fontWeight: '600' }}>{bible.language.name || bible.language.name_local}</Text>
-              </View>
-            )}
-
-            {!isDownloaded && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#EEF2FF', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 12, gap: 6 }}>
-                <HardDrive size={14} color="#6366F1" />
-                <Text style={{ fontSize: 13, color: '#6366F1', fontWeight: '700' }}>{sizeLabel}</Text>
-              </View>
-            )}
-
-            {isDownloaded && updateInfo?.hasUpdate && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FEF3C7', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 12, gap: 6 }}>
-                <Zap size={14} color="#D97706" />
-                <Text style={{ fontSize: 13, color: '#D97706', fontWeight: '800' }}>v{updateInfo.remoteVersion} Available</Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {/* Content Section */}
-        <View style={{ paddingHorizontal: 24 }}>
-          <View style={{ backgroundColor: '#fff', borderRadius: 24, padding: 24, shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 15, shadowOffset: { width: 0, height: 5 }, elevation: 3 }}>
-            <Text style={{ fontSize: 18, fontWeight: '800', color: '#1a1a1a', marginBottom: 16, letterSpacing: -0.3 }}>About this Version</Text>
-            <Text style={{ fontSize: 16, lineHeight: 28, color: '#555', letterSpacing: 0.2 }}>
-              {bible.description || bible.localized_description || 'No detailed description is available for this version yet. This translation provides a faithful rendering of the original texts.'}
-            </Text>
-          </View>
-        </View>
-
-      </ScrollView>
-
-        {/* Floating Action Bar */}
-        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }}>
-          <LinearGradient
-            colors={['rgba(250,250,250,0)', 'rgba(250,250,250,0.9)', '#FAFAFA']}
-            style={{ paddingHorizontal: 24, paddingBottom: 32, paddingTop: 40 }}
-          >
-            {!isDownloaded && !isDownloading && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginBottom: 10 }}>
-                <HardDrive size={12} color="#999" />
-                <Text style={{ fontSize: 12, color: '#999', fontWeight: '500' }}>
-                  Estimated download: {sizeLabel}
-                </Text>
-              </View>
-            )}
-
-            {isDownloaded && updateInfo?.hasUpdate && !isDownloading && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginBottom: 10 }}>
-                <RefreshCw size={12} color="#D97706" />
-                <Text style={{ fontSize: 12, color: '#D97706', fontWeight: '600' }}>
-                  Your local copy is outdated — tap to update
-                </Text>
-              </View>
-            )}
-
-            <TouchableOpacity 
-              style={[{ flexDirection: 'row', backgroundColor: '#1a1a1a', paddingVertical: 20, borderRadius: 20, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 15, shadowOffset: { width: 0, height: 8 }, elevation: 5 },
-                (isDownloaded && !updateInfo?.hasUpdate || isDownloading) && { backgroundColor: '#F0F0F0', shadowOpacity: 0, elevation: 0, opacity: isDownloaded && !updateInfo?.hasUpdate ? 0.8 : 1 },
-                isDownloaded && updateInfo?.hasUpdate && { backgroundColor: '#D97706' },
-              ]}
-              onPress={handleDownload}
-              disabled={(isDownloaded && !updateInfo?.hasUpdate) || isDownloading}
-              activeOpacity={0.8}
-            >
-              {isDownloading ? (
-                <ActivityIndicator color="#999" style={{ marginRight: 10 }} />
-              ) : isDownloaded && updateInfo?.hasUpdate ? (
-                <RefreshCw size={22} color="#fff" style={{ marginRight: 10 }} />
-              ) : isDownloaded ? (
-                <CheckCircle size={22} color="#4ADE80" style={{ marginRight: 10 }} />
-              ) : (
-                <CloudDownload size={22} color="#fff" style={{ marginRight: 10 }} />
-              )}
-              <Text style={[{ color: '#fff', fontSize: 18, fontWeight: '800', letterSpacing: 0.5 },
-                (isDownloaded && !updateInfo?.hasUpdate || isDownloading) && { color: '#999' },
-              ]}>
-                {isDownloading
-                  ? (updateInfo?.hasUpdate ? 'Updating...' : 'Downloading...')
-                  : isDownloaded && updateInfo?.hasUpdate
-                  ? `Update to v${updateInfo.remoteVersion}`
-                  : isDownloaded
-                  ? 'Downloaded'
-                  : 'Download to Device'}
+          {!isDownloaded && !isDownloading && (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 24 }}>
+              <HardDrive size={14} color="#999" />
+              <Text style={{ fontSize: 13, color: "#999", fontWeight: "500" }}>
+                {sizeLabel}
               </Text>
-            </TouchableOpacity>
-          </LinearGradient>
+            </View>
+          )}
         </View>
+
+        {/* Action Buttons */}
+        <View style={{ paddingHorizontal: 24, marginBottom: 32, gap: 12 }}>
+          <TouchableOpacity
+            style={{
+              flexDirection: "row",
+              height: 52,
+              borderRadius: 26,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: "#1a1a1a",
+              shadowColor: "#000",
+              shadowOpacity: 0.1,
+              shadowRadius: 10,
+              shadowOffset: { width: 0, height: 4 },
+              elevation: 4,
+              opacity: isDownloading ? 0.8 : 1,
+            }}
+            onPress={() => {
+              if (isDownloaded && !updateInfo?.hasUpdate) {
+                handleSelectVersion(bible.id);
+                if (router.dismissAll) {
+                  router.dismissAll();
+                } else {
+                  router.navigate('/(tabs)/bible');
+                }
+              } else {
+                handleDownload();
+              }
+            }}
+            disabled={isDownloading}
+          >
+            {isDownloading ? (
+              <ActivityIndicator color="#FFF" style={{ marginRight: 8 }} />
+            ) : isDownloaded && updateInfo?.hasUpdate ? (
+              <RefreshCw size={20} color="#FFF" style={{ marginRight: 8 }} />
+            ) : isDownloaded ? (
+              null
+            ) : (
+              <CloudDownload size={20} color="#FFF" style={{ marginRight: 8 }} />
+            )}
+            <Text style={{ color: "#FFF", fontSize: 16, fontWeight: "700" }}>
+              {isDownloading
+                ? updateInfo?.hasUpdate
+                  ? "Updating..."
+                  : "Downloading..."
+                : isDownloaded && updateInfo?.hasUpdate
+                ? "Update"
+                : isDownloaded
+                ? "Read in Bible"
+                : "Download"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Details Section */}
+        <View style={{ paddingHorizontal: 24 }}>
+          <Text style={{ fontSize: 18, fontWeight: "800", color: "#1a1a1a", marginBottom: 16 }}>
+            Details
+          </Text>
+
+          {displayBible.publisher?.url && (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 16 }}>
+              <Globe2 size={20} color="#666" />
+              <Text style={{ fontSize: 15, color: "#666", fontWeight: "500" }}>
+                {displayBible.publisher.url}
+              </Text>
+            </View>
+          )}
+
+          <Text style={{ fontSize: 14, color: "#555", lineHeight: 22 }}>
+            {copyrightText}
+          </Text>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }

@@ -2,7 +2,7 @@
 import { bibleDataService } from '@/features/bible/data/BibleDataService';
 import { BounceCard } from '@/components/ui/BounceCard';
 import { useRouter } from 'expo-router';
-import { ChevronLeft, ChevronRight, Cloud, Globe, Search } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Cloud, Globe, Search, RefreshCw } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useVersionContext } from '@/features/bible/presentation/context/VersionManagerContext';
@@ -23,7 +23,7 @@ export default function DiscoverVersionsScreen() {
     if (selectedLanguage) {
       const loadBibles = async () => {
         setBiblesLoading(true);
-        const fetchedBibles = await bibleDataService.getVersions(selectedLanguage.tag || selectedLanguage.iso6393 || selectedLanguage.id);
+        const fetchedBibles = await bibleDataService.getVersions(selectedLanguage.tag || selectedLanguage.id);
         setBibles(fetchedBibles);
         setBiblesLoading(false);
       };
@@ -77,7 +77,7 @@ export default function DiscoverVersionsScreen() {
           />
         </View>
 
-        <TouchableOpacity pointerEvents="auto" onPress={() => router.push('/version-manager/language')} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, marginHorizontal: 16, marginBottom: 16, backgroundColor: 'rgba(255,255,255,0.5)', borderRadius: 14 }} activeOpacity={0.7}>
+        <TouchableOpacity onPress={() => router.push('/version-manager/language')} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, marginHorizontal: 16, marginBottom: 16, backgroundColor: 'rgba(255,255,255,0.5)', borderRadius: 14 }} activeOpacity={0.7}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Globe size={18} color="#1a1a1a" />
             <Text style={{ fontSize: 15, fontWeight: '600', color: '#1a1a1a' }}>{selectedLanguage.name}</Text>
@@ -108,6 +108,17 @@ export default function DiscoverVersionsScreen() {
               displayBibles.map(bible => {
                 const abbr = String(bible.abbreviation || bible.localized_abbreviation || bible.id || '').replace(/(\d{2,})$/, '\n$1');
                 
+                const isDownloaded = downloadedIds.includes(String(bible.id));
+                let hasUpdate = false;
+                if (isDownloaded) {
+                  const localBible = savedVersions.find((v: any) => String(v.id) === String(bible.id));
+                  const localVersion = localBible?._localContentVersion ?? 0;
+                  const remoteVersion = bible.contentVersion ?? 1;
+                  if (remoteVersion > localVersion) {
+                    hasUpdate = true;
+                  }
+                }
+
                 return (
                   <TouchableOpacity
                     key={bible.id}
@@ -131,7 +142,9 @@ export default function DiscoverVersionsScreen() {
                     </View>
                     
                     <View style={{ marginLeft: 12 }}>
-                      {downloadedIds.includes(String(bible.id)) ? (
+                      {hasUpdate ? (
+                        <RefreshCw size={20} color="#D97706" />
+                      ) : isDownloaded ? (
                         <Cloud size={22} color="#ccc" />
                       ) : (
                         <ChevronRight size={20} color="#ccc" />

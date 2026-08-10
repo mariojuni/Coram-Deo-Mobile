@@ -8,7 +8,8 @@ initializeApp({
   credential: applicationDefault()
 });
 
-const db = getFirestore();
+// ⚠️ IMPORTANT: Production uses the "coramdeo" named database, NOT the (default) database
+const db = getFirestore(undefined, 'coramdeo');
 
 async function migrateGivingRecords() {
   console.log('--- Migrating Giving Records ---');

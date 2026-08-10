@@ -27,7 +27,7 @@ export const fetchLanguages = async () => {
   ];
 };
 
-export const fetchVerseOfTheDay = async (translationId = '111') => {
+export const fetchVerseOfTheDay = async (translationId = '111'): Promise<any> => {
   const now = new Date();
   const start = new Date(now.getFullYear(), 0, 0);
   const dayOfYear = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
@@ -98,13 +98,13 @@ export const fetchBiblesByLanguage = async (languageTag: string) => {
 
   if (languageTag.toLowerCase().startsWith('en')) {
     return [
-      { id: 111, abbreviation: 'NIV', localized_abbreviation: 'NIV', title: 'New International Version' },
-      { id: 59, abbreviation: 'ESV', localized_abbreviation: 'ESV', title: 'English Standard Version' },
-      { id: 1, abbreviation: 'KJV', localized_abbreviation: 'KJV', title: 'King James Version' },
-      { id: 114, abbreviation: 'NKJV', localized_abbreviation: 'NKJV', title: 'New King James Version' },
-      { id: 116, abbreviation: 'NLT', localized_abbreviation: 'NLT', title: 'New Living Translation' },
-      { id: 2692, abbreviation: 'NASB2020', localized_abbreviation: 'NASB', title: 'New American Standard Bible 2020' },
-      { id: 97, abbreviation: 'MSG', localized_abbreviation: 'MSG', title: 'The Message' },
+      { id: 111, abbreviation: 'NIV', localized_abbreviation: 'NIV', title: 'New International Version', contentVersion: 1 },
+      { id: 59, abbreviation: 'ESV', localized_abbreviation: 'ESV', title: 'English Standard Version', contentVersion: 1 },
+      { id: 1, abbreviation: 'KJV', localized_abbreviation: 'KJV', title: 'King James Version', contentVersion: 1 },
+      { id: 114, abbreviation: 'NKJV', localized_abbreviation: 'NKJV', title: 'New King James Version', contentVersion: 1 },
+      { id: 116, abbreviation: 'NLT', localized_abbreviation: 'NLT', title: 'New Living Translation', contentVersion: 1 },
+      { id: 2692, abbreviation: 'NASB2020', localized_abbreviation: 'NASB', title: 'New American Standard Bible 2020', contentVersion: 1 },
+      { id: 97, abbreviation: 'MSG', localized_abbreviation: 'MSG', title: 'The Message', contentVersion: 1 },
     ];
   }
   return [];
@@ -279,6 +279,17 @@ export const getSavedVersions = async () => {
     if (parsed.length > 0) return parsed;
   }
 
+  let remoteContentVersion = 1;
+  try {
+    const docRef = doc(getActiveDb(), 'bibleVersions', '59');
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      remoteContentVersion = docSnap.data().contentVersion || 1;
+    }
+  } catch (e) {
+    // Ignore if offline
+  }
+
   const defaultVersion = {
     id: 59,
     abbreviation: 'ESV',
@@ -286,6 +297,8 @@ export const getSavedVersions = async () => {
     localized_abbreviation: 'ESV',
     localized_title: 'English Standard Version',
     title: 'English Standard Version',
+    _localContentVersion: remoteContentVersion,
+    _downloadedAt: Date.now(),
   };
 
   await AsyncStorage.setItem('my_bible_versions', JSON.stringify([defaultVersion]));

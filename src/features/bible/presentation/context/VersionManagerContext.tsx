@@ -8,6 +8,7 @@ import {
     saveVersion,
 } from '@/features/bible/data/bible.repository';
 import { getBibleIndex } from '@/features/bible/data/offlineDb.repository';
+import { bibleDataService } from '@/features/bible/data/BibleDataService';
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 type SavedVersion = {
@@ -81,12 +82,14 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
           const englishBibles = await fetchBiblesByLanguage('eng');
           const esvMeta = englishBibles?.find((b: any) => b.id === DEFAULT_VERSION_ID);
           if (esvMeta) {
-            await saveVersion(esvMeta);
+            // Set the local content version equal to the remote content version initially so it doesn't immediately prompt for an update
+            const esvToSave = { ...esvMeta, _localContentVersion: esvMeta.contentVersion || 1, _downloadedAt: Date.now() };
+            await saveVersion(esvToSave);
             await refreshSavedVersions();
           }
         }
         // Kick off background download silently
-        downloadBibleOffline(DEFAULT_VERSION_ID).catch(() => {});
+        bibleDataService.downloadVersion(String(DEFAULT_VERSION_ID)).catch(() => {});
       }
     };
     init();

@@ -1,9 +1,5 @@
 const fetch = require('node-fetch'); // you may need to 'npm install node-fetch@2' if running this on older Node
-const admin = require('firebase-admin');
-
-// 1. INITIALIZE FIREBASE ADMIN SDK
-// Make sure to download your serviceAccountKey.json from Firebase Console
-// and place it in the same directory as this script.
+const { getFirestore } = require('firebase-admin/firestore');
 try {
   const serviceAccount = require('./serviceAccountKey.json');
   admin.initializeApp({
@@ -14,7 +10,8 @@ try {
   process.exit(1);
 }
 
-const db = admin.firestore();
+// ⚠️ IMPORTANT: Production uses the "coramdeo" named database, NOT the (default) database
+const db = getFirestore(admin.app(), 'coramdeo');
 
 const API_BASE = 'https://api.youversion.com/v1';
 const API_KEY = 'RAhHurUzL1pk5kt9LwrGIaz0AdnX0obcIH6NNIayuvGogR7f';

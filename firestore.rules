@@ -286,7 +286,7 @@ service cloud.firestore {
 
     // ── Global Bible Library ─────────────────────────────────────────────────
     match /bibleLanguages/{languageTag} {
-      allow read: if isSignedIn();
+      allow read: if true; // Bible content is public
       allow write: if false; // Managed by backend functions
     }
 
@@ -295,15 +295,15 @@ service cloud.firestore {
     }
 
     match /bibleVersions/{versionId} {
-      allow read: if isSignedIn() && (isSuperAdmin() || (resource != null && resource.data.status == 'published'));
+      allow read: if true; // Bible content is public
       allow write: if isSuperAdmin();
       
       match /books/{bookId} {
-        allow read: if isSignedIn();
+        allow read: if true; // Bible content is public
         allow write: if false; // Managed by backend functions
 
         match /chapters/{chapterNumber} {
-          allow read: if isSignedIn();
+          allow read: if true; // Bible content is public
           allow write: if false; // Managed by backend functions
         }
       }
@@ -311,10 +311,10 @@ service cloud.firestore {
 
     // Legacy Bibles fallback
     match /bibles/{translationId} {
-      allow read: if isSignedIn();
+      allow read: if true; // Bible content is public
       
       match /chapters/{chapterId} {
-        allow read: if isSignedIn();
+        allow read: if true; // Bible content is public
       }
     }
 

@@ -24,6 +24,8 @@ export interface BibleVersionSummary {
     audio: boolean;
   };
   sizeBytes?: number;
+  sourceStoragePath?: string;
+  contentVersion?: number;
 }
 
 export interface BibleVersionDetails extends BibleVersionSummary {
@@ -51,12 +53,21 @@ export interface BibleBook {
   chapters?: any[]; // Some endpoints may embed chapters
 }
 
+export interface BibleCrossReferenceItem {
+  text: string;
+  refs?: {
+    id: string;
+    text: string;
+  }[];
+}
+
 export interface BibleVerse {
   id: string;
   verseNumber: string;
   heading?: string;
+  subheading?: string;
   content: string;
-  notes?: BibleNote[];
+  crossReferences?: BibleCrossReferenceItem[];
 }
 
 export interface BibleNote {

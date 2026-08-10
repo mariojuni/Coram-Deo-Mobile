@@ -22,23 +22,27 @@ interface BibleReaderProps {
   scrollY?: Animated.Value;
 }
 
-interface VerseNote {
-  index: number;
-  type: string;
-  raw: string;
+interface VerseCrossReference {
+  text: string;
+  refs?: {
+    id: string;
+    text: string;
+  }[];
 }
 
 interface Verse {
   id: string;
   verseNumber: string;
   heading?: string;
+  subheading?: string;
   content: string;
-  notes?: VerseNote[];
+  crossReferences?: VerseCrossReference[];
+  notes?: any[];
 }
 
 // Sanitize text to remove problematic Unicode characters and HTML entities
-const sanitizeVerseText = (text: string): string => {
-  if (!text) return '';
+const sanitizeVerseText = (text: any): string => {
+  if (!text || typeof text !== 'string') return '';
   
   return text
     // Remove zero-width characters and other invisible Unicode
@@ -47,8 +51,7 @@ const sanitizeVerseText = (text: string): string => {
     .replace(/<[^>]*>/g, '')
     // Strip # section/paragraph markers from source data.
     // # never appears as legitimate Bible text, so remove ALL occurrences
-    // regardless of what precedes them (e.g. after a closing quote mark ").
-    .replace(/#+\s*/g, '')
+    .replace(/#/g, '')
     // Decode common HTML entities
     .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')
@@ -218,7 +221,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
     })
   ).current;
 
-  const renderVerseTextWithLetters = (text: string | undefined, notes: VerseNote[] | undefined) => {
+  const renderVerseTextWithLetters = (text: string | undefined, crossReferences: VerseCrossReference[] | undefined) => {
     if (!text) return null;
     const parts = sanitizeVerseText(text).split(/(\{\{note:\d+\}\})/g);
     return parts.map((part, index) => {
@@ -239,9 +242,15 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FF6596" />
+        <ActivityIndicator size="large" color="#4A90E2" />
+        <Text style={styles.loadingText}>Loading chapter...</Text>
       </View>
     );
+  }
+
+  console.log("BibleReader render, verses length:", chapterData.length);
+  if (chapterData.length > 0) {
+    console.log("First verse raw data:", JSON.stringify(chapterData[0], null, 2));
   }
 
   return (
@@ -278,7 +287,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
 
               const renderVerseContent = (verse: Verse, text: string, hasHighlight: boolean, highlightColorValue: string, isSelected: boolean) => {
                 const cleanText = text.replace(/\{\{note:\d+\}\}/g, '');
-                const hasNotes = verse.notes && verse.notes.length > 0;
+                const hasNotes = (verse.crossReferences && verse.crossReferences.length > 0) || (verse.notes && verse.notes.length > 0);
                 
                 return (
                   <Text
@@ -326,12 +335,22 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
                 renderVerseContent(verse, sanitizedContent, hasHighlight, highlightColorValue, isSelected),
               ];
 
-              if (verse.heading) {
-                console.log(`Rendering heading for verse ${verse.verseNumber}:`, verse.heading);
+              if (verse.heading || verse.subheading) {
+                console.log(`Rendering heading/subheading for verse ${verse.verseNumber}`);
                 nodes.unshift(
-                  <Text key={`${verse.id}-heading`} style={styles.verseHeading}>
+                  <Text key={`${verse.id}-heading-container`}>
                     {isFirstVerse ? '' : '\n\n'}
-                    {verse.heading}
+                    {verse.heading && (
+                      <Text style={styles.verseHeading}>
+                        {verse.heading.replace(/#/g, '')}
+                      </Text>
+                    )}
+                    {verse.heading && verse.subheading && <Text>{'\n'}</Text>}
+                    {verse.subheading && (
+                      <Text style={styles.verseSubheading}>
+                        {verse.subheading.replace(/#/g, '')}
+                      </Text>
+                    )}
                     {'\n'}
                   </Text>
                 );
@@ -414,24 +433,27 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
             {/* Verse preview card */}
             <View style={styles.noteVerseCard}>
               <Text style={styles.noteVerseText}>
-                {renderVerseTextWithLetters(activeVerse?.content, activeVerse?.notes)}
+                {renderVerseTextWithLetters(activeVerse?.content, activeVerse?.crossReferences)}
               </Text>
             </View>
 
             {/* Notes list card */}
             <View style={styles.noteListCard}>
               <Text style={styles.noteListSectionLabel}>Notes & Cross References</Text>
-              {activeVerse?.notes?.map((n) => {
-                const letter = String.fromCharCode(97 + (n.index % 26));
-                return (
-                  <View key={n.index} style={styles.noteRow}>
-                    <View style={styles.noteLetterBadge}>
-                      <Text style={styles.noteLetter}>{letter}</Text>
-                    </View>
-                    <Text style={styles.noteRaw}>{n.raw}</Text>
-                  </View>
-                );
-              })}
+              {Array.isArray(activeVerse?.crossReferences || activeVerse?.notes) 
+                ? (activeVerse?.crossReferences || activeVerse?.notes)?.map((n, index) => {
+                    const letter = String.fromCharCode(97 + (index % 26));
+                    const noteContent = typeof n === 'string' ? n : (n?.text || (typeof n?.raw === 'object' ? n.raw.text : n?.raw) || '');
+                    return (
+                      <View key={index} style={styles.noteRow}>
+                        <View style={styles.noteLetterBadge}>
+                          <Text style={styles.noteLetter}>{letter}</Text>
+                        </View>
+                        <Text style={styles.noteRaw}>{sanitizeVerseText(noteContent)}</Text>
+                      </View>
+                    );
+                  })
+                : null}
             </View>
           </ScrollView>
         </View>
@@ -442,6 +464,12 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
 
 const styles = StyleSheet.create({  container: { flex: 1, backgroundColor: '#fafafa' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#666',
+    fontFamily: 'Inter',
+  },
   scrollView: { flex: 1 },
   scrollContent: {
     paddingHorizontal: 24,
@@ -459,6 +487,13 @@ const styles = StyleSheet.create({  container: { flex: 1, backgroundColor: '#faf
     fontWeight: '700',
     color: '#1a1a1a',
     fontFamily: 'Inter',
+  },
+  verseSubheading: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#555555',
+    fontFamily: 'Inter',
+    marginTop: 4,
   },
   verseSelected: {
     // No backgroundColor on tap — background only appears once a highlight color is chosen.
@@ -594,69 +629,60 @@ const styles = StyleSheet.create({  container: { flex: 1, backgroundColor: '#faf
     gap: 12,
   },
   noteVerseCard: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
-    marginBottom: 12,
-    boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.03)',
+    paddingHorizontal: 8,
+    paddingVertical: 12,
+    marginBottom: 24,
+    borderLeftWidth: 3,
+    borderLeftColor: '#FF6596',
   },
   noteVerseText: {
-    fontSize: 15,
-    lineHeight: 24,
-    color: '#1F2937',
+    fontSize: 16,
+    lineHeight: 32,
+    color: '#374151',
     fontFamily: 'Inter',
+    fontStyle: 'italic',
   },
   inlineLetterDark: {
     fontSize: 10,
-    lineHeight: 14,
     color: '#9CA3AF',
     fontWeight: '700',
   },
   noteListCard: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
-    boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.03)',
+    paddingHorizontal: 8,
+    paddingBottom: 24,
   },
   noteListSectionLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: '#9CA3AF',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 14,
+    letterSpacing: 1,
+    marginBottom: 16,
   },
   noteRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
+    gap: 8,
     paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
   noteLetterBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 101, 150, 0.10)',
+    width: 20,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 1,
+    justifyContent: 'flex-start',
+    marginTop: 2,
     flexShrink: 0,
   },
   noteLetter: {
-    fontSize: 11,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '700',
     color: '#FF6596',
   },
   noteRaw: {
     flex: 1,
-    fontSize: 14,
-    lineHeight: 21,
+    fontSize: 15,
+    lineHeight: 24,
     color: '#4B5563',
     fontFamily: 'Inter',
   },
