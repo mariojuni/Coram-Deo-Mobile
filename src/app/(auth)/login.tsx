@@ -94,7 +94,10 @@ export default function LoginScreen() {
     try {
       await loginWithGoogle();
     } catch (error: any) {
-      setErrorMsg(error.message);
+      const errorMessage = error?.message?.toLowerCase() || '';
+      if (!errorMessage.includes('no id token found')) {
+        setErrorMsg(error.message);
+      }
     } finally {
       setIsLoading(false);
     }

@@ -118,22 +118,26 @@ export function useProfileDashboardData() {
 
         if (memberId || userId) {
           const qRef = collection(getActiveDb(), 'ministryMembers');
-          const qConstraints = [where('churchId', '==', churchId), where('status', '==', 'active')];
-          
           let docsSnap: any[] = [];
           if (memberId) {
-            const q1 = query(qRef, ...qConstraints, where('memberId', '==', memberId));
+            const q1 = query(qRef, where('memberId', '==', memberId));
             const s1 = await getDocs(q1);
             docsSnap.push(...s1.docs);
           }
           if (userId) {
-            const q2 = query(qRef, ...qConstraints, where('userId', '==', userId));
+            const q2 = query(qRef, where('userId', '==', userId));
             const s2 = await getDocs(q2);
             docsSnap.push(...s2.docs);
           }
 
           docsSnap.forEach((d) => {
             const data = d.data();
+            
+            // Local filter to bypass composite index requirement
+            if (data.churchId !== churchId || data.status !== 'active') {
+              return;
+            }
+
             const minId = data.ministryId;
             if (minId && !memSet.has(minId)) {
               memSet.add(minId);
@@ -172,6 +176,7 @@ export function useProfileDashboardData() {
           setMinistriesLoading(false);
         }
       } catch (err) {
+        console.error('Error fetching user ministries:', err);
         if (isMounted) setMinistriesLoading(false);
       }
     };
