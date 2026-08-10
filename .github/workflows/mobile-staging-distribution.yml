@@ -62,6 +62,13 @@ jobs:
           mkdir -p fastlane
           echo "$SERVICE_ACCOUNT" > fastlane/service-account.json
 
+      - name: Inject google-services.json (Staging)
+        env:
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON_STAGING }}
+        run: |
+          mkdir -p credentials/staging
+          echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > credentials/staging/google-services.json
+
       - name: Run Fastlane Android
         env:
           FIREBASE_ANDROID_APP_ID_STAGING: ${{ secrets.FIREBASE_ANDROID_APP_ID_STAGING }}
@@ -109,7 +116,14 @@ jobs:
         run: |
           mkdir -p fastlane
           echo "$SERVICE_ACCOUNT" > fastlane/service-account.json
-        
+
+      - name: Inject GoogleService-Info.plist (Staging)
+        env:
+          GOOGLE_SERVICE_INFO_PLIST_BASE64: ${{ secrets.IOS_GOOGLE_SERVICE_INFO_PLIST_STAGING }}
+        run: |
+          mkdir -p credentials/staging
+          echo "$GOOGLE_SERVICE_INFO_PLIST_BASE64" | base64 --decode > credentials/staging/GoogleService-Info.plist
+
       - name: Run Fastlane iOS
         env:
           FIREBASE_IOS_APP_ID_STAGING: ${{ secrets.FIREBASE_IOS_APP_ID_STAGING }}
