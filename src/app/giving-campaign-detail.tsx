@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Animated } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCachedImage } from '@/features/files/presentation/hooks/useCachedImage';
 import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 import { BounceCard } from '@/components/ui/BounceCard';
+import GlobalShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
 
 const ShimmerSkeleton = ({ width, height, style, borderRadius = 8 }: any) => {
   const animValue = useRef(new Animated.Value(0)).current;
@@ -38,6 +39,7 @@ export default function GivingCampaignDetailScreen() {
   const insets = useSafeAreaInsets();
   const scrollY = useRef(new Animated.Value(0)).current;
   const isDebouncing = useRef(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const withDebounce = (callback: Function, delay: number = 1000) => {
     return (...args: any[]) => {
       if (isDebouncing.current) return;
@@ -165,7 +167,16 @@ export default function GivingCampaignDetailScreen() {
       >
         <Animated.View style={{ transform: [{ scale: coverScale }, { translateY: coverTranslateY }] }}>
           {cachedUri ? (
-            <Image source={{ uri: cachedUri }} style={styles.coverImage} />
+            <>
+              <Image 
+                source={{ uri: cachedUri }} 
+                style={[styles.coverImage, !imageLoaded && { position: 'absolute', opacity: 0 }]} 
+                onLoad={() => setImageLoaded(true)}
+              />
+              {!imageLoaded && (
+                <GlobalShimmerSkeleton width="100%" height={280} borderRadius={0} />
+              )}
+            </>
           ) : (
             <LinearGradient
               colors={['#FF6596', '#FF8AAB']}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { GivingCampaign } from '../../domain/giving.types';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -6,6 +6,7 @@ import { ChevronRight } from 'lucide-react-native';
 import { useCachedImage } from '../../../files/presentation/hooks/useCachedImage';
 import { SoftCard } from '@/components/ui/SoftCard';
 import { BounceCard } from '@/components/ui/BounceCard';
+import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
 
 interface CampaignCardProps {
   campaign: GivingCampaign;
@@ -14,6 +15,7 @@ interface CampaignCardProps {
 
 export function CampaignCard({ campaign, onPress }: CampaignCardProps) {
   const progress = Math.min((campaign.raisedAmount / campaign.goalAmount) * 100, 100);
+  const [imageLoaded, setImageLoaded] = useState(false);
   
   const { cachedUri } = useCachedImage(campaign.coverImageUrl, {
     id: campaign.id,
@@ -26,7 +28,17 @@ export function CampaignCard({ campaign, onPress }: CampaignCardProps) {
       <SoftCard innerStyle={styles.cardInner}>
       <View style={styles.imageContainer}>
         {cachedUri ? (
-          <Image source={{ uri: cachedUri }} style={styles.coverImage} resizeMode="cover" />
+          <>
+            <Image 
+              source={{ uri: cachedUri }} 
+              style={[styles.coverImage, !imageLoaded && { position: 'absolute', opacity: 0 }]} 
+              resizeMode="cover" 
+              onLoad={() => setImageLoaded(true)}
+            />
+            {!imageLoaded && (
+              <ShimmerSkeleton width="100%" height="100%" borderRadius={12} />
+            )}
+          </>
         ) : (
           <LinearGradient
             colors={['#FF6596', '#FF8AAB']}

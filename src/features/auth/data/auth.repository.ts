@@ -415,12 +415,12 @@ export const authRepository = {
     } catch (error: any) {
       console.warn("[Auth Repository] Error sending password reset email:", error);
       
-      // We intentionally do not throw 'getActiveAuth()/user-not-found' to prevent email enumeration.
+      // We intentionally do not throw 'auth/user-not-found' to prevent email enumeration.
       // We only throw generic network or internal errors.
       if (
-        error?.code === "getActiveAuth()/network-request-failed" ||
-        error?.code === "getActiveAuth()/internal-error" ||
-        error?.code === "getActiveAuth()/too-many-requests"
+        error?.code === "auth/network-request-failed" ||
+        error?.code === "auth/internal-error" ||
+        error?.code === "auth/too-many-requests"
       ) {
         throw new Error("We could not send the reset link right now. Please try again later.");
       }
@@ -462,13 +462,13 @@ export const authRepository = {
           payload.password
         );
       } catch (authErr: any) {
-        if (authErr?.code === "getActiveAuth()/email-already-in-use") {
+        if (authErr?.code === "auth/email-already-in-use") {
           throw new Error("An account with this email already exists. Please log in instead.");
         }
-        if (authErr?.code === "getActiveAuth()/weak-password") {
+        if (authErr?.code === "auth/weak-password") {
           throw new Error("Password should be at least 6 characters.");
         }
-        if (authErr?.code === "getActiveAuth()/password-does-not-meet-requirements") {
+        if (authErr?.code === "auth/password-does-not-meet-requirements") {
           let msg = "Password does not meet requirements. Please include numbers and a special character (e.g. !@#$).";
           if (authErr?.message) {
             const match = authErr.message.match(/\[(.*?)\]/);
@@ -478,7 +478,7 @@ export const authRepository = {
           }
           throw new Error(msg);
         }
-        if (authErr?.code === "getActiveAuth()/invalid-email") {
+        if (authErr?.code === "auth/invalid-email") {
           throw new Error("The email address provided is invalid.");
         }
         throw authErr;
@@ -629,13 +629,13 @@ export const authRepository = {
       return await signInWithEmailAndPassword(getActiveAuth(), emailToUse, password);
     } catch (authErr: any) {
       if (
-        authErr?.code === "getActiveAuth()/invalid-credential" ||
-        authErr?.code === "getActiveAuth()/user-not-found" ||
-        authErr?.code === "getActiveAuth()/wrong-password"
+        authErr?.code === "auth/invalid-credential" ||
+        authErr?.code === "auth/user-not-found" ||
+        authErr?.code === "auth/wrong-password"
       ) {
         throw new Error("Invalid email/username or password.");
       }
-      if (authErr?.code === "getActiveAuth()/invalid-email") {
+      if (authErr?.code === "auth/invalid-email") {
         throw new Error("Please enter a valid email address or username.");
       }
       throw authErr;
