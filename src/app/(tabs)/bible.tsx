@@ -33,14 +33,18 @@ const DEFAULT_PREFERENCES: BiblePreferencesWithHighlights = {
   highlights: {},
 };
 
+let cachedPreferences: BiblePreferencesWithHighlights | null = null;
+let cachedSavedVersions: BibleVersion[] = [];
+let cachedBooks: BibleBook[] = [];
+
 export default function BibleScreen() {
   const userProfile = useAuthStore((state) => state.userProfile);
   const setTranslation = useBibleVersionStore((state) => state.setTranslation);
   const globalTranslation = useBibleVersionStore((state) => state.activeTranslation);
   const setSyncToastMessage = useUIStore((state) => state.setSyncToastMessage);
-  const [preferences, setPreferences] = useState<BiblePreferencesWithHighlights | null>(null);
-  const [savedVersions, setSavedVersions] = useState<BibleVersion[]>([]);
-  const [books, setBooks] = useState<BibleBook[]>([]);
+  const [preferences, setPreferences] = useState<BiblePreferencesWithHighlights | null>(cachedPreferences);
+  const [savedVersions, setSavedVersions] = useState<BibleVersion[]>(cachedSavedVersions);
+  const [books, setBooks] = useState<BibleBook[]>(cachedBooks);
   const [isBooksModalOpen, setIsBooksModalOpen] = useState(false);
   const router = useRouter();
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -48,7 +52,12 @@ export default function BibleScreen() {
   // Instantly sync active translation from global store
   useEffect(() => {
     if (globalTranslation && preferences && globalTranslation !== preferences.activeTranslation) {
-      setPreferences((prev) => (prev ? { ...prev, activeTranslation: globalTranslation as string } : prev));
+      setPreferences((prev) => {
+        if (!prev) return prev;
+        const newPrefs = { ...prev, activeTranslation: globalTranslation as string };
+        cachedPreferences = newPrefs;
+        return newPrefs;
+      });
     }
   }, [globalTranslation]);
 
@@ -60,12 +69,15 @@ export default function BibleScreen() {
         setPreferences((prev) => {
           // If we already have a global translation (which updates instantly), don't let a slow storage read override it
           const currentGlobal = useBibleVersionStore.getState().activeTranslation;
+          let newPrefs = prefs;
           if (currentGlobal && currentGlobal !== prefs?.activeTranslation) {
-            return { ...prefs, activeTranslation: currentGlobal as string };
+            newPrefs = { ...prefs, activeTranslation: currentGlobal as string };
           }
-          return prefs;
+          cachedPreferences = newPrefs;
+          return newPrefs;
         });
         const versions = (await getSavedVersions()) as BibleVersion[];
+        cachedSavedVersions = versions;
         setSavedVersions(versions);
       };
       init();
@@ -77,7 +89,9 @@ export default function BibleScreen() {
     if (!preferences?.activeTranslation) return;
     const loadBooks = async () => {
       const data = await bibleDataService.getBooks(String(preferences.activeTranslation));
-      setBooks(data || []);
+      const newBooks = data || [];
+      cachedBooks = newBooks;
+      setBooks(newBooks);
     };
     loadBooks();
   }, [preferences?.activeTranslation]);
@@ -114,6 +128,7 @@ export default function BibleScreen() {
     setPreferences((previous) => {
       const newPrefs = { ...(previous || DEFAULT_PREFERENCES), ...updates };
       saveUserPreferences(newPrefs);
+      cachedPreferences = newPrefs;
 
       // Broadcast translation change to global store so all features stay in sync
       if (updates.activeTranslation !== undefined) {

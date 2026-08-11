@@ -286,7 +286,7 @@ export function MyAffiliationsSection({
                   <Text style={styles.ministryRole}>{min.ministryRole}</Text>
                 </View>
                 <TouchableOpacity
-                  onPress={() => router.push(`/(tabs)/serve` as any)}
+                  onPress={() => router.navigate(`/(tabs)/serve` as any)}
                   activeOpacity={0.7}
                   style={styles.serveLink}
                 >

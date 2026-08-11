@@ -72,11 +72,12 @@ export default function HighlightedVersesScreen() {
         onPress: async () => {
           try {
             const prefs = await getUserPreferences();
-            if (prefs.highlights?.[passageId]?.[verseNumber]) {
-              delete prefs.highlights[passageId][verseNumber];
+            const highlights = prefs.highlights as Record<string, Record<string, string>> | undefined;
+            if (highlights?.[passageId]?.[verseNumber]) {
+              delete highlights[passageId][verseNumber];
               
-              if (Object.keys(prefs.highlights[passageId]).length === 0) {
-                delete prefs.highlights[passageId];
+              if (Object.keys(highlights[passageId]).length === 0) {
+                delete highlights[passageId];
               }
 
               await saveUserPreferences(prefs);
@@ -96,7 +97,7 @@ export default function HighlightedVersesScreen() {
       const prefs = await getUserPreferences();
       const [book, chapter] = passageId.split('.');
       await saveUserPreferences({ ...prefs, activeBook: book, activeChapter: chapter, activePassageId: passageId });
-      router.push('/(tabs)/bible');
+      router.navigate('/(tabs)/bible');
     } catch (e) {
       console.error('Failed to open Bible', e);
     }
@@ -154,7 +155,7 @@ export default function HighlightedVersesScreen() {
             <Text style={styles.emptySubtitle}>
               Verses you highlight while reading the Bible will appear here for easy access.
             </Text>
-            <TouchableOpacity style={styles.readBibleBtn} onPress={() => router.push('/(tabs)/bible')} activeOpacity={0.8}>
+            <TouchableOpacity style={styles.readBibleBtn} onPress={() => router.navigate('/(tabs)/bible')} activeOpacity={0.8}>
               <LinearGradient colors={['#007AFF', '#0056b3']} style={styles.readBibleBtnGradient}>
                 <Text style={styles.readBibleBtnText}>Read the Bible</Text>
               </LinearGradient>

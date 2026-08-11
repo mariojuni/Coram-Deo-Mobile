@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,6 +9,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Settings2 } from 'lucide-react-native';
 import { getSoftShadowStyle } from '@/components/ui/SoftCard';
+import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
 
 // ── System design tokens ──────────────────────────────────────────────────────
 const BRAND        = '#FF6596';
@@ -59,6 +60,8 @@ export function ProfileHeaderCard({
       .substring(0, 2)
       .toUpperCase() || 'M';
 
+  const [imageLoading, setImageLoading] = useState(true);
+
   const isVerified = status === 'active' || status === 'Active';
   const showChurch = !!churchName && churchName !== 'Church App Community';
 
@@ -69,7 +72,20 @@ export function ProfileHeaderCard({
         {/* Avatar — display only, no tap */}
         <View style={styles.avatarContainer}>
           {photoUrl ? (
-            <Image source={{ uri: photoUrl }} style={styles.avatar} />
+            <>
+              {imageLoading && (
+                <View style={[StyleSheet.absoluteFill, { borderRadius: AVATAR_SIZE / 2, overflow: 'hidden' }]}>
+                  <ShimmerSkeleton width={AVATAR_SIZE} height={AVATAR_SIZE} borderRadius={AVATAR_SIZE / 2} />
+                </View>
+              )}
+              <Image 
+                source={{ uri: photoUrl }} 
+                style={styles.avatar} 
+                onLoadStart={() => setImageLoading(true)}
+                onLoad={() => setImageLoading(false)}
+                onError={() => setImageLoading(false)}
+              />
+            </>
           ) : (
             <LinearGradient
               colors={[BRAND, BRAND_PURPLE]}

@@ -141,7 +141,7 @@ export function DownloadsScreen() {
       </Text>
       <TouchableOpacity
         style={styles.browseButton}
-        onPress={() => router.push('/(tabs)/community?tab=sermons')}
+        onPress={() => router.navigate('/(tabs)/community?tab=sermons')}
       >
         <Text style={styles.browseButtonText}>Browse Sermons</Text>
       </TouchableOpacity>

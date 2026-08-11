@@ -60,10 +60,10 @@ export function ProfileActivityTabs({
           activeChapter: chapter || '1',
           activePassageId: passageId,
         });
-        router.push('/(tabs)/bible');
+        router.navigate('/(tabs)/bible');
       } catch (e) {
         console.error('Failed to open passage:', e);
-        router.push('/(tabs)/bible');
+        router.navigate('/(tabs)/bible');
       }
     },
     [router]
@@ -129,7 +129,7 @@ export function ProfileActivityTabs({
             <Text style={styles.emptySubtitle}>Verses you highlight while reading will appear here.</Text>
             <TouchableOpacity
               style={styles.emptyActionBtn}
-              onPress={() => router.push('/(tabs)/bible')}
+              onPress={() => router.navigate('/(tabs)/bible')}
               activeOpacity={0.8}
             >
               <Text style={styles.emptyActionBtnText}>Read the Bible</Text>

@@ -1,7 +1,7 @@
 import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
 import { Book, Handshake, Home, Users, CheckCircle, XCircle } from 'lucide-react-native';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { Animated, Platform, StyleSheet, TouchableOpacity, View, Text, ActivityIndicator, AccessibilityInfo } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FabMenu from '../../components/Navigation/FabMenu';
@@ -171,7 +171,8 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
 }
 
 export default function TabLayout() {
-  const { userProfile, currentUser } = useAuthStore();
+  const userProfile = useAuthStore((state) => state.userProfile);
+  const currentUser = useAuthStore((state) => state.currentUser);
   const initializeMemberAssignmentsListener = useMinistryStore(
     (s) => s.initializeMemberAssignmentsListener
   );
@@ -196,9 +197,12 @@ export default function TabLayout() {
   const syncToastType = useUIStore((s) => s.syncToastType);
   
   // Get active ministries for the user to check staff/tool permissions
-  const userMinistries = useMinistryStore((state) => state.ministries).filter(
-    (m) => m.members?.some((mem) => mem.memberId === userProfile?.memberId)
-  );
+  const ministries = useMinistryStore((state) => state.ministries);
+  const userMinistries = useMemo(() => {
+    return ministries.filter(
+      (m) => m.members?.some((mem) => mem.memberId === userProfile?.memberId)
+    );
+  }, [ministries, userProfile?.memberId]);
   
   // Check if they have access to the Staff tab
   const isStaff = canViewStaffScreen(userProfile, userMinistries);
@@ -206,7 +210,9 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  const { sermons, currentSermon, relatedSermons } = useSermonStore();
+  const sermons = useSermonStore((state) => state.sermons);
+  const currentSermon = useSermonStore((state) => state.currentSermon);
+  const relatedSermons = useSermonStore((state) => state.relatedSermons);
   const inProgressList = useSermonPlaybackStore(useShallow((state) => 
     state.getInProgressSermons().filter((p) => !p.completed).slice(0, 3)
   ));
@@ -228,6 +234,10 @@ export default function TabLayout() {
   const topSermon = inProgressWithSermons.length > 0 ? inProgressWithSermons[0] : null;
   const isCurrentAudioPlaying = topSermon?.progress.mediaType === 'audio' && (audio.player?.playing ?? false);
 
+  const renderTabBar = useCallback((props: any) => {
+    return <CustomTabBar {...props} isStaff={isStaff} />;
+  }, [isStaff]);
+
   return (
     <View style={{ flex: 1 }}>
       <Tabs 
@@ -235,7 +245,7 @@ export default function TabLayout() {
           headerShown: false,
           freezeOnBlur: false,
         }}
-        tabBar={(props) => <CustomTabBar {...props} isStaff={isStaff} />}
+        tabBar={renderTabBar}
       >
         <Tabs.Screen name="index" options={{ title: 'Home' }} />
         <Tabs.Screen name="bible" options={{ title: 'Bible' }} />

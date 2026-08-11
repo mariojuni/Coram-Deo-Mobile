@@ -1,4 +1,4 @@
-import { useRef, useEffect, createContext, useContext, ReactNode } from 'react';
+import { useRef, useEffect, createContext, useContext, ReactNode, useCallback, useMemo } from 'react';
 import { useAudioPlayer, setAudioModeAsync, AudioPlayer } from 'expo-audio';
 import { useSermonStore } from '@/store/useSermonStore';
 import { useSermonPlaybackStore } from '@/store/useSermonPlaybackStore';
@@ -18,8 +18,10 @@ interface AudioContextType {
 const AudioContext = createContext<AudioContextType | null>(null);
 
 export function AudioProvider({ children }: { children: ReactNode }) {
-  const { setCurrentPosition, setIsPlaying, currentSermon } = useSermonStore();
-  const { updateProgress } = useSermonPlaybackStore();
+  const setCurrentPosition = useSermonStore((state) => state.setCurrentPosition);
+  const setIsPlaying = useSermonStore((state) => state.setIsPlaying);
+  const currentSermon = useSermonStore((state) => state.currentSermon);
+  const updateProgress = useSermonPlaybackStore((state) => state.updateProgress);
   const currentUser = useAuthStore((state) => state.currentUser);
   const currentSermonId = useRef<string | null>(null);
   
@@ -76,14 +78,14 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     }
   }, [player?.playing, currentUser, currentSermon]);
 
-  const playAudio = async (audioUrl: string, sermonId: string, initialPositionSeconds?: number) => {
+  const playAudio = useCallback(async (audioUrl: string, sermonId: string, initialPositionSeconds?: number) => {
     try {
       currentSermonId.current = sermonId;
-      player.replace(audioUrl);
+      player?.replace(audioUrl);
       if (initialPositionSeconds !== undefined) {
-        player.seekTo(initialPositionSeconds);
+        player?.seekTo(initialPositionSeconds);
       }
-      player.play();
+      player?.play();
       setIsPlaying(true);
       
       if (progressInterval.current) {
@@ -93,20 +95,20 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Error playing audio:', error);
     }
-  };
+  }, [player, setIsPlaying]);
 
-  const pauseAudio = () => {
-    player.pause();
+  const pauseAudio = useCallback(() => {
+    player?.pause();
     setIsPlaying(false);
-  };
+  }, [player, setIsPlaying]);
 
-  const resumeAudio = () => {
-    player.play();
+  const resumeAudio = useCallback(() => {
+    player?.play();
     setIsPlaying(true);
-  };
+  }, [player, setIsPlaying]);
 
-  const stopAudio = () => {
-    player.pause();
+  const stopAudio = useCallback(() => {
+    player?.pause();
     setIsPlaying(false);
     setCurrentPosition(0);
     
@@ -114,18 +116,18 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       clearInterval(progressInterval.current);
       progressInterval.current = null;
     }
-  };
+  }, [player, setIsPlaying, setCurrentPosition]);
 
-  const seekAudio = (position: number) => {
+  const seekAudio = useCallback((position: number) => {
     // position argument is in seconds (consistent with video player)
-    player.seekTo(position);
-  };
+    player?.seekTo(position);
+  }, [player]);
 
-  const setRate = (rate: number) => {
-    player.setPlaybackRate(rate);
-  };
+  const setRate = useCallback((rate: number) => {
+    player?.setPlaybackRate(rate);
+  }, [player]);
 
-  const value: AudioContextType = {
+  const value: AudioContextType = useMemo(() => ({
     player,
     playAudio,
     pauseAudio,
@@ -133,7 +135,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     stopAudio,
     seekAudio,
     setRate,
-  };
+  }), [player, playAudio, pauseAudio, resumeAudio, stopAudio, seekAudio, setRate]);
 
   return (
     <AudioContext.Provider value={value}>

@@ -1,6 +1,7 @@
 import type { BiblePlan, UserBiblePlan } from '@/features/biblePlan/domain/biblePlan.types';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useBiblePlanStore } from '@/store/useBiblePlanStore';
+import { BounceCard } from '@/components/ui/BounceCard';
 import { SoftCard } from '@/components/ui/SoftCard';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -48,10 +49,15 @@ export function BiblePlanProgressCard() {
   // ── No active plan ────────────────────────────────────────────────────────
   if (!activePlan) {
     return (
-      <TouchableOpacity
+      <BounceCard
         activeOpacity={0.85}
         style={styles.emptyCardContainer}
-        onPress={() => router.push('/bible-plans')}
+        onPress={() => {
+          const now = Date.now();
+          if (now - lastCardPress.current < 400) return;
+          lastCardPress.current = now;
+          router.push('/bible-plans');
+        }}
       >
         <SoftCard innerStyle={styles.emptyCardInner}>
           <LinearGradient
@@ -61,7 +67,7 @@ export function BiblePlanProgressCard() {
             style={styles.emptyGradient}
           >
             <View style={styles.emptyIconWrap}>
-              <Sparkles size={22} color="#C084FC" strokeWidth={2} />
+              <BookOpen size={22} color="#C084FC" strokeWidth={2} />
             </View>
             <View style={styles.emptyText}>
               <Text style={styles.emptyTitle}>Start a Bible Reading Plan</Text>
@@ -70,7 +76,7 @@ export function BiblePlanProgressCard() {
             <ChevronRight size={18} color="#C9A8E0" strokeWidth={2.5} />
           </LinearGradient>
         </SoftCard>
-      </TouchableOpacity>
+      </BounceCard>
     );
   }
 

@@ -19,7 +19,8 @@ import HomeScreenSkeleton from '@/components/ui/HomeScreenSkeleton';
 import { BounceCard } from '@/components/ui/BounceCard';
 import { CalendarDays, CheckCircle2, ChevronRight, Clock, HeartHandshake, HelpCircle, MapPin, Play, XCircle, Pencil, Trash2, MoreHorizontal, User, MessageCircle } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert, ActionSheetIOS, Platform } from 'react-native';
+import { Animated, Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert, ActionSheetIOS, Platform } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Schedule } from '@/features/schedule/domain/schedule.types';
 import { EventDetailsModal } from '@/components/Events/EventDetailsModal';
@@ -69,6 +70,7 @@ const INNER_COLLAPSED = 52;
 export default function HomeScreen() {
   const router = useRouter();
   const [selectedEvent, setSelectedEvent] = useState<Schedule | null>(null);
+  const [imageLoading, setImageLoading] = useState(true);
 
   const userProfile = useAuthStore((s) => s.userProfile);
   const {
@@ -292,7 +294,20 @@ export default function HomeScreen() {
               activeOpacity={0.8}
             >
             {photoUrl ? (
-              <Image source={{ uri: photoUrl }} style={styles.avatarImg} />
+              <View style={{ width: 46, height: 46 }}>
+                {imageLoading && (
+                  <View style={[StyleSheet.absoluteFill, { borderRadius: 23, overflow: 'hidden' }]}>
+                    <ShimmerSkeleton width={46} height={46} borderRadius={23} />
+                  </View>
+                )}
+                <Image 
+                  source={{ uri: photoUrl }} 
+                  style={styles.avatarImg}
+                  onLoadStart={() => setImageLoading(true)}
+                  onLoad={() => setImageLoading(false)}
+                  onError={() => setImageLoading(false)}
+                />
+              </View>
             ) : (
               <LinearGradient
                 colors={['#FF6596', '#B66DFF']}
@@ -500,7 +515,7 @@ export default function HomeScreen() {
 
             <DebouncedTouchable
               style={[styles.seeAllEventsBtn, { marginTop: 0 }]}
-              onPress={() => router.push('/(tabs)/serve')}
+              onPress={() => router.navigate('/(tabs)/serve')}
             >
               <Text style={styles.seeAllEventsBtnText}>See all ministries</Text>
               <ChevronRight size={14} color="#FF6596" />

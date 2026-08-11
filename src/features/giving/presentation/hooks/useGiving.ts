@@ -4,7 +4,8 @@ import { GivingCampaign, GivingFund, GivingRecord, PaymentMethod } from '../../d
 import * as givingRepo from '../../data/giving.repository';
 
 export function useGiving() {
-  const { userProfile, currentUser } = useAuthStore();
+  const userProfile = useAuthStore((state) => state.userProfile);
+  const currentUser = useAuthStore((state) => state.currentUser);
   const churchId = userProfile?.churchId;
   const userId = currentUser?.uid;
 

@@ -29,8 +29,10 @@ export const fetchLanguages = async () => {
 
 export const fetchVerseOfTheDay = async (translationId = '111'): Promise<any> => {
   const now = new Date();
-  const start = new Date(now.getFullYear(), 0, 0);
-  const dayOfYear = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+  // Adjust time by subtracting 1 hour so the day effectively rolls over at 1 AM
+  const adjustedTime = new Date(now.getTime() - 1 * 60 * 60 * 1000);
+  const start = new Date(adjustedTime.getFullYear(), 0, 0);
+  const dayOfYear = Math.floor((adjustedTime.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
   const cacheKey = `votd_${dayOfYear}_${translationId}`;
 
   try {

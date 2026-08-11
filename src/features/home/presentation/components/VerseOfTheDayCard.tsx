@@ -43,10 +43,12 @@ export function VerseOfTheDayCard() {
 
   const activeTranslation = useBibleVersionStore((s) => s.activeTranslation);
   const isVersionLoaded = useBibleVersionStore((s) => s.isLoaded);
-  const [verseText, setVerseText] = useState('');
-  const [reference, setReference] = useState('');
-  const [passageId, setPassageId] = useState('');
-  const [loading, setLoading] = useState(true);
+  
+  const translationId = activeTranslation ? String(activeTranslation) : '111';
+  const votdData = useBibleVersionStore((s) => s.votdCache[translationId]);
+  const votdLoading = useBibleVersionStore((s) => s.votdLoading);
+  const loadVotd = useBibleVersionStore((s) => s.loadVotd);
+
   const [cachedPrefs, setCachedPrefs] = useState<any>(null);
 
   useEffect(() => {
@@ -64,8 +66,8 @@ export function VerseOfTheDayCard() {
 
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (passageId) {
-      const parts = passageId.split('.');
+    if (votdData?.passageId) {
+      const parts = votdData.passageId.split('.');
       if (parts.length >= 2) {
         try {
           const prefs = { ...(cachedPrefs || {}) };
@@ -73,7 +75,7 @@ export function VerseOfTheDayCard() {
           prefs.activeChapter = parts[1];
           // Fire and forget save to avoid delaying navigation
           saveUserPreferences(prefs).catch(e => console.error('Failed to save prefs', e));
-          router.push('/(tabs)/bible');
+          router.navigate('/(tabs)/bible');
         } catch (e) {
           console.error('Failed to navigate to verse', e);
         }
@@ -82,29 +84,12 @@ export function VerseOfTheDayCard() {
   };
 
   useEffect(() => {
-    // Wait until the version store has loaded before fetching
-    if (!isVersionLoaded) return;
-    async function loadVerse() {
-      setLoading(true);
-      try {
-        // Use the globally selected translation; fall back to default NIV (111)
-        const translationId = activeTranslation ? String(activeTranslation) : '111';
-        const votd = await fetchVerseOfTheDay(translationId);
-        if (votd) {
-          setVerseText(stripHtml(votd.html));
-          setReference(votd.reference);
-          setPassageId(votd.passageId);
-        }
-      } catch (error) {
-        console.error('Failed to load Verse of the Day', error);
-      } finally {
-        setLoading(false);
-      }
+    if (isVersionLoaded) {
+      loadVotd(translationId);
     }
-    loadVerse();
-  }, [activeTranslation, isVersionLoaded]);
+  }, [isVersionLoaded, translationId, loadVotd]);
 
-  if (loading) {
+  if (votdLoading && !votdData) {
     return (
       <View style={styles.outerContainer}>
         <LinearGradient
@@ -119,7 +104,7 @@ export function VerseOfTheDayCard() {
     );
   }
 
-  if (!verseText) return null;
+  if (!votdData?.html) return null;
 
   return (
     <View style={styles.outerContainer}>
@@ -190,7 +175,7 @@ export function VerseOfTheDayCard() {
                 style={[styles.verseText, { fontFamily: Fonts?.serif ?? 'serif' }]}
                 numberOfLines={5}
               >
-                {verseText}
+                {stripHtml(votdData.html)}
               </Text>
 
               {/* Divider */}
@@ -200,7 +185,7 @@ export function VerseOfTheDayCard() {
               <View style={styles.bottomRow}>
                 <View style={styles.referencePill}>
                   <BookOpen size={10} color="rgba(255,255,255,0.95)" strokeWidth={2.5} />
-                  <Text style={styles.reference}>{reference}</Text>
+                  <Text style={styles.reference}>{votdData.reference}</Text>
                 </View>
                 <Pressable style={styles.readCta} onPress={handlePress}>
                   <Text style={styles.readCtaText}>Read chapter</Text>

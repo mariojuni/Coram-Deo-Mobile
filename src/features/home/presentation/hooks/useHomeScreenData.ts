@@ -22,7 +22,9 @@ export function useHomeScreenData() {
   const initializeSchedulesListener = useScheduleStore((state) => state.initializeSchedulesListener);
   const activeSchedules = useMemo(() => schedules.filter(s => s.status?.toLowerCase() === 'published'), [schedules]);
 
-  const { assignments, initializeAssignmentsListener, fetchMinistries } = useMinistryStore();
+  const assignments = useMinistryStore((state) => state.assignments);
+  const initializeAssignmentsListener = useMinistryStore((state) => state.initializeAssignmentsListener);
+  const fetchMinistries = useMinistryStore((state) => state.fetchMinistries);
   const [latestPrayer, setLatestPrayer] = useState<Prayer | null>(null);
   const [hasError, setHasError] = useState<boolean>(false);
   const [retryTrigger, setRetryTrigger] = useState(false);
