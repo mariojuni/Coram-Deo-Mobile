@@ -1,6 +1,6 @@
 import { addDoc, collection, doc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { Calendar as CalendarIcon, Clock, X } from 'lucide-react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { getActiveDb } from '../../firebase';
 import type { Schedule } from '../../features/schedule/domain/schedule.types';
@@ -68,10 +68,36 @@ export default function AddScheduleModal({ isOpen, onClose, eventToEdit }: AddSc
     eventToEdit?.endTime ? parseTime(eventToEdit.endTime) : new Date(new Date().setHours(11, 0, 0, 0))
   );
   const [location, setLocation] = useState(eventToEdit?.location ?? 'Main Sanctuary');
+  const [status, setStatus] = useState<'draft' | 'published' | 'cancelled'>((eventToEdit?.status as 'draft' | 'published' | 'cancelled') ?? 'published');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      if (eventToEdit) {
+        setTitle(eventToEdit.title ?? 'Sunday Worship Service');
+        const d = new Date();
+        if (eventToEdit.date) {
+          const [y, m, day] = eventToEdit.date.split('-');
+          d.setFullYear(Number(y), Number(m) - 1, Number(day));
+        }
+        setDate(d);
+        setStartTime(eventToEdit.time ? parseTime(eventToEdit.time) : new Date(new Date().setHours(9, 0, 0, 0)));
+        setEndTime(eventToEdit.endTime ? parseTime(eventToEdit.endTime) : new Date(new Date().setHours(11, 0, 0, 0)));
+        setLocation(eventToEdit.location ?? 'Main Sanctuary');
+        setStatus((eventToEdit.status?.toLowerCase() as 'draft' | 'published' | 'cancelled') ?? 'published');
+      } else {
+        setTitle('Sunday Worship Service');
+        setDate(new Date());
+        setStartTime(new Date(new Date().setHours(9, 0, 0, 0)));
+        setEndTime(new Date(new Date().setHours(11, 0, 0, 0)));
+        setLocation('Main Sanctuary');
+        setStatus('published');
+      }
+    }
+  }, [isOpen, eventToEdit]);
 
   const handleSave = async () => {
     if (!title.trim()) {
@@ -90,6 +116,7 @@ export default function AddScheduleModal({ isOpen, onClose, eventToEdit }: AddSc
         time: fmtTime(startTime),
         endTime: fmtTime(endTime),
         location: location.trim(),
+        status,
       };
       if (eventToEdit) {
         await updateDoc(doc(getActiveDb(), 'events', eventToEdit.id), payload);
@@ -179,6 +206,28 @@ export default function AddScheduleModal({ isOpen, onClose, eventToEdit }: AddSc
             placeholder="e.g. Main Sanctuary"
             placeholderTextColor="#aaa"
           />
+
+          <Text style={s.label}>Status</Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity 
+              style={[s.statusOption, status === 'draft' && s.statusOptionSelected]}
+              onPress={() => setStatus('draft')}
+            >
+              <Text style={[s.statusOptionText, status === 'draft' && s.statusOptionTextSelected]}>Draft</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[s.statusOption, status === 'published' && s.statusOptionSelected]}
+              onPress={() => setStatus('published')}
+            >
+              <Text style={[s.statusOptionText, status === 'published' && s.statusOptionTextSelected]}>Published</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[s.statusOption, status === 'cancelled' && s.statusOptionSelected]}
+              onPress={() => setStatus('cancelled')}
+            >
+              <Text style={[s.statusOptionText, status === 'cancelled' && s.statusOptionTextSelected]}>Cancelled</Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
 
 
@@ -283,4 +332,26 @@ const s = StyleSheet.create({
     height: 48,
   },
   iconFieldText: { fontSize: 15, color: '#1a1a1a', flex: 1 },
+  statusOption: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+  },
+  statusOptionSelected: {
+    borderColor: '#FF6596',
+    backgroundColor: '#FFE8F0',
+  },
+  statusOptionText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  statusOptionTextSelected: {
+    color: '#FF6596',
+    fontWeight: '800',
+  },
 });

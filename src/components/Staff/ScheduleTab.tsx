@@ -122,6 +122,34 @@ export default function ScheduleTab({
             </View>
 
             <View style={styles.detailsBlock}>
+              {item.schedule.status && (
+                <View style={{ flexDirection: 'row', marginBottom: 4 }}>
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      { marginRight: 0 },
+                      item.schedule.status.toLowerCase() === 'published'
+                        ? styles.statusPublished
+                        : item.schedule.status.toLowerCase() === 'cancelled'
+                        ? styles.statusCancelled
+                        : styles.statusDraft,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.statusText,
+                        item.schedule.status.toLowerCase() === 'published'
+                          ? styles.statusTextPublished
+                          : item.schedule.status.toLowerCase() === 'cancelled'
+                          ? styles.statusTextCancelled
+                          : styles.statusTextDraft,
+                      ]}
+                    >
+                      {item.schedule.status.toUpperCase()}
+                    </Text>
+                  </View>
+                </View>
+              )}
               <View style={styles.titleRow}>
                 <Text style={styles.eventTitle} numberOfLines={1}>
                   {item.schedule.title}
@@ -291,6 +319,20 @@ const styles = StyleSheet.create({
   detailsBlock: { flex: 1, paddingLeft: 4 },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 },
   eventTitle: { flex: 1, fontSize: 16, fontWeight: '800', color: '#1a1a1a', marginRight: 8 },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    alignSelf: 'center',
+    marginRight: 8,
+  },
+  statusPublished: { backgroundColor: '#DCFCE7' },
+  statusDraft: { backgroundColor: '#FEF3C7' },
+  statusCancelled: { backgroundColor: '#FEE2E2' },
+  statusText: { fontSize: 10, fontWeight: '800' },
+  statusTextPublished: { color: '#15803D' },
+  statusTextDraft: { color: '#B45309' },
+  statusTextCancelled: { color: '#B91C1C' },
   roleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
   roleRowWithoutTeam: { marginBottom: 2 },
   dotSeparator: { color: '#ccc', marginHorizontal: 6, fontSize: 14 },
