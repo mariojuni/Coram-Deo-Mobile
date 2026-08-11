@@ -10,9 +10,10 @@ interface BooksModalProps {
   onClose: () => void;
   books: any[];
   onSelectChapter: (bookId: string, chapterNum: string) => void;
+  activeBookId?: string;
 }
 
-export default function BooksModal({ isOpen, onClose, books, onSelectChapter }: BooksModalProps) {
+export default function BooksModal({ isOpen, onClose, books, onSelectChapter, activeBookId }: BooksModalProps) {
   const { collapseBook, expandedBook, setSortMode, sortMode, sortedBooks, toggleBook } = useBooksModal(books);
 
   const renderChapters = (book: any) => {
@@ -74,7 +75,7 @@ export default function BooksModal({ isOpen, onClose, books, onSelectChapter }: 
                 style={[styles.bookItem, isExpanded && styles.bookItemExpanded]}
                 onPress={() => toggleBook(book.id)}
               >
-                <Text style={[styles.bookName, isExpanded && styles.bookNameExpanded]}>
+                <Text style={[styles.bookName, isExpanded && styles.bookNameExpanded, book.id === activeBookId && styles.bookNameActive]}>
                   {book.title || book.name}
                 </Text>
               </TouchableOpacity>
@@ -140,6 +141,7 @@ const styles = StyleSheet.create({
   },
   bookName: { fontSize: 16, color: '#1a1a1a', fontWeight: '600' },
   bookNameExpanded: { fontWeight: '700' },
+  bookNameActive: { color: '#FF6596', fontWeight: '700' },
   chapterGridContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',

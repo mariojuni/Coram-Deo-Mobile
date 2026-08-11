@@ -1,6 +1,7 @@
 import { CalendarPlus, Clock, MapPin, Pencil, CalendarDays } from 'lucide-react-native';
 import { useEffect, useCallback, useMemo, useState } from 'react';
-import { FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native';
+import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native';
+import { Image } from 'expo-image';
 import { useMemberStore } from '../../store/useMemberStore';
 import { useMinistryStore } from '../../store/useMinistryStore';
 import { getMinisterialTeam, type Schedule, useScheduleStore } from '../../store/useScheduleStore';
@@ -85,7 +86,7 @@ export default function ScheduleTab({
               id: assignment.memberId,
               role: assignment.roleName,
               avatar:
-                member.avatar ||
+                (member as any).photoUrl || member.avatar ||
                 `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name || 'User')}&background=f0f0f0&color=999`,
             };
           })
@@ -201,7 +202,7 @@ export default function ScheduleTab({
                             index > 0 && styles.stackedAvatar,
                           ]}
                         >
-                          <Image source={{ uri: member.avatar }} style={styles.teamAvatar} />
+                          <Image source={{ uri: member.avatar }} style={styles.teamAvatar} transition={200} cachePolicy="memory-disk" contentFit="cover" />
                         </View>
                       ))}
                     </View>

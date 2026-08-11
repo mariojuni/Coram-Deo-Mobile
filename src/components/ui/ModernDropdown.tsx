@@ -262,7 +262,7 @@ export function ModernDropdown<T = string>({
                         { 
                           backgroundColor: isActive 
                             ? (isDarkMode ? 'rgba(255, 101, 150, 0.15)' : 'rgba(255, 101, 150, 0.08)') 
-                            : (isDarkMode ? '#2C2C2E' : '#FFF') 
+                            : 'transparent' 
                         }
                       ]}
                       activeOpacity={0.7}
@@ -413,10 +413,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    borderRadius: 16,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.04)',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
   },
   optionContent: {
     flexDirection: 'row',

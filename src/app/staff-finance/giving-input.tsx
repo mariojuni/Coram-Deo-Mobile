@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BounceCard } from '@/components/ui/BounceCard';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Alert, Image } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
@@ -14,6 +14,7 @@ import { createManualGivingRecord } from '../../features/giving/data/financeAdmi
 import { PaymentMethodType } from '../../features/giving/domain/giving.types';
 import { ModernDropdown, DropdownOption } from '../../components/ui/ModernDropdown';
 import { useEffect, useMemo } from 'react';
+import { formatMemberName } from '../../features/member/domain/member.utils';
 
 export default function GivingInputScreen() {
   const router = useRouter();
@@ -24,8 +25,9 @@ export default function GivingInputScreen() {
 
   const insets = useSafeAreaInsets();
   const [form, setForm] = useState({
-    giverType: 'member', // or anonymous
+    giverType: 'member', // member, non_member, or anonymous
     memberId: '',
+    donorName: '',
     fundId: '',
     campaignId: '',
     amount: '',
@@ -41,10 +43,19 @@ export default function GivingInputScreen() {
   }, [userProfile?.churchId, initializeMembersListener]);
 
   const memberOptions: DropdownOption[] = useMemo(() => {
-    return members.map(m => ({
-      label: `${m.firstName} ${m.lastName}`,
-      value: m.uid
-    })).sort((a, b) => a.label.localeCompare(b.label));
+    return members.map(m => {
+      const name = formatMemberName(m);
+      return {
+        label: name,
+        value: m.uid,
+        icon: (
+          <Image
+            source={{ uri: m.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=f0f0f0&color=999` }}
+            style={{ width: 28, height: 28, borderRadius: 14 }}
+          />
+        )
+      };
+    }).sort((a, b) => a.label.localeCompare(b.label));
   }, [members]);
 
   const fundOptions: DropdownOption[] = useMemo(() => {
@@ -80,7 +91,9 @@ export default function GivingInputScreen() {
       const selectedFund = funds.find(f => f.id === form.fundId);
       
       await createManualGivingRecord(userProfile.churchId, {
+        userId: form.giverType === 'member' ? form.memberId : null as any,
         memberId: form.giverType === 'member' ? form.memberId : undefined,
+        donorName: form.giverType === 'non_member' ? form.donorName : form.giverType === 'anonymous' ? 'Anonymous' : undefined,
         fundId: form.fundId,
         fundType: selectedFund?.name || 'Others',
         campaignId: form.campaignId || undefined,
@@ -118,14 +131,14 @@ export default function GivingInputScreen() {
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 24) + 70 }]}>
         <Text style={styles.label}>Giver Type</Text>
         <View style={styles.row}>
-          {['member', 'anonymous'].map(type => (
+          {['member', 'non_member', 'anonymous'].map(type => (
             <TouchableOpacity 
               key={type} 
               style={[styles.chip, form.giverType === type && styles.chipActive]}
               onPress={() => setForm({ ...form, giverType: type })}
             >
               <Text style={[styles.chipText, form.giverType === type && styles.chipTextActive]}>
-                {type.charAt(0).toUpperCase() + type.slice(1)}
+                {type === 'non_member' ? 'Not Member' : type.charAt(0).toUpperCase() + type.slice(1)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -141,6 +154,19 @@ export default function GivingInputScreen() {
               placeholder="Search and select member"
               searchable
               disableDarkMode
+            />
+          </View>
+        )}
+
+        {form.giverType === 'non_member' && (
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Donor Name</Text>
+            <TextInput 
+              style={styles.input}
+              placeholder="Enter donor's name"
+              value={form.donorName}
+              onChangeText={(text) => setForm({ ...form, donorName: text })}
+              autoCapitalize="words"
             />
           </View>
         )}

@@ -56,6 +56,7 @@ export async function createManualGivingRecord(
       churchId,
       status: 'completed',
       date: new Date().toISOString().split('T')[0],
+      transactionDate: new Date().toISOString().split('T')[0],
       fundType: mapFundIdToName(data.fundId || ''),
       method: data.paymentMethod || 'cash',
       notes: data.note || '',
@@ -67,7 +68,7 @@ export async function createManualGivingRecord(
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       submittedAt: new Date().toISOString(),
-    };
+    } as any;
 
     transaction.set(newRef, newRecord);
   });

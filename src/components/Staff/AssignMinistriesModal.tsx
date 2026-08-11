@@ -8,7 +8,8 @@ import {
   Guitar, HandCoins, MapPin, Mic, Monitor, Piano, Search, Users, X, Shield, Music, Heart, Star, Settings
 } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, FlatList, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal } from 'react-native';
+import { Alert, FlatList, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal } from 'react-native';
+import { Image } from 'expo-image';
 import { PrayingHands } from '../ui/icons/PrayingHands';
 import { ministryRepository } from '../../features/ministry/data/ministry.repository';
 import type { Schedule } from '../../features/schedule/domain/schedule.types';
@@ -118,14 +119,14 @@ function MemberPickerSheet({ roleLabel, ministry, currentUserId, onSelect, onClo
             id: m.memberId,
             name: formatMemberName(globalMember || m),
             role: m.role || 'Member',
-            avatar: globalMember?.avatar || m.avatar
+            avatar: globalMember?.photoUrl || globalMember?.avatar || (m as any).photoUrl || (m as any).avatar
           };
         })
       : allMembers.map(g => ({
           id: g.id,
           name: formatMemberName(g),
           role: g.role || 'Member',
-          avatar: g.avatar
+          avatar: g.photoUrl || g.avatar
         }));
 
     const uniqueSourceMembers = Array.from(new Map(sourceMembers.map(m => [m.id, m])).values());
@@ -203,7 +204,7 @@ function MemberPickerSheet({ roleLabel, ministry, currentUserId, onSelect, onClo
                   activeOpacity={0.7}
                 >
                   {item.avatar ? (
-                    <Image source={{ uri: item.avatar }} style={ps.avatar} />
+                    <Image source={{ uri: item.avatar }} style={ps.avatar} transition={200} cachePolicy="memory-disk" contentFit="cover" />
                   ) : (
                     <View style={[ps.avatarBox, { backgroundColor: '#f0f0f0' }]}>
                       <Users size={18} color="#999" />
@@ -551,12 +552,10 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
                     >
                       {assignedMember ? (
                         <View style={ms.assignedMemberRow}>
-                          {assignedMember.avatar ? (
-                            <Image source={{ uri: assignedMember.avatar }} style={ms.assignedAvatar} />
+                          {assignedMember.photoUrl ? (
+                            <Image source={{ uri: assignedMember.photoUrl }} style={ms.assignedAvatar} />
                           ) : (
-                            <View style={[ms.assignedAvatar, { backgroundColor: '#E8F0FF', alignItems: 'center', justifyContent: 'center' }]}>
-                              <Users size={12} color="#4D8BFF" />
-                            </View>
+                            <Image source={{ uri: `https://ui-avatars.com/api/?name=User&background=f0f0f0&color=999` }} style={ms.assignedAvatar} />
                           )}
                           <Text style={[ms.assignedName, { color: statusColor }]} numberOfLines={1}>{assignedMember ? formatMemberName(assignedMember) : 'Member'}</Text>
                         </View>

@@ -408,6 +408,7 @@ export default function BiblePlanDayScreen() {
         isOpen={isBooksModalOpen}
         onClose={() => setIsBooksModalOpen(false)}
         books={books}
+        activeBookId={preferences?.activeBook}
         onSelectChapter={(bookId, chapterNum) => {
           handleUpdatePreferences({
             activeBook: String(bookId),

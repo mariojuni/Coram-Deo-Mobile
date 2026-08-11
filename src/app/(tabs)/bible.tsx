@@ -178,6 +178,7 @@ export default function BibleScreen() {
         isOpen={isBooksModalOpen}
         onClose={() => setIsBooksModalOpen(false)}
         books={books}
+        activeBookId={safePreferences.activeBook}
         onSelectChapter={(bookId, chapterNum) => {
           handleUpdatePreferences({ activeBook: String(bookId), activeChapter: String(chapterNum) });
           setIsBooksModalOpen(false);

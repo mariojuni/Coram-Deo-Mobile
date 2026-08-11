@@ -547,6 +547,7 @@ export default function AttendanceTab({ members, showStaffFeatures }: Attendance
         title="Manual Check-in"
         hideHeader={true}
         hideDragHandle={true}
+        avoidKeyboard={false}
         containerStyle={{ flex: 1, backgroundColor: '#FAFAFA', paddingHorizontal: 0, paddingBottom: 0 }}
         heightRatio={0.85}
       >
@@ -588,11 +589,11 @@ export default function AttendanceTab({ members, showStaffFeatures }: Attendance
             renderItem={({ item: m }) => (
                 <View style={styles.modalListItem}>
                   <View style={[styles.modalListItemLeft, { flex: 1 }]}>
-                    {m.avatar ? (
-                      <Image source={{ uri: m.avatar }} style={styles.modalAvatar} />
+                    {m.photoUrl ? (
+                      <Image source={{ uri: m.photoUrl }} style={styles.modalAvatar} />
                     ) : (
-                      <View style={[styles.modalAvatar, { backgroundColor: '#f0f0f0', alignItems: 'center', justifyContent: 'center' }]}>
-                        <User size={20} color="#999" />
+                      <View style={styles.modalAvatarPlaceholder}>
+                        <Users size={18} color="#999" />
                       </View>
                     )}
                     <View style={{ flex: 1, paddingRight: 8 }}>
@@ -768,7 +769,8 @@ const styles = StyleSheet.create({
   modalScroll: { marginTop: 8 },
   modalListItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
   modalListItemLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  modalAvatar: { width: 40, height: 40, borderRadius: 12 },
+  modalAvatar: { width: 40, height: 40, borderRadius: 20 },
+  modalAvatarPlaceholder: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f0f0' },
   modalMemberName: { fontSize: 15, fontWeight: '700', color: '#1a1a1a', marginBottom: 2 },
   modalMemberRole: { fontSize: 11, color: '#888', textTransform: 'uppercase', fontWeight: '600' },
   addBtn: { ...getTopBarButtonShadowStyle(20), backgroundColor: '#FFF0F5', flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 14, paddingVertical: 6 },
@@ -779,10 +781,10 @@ const styles = StyleSheet.create({
   dangerBtnText: { fontSize: 15, fontWeight: '800', color: '#EF4444' },
   
   calendarWrap: { paddingBottom: 16, marginBottom: 16 },
-  calendarHeaderTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  calendarMonthNav: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  calendarHeaderTop: { flexDirection: 'row', alignItems: 'center', width: '100%', marginBottom: 16 },
+  calendarMonthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' },
   calendarNavBtn: { width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(255,101,150,0.08)', alignItems: 'center', justifyContent: 'center' },
-  calendarMonthCenter: { alignItems: 'center', minWidth: 120 },
+  calendarMonthCenter: { alignItems: 'center', flex: 1 },
   calendarMonthTitle: { fontSize: 16, fontWeight: '800', color: '#1a1a1a', letterSpacing: -0.3 },
   calendarWeekdayRow: { flexDirection: 'row', marginBottom: 6 },
   calendarWeekdayLabel: { flex: 1, textAlign: 'center', fontSize: 11, fontWeight: '700', color: '#9CA3AF', letterSpacing: 0.3 },

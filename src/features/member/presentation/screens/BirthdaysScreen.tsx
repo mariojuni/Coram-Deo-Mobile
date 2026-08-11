@@ -124,7 +124,7 @@ export function BirthdaysScreen() {
                             <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
                         </BounceCard>
                         <Text style={styles.headerTitle} numberOfLines={1}>Birthdays</Text>
-                        <View style={[styles.headerCircle, { backgroundColor: 'transparent', borderWidth: 0, elevation: 0 }]} />
+                        <View style={{ width: 40, height: 40 }} />
                     </View>
                 </View>
 

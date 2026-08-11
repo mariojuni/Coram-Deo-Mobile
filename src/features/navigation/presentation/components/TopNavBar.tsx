@@ -1,8 +1,9 @@
 import { BlurView } from 'expo-blur';
-import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getSoftShadowStyle, getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 import { LinearGradient } from 'expo-linear-gradient';
+import DebouncedTouchable from '@/components/DebouncedTouchable';
 
 export interface TopNavBarProps {
   leftText: string;
@@ -60,29 +61,29 @@ export function TopNavBar({ leftText, onLeftPress, rightText, onRightPress, scro
         
         {/* Expanded (Centered) */}
         <Animated.View style={[styles.pillContainer, { opacity: expandedOpacity }]} pointerEvents="box-none">
-          <TouchableOpacity style={styles.bookBtn} onPress={onLeftPress}>
+          <DebouncedTouchable style={styles.bookBtn} onPress={onLeftPress}>
             <Text style={styles.bookText}>{leftText}</Text>
-          </TouchableOpacity>
+          </DebouncedTouchable>
 
           <View style={styles.divider} />
 
-          <TouchableOpacity style={styles.versionBtn} onPress={onRightPress}>
+          <DebouncedTouchable style={styles.versionBtn} onPress={onRightPress}>
             <Text style={styles.versionText}>{rightText}</Text>
-          </TouchableOpacity>
+          </DebouncedTouchable>
         </Animated.View>
 
         {/* Compact (Left Aligned) */}
         <Animated.View style={[styles.compactContainer, { opacity: compactOpacity }]} pointerEvents="box-none">
           <BlurView intensity={50} tint="light" style={StyleSheet.absoluteFill} />
-          <TouchableOpacity style={styles.compactBookBtn} onPress={onLeftPress}>
+          <DebouncedTouchable style={styles.compactBookBtn} onPress={onLeftPress}>
             <Text style={styles.compactBookText}>{leftText}</Text>
-          </TouchableOpacity>
+          </DebouncedTouchable>
 
           <View style={styles.compactDivider} />
 
-          <TouchableOpacity style={styles.compactVersionBtn} onPress={onRightPress}>
+          <DebouncedTouchable style={styles.compactVersionBtn} onPress={onRightPress}>
             <Text style={styles.compactVersionText}>{rightText}</Text>
-          </TouchableOpacity>
+          </DebouncedTouchable>
         </Animated.View>
 
       </View>
