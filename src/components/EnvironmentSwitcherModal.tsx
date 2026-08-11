@@ -39,6 +39,9 @@ export default function EnvironmentSwitcherModal({
     setIsApplying(true);
     try {
       await onApplyEnv(selectedEnv);
+      // If the app didn't restart (e.g. in Release mode), we need to reset the button state and close the modal
+      setIsApplying(false);
+      onClose();
     } catch (error) {
       console.error('Failed to apply environment change:', error);
       setIsApplying(false);

@@ -80,7 +80,7 @@ export const getInitialSelectedEnvironmentSync = (): AppEnvironment => {
       console.warn('Failed to read environment from localStorage', e);
     }
   }
-  return BUILD_ENV;
+  return 'production'; // Default to production even in staging builds
 };
 
 /**
@@ -98,7 +98,7 @@ export const getSavedEnvironment = async (): Promise<AppEnvironment> => {
   } catch (e) {
     console.warn('Failed to get saved environment from AsyncStorage', e);
   }
-  return BUILD_ENV;
+  return 'production'; // Default to production even in staging builds
 };
 
 /**

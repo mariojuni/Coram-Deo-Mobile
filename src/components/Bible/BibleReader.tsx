@@ -8,6 +8,7 @@ import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppModal from '@/components/ui/AppModal';
 import { BounceCard } from '@/components/ui/BounceCard';
+import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
 
 interface BibleReaderProps {
   preferences: any;
@@ -241,9 +242,16 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4A90E2" />
-        <Text style={styles.loadingText}>Loading chapter...</Text>
+      <View style={[styles.loadingContainer, { paddingHorizontal: 24, paddingTop: 32 }]}>
+        <ShimmerSkeleton width="40%" height={32} borderRadius={8} style={{ marginBottom: 24 }} />
+        <ShimmerSkeleton width="100%" height={24} borderRadius={6} style={{ marginBottom: 12 }} />
+        <ShimmerSkeleton width="90%" height={24} borderRadius={6} style={{ marginBottom: 12 }} />
+        <ShimmerSkeleton width="95%" height={24} borderRadius={6} style={{ marginBottom: 12 }} />
+        <ShimmerSkeleton width="80%" height={24} borderRadius={6} style={{ marginBottom: 32 }} />
+        
+        <ShimmerSkeleton width="100%" height={24} borderRadius={6} style={{ marginBottom: 12 }} />
+        <ShimmerSkeleton width="85%" height={24} borderRadius={6} style={{ marginBottom: 12 }} />
+        <ShimmerSkeleton width="90%" height={24} borderRadius={6} style={{ marginBottom: 12 }} />
       </View>
     );
   }

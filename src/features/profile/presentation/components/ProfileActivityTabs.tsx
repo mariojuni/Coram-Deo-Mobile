@@ -71,8 +71,9 @@ export function ProfileActivityTabs({
 
   const handleShareHighlight = useCallback(async (item: UserHighlightItem) => {
     try {
-      const msg = item.text
-        ? `"${item.text}" — ${item.bookName} ${item.chapter}:${item.verseNumber}`
+      const cleanText = item.text ? item.text.replace(/{{note:[0-9]+}}/g, '').trim() : '';
+      const msg = cleanText
+        ? `"${cleanText}" — ${item.bookName} ${item.chapter}:${item.verseNumber}`
         : `${item.bookName} ${item.chapter}:${item.verseNumber}`;
       await Share.share({ message: msg });
     } catch (e) {
@@ -177,7 +178,7 @@ export function ProfileActivityTabs({
                   </View>
 
                   {!!item.text ? (
-                    <Text style={styles.scriptureText}>"{item.text}"</Text>
+                    <Text style={styles.scriptureText}>"{item.text.replace(/{{note:[0-9]+}}/g, '').trim()}"</Text>
                   ) : (
                     <Text style={styles.scriptureTextFallback}>Tap card to read passage in Bible</Text>
                   )}

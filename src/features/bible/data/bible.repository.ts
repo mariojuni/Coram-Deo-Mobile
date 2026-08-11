@@ -447,6 +447,13 @@ export const getUserPreferences = async () => {
     if (data.highlights) merged.highlights = data.highlights;
   }
 
+  const savedVersions = await getSavedVersions();
+  const isAvailable = savedVersions.some((v: any) => String(v.id) === String(merged.activeTranslation));
+  
+  if (!isAvailable) {
+    merged.activeTranslation = defaultPrefs.activeTranslation;
+  }
+
   return merged;
 };
 
