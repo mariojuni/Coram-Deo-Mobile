@@ -7,6 +7,7 @@ import { useMinistryStore } from '@/store/useMinistryStore';
 import { discipleshipGroupRepository } from '@/features/discipleshipGroup/data/discipleshipGroup.repository';
 import type { DiscipleshipGroup, DiscipleshipLesson } from '@/features/discipleshipGroup/domain/discipleshipGroup.types';
 import { sermonRepository } from '@/features/sermons/data/sermon.repository';
+import { isUserInMinistry } from '@/features/member/domain/member.utils';
 import type { SermonNote } from '@/features/sermons/domain/sermon.types';
 import { getUserPreferences, saveUserPreferences, fetchChapterData } from '@/features/bible/data/bible.repository';
 import type { SystemRole } from '@/features/auth/domain/auth.types';
@@ -153,12 +154,16 @@ export function useProfileDashboardData() {
         }
 
         // Also check if user is in leaderMemberIds / managedMinistryIds of any ministry
+        // and also check if user is in the embedded `members` array.
         ministries.forEach((m) => {
           if (!memSet.has(m.id)) {
             const isLeader =
               (memberId && m.leaderId === memberId) ||
               (userId && m.leaderId === userId) ||
               (userProfile?.managedMinistryIds?.includes(m.id));
+              
+            const isEmbeddedMember = isUserInMinistry(m.members, currentUser, userProfile);
+
             if (isLeader) {
               memSet.add(m.id);
               memberships.push({
@@ -166,6 +171,19 @@ export function useProfileDashboardData() {
                 ministryId: m.id,
                 ministryName: m.name,
                 ministryRole: 'Leader',
+              });
+            } else if (isEmbeddedMember) {
+              memSet.add(m.id);
+              
+              // Find role if specified in embedded member data
+              const ids = [currentUser?.uid, userProfile?.memberId].filter(Boolean);
+              const memberData = m.members?.find(mem => ids.includes(mem.memberId));
+              
+              memberships.push({
+                id: `embedded_${m.id}`,
+                ministryId: m.id,
+                ministryName: m.name,
+                ministryRole: memberData?.role || 'Member',
               });
             }
           }
