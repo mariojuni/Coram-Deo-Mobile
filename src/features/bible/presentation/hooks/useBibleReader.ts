@@ -1,7 +1,7 @@
 import { bibleDataService, BIBLE_DOWNLOAD_COMPLETED_EVENT } from '@/features/bible/data/BibleDataService';
 import * as Clipboard from 'expo-clipboard';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, DeviceEventEmitter } from 'react-native';
+import { DeviceEventEmitter } from 'react-native';
 
 const highlightColors = {
   yellow: 'rgba(254, 240, 138, 0.55)',
@@ -120,15 +120,63 @@ export function useBibleReader(
   const handleCopy = useCallback(async () => {
     if (selectedVerses.length === 0) return;
 
-    const versesText = [...selectedVerses]
-      .sort((a, b) => Number(a) - Number(b))
-      .map((verseNumber) => chapterDataByVerseNumber.get(verseNumber) || '')
-      .join(' ');
+    const cleanVerseText = (text: string) => {
+      if (!text) return '';
+      return text
+        .replace(/\{\{note:\d+\}\}/g, '')
+        .replace(/[\u200B-\u200D\uFEFF]/g, '')
+        .replace(/<[^>]*>/g, '')
+        .replace(/#/g, '')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/\s+/g, ' ')
+        .trim();
+    };
 
-    await Clipboard.setStringAsync(versesText);
+    const sortedNums = [...selectedVerses]
+      .map(Number)
+      .filter((n) => !isNaN(n))
+      .sort((a, b) => a - b);
+
+    const lines = sortedNums
+      .map((vNum) => {
+        const raw = chapterDataByVerseNumber.get(String(vNum)) || '';
+        const clean = cleanVerseText(raw);
+        return `${vNum} ${clean}`;
+      })
+      .filter((line) => line.trim().length > 0);
+
+    const activeBookObj = books.find((b) => String(b.id) === String(activeBook));
+    const bookTitle = (activeBookObj as any)?.localTitle || (activeBookObj as any)?.title || activeBook;
+
+    let rangeStr = '';
+    if (sortedNums.length === 1) {
+      rangeStr = `${sortedNums[0]}`;
+    } else if (sortedNums.length > 1) {
+      let isConsecutive = true;
+      for (let i = 1; i < sortedNums.length; i++) {
+        if (sortedNums[i] !== sortedNums[i - 1] + 1) {
+          isConsecutive = false;
+          break;
+        }
+      }
+      if (isConsecutive) {
+        rangeStr = `${sortedNums[0]}-${sortedNums[sortedNums.length - 1]}`;
+      } else {
+        rangeStr = sortedNums.join(', ');
+      }
+    }
+
+    const reference = `- ${bookTitle} ${activeChapter}:${rangeStr}`;
+    const formattedCopyText = `${lines.join('\n')}\n\n${reference}`;
+
     setSelectedVerses([]);
-    Alert.alert('Copied', 'Verses copied to clipboard!');
-  }, [chapterDataByVerseNumber, selectedVerses]);
+    await Clipboard.setStringAsync(formattedCopyText);
+  }, [activeBook, activeChapter, books, chapterDataByVerseNumber, selectedVerses]);
 
   const handleHighlight = useCallback(
     (color: keyof typeof highlightColors | 'clear') => {

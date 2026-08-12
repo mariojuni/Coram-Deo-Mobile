@@ -18,17 +18,11 @@ const COLLAPSE_RANGE = 70;
 export function TopNavBar({ leftText, onLeftPress, rightText, onRightPress, scrollY }: TopNavBarProps) {
   const insets = useSafeAreaInsets();
 
-  const expandedOpacity = scrollY ? scrollY.interpolate({
+  const pillScale = scrollY ? scrollY.interpolate({
     inputRange: [0, COLLAPSE_RANGE],
-    outputRange: [1, 0],
+    outputRange: [1, 0.9],
     extrapolate: 'clamp',
   }) : 1;
-
-  const compactOpacity = scrollY ? scrollY.interpolate({
-    inputRange: [0, COLLAPSE_RANGE],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  }) : 0;
 
   const accentLineOpacity = scrollY ? scrollY.interpolate({
     inputRange: [0, COLLAPSE_RANGE],
@@ -58,9 +52,13 @@ export function TopNavBar({ leftText, onLeftPress, rightText, onRightPress, scro
       </Animated.View>
 
       <View style={styles.content} pointerEvents="box-none">
-        
-        {/* Expanded (Centered) */}
-        <Animated.View style={[styles.pillContainer, { opacity: expandedOpacity }]} pointerEvents="box-none">
+        <Animated.View 
+          style={[
+            styles.pillContainer, 
+            { transform: [{ scale: pillScale }] }
+          ]} 
+          pointerEvents="box-none"
+        >
           <DebouncedTouchable style={styles.bookBtn} onPress={onLeftPress}>
             <Text style={styles.bookText}>{leftText}</Text>
           </DebouncedTouchable>
@@ -71,21 +69,6 @@ export function TopNavBar({ leftText, onLeftPress, rightText, onRightPress, scro
             <Text style={styles.versionText}>{rightText}</Text>
           </DebouncedTouchable>
         </Animated.View>
-
-        {/* Compact (Left Aligned) */}
-        <Animated.View style={[styles.compactContainer, { opacity: compactOpacity }]} pointerEvents="box-none">
-          <BlurView intensity={50} tint="light" style={StyleSheet.absoluteFill} />
-          <DebouncedTouchable style={styles.compactBookBtn} onPress={onLeftPress}>
-            <Text style={styles.compactBookText}>{leftText}</Text>
-          </DebouncedTouchable>
-
-          <View style={styles.compactDivider} />
-
-          <DebouncedTouchable style={styles.compactVersionBtn} onPress={onRightPress}>
-            <Text style={styles.compactVersionText}>{rightText}</Text>
-          </DebouncedTouchable>
-        </Animated.View>
-
       </View>
     </Animated.View>
   );
@@ -121,6 +104,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 4,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
   },
   bookBtn: {
     paddingVertical: 8,
@@ -145,44 +130,6 @@ const styles = StyleSheet.create({
   },
   versionText: {
     fontSize: 12,
-    fontWeight: '800',
-    color: '#FF6596',
-    textTransform: 'uppercase',
-  },
-  compactContainer: {
-    position: 'absolute',
-    bottom: 12,
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 4,
-    borderRadius: 24,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  compactBookBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-  },
-  compactBookText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#1a1a1a',
-  },
-  compactDivider: {
-    width: 1,
-    height: 12,
-    backgroundColor: '#e1e4e8',
-    marginHorizontal: 4,
-  },
-  compactVersionBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    backgroundColor: 'rgba(255, 101, 150, 0.08)',
-    borderRadius: 16,
-  },
-  compactVersionText: {
-    fontSize: 10,
     fontWeight: '800',
     color: '#FF6596',
     textTransform: 'uppercase',
