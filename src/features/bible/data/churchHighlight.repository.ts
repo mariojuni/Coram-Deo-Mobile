@@ -15,6 +15,7 @@ import {
   arrayUnion,
   arrayRemove,
   increment,
+  runTransaction,
   serverTimestamp,
 } from 'firebase/firestore';
 import { commentRepository } from '@/features/comments/data/comment.repository';
@@ -227,22 +228,28 @@ export const churchHighlightRepository = {
   /**
    * Toggle Like / Unlike on a church highlight
    */
-  async toggleHighlightLike(churchId: string, highlightId: string, userId: string, isLiked: boolean) {
+  async toggleHighlightLike(churchId: string, highlightId: string, userId: string, isLiked?: boolean) {
     if (!churchId || !highlightId || !userId) return;
     const docRef = doc(getActiveDb(), `churches/${churchId}/verse_highlights`, highlightId);
 
     try {
-      if (isLiked) {
-        await updateDoc(docRef, {
-          likedBy: arrayRemove(userId),
-          likes: increment(-1),
+      await runTransaction(getActiveDb(), async (transaction) => {
+        const snapshot = await transaction.get(docRef);
+        if (!snapshot.exists()) return;
+
+        const data = snapshot.data();
+        const likedBy = Array.isArray(data.likedBy) ? data.likedBy.filter((v): v is string => typeof v === 'string') : [];
+        const likes = typeof data.likes === 'number' ? data.likes : 0;
+        const alreadyLiked = likedBy.includes(userId);
+
+        const nextLikedBy = alreadyLiked ? likedBy.filter((uid) => uid !== userId) : [...likedBy, userId];
+        const nextLikes = alreadyLiked ? Math.max(0, likes - 1) : likes + 1;
+
+        transaction.update(docRef, {
+          likedBy: nextLikedBy,
+          likes: nextLikes,
         });
-      } else {
-        await updateDoc(docRef, {
-          likedBy: arrayUnion(userId),
-          likes: increment(1),
-        });
-      }
+      });
     } catch (err) {
       console.error('[ChurchHighlightRepository] Failed to toggle like:', err);
     }

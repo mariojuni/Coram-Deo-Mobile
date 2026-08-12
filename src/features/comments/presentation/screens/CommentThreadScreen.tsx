@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 
 import { Stack as ExpoStack, useLocalSearchParams as useExpoSearchParams, useRouter as useExpoRouter, useFocusEffect } from 'expo-router';
-import { ArrowLeft, X, Send, User, CheckCircle2, MessageCircle, HeartHandshake, ChevronLeft, MoreVertical, BookOpen } from 'lucide-react-native';
+import { ArrowLeft, X, Send, User, CheckCircle2, MessageCircle, Heart, HeartHandshake, ChevronLeft, MoreVertical, BookOpen } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,6 +18,7 @@ import type { Comment, CommentTargetType } from '../../domain/comment.types';
 import { canCreateComment, canDeleteComment, canModerateComments, canModeratePrayerRequests } from '@/permissions/mobilePermissions';
 import { formatPrayerTimeAgo } from '@/features/prayer/domain/prayer.selectors';
 import { prayerRepository } from '@/features/prayer/data/prayer.repository';
+import { churchHighlightRepository } from '@/features/bible/data/churchHighlight.repository';
 import { useUIStore } from '@/store/useUIStore';
 import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
 import { getHumanReadableBookName } from '@/utils/scriptureReferenceParser';
@@ -102,17 +103,32 @@ export function CommentThreadScreen() {
   }, [churchId, targetType, targetId]);
 
   const handlePray = async () => {
-    if (!churchId || !parentData || !currentUser?.uid || targetType !== 'prayer_request') return;
-    try {
-      await prayerRepository.togglePrayerLike(churchId, targetId, currentUser.uid);
-      const isLiked = parentData.likedBy?.includes(currentUser.uid);
-      setParentData((prev: any) => prev ? {
+    if (!churchId || !parentData || !currentUser?.uid) return;
+    const isLiked = !!parentData.likedBy?.includes(currentUser.uid);
+    const targetChurchId = parentData.churchId || churchId;
+
+    // Optimistic UI update
+    setParentData((prev: any) => {
+      if (!prev) return prev;
+      const currentLikedBy = prev.likedBy || [];
+      const currentlyLiked = currentLikedBy.includes(currentUser.uid);
+      const nextLikedBy = currentlyLiked
+        ? currentLikedBy.filter((id: string) => id !== currentUser.uid)
+        : [...currentLikedBy, currentUser.uid];
+
+      return {
         ...prev,
-        likes: Math.max(0, (prev.likes || 0) + (isLiked ? -1 : 1)),
-        likedBy: isLiked 
-          ? prev.likedBy?.filter((id: string) => id !== currentUser.uid) 
-          : [...(prev.likedBy || []), currentUser.uid]
-      } : prev);
+        likes: Math.max(0, (prev.likes || 0) + (currentlyLiked ? -1 : 1)),
+        likedBy: nextLikedBy,
+      };
+    });
+
+    try {
+      if (targetType === 'prayer_request') {
+        await prayerRepository.togglePrayerLike(churchId, targetId, currentUser.uid);
+      } else if (targetType === 'church_highlight') {
+        await churchHighlightRepository.toggleHighlightLike(targetChurchId, targetId, currentUser.uid, isLiked);
+      }
     } catch (e) {
       console.error(e);
     }
@@ -254,6 +270,10 @@ export function CommentThreadScreen() {
     if (!parentData) return null;
 
     if (targetType === 'prayer_request') {
+      const isLiked = parentData.likedBy?.includes(currentUser?.uid || '');
+      const isAnswered = parentData.answered || parentData.status === 'answered';
+      const canManage = parentData.userId === currentUser?.uid || canModeratePrayerRequests(userProfile);
+
       return (
         <View style={styles.flatParentContainer}>
           <Text style={styles.flatPrayerText}>
@@ -261,50 +281,58 @@ export function CommentThreadScreen() {
             {parentData.request || parentData.requestText || parentData.content}
           </Text>
 
-          <View style={styles.flatPrayerBottomRow}>
-            {/* Answered Tag */}
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              {(parentData.answered || parentData.status === 'answered') && (
-                <View style={[styles.flatAnsweredBadge, { marginRight: 8 }]}>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: '#10B981', marginRight: 4 }}>Answered</Text>
-                </View>
-              )}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'flex-start',
+              marginTop: 16,
+              gap: 16,
+            }}
+          >
+            <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} onPress={handlePray} activeOpacity={0.7}>
+              <Heart
+                size={18}
+                color={isLiked ? '#EF4444' : '#6B7280'}
+                fill={isLiked ? '#EF4444' : 'transparent'}
+              />
+              <Text style={{ fontSize: 13, fontWeight: '600', color: isLiked ? '#EF4444' : '#6B7280' }}>
+                {Math.max(0, parentData.likes || 0)}
+              </Text>
+            </TouchableOpacity>
+
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <MessageCircle size={18} color="#6B7280" />
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#6B7280' }}>
+                {parentData.commentCount || comments.length || 0}
+              </Text>
             </View>
 
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              {(parentData.userId === currentUser?.uid || canModeratePrayerRequests(userProfile)) ? (
-                <TouchableOpacity style={[styles.prayIconButton, { marginRight: 16 }]} onPress={handleAnswered}>
-                  <CheckCircle2 size={18} color={(parentData.answered || parentData.status === 'answered') ? '#10B981' : '#9CA3AF'} />
-                </TouchableOpacity>
-              ) : (
-                (parentData.answered || parentData.status === 'answered') && (
-                  <View style={[styles.flatAnsweredBadge, { marginRight: 16 }]}>
-                    <CheckCircle2 size={18} color="#10B981" />
-                  </View>
-                )
-              )}
-              
-              <View style={[styles.prayIconButton, { marginRight: 16 }]}>
-                <MessageCircle size={18} color="#FF6596" />
-                <Text style={[styles.prayIconCount, { color: '#FF6596' }]}>
-                  {parentData.commentCount || comments.length || 0}
+            {canManage ? (
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                onPress={handleAnswered}
+                activeOpacity={0.7}
+              >
+                <CheckCircle2 size={18} color={isAnswered ? '#10B981' : '#9CA3AF'} />
+                <Text style={{ fontSize: 12, fontWeight: '600', color: isAnswered ? '#10B981' : '#6B7280' }}>
+                  {isAnswered ? 'Answered' : 'Mark Answered'}
                 </Text>
-              </View>
-
-              {(() => {
-                const isLiked = parentData.likedBy?.includes(currentUser?.uid || '');
-                return (
-                  <TouchableOpacity style={styles.prayIconButton} onPress={handlePray}>
-                    <HeartHandshake size={18} color={isLiked ? "#FF6596" : "#9CA3AF"} />
-                    <Text style={[styles.prayIconCount, isLiked && { color: "#FF6596" }]}>{parentData.likes || 0}</Text>
-                  </TouchableOpacity>
-                );
-              })()}
-            </View>
+              </TouchableOpacity>
+            ) : (
+              isAnswered && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <CheckCircle2 size={18} color="#10B981" />
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: '#10B981' }}>Answered</Text>
+                </View>
+              )
+            )}
           </View>
         </View>
       );
     } else if (targetType === 'church_highlight') {
+      const isLiked = parentData.likedBy?.includes(currentUser?.uid || '');
+
       return (
         <View style={styles.flatParentContainer}>
           <Text style={[styles.flatPrayerText, { fontStyle: 'italic', color: '#4B5563', lineHeight: 24 }]}>
@@ -342,25 +370,31 @@ export function CommentThreadScreen() {
             </TouchableOpacity>
           </View>
           
-          <View style={[styles.flatPrayerBottomRow, { marginTop: 16 }]}>
-            <View style={{ flex: 1 }} />
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <View style={[styles.prayIconButton, { marginRight: 16 }]}>
-                <MessageCircle size={18} color="#FF6596" />
-                <Text style={[styles.prayIconCount, { color: '#FF6596' }]}>
-                  {parentData.commentCount || comments.length || 0}
-                </Text>
-              </View>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'flex-start',
+              marginTop: 16,
+              gap: 16,
+            }}
+          >
+            <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} onPress={handlePray} activeOpacity={0.7}>
+              <Heart
+                size={18}
+                color={isLiked ? '#EF4444' : '#6B7280'}
+                fill={isLiked ? '#EF4444' : 'transparent'}
+              />
+              <Text style={{ fontSize: 13, fontWeight: '600', color: isLiked ? '#EF4444' : '#6B7280' }}>
+                {Math.max(0, parentData.likes || 0)}
+              </Text>
+            </TouchableOpacity>
 
-              {(() => {
-                const isLiked = parentData.likedBy?.includes(currentUser?.uid || '');
-                return (
-                  <TouchableOpacity style={styles.prayIconButton} onPress={handlePray}>
-                    <HeartHandshake size={18} color={isLiked ? "#FF6596" : "#9CA3AF"} />
-                    <Text style={[styles.prayIconCount, isLiked && { color: "#FF6596" }]}>{parentData.likes || 0}</Text>
-                  </TouchableOpacity>
-                );
-              })()}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <MessageCircle size={18} color="#6B7280" />
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#6B7280' }}>
+                {parentData.commentCount || comments.length || 0}
+              </Text>
             </View>
           </View>
         </View>

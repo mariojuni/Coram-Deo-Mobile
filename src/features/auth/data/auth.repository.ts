@@ -716,16 +716,24 @@ export const authRepository = {
         }
       }
 
-      if (Object.keys(updates).length > 0) {
-        updates.updatedAt = serverTimestamp();
-        await updateDoc(existingUserDoc.ref, updates);
+      try {
+        if (Object.keys(updates).length > 0) {
+          updates.updatedAt = serverTimestamp();
+          await updateDoc(existingUserDoc.ref, updates);
+        }
+      } catch (err) {
+        console.warn("[Auth Repository] Failed to update existing user doc on Google sign-in:", err);
       }
     } else if (userDocByUid.exists()) {
       // UID exists but email is different (should be rare)
-      await updateDoc(userDocRefByUid, {
-        lastLoginAt: new Date().toISOString(),
-        updatedAt: serverTimestamp(),
-      });
+      try {
+        await updateDoc(userDocRefByUid, {
+          lastLoginAt: new Date().toISOString(),
+          updatedAt: serverTimestamp(),
+        });
+      } catch (err) {
+        console.warn("[Auth Repository] Failed to update user doc by UID on Google sign-in:", err);
+      }
     } else {
       // New user from Google
       const phoneNumber = user.phoneNumber || undefined;
@@ -744,22 +752,26 @@ export const authRepository = {
         const churchId = matchedMember.churchId ?? null;
         const status = matchedMember.churchId ? "active" : "pending_church_link";
 
-        await updateDoc(memberRef, {
-          authUid: user.uid,
-          accountId: user.uid,
-          status,
-          churchId,
-          memberId: matchedMember.id,
-          email: email || matchedMember.email || "",
-          emailLowercase: cleanEmail || matchedMember.emailLowercase || "",
-          photoUrl: user.photoURL || matchedMember.photoUrl || "",
-          firstName: matchedMember.firstName || firstName,
-          lastName: matchedMember.lastName || lastName,
-          authProvider: "google",
-          providers: Array.from(new Set([...(matchedMember.providers || []), "google.com"])),
-          lastLoginAt: new Date().toISOString(),
-          updatedAt: serverTimestamp(),
-        });
+        try {
+          await updateDoc(memberRef, {
+            authUid: user.uid,
+            accountId: user.uid,
+            status,
+            churchId,
+            memberId: matchedMember.id,
+            email: email || matchedMember.email || "",
+            emailLowercase: cleanEmail || matchedMember.emailLowercase || "",
+            photoUrl: user.photoURL || matchedMember.photoUrl || "",
+            firstName: matchedMember.firstName || firstName,
+            lastName: matchedMember.lastName || lastName,
+            authProvider: "google",
+            providers: Array.from(new Set([...(matchedMember.providers || []), "google.com"])),
+            lastLoginAt: new Date().toISOString(),
+            updatedAt: serverTimestamp(),
+          });
+        } catch (err) {
+          console.warn("[Auth Repository] Failed to link existing member doc on Google sign-in:", err);
+        }
       } else {
         // Create new user document at user.uid only if no existing member was matched
         const nameParts = (user.displayName || "").split(" ");
@@ -789,7 +801,11 @@ export const authRepository = {
           role: "member", // legacy compat
         };
 
-        await setDoc(userDocRefByUid, userAccount);
+        try {
+          await setDoc(userDocRefByUid, userAccount);
+        } catch (err) {
+          console.warn("[Auth Repository] Failed to create new user doc on Google sign-in:", err);
+        }
       }
     }
 
