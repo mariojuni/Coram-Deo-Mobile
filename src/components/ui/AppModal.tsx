@@ -1,11 +1,23 @@
 import { BounceCard } from '@/components/ui/BounceCard';
 import { X } from 'lucide-react-native';
-import { ReactNode, useEffect, useMemo, useState } from 'react';
-import { Animated, Dimensions, Keyboard, KeyboardAvoidingView, Modal, Platform, StyleProp, StyleSheet, Text, TouchableWithoutFeedback, View, ViewStyle } from 'react-native';
+import React, { ReactNode, useEffect, useMemo, useState, useRef } from 'react';
+import { Animated, Dimensions, Keyboard, KeyboardAvoidingView, Modal, Platform, StyleProp, StyleSheet, Text, TouchableWithoutFeedback, View, ViewStyle, PanResponder } from 'react-native';
 
 
 
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+
+export const ModalDragContext = React.createContext<Record<string, any>>({});
+
+export function ModalDragArea({ children, style, pointerEvents }: { children: React.ReactNode, style?: import('react-native').StyleProp<import('react-native').ViewStyle>, pointerEvents?: 'box-none' | 'none' | 'box-only' | 'auto' }) {
+  const panHandlers = React.useContext(ModalDragContext);
+  return (
+    <View style={style} pointerEvents={pointerEvents} {...panHandlers}>
+      {children}
+    </View>
+  );
+}
 
 interface AppModalProps {
   isOpen: boolean;
@@ -28,9 +40,49 @@ export default function AppModal({ isOpen, onClose, title, children, containerSt
 
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
-  // Compute max height for the modal sheet based on screen height ratio
   const windowHeight = Dimensions.get('window').height;
   const maxSheetHeight = windowHeight * heightRatio;
+
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dy) > 5 && Math.abs(g.dy) > Math.abs(g.dx),
+        onPanResponderMove: (_, g) => {
+          if (g.dy > 0) {
+            slideAnim.setValue(g.dy);
+          }
+        },
+        onPanResponderRelease: (_, g) => {
+          if (g.dy > 100 || g.vy > 1.2) {
+            Animated.timing(slideAnim, {
+              toValue: windowHeight,
+              duration: 200,
+              useNativeDriver: true,
+            }).start(() => {
+              onCloseRef.current();
+            });
+          } else {
+            Animated.spring(slideAnim, {
+              toValue: 0,
+              useNativeDriver: true,
+              bounciness: 0,
+            }).start();
+          }
+        },
+        onPanResponderTerminate: () => {
+          Animated.spring(slideAnim, {
+            toValue: 0,
+            useNativeDriver: true,
+            bounciness: 0,
+          }).start();
+        },
+      }),
+    [slideAnim, windowHeight]
+  );
 
   useEffect(() => {
     if (!avoidKeyboard) return;
@@ -74,7 +126,7 @@ export default function AppModal({ isOpen, onClose, title, children, containerSt
         </TouchableWithoutFeedback>
 
         <Animated.View style={[styles.sheet, sheetBg ? { backgroundColor: sheetBg } : null, dynamicHeight ? { flex: undefined } : { height: maxSheetHeight }, { transform: [{ translateY: slideAnim }], maxHeight: maxSheetHeight, marginBottom: avoidKeyboard ? keyboardHeight : 0 }]}>
-          {!hideDragHandle && <View style={styles.dragHandle} />}
+          {!hideDragHandle && (<View {...panResponder.panHandlers} style={styles.dragHandleContainer}><View style={styles.dragHandle} /></View>)}
 
           {/* Header */}
           {!hideHeader && (
@@ -98,7 +150,9 @@ export default function AppModal({ isOpen, onClose, title, children, containerSt
 
           {/* Content */}
           <SafeAreaView edges={keyboardHeight > 0 ? [] : ['bottom']} style={[styles.contentContainer, dynamicHeight && { flex: undefined }, containerStyle]}>
-            {children}
+            <ModalDragContext.Provider value={panResponder.panHandlers}>
+              {children}
+            </ModalDragContext.Provider>
           </SafeAreaView>
         </Animated.View>
       </View>
@@ -127,14 +181,14 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     overflow: 'hidden',
   },
+  dragHandleContainer: { paddingVertical: 12 },
   dragHandle: {
     width: 40,
     height: 5,
     backgroundColor: '#e1e4e8',
     borderRadius: 10,
     alignSelf: 'center',
-    marginTop: 12,
-    marginBottom: 4,
+    
   },
   contentContainer: {
     flex: 1,

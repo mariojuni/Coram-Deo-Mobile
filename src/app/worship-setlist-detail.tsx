@@ -1,4 +1,4 @@
-import AppModal from '@/components/ui/AppModal';
+import AppModal, { ModalDragArea } from '@/components/ui/AppModal';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -547,7 +547,7 @@ export default function WorshipSetlistDetailScreen() {
       >
         <View style={styles.modalContainer}>
           {/* Header with Frosted Glass */}
-          <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
+          <ModalDragArea style={[styles.headerContainer, { paddingTop: 12 }]}>
             <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
             <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
             <View style={styles.dragHandle} />
@@ -568,7 +568,7 @@ export default function WorshipSetlistDetailScreen() {
                 <X size={24} color="#111827" strokeWidth={2} />
               </BounceCard>
             </View>
-          </View>
+          </ModalDragArea>
 
           <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
             <View style={{ gap: 20, paddingTop: 24 }}>
@@ -658,7 +658,7 @@ export default function WorshipSetlistDetailScreen() {
       >
         <View style={styles.modalContainer}>
           {/* Header with Frosted Glass */}
-          <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
+          <ModalDragArea style={[styles.headerContainer, { paddingTop: 12 }]}>
             <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
             <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
             <View style={styles.dragHandle} />
@@ -669,7 +669,7 @@ export default function WorshipSetlistDetailScreen() {
                 <X size={24} color="#111827" strokeWidth={2} />
               </BounceCard>
             </View>
-          </View>
+          </ModalDragArea>
 
           <ScrollView
             ref={addSongKeyboard.scrollViewRef}
@@ -736,7 +736,7 @@ export default function WorshipSetlistDetailScreen() {
       >
         <View style={[styles.modalContainer, { flex: 1 }]}>
           {/* Frosted Glass Header */}
-          <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
+          <ModalDragArea style={[styles.headerContainer, { paddingTop: 12 }]}>
             <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
             <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
             <View style={styles.dragHandle} />
@@ -756,7 +756,7 @@ export default function WorshipSetlistDetailScreen() {
                 <X size={24} color="#111827" strokeWidth={2} />
               </BounceCard>
             </View>
-          </View>
+          </ModalDragArea>
 
           <View style={{ flex: 1, paddingTop: 90, paddingHorizontal: 20 }}>
             {/* Search Input Bar */}

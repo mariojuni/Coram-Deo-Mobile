@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Plus, Receipt, X, ChevronLeft, Upload, Calendar } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import AppModal from '../../components/ui/AppModal';
+import AppModal, { ModalDragArea } from '../../components/ui/AppModal';
 import CustomDatePicker from '../../components/CustomDatePicker';
 import { ModernDropdown, DropdownOption } from '../../components/ui/ModernDropdown';
 import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
@@ -208,7 +208,7 @@ export default function ExpenseTrackerScreen() {
       >
         <View style={styles.modalContainer}>
           {/* Header matching Event Details style exactly */}
-          <View style={[styles.modalHeaderContainer, { paddingTop: 12 }]} pointerEvents="box-none">
+          <ModalDragArea style={[styles.modalHeaderContainer, { paddingTop: 12 }]}>
             <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
             <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
             <View style={styles.modalDragHandle} />
@@ -219,7 +219,7 @@ export default function ExpenseTrackerScreen() {
                 <X size={24} color="#111827" strokeWidth={2} />
               </BounceCard>
             </View>
-          </View>
+          </ModalDragArea>
 
           <ScrollView contentContainerStyle={styles.modalScrollContent} showsVerticalScrollIndicator={false}>
             <View style={styles.contentWrap}>

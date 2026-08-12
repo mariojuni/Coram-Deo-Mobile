@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { getActiveAuth, getActiveDb } from '../../../firebase';
 import { deleteOfflineBible, getBibleIndex, getChapter, saveBibleIndex, saveChapter } from './offlineDb.repository';
 
@@ -466,7 +466,15 @@ export const saveUserPreferences = async (prefs: any) => {
   if (currentUser) {
     try {
       const docRef = doc(getActiveDb(), 'users', currentUser.uid, 'bible', 'preferences');
-      await setDoc(docRef, prefs, { merge: true });
+      try {
+        await updateDoc(docRef, prefs);
+      } catch (error: any) {
+        if (error.code === 'not-found') {
+          await setDoc(docRef, prefs);
+        } else {
+          throw error;
+        }
+      }
     } catch (error) {
       console.warn('Failed to save preferences to Firestore:', error);
     }

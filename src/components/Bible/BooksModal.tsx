@@ -2,7 +2,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { BlurView } from 'expo-blur';
 import { X } from 'lucide-react-native';
 import { BounceCard } from '@/components/ui/BounceCard';
-import AppModal from '../ui/AppModal';
+import AppModal, { ModalDragArea } from '../ui/AppModal';
 import { useBooksModal } from '@/features/bible/presentation/hooks/useBooksModal';
 
 interface BooksModalProps {
@@ -52,7 +52,7 @@ export default function BooksModal({ isOpen, onClose, books, onSelectChapter, ac
       heightRatio={0.85}
     >
       <View style={styles.modalContainer}>
-        <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
+        <ModalDragArea style={[styles.headerContainer, { paddingTop: 12 }]}>
           <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
           <View style={styles.dragHandle} />
@@ -63,7 +63,7 @@ export default function BooksModal({ isOpen, onClose, books, onSelectChapter, ac
               <X size={24} color="#111827" strokeWidth={2} />
             </BounceCard>
           </View>
-        </View>
+        </ModalDragArea>
 
         {/* Book List */}
         <ScrollView style={styles.content} contentContainerStyle={{ paddingTop: 70 }}>

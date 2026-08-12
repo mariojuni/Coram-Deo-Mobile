@@ -135,12 +135,6 @@ export default function BibleScreen() {
         setTranslation(updates.activeTranslation);
       }
 
-      // Sync highlights to Firestore
-      if (updates.highlights && userProfile?.uid) {
-        const docRef = doc(getActiveDb(), 'users', userProfile.uid, 'bible', 'preferences');
-        setDoc(docRef, { highlights: updates.highlights }, { merge: true })
-          .catch(err => console.error('Error saving Bible highlights to Firebase:', err));
-      }
       return newPrefs;
     });
   };

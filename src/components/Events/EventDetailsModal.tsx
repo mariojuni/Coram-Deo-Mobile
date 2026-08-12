@@ -3,7 +3,7 @@ import { BounceCard } from '@/components/ui/BounceCard';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { CalendarDays, CheckCircle2, HelpCircle, XCircle, X } from 'lucide-react-native';
 import { Platform, ScrollView } from 'react-native';
-import AppModal from '@/components/ui/AppModal';
+import AppModal, { ModalDragArea } from '@/components/ui/AppModal';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { PublicEventSetlist } from '@/components/Events/PublicEventSetlist';
@@ -79,7 +79,7 @@ export function EventDetailsModal({
     >
       <View style={styles.modalContainer}>
         {/* ─── Header ─────────────────────────────────────────────────────── */}
-        <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
+        <ModalDragArea style={[styles.headerContainer, { paddingTop: 12 }]}>
           <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
           <View style={styles.dragHandle} />
@@ -90,7 +90,7 @@ export function EventDetailsModal({
               <X size={24} color="#111827" strokeWidth={2} />
             </BounceCard>
           </View>
-        </View>
+        </ModalDragArea>
 
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: 70 }]} showsVerticalScrollIndicator={false}>
           <View style={styles.contentWrap}>

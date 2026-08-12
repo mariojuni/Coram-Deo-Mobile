@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BounceCard } from '@/components/ui/BounceCard';
-import AppModal from '@/components/ui/AppModal';
+import AppModal, { ModalDragArea } from '@/components/ui/AppModal';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -164,7 +164,7 @@ export default function EditProfileScreen() {
     >
       <LinearGradient colors={['#F3F9FF', '#FFFFFF']} style={StyleSheet.absoluteFill} />
       
-      <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
+      <ModalDragArea style={[styles.headerContainer, { paddingTop: 12 }]}>
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
         <View style={styles.dragHandle} />
@@ -177,7 +177,7 @@ export default function EditProfileScreen() {
             <X size={24} color="#111827" strokeWidth={2} />
           </BounceCard>
         </View>
-      </View>
+      </ModalDragArea>
       
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: 80 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>

@@ -4,10 +4,16 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, DeviceEventEmitter } from 'react-native';
 
 const highlightColors = {
-  yellow: 'rgba(255, 235, 59, 0.4)',
-  pink: 'rgba(255, 101, 150, 0.3)',
-  blue: 'rgba(77, 139, 255, 0.3)',
-  green: 'rgba(74, 222, 128, 0.3)',
+  yellow: 'rgba(254, 240, 138, 0.55)',
+  pink: 'rgba(251, 207, 232, 0.60)',
+  blue: 'rgba(191, 219, 254, 0.60)',
+  green: 'rgba(187, 247, 208, 0.60)',
+  orange: 'rgba(254, 215, 170, 0.60)',
+  purple: 'rgba(233, 213, 255, 0.60)',
+  red: 'rgba(254, 202, 202, 0.60)',
+  teal: 'rgba(153, 246, 228, 0.60)',
+  indigo: 'rgba(199, 210, 254, 0.60)',
+  brown: 'rgba(231, 220, 210, 0.65)',
 } as const;
 
 type Preferences = {
@@ -220,6 +226,10 @@ export function useBibleReader(
     [chapterHighlights]
   );
 
+  const clearSelection = useCallback(() => {
+    setSelectedVerses([]);
+  }, []);
+
   return useMemo(
     () => ({
       chapterData,
@@ -233,6 +243,8 @@ export function useBibleReader(
       handleNextChapter,
       handlePrevChapter,
       toggleVerse,
+      clearSelection,
+      chapterHighlights,
     }),
     [
       chapterData,
@@ -245,6 +257,8 @@ export function useBibleReader(
       handleNextChapter,
       handlePrevChapter,
       toggleVerse,
+      clearSelection,
+      chapterHighlights,
     ]
   );
 }

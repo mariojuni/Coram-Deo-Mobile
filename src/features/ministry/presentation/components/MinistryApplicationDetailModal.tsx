@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { CheckCircle2, User, X, XCircle } from 'lucide-react-native';
-import AppModal from '@/components/ui/AppModal';
+import AppModal, { ModalDragArea } from '@/components/ui/AppModal';
 import { BounceCard } from '@/components/ui/BounceCard';
 import { SoftCard, getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 import type { MinistryApplication } from '@/features/ministry/domain/ministry.types';
@@ -132,7 +132,7 @@ export function MinistryApplicationDetailModal({
       >
         <View style={styles.modalContainer}>
           {/* ─── Header (Matching EventDetailsModal pattern) ───────────────── */}
-          <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
+          <ModalDragArea style={[styles.headerContainer, { paddingTop: 12 }]}>
             <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
             <View
               style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]}
@@ -154,7 +154,7 @@ export function MinistryApplicationDetailModal({
                 <X size={24} color="#111827" strokeWidth={2} />
               </BounceCard>
             </View>
-          </View>
+          </ModalDragArea>
 
           {/* ─── Scroll Content ────────────────────────────────────────── */}
           <ScrollView

@@ -3,10 +3,10 @@ import { useUIStore } from '@/store/useUIStore';
 import { ChevronLeft, ChevronRight, Copy, X, MessageSquareText, Info } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getSoftShadowStyle, getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
-import { ActivityIndicator, Animated, NativeScrollEvent, NativeSyntheticEvent, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { ActivityIndicator, Animated, Dimensions, NativeScrollEvent, NativeSyntheticEvent, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform, Image } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import AppModal from '@/components/ui/AppModal';
+import AppModal, { ModalDragArea } from '@/components/ui/AppModal';
 import { BounceCard } from '@/components/ui/BounceCard';
 import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
 
@@ -111,8 +111,22 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
     handleNextChapter,
     handlePrevChapter,
     toggleVerse,
+    clearSelection,
+    chapterHighlights,
   } = useBibleReader(preferences, books, updatePreferences);
   const selectedVerseSet = useMemo(() => new Set(selectedVerses), [selectedVerses]);
+
+  const activeColors = useMemo(() => {
+    const colors = new Set<string>();
+    if (selectedVerses.length === 0) return colors;
+    selectedVerses.forEach(v => {
+      const color = chapterHighlights[v];
+      if (color) {
+        colors.add(color);
+      }
+    });
+    return colors;
+  }, [selectedVerses, chapterHighlights]);
 
   // Reset tab bar visibility on unmount
   useEffect(() => {
@@ -128,6 +142,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
       useNativeDriver: false,
       listener: (e: NativeSyntheticEvent<NativeScrollEvent>) => {
         if (!controlsTabBar) return;
+        if (selectedVerses.length > 0) return; // Keep tab bar hidden if highlight modal is open
         const y = e.nativeEvent.contentOffset.y;
         const delta = y - lastScrollY.current;
         if (Math.abs(delta) > 6) {
@@ -222,6 +237,65 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
     })
   ).current;
 
+  // ── Highlight menu swipe-to-dismiss ──────────────────────────────────────
+  const highlightTranslateY = useRef(new Animated.Value(200)).current;
+  const lastSelectedVersesCount = useRef(0);
+  const windowHeight = Dimensions.get('window').height;
+  const highlightModalHeight = windowHeight * 0.15;
+
+  useEffect(() => {
+    if (selectedVerses.length > 0) {
+      if (lastSelectedVersesCount.current === 0) {
+        Animated.spring(highlightTranslateY, {
+          toValue: 0,
+          useNativeDriver: true,
+          bounciness: 0,
+        }).start();
+      }
+      setTabBarVisible(false);
+    } else {
+      highlightTranslateY.setValue(200);
+      setTabBarVisible(true);
+    }
+    lastSelectedVersesCount.current = selectedVerses.length;
+  }, [selectedVerses.length, highlightTranslateY, setTabBarVisible]);
+
+  const highlightPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dy) > 5,
+      onPanResponderMove: (_, g) => {
+        if (g.dy > 0) {
+          highlightTranslateY.setValue(g.dy);
+        }
+      },
+      onPanResponderRelease: (_, g) => {
+        if (g.dy > 50 || g.vy > 0.5) {
+          Animated.timing(highlightTranslateY, {
+            toValue: 200,
+            duration: 200,
+            useNativeDriver: true,
+          }).start(() => {
+            clearSelection();
+          });
+        } else {
+          Animated.spring(highlightTranslateY, {
+            toValue: 0,
+            useNativeDriver: true,
+            bounciness: 0,
+          }).start();
+        }
+      },
+      onPanResponderTerminate: () => {
+        Animated.spring(highlightTranslateY, {
+          toValue: 0,
+          useNativeDriver: true,
+          bounciness: 0,
+        }).start();
+      },
+    })
+  ).current;
+
   const renderVerseTextWithLetters = (text: string | undefined, crossReferences: VerseCrossReference[] | undefined) => {
     if (!text) return null;
     const parts = sanitizeVerseText(text).split(/(\{\{note:\d+\}\})/g);
@@ -302,21 +376,27 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
                     key={verse.id}
                     suppressHighlighting
                     style={[
-                      hasHighlight && { backgroundColor: highlightColorValue },
                       isSelected && styles.verseSelected,
                     ]}
                   >
-                    <Text suppressHighlighting onPress={() => toggleVerse(verse.verseNumber)}>
+                    <Text 
+                      suppressHighlighting 
+                      onPress={() => toggleVerse(verse.verseNumber)}
+                      style={hasHighlight ? { backgroundColor: highlightColorValue } : undefined}
+                    >
                       {cleanText}
                     </Text>
                     {hasNotes && (
                       <Text
                         suppressHighlighting
                         onPress={() => setActiveVerse(verse)}
-                        style={{ backgroundColor: 'transparent' }}
+                        style={[{ fontSize: 12 }, hasHighlight ? { backgroundColor: highlightColorValue } : undefined]}
                       >
                         {' '}
-                        <MessageSquareText size={12} color="#aaa" style={{ marginTop: 2 }} />
+                        <Image
+                          source={{ uri: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAABpklEQVR4nNSXMU/CQBTHX4+mg5ujibth1DgZP0ahYVNY9AvIyuSki4suaOJCCp39BMbJSOJC3E0cjavQw/8Rrjm0pa13pfpb+qB39+s9HndXRiXBqCTs71/0+/0tXPYty9rknFukAWNsCl4R3tfr9Rf13sLAvu+3ITwl85ngeIC253lnP8RBEGxjhk9UIMjAjuu6QxFHqQ7DcBezncV4Om80GgWdToeTBujPqtWqi3F96cBlJo5SipsbMjYhnYu5GCvOEYkxS6Z2IEOoY6kOO61jr9fbs23bSbo/mUw+G43GA+VkqRhVfoT0XOJJE9tUKhXR7hgVe0U5+DsLiIqYBVL9vPJUC34zqBFxWnHFkSUL2sUVR5aC+7/FFYd2qgWlFZcuYqOQMeqFr0Qsdyf5GUX6lkk8GAwO0fgc4ToZANX+mCrG36EJaZfMwJHmE3kISBTPZxpJ0ekCp5N3yol65qrVagtnrlgxGl8r0iY63ZBhlv3GU0gPIL2lAkgUQ9oqSipQl8wPGSDVrSLSqxLNeDwedx3HWYN0iKXyjgpG601Bh9J2py8AAAD//9JiXhkAAAAGSURBVAMAgwvIsxSQIioAAAAASUVORK5CYII=' }}
+                          style={{ width: 14, height: 14, tintColor: '#aaa', marginTop: 2 }}
+                        />
                       </Text>
                     )}
                     {' '}
@@ -386,28 +466,63 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
         </Animated.View>
       )}
 
-      {/* Highlighting Toolbar */}
+      {/* Highlighting Toolbar (Inline Modal) */}
       {selectedVerses.length > 0 && (
-        <View style={[styles.actionToolbar, { bottom: Math.max(insets.bottom, 16) + 84 }]}>
-          <BlurView intensity={80} tint="light" style={[StyleSheet.absoluteFill, { borderRadius: 40, overflow: 'hidden' }]} />
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)', borderRadius: 40 }]} pointerEvents="none" />
+        <Animated.View 
+          style={[
+            styles.highlightModal, 
+            { 
+              height: highlightModalHeight,
+              bottom: -5, 
+              transform: [{ translateY: highlightTranslateY }] 
+            }
+          ]}
+          {...highlightPanResponder.panHandlers}
+        >
+          <BlurView intensity={80} tint="light" style={[StyleSheet.absoluteFill, { borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden' }]} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)', borderTopLeftRadius: 24, borderTopRightRadius: 24 }]} pointerEvents="none" />
           
-          <TouchableOpacity style={styles.copyBtn} onPress={handleCopy}>
-            <Copy size={20} color="#1a1a1a" />
-            <Text style={styles.copyText}>Copy</Text>
-          </TouchableOpacity>
+          <View style={styles.highlightDragHandle} />
           
-          <View style={styles.colorPicker}>
-            <TouchableOpacity style={[styles.colorDot, { backgroundColor: highlightColors.yellow }]} onPress={() => handleHighlight('yellow')} />
-            <TouchableOpacity style={[styles.colorDot, { backgroundColor: highlightColors.pink }]} onPress={() => handleHighlight('pink')} />
-            <TouchableOpacity style={[styles.colorDot, { backgroundColor: highlightColors.blue }]} onPress={() => handleHighlight('blue')} />
-            <TouchableOpacity style={[styles.colorDot, { backgroundColor: highlightColors.green }]} onPress={() => handleHighlight('green')} />
-            
-            <TouchableOpacity style={styles.clearDot} onPress={() => handleHighlight('clear')}>
-               <X size={14} color="#1a1a1a" />
-            </TouchableOpacity>
+          <View style={styles.highlightModalContent}>
+            <View style={styles.actionsContainer}>
+              {/* Copy Card */}
+              <TouchableOpacity style={styles.actionButton} onPress={handleCopy}>
+                <Copy size={20} color="#4B5563" />
+                <Text style={styles.actionButtonText}>Copy</Text>
+              </TouchableOpacity>
+
+              {/* Note Card */}
+              <TouchableOpacity style={styles.actionButton} onPress={() => {}}>
+                <MessageSquareText size={20} color="#4B5563" />
+                <Text style={styles.actionButtonText}>Note</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.highlightColorDivider} />
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.highlightColorPicker}>
+              {Object.keys(highlightColors).map((colorKey) => {
+                const isActive = activeColors.has(colorKey);
+                return (
+                  <TouchableOpacity 
+                    key={colorKey}
+                    style={[styles.colorDot, { backgroundColor: highlightColors[colorKey as keyof typeof highlightColors] }]} 
+                    onPress={() => {
+                      if (isActive) {
+                        handleHighlight('clear');
+                      } else {
+                        handleHighlight(colorKey as keyof typeof highlightColors);
+                      }
+                    }}
+                  >
+                    {isActive && <X size={14} color="#1a1a1a" />}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           </View>
-        </View>
+        </Animated.View>
       )}
       {/* Cross-Reference / Notes Bottom Sheet */}
       <AppModal
@@ -422,7 +537,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
       >
         <View style={styles.noteModalContainer}>
           {/* Blur Header */}
-          <View style={[styles.noteModalHeader, { paddingTop: 12 }]} pointerEvents="box-none">
+          <ModalDragArea style={[styles.noteModalHeader, { paddingTop: 12 }]}>
             <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
             <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
             <View style={styles.noteModalDragHandle} />
@@ -435,7 +550,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
                 <X size={20} color="#111827" strokeWidth={2} />
               </BounceCard>
             </View>
-          </View>
+          </ModalDragArea>
 
           <ScrollView contentContainerStyle={[styles.noteModalScroll, { paddingTop: 82 }]} showsVerticalScrollIndicator={false}>
             {/* Verse preview card */}
@@ -486,7 +601,7 @@ const styles = StyleSheet.create({  container: { flex: 1, backgroundColor: '#faf
   },
   chapterContent: {
     fontSize: 18,
-    lineHeight: 29,
+    lineHeight: 28,
     fontFamily: 'Inter',
     color: '#1a1a1a',
   },
@@ -540,43 +655,71 @@ const styles = StyleSheet.create({  container: { flex: 1, backgroundColor: '#faf
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionToolbar: {
+  highlightModal: {
     ...getTopBarButtonShadowStyle(100),
     position: 'absolute',
     alignSelf: 'center',
-    padding: 8,
-    paddingHorizontal: 16,
     zIndex: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 40,
+    width: '100%',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     backgroundColor: Platform.OS === 'android' ? '#FFFFFF' : 'transparent',
     borderColor: 'rgba(255,255,255,0.5)',
-    borderWidth: 1,
-  },
-  copyBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingRight: 16,
-  },
-  copyText: {
-    fontSize: 16,
-    color: '#1a1a1a',
-    fontWeight: '600'
-  },
-  colorPicker: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    borderTopWidth: 1,
     borderLeftWidth: 1,
-    borderLeftColor: '#e1e4e8',
-    paddingLeft: 16,
+    borderRightWidth: 1,
+  },
+  highlightDragHandle: {
+    width: 40,
+    height: 5,
+    backgroundColor: '#d1d5db',
+    borderRadius: 10,
+    alignSelf: 'center',
+    marginTop: 12,
+  },
+  highlightModalContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    paddingTop: 8,
+    gap: 8,
+  },
+  actionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  actionButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 44,
+  },
+  actionButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#4B5563',
+    marginTop: 4,
+  },
+  highlightColorDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: '#e1e4e8',
+    marginHorizontal: 4,
+  },
+  highlightColorPicker: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   colorDot: { 
     width: 24, 
     height: 24, 
-    borderRadius: 12 
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   clearDot: {
     width: 24,

@@ -3,7 +3,7 @@ import { BounceCard } from '@/components/ui/BounceCard';
 import { Download, X } from 'lucide-react-native';
 import { Image, StyleSheet, Text, View, Alert, ScrollView } from 'react-native';
 import { useAuthStore } from '../store/useAuthStore';
-import AppModal from '@/components/ui/AppModal';
+import AppModal, { ModalDragArea } from '@/components/ui/AppModal';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { getTopBarButtonShadowStyle, getSoftShadowStyle } from '@/components/ui/SoftCard';
@@ -36,7 +36,7 @@ export default function MyQRScreen() {
     >
       <LinearGradient colors={['#F3F9FF', '#FFFFFF']} style={StyleSheet.absoluteFill} />
 
-      <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
+      <ModalDragArea style={[styles.headerContainer, { paddingTop: 12 }]}>
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
         <View style={styles.dragHandle} />
@@ -49,7 +49,7 @@ export default function MyQRScreen() {
             <X size={24} color="#111827" strokeWidth={2} />
           </BounceCard>
         </View>
-      </View>
+      </ModalDragArea>
 
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: 80 }]} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>

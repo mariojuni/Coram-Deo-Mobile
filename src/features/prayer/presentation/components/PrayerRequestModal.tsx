@@ -4,7 +4,7 @@ import {
   View, Text, StyleSheet, TextInput, Switch, TouchableOpacity, 
   ScrollView, ActivityIndicator, Alert 
 } from 'react-native';
-import AppModal from '@/components/ui/AppModal';
+import AppModal, { ModalDragArea } from '@/components/ui/AppModal';
 import { useAuthStore } from '@/store/useAuthStore';
 import { prayerRepository } from '../../data/prayer.repository';
 import type { Prayer, PrayerCategory, PrayerVisibility, PrayerStatus } from '../../domain/prayer.types';
@@ -158,7 +158,7 @@ export default function PrayerRequestModal({ isOpen, onClose, initialData }: Pra
     >
       <View style={styles.modalContainer}>
         {/* Header */}
-        <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
+        <ModalDragArea style={[styles.headerContainer, { paddingTop: 12 }]}>
           <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
           <View style={styles.dragHandle} />
@@ -169,7 +169,7 @@ export default function PrayerRequestModal({ isOpen, onClose, initialData }: Pra
               <X size={24} color="#111827" strokeWidth={2} />
             </BounceCard>
           </View>
-        </View>
+        </ModalDragArea>
 
         <ScrollView
           ref={scrollViewRef}

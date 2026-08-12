@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
 import { X, Music } from 'lucide-react-native';
-import AppModal from '@/components/ui/AppModal';
+import AppModal, { ModalDragArea } from '@/components/ui/AppModal';
 import { BlurView } from 'expo-blur';
 import { BounceCard } from '@/components/ui/BounceCard';
 import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
@@ -37,7 +37,7 @@ export function CommunitySongDetailModal({
     >
       <View style={styles.modalContainer}>
         {/* ─── Clean Header (Drag Handle & Close Button) ───────────────────── */}
-        <View style={[styles.headerContainer, { paddingTop: 10 }]} pointerEvents="box-none">
+        <ModalDragArea style={[styles.headerContainer, { paddingTop: 10 }]}>
           <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.75)' }]} pointerEvents="none" />
           <View style={styles.dragHandle} />
@@ -47,7 +47,7 @@ export function CommunitySongDetailModal({
               <X size={22} color="#111827" strokeWidth={2} />
             </BounceCard>
           </View>
-        </View>
+        </ModalDragArea>
 
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: 64 }]} showsVerticalScrollIndicator={false}>
           <View style={styles.contentWrap}>

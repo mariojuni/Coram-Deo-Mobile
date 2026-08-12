@@ -44,7 +44,7 @@ const formatTime12Hr = (timeStr?: string) => {
 };
 
 import { formatMemberName } from '@/features/member/domain/member.utils';
-import AppModal from '../ui/AppModal';
+import AppModal, { ModalDragArea } from '../ui/AppModal';
 import { getTopBarButtonShadowStyle, getSoftShadowStyle } from '@/components/ui/SoftCard';
 import { BounceCard } from '@/components/ui/BounceCard';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -387,7 +387,7 @@ export default function AttendanceTab({ members, showStaffFeatures }: Attendance
         heightRatio={0.85}
       >
         <View style={[styles.modalContainer, { flex: 1 }]}>
-          <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
+          <ModalDragArea style={[styles.headerContainer, { paddingTop: 12 }]}>
             <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
             <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
             <View style={styles.dragHandle} />
@@ -398,7 +398,7 @@ export default function AttendanceTab({ members, showStaffFeatures }: Attendance
                 <X size={24} color="#111827" strokeWidth={2} />
               </TouchableOpacity>
             </View>
-          </View>
+          </ModalDragArea>
 
           <ScrollView style={{ paddingHorizontal: 24, paddingTop: 90, paddingBottom: 16 }} showsVerticalScrollIndicator={false}>
             {/* Calendar UI */}
@@ -552,7 +552,7 @@ export default function AttendanceTab({ members, showStaffFeatures }: Attendance
         heightRatio={0.85}
       >
         <View style={[styles.modalContainer, { flex: 1 }]}>
-          <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
+          <ModalDragArea style={[styles.headerContainer, { paddingTop: 12 }]}>
             <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
             <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
             <View style={styles.dragHandle} />
@@ -563,7 +563,7 @@ export default function AttendanceTab({ members, showStaffFeatures }: Attendance
                 <X size={24} color="#111827" strokeWidth={2} />
               </TouchableOpacity>
             </View>
-          </View>
+          </ModalDragArea>
 
           <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: 90, paddingBottom: 16 }}>
             <View style={styles.searchWrapper}>
@@ -633,7 +633,7 @@ export default function AttendanceTab({ members, showStaffFeatures }: Attendance
         containerStyle={{ flex: 1, backgroundColor: '#FAFAFA', paddingHorizontal: 0, paddingBottom: 0 }}
       >
         <View style={[styles.modalContainer, { flex: 1 }]}>
-          <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
+          <ModalDragArea style={[styles.headerContainer, { paddingTop: 12 }]}>
             <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
             <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
             <View style={styles.dragHandle} />
@@ -644,7 +644,7 @@ export default function AttendanceTab({ members, showStaffFeatures }: Attendance
                 <X size={24} color="#111827" strokeWidth={2} />
               </TouchableOpacity>
             </View>
-          </View>
+          </ModalDragArea>
 
         {selectedCheckinMember && (
           <View style={{ paddingHorizontal: 24, paddingTop: 90, paddingBottom: 16 }}>

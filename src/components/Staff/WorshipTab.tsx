@@ -15,7 +15,7 @@ import { Music, Plus, ListMusic, Calendar, ChevronRight, AlertCircle, X, Check, 
 import { useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import AppModal from '@/components/ui/AppModal';
+import AppModal, { ModalDragArea } from '@/components/ui/AppModal';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useMinistryStore } from '../../store/useMinistryStore';
 import { useScheduleStore } from '../../store/useScheduleStore';
@@ -354,7 +354,7 @@ export default function WorshipTab() {
         <View style={styles.modalContainer}>
 
           {/* Header with Frosted Glass */}
-          <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
+          <ModalDragArea style={[styles.headerContainer, { paddingTop: 12 }]}>
             <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
             <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
             <View style={styles.dragHandle} />
@@ -376,7 +376,7 @@ export default function WorshipTab() {
               </BounceCard>
 
             </View>
-          </View>
+          </ModalDragArea>
 
           <ScrollView
             ref={createSetlistKeyboard.scrollViewRef}
@@ -468,7 +468,7 @@ export default function WorshipTab() {
       >
         <View style={[styles.modalContainer, { flex: 1 }]}>
           {/* Frosted Glass Header */}
-          <View style={[styles.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
+          <ModalDragArea style={[styles.headerContainer, { paddingTop: 12 }]}>
             <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
             <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
             <View style={styles.dragHandle} />
@@ -488,7 +488,7 @@ export default function WorshipTab() {
                 <X size={24} color="#111827" strokeWidth={2} />
               </BounceCard>
             </View>
-          </View>
+          </ModalDragArea>
 
           <View style={{ flex: 1, paddingTop: 90, paddingHorizontal: 20 }}>
 
