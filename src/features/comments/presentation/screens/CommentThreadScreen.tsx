@@ -293,10 +293,10 @@ export function CommentThreadScreen() {
             <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} onPress={handlePray} activeOpacity={0.7}>
               <Heart
                 size={18}
-                color={isLiked ? '#EF4444' : '#6B7280'}
-                fill={isLiked ? '#EF4444' : 'transparent'}
+                color={isLiked ? '#FF759E' : '#6B7280'}
+                fill={isLiked ? '#FF759E' : 'transparent'}
               />
-              <Text style={{ fontSize: 13, fontWeight: '600', color: isLiked ? '#EF4444' : '#6B7280' }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: isLiked ? '#FF759E' : '#6B7280' }}>
                 {Math.max(0, parentData.likes || 0)}
               </Text>
             </TouchableOpacity>
@@ -382,10 +382,10 @@ export function CommentThreadScreen() {
             <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} onPress={handlePray} activeOpacity={0.7}>
               <Heart
                 size={18}
-                color={isLiked ? '#EF4444' : '#6B7280'}
-                fill={isLiked ? '#EF4444' : 'transparent'}
+                color={isLiked ? '#FF759E' : '#6B7280'}
+                fill={isLiked ? '#FF759E' : 'transparent'}
               />
-              <Text style={{ fontSize: 13, fontWeight: '600', color: isLiked ? '#EF4444' : '#6B7280' }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: isLiked ? '#FF759E' : '#6B7280' }}>
                 {Math.max(0, parentData.likes || 0)}
               </Text>
             </TouchableOpacity>

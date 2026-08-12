@@ -1,9 +1,12 @@
 import { formatBirthday, formatMemberName, parseMemberDate } from '@/features/member/domain/member.utils';
 import { canModeratePrayerRequests } from '@/permissions/mobilePermissions';
 import { BlurView } from 'expo-blur';
+import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGlobalSearchParams, useLocalSearchParams, useRouter } from 'expo-router';
 import {
+  BookOpen,
+  Bookmark,
   Cake,
   CalendarDays,
   CheckCircle2,
@@ -12,9 +15,9 @@ import {
   Heart,
   HeartHandshake,
   HelpCircle,
+  Layers,
   MapPin,
   MessageCircle,
-  MoreHorizontal,
   MoreVertical,
   Music,
   PlayCircle,
@@ -30,7 +33,8 @@ import {
   Alert,
   Animated,
   Dimensions,
-  Image,
+  InteractionManager,
+  LayoutAnimation,
   Platform,
   ScrollView,
   Share,
@@ -38,20 +42,22 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
-  InteractionManager,
+  View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EventDetailsModal } from '../../components/Events/EventDetailsModal';
 import { CommunitySongDetailModal } from '../../components/Worship/CommunitySongDetailModal';
 import { BounceCard } from '../../components/ui/BounceCard';
-import { SoftCard } from '../../components/ui/SoftCard';
+import { SoftCard, getSoftShadowStyle } from '../../components/ui/SoftCard';
+import { churchHighlightRepository, type ChurchHighlightPost } from '../../features/bible/data/churchHighlight.repository';
 import { CommentButton } from '../../features/comments/presentation/components/CommentButton';
 import type { Member } from '../../features/member/domain/member.types';
 import { formatPrayerTimeAgo, getFilteredPrayers } from '../../features/prayer/domain/prayer.selectors';
 import type { Prayer, PrayerFilter } from '../../features/prayer/domain/prayer.types';
 import { usePrayerFeed } from '../../features/prayer/presentation/hooks/usePrayerFeed';
 import type { Schedule } from '../../features/schedule/domain/schedule.types';
+import { sermonRepository } from '../../features/sermons/data/sermon.repository';
+import type { SermonNote } from '../../features/sermons/domain/sermon.types';
 import { SermonsExperience } from '../../features/sermons/presentation/components/SermonsExperience';
 import { worshipRepository } from '../../features/worship/data/worship.repository';
 import { Song } from '../../features/worship/domain/worship.types';
@@ -61,8 +67,6 @@ import {
   canViewSongInDirectory,
 } from '../../permissions/communitySongsPermissions';
 import { useAuthStore } from '../../store/useAuthStore';
-import { churchHighlightRepository, type ChurchHighlightPost } from '../../features/bible/data/churchHighlight.repository';
-import { Image as ExpoImage } from 'expo-image';
 import { useMemberStore } from '../../store/useMemberStore';
 import { useMinistryStore } from '../../store/useMinistryStore';
 import {
@@ -134,7 +138,13 @@ function PrayerCardItem({ req, currentUser, handlePray, handleAnswered, openPray
             }}
           >
             {req.userPhotoUrl ? (
-              <Image source={{ uri: req.userPhotoUrl }} style={{ width: 36, height: 36 }} />
+              <ExpoImage
+                source={{ uri: req.userPhotoUrl }}
+                style={{ width: 36, height: 36, borderRadius: 18 }}
+                cachePolicy="memory-disk"
+                priority="high"
+                transition={150}
+              />
             ) : (
               <User size={20} color="#9CA3AF" />
             )}
@@ -201,10 +211,10 @@ function PrayerCardItem({ req, currentUser, handlePray, handleAnswered, openPray
             >
               <Heart
                 size={18}
-                color={isLiked ? '#EF4444' : '#6B7280'}
-                fill={isLiked ? '#EF4444' : 'transparent'}
+                color={isLiked ? '#FF759E' : '#6B7280'}
+                fill={isLiked ? '#FF759E' : 'transparent'}
               />
-              <Text style={{ fontSize: 13, fontWeight: '600', color: isLiked ? '#EF4444' : '#6B7280' }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: isLiked ? '#FF759E' : '#6B7280' }}>
                 {Math.max(0, req.likes || 0)}
               </Text>
             </TouchableOpacity>
@@ -332,7 +342,7 @@ function PrayersTab({ searchQuery }: SubScreenProps) {
       >
         <View style={prayerStyles.heroTopRow}>
           <View style={prayerStyles.heroBadge}>
-            <Heart size={12} color="#FF6596" />
+            <Heart size={12} color="#FF759E" fill="#FF759E" />
             <Text style={prayerStyles.heroBadgeText}>Care circle</Text>
           </View>
           <View style={prayerStyles.heroCountPill}>
@@ -745,11 +755,34 @@ function SermonsTab({ searchQuery }: SubScreenProps) {
 
 let isLocalHighlightsSynced = false;
 
+type CommunityMemberTabFilter = 'all' | 'prayers' | 'highlights' | 'notes';
+
+interface CombinedFeedItem {
+  type: 'highlight' | 'prayer' | 'note';
+  data: any;
+  timestamp: number;
+}
+
+function parseFeedTimestamp(dateVal: any): number {
+  if (!dateVal) return 0;
+  if (typeof dateVal === 'number') return dateVal;
+  if (typeof dateVal === 'string') return new Date(dateVal).getTime() || 0;
+  if (dateVal instanceof Date) return dateVal.getTime();
+  if (typeof dateVal?.toDate === 'function') return dateVal.toDate().getTime();
+  if (typeof dateVal?.seconds === 'number') return dateVal.seconds * 1000;
+  return 0;
+}
+
 function MembersTab({ searchQuery }: SubScreenProps) {
   const members = useMemberStore((state) => state.members);
-  const membersLoading = useMemberStore((state) => state.membersLoading);
   const userProfile = useAuthStore((state) => state.userProfile);
+  const currentUser = useAuthStore((s) => s.currentUser);
   const router = useRouter();
+  const navDebounceRef = useRef(false);
+  const openPrayerModal = useUIStore((state) => state.openPrayerModal);
+
+  const [activeTabFilter, setActiveTabFilter] = useState<CommunityMemberTabFilter>('all');
+
   const { todayBirthdays, upcomingBirthdays } = useMemo(() => {
     const today = new Date();
     const curMonth = today.getMonth() + 1;
@@ -791,30 +824,37 @@ function MembersTab({ searchQuery }: SubScreenProps) {
     };
   }, [members, userProfile]);
 
-  const filteredMembers = useMemo(() => {
-    if (!members) return [];
-    let filtered = members.filter(m => m.status?.toLowerCase() !== 'archived' && m.membershipStatus?.toLowerCase() !== 'archived');
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((m) => {
-        const name = formatMemberName(m).toLowerCase();
-        return name.includes(query);
-      });
-    }
-    return filtered.sort((a, b) => formatMemberName(a).localeCompare(formatMemberName(b)));
-  }, [members, searchQuery]);
-
-  const sendGreeting = (member: any) => {
-    Share.share({
-      message: `Happy birthday ${formatMemberName(member)}! May the Lord bless you and strengthen you as you continue to walk with Him.`
-    });
-  };
-
+  // 1. Highlights
   const [churchHighlights, setChurchHighlights] = useState<ChurchHighlightPost[]>([]);
   const [highlightsLoading, setHighlightsLoading] = useState(true);
   const [pageLimit, setPageLimit] = useState(10);
   const [hasMore, setHasMore] = useState(true);
-  const currentUser = useAuthStore((s) => s.currentUser);
+
+  // 2. Prayers
+  const { prayers: prayerItems, loading: prayersLoading, togglePrayerLike, togglePrayerAnswered, deletePrayer } = usePrayerFeed();
+
+  // 3. Notes
+  const [notes, setNotes] = useState<SermonNote[]>([]);
+  const [notesLoading, setNotesLoading] = useState(true);
+
+  useEffect(() => {
+    if (!currentUser?.uid || !userProfile?.churchId) {
+      setNotes([]);
+      setNotesLoading(false);
+      return;
+    }
+    setNotesLoading(true);
+    sermonRepository
+      .fetchUserNotes(currentUser.uid, userProfile.churchId)
+      .then((userNotes) => {
+        setNotes(userNotes || []);
+        setNotesLoading(false);
+      })
+      .catch((err) => {
+        console.warn('Failed to fetch user notes:', err);
+        setNotesLoading(false);
+      });
+  }, [currentUser?.uid, userProfile?.churchId]);
 
   useEffect(() => {
     if (!userProfile?.churchId) {
@@ -823,7 +863,6 @@ function MembersTab({ searchQuery }: SubScreenProps) {
     }
     setHighlightsLoading(true);
 
-    // Sync any existing local highlights to churchHighlights Firestore collection once in background
     if (!isLocalHighlightsSynced) {
       isLocalHighlightsSynced = true;
       InteractionManager.runAfterInteractions(async () => {
@@ -841,7 +880,7 @@ function MembersTab({ searchQuery }: SubScreenProps) {
             let chapterData: any[] = [];
             try {
               chapterData = (await fetchChapterData(activeTranslation, passageId)) || [];
-            } catch (_) {}
+            } catch (_) { }
 
             const timeMap: Record<string, { vNum: number; color: string; createdAt?: string }[]> = {};
             for (const [verseStr, val] of Object.entries(verses as Record<string, any>)) {
@@ -944,6 +983,35 @@ function MembersTab({ searchQuery }: SubScreenProps) {
     );
   }, [churchHighlights, searchQuery]);
 
+  const filteredPrayers = useMemo(() => {
+    if (!prayerItems) return [];
+    if (!searchQuery) return prayerItems;
+    const query = searchQuery.toLowerCase();
+    return prayerItems.filter(
+      (p) => p.name?.toLowerCase().includes(query) || p.request?.toLowerCase().includes(query)
+    );
+  }, [prayerItems, searchQuery]);
+
+  const filteredNotes = useMemo(() => {
+    if (!notes) return [];
+    if (!searchQuery) return notes;
+    const query = searchQuery.toLowerCase();
+    return notes.filter((n) => n.content?.toLowerCase().includes(query));
+  }, [notes, searchQuery]);
+
+  const highlightsCount = filteredHighlights.length;
+  const prayersCount = filteredPrayers.length;
+  const notesCount = filteredNotes.length;
+  const allCount = highlightsCount + prayersCount + notesCount;
+
+  const combinedFeed = useMemo(() => {
+    const items: CombinedFeedItem[] = [];
+    filteredHighlights.forEach((h) => items.push({ type: 'highlight', data: h, timestamp: parseFeedTimestamp(h.createdAt) }));
+    filteredPrayers.forEach((p) => items.push({ type: 'prayer', data: p, timestamp: parseFeedTimestamp(p.createdAt) }));
+    filteredNotes.forEach((n) => items.push({ type: 'note', data: n, timestamp: parseFeedTimestamp(n.createdAt) }));
+    return items.sort((a, b) => b.timestamp - a.timestamp);
+  }, [filteredHighlights, filteredPrayers, filteredNotes]);
+
   const getHighlightColorHex = (colorName: string) => {
     const map: Record<string, string> = {
       yellow: '#FACC15',
@@ -1007,29 +1075,219 @@ function MembersTab({ searchQuery }: SubScreenProps) {
     }
   };
 
-  const handleNavigateToPassage = async (post: ChurchHighlightPost) => {
+  const handlePray = async (id: string) => {
+    if (!currentUser) return;
     try {
-      const { getUserPreferences, saveUserPreferences } = await import('@/features/bible/data/bible.repository');
-      const prefs = await getUserPreferences();
-      const [book, chapter] = post.passageId.split('.');
-      const startVerse = String(post.verseNumber || post.verseNumbers?.[0] || 1);
-      await saveUserPreferences({
-        ...prefs,
-        activeBook: book,
-        activeChapter: chapter,
-        activePassageId: post.passageId,
-        scrollToVerse: startVerse,
-      } as any);
-      router.navigate('/(tabs)/bible');
-    } catch (e) {
-      console.error('Failed to navigate to Bible passage', e);
+      await togglePrayerLike(id, currentUser.uid);
+    } catch (error) {
+      console.error(error);
     }
   };
+
+  const handleAnswered = async (id: string, currentValue: boolean) => {
+    try {
+      await togglePrayerAnswered(id, currentValue);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const renderHighlightPost = (post: ChurchHighlightPost) => {
+    const reference = `${post.bookName} ${post.chapter}:${post.verseRangeLabel}`;
+    const isLiked = currentUser?.uid ? post.likedBy?.includes(currentUser.uid) : false;
+    const isOwner = currentUser?.uid === post.userId;
+
+    return (
+      <BounceCard
+        key={`h-${post.id}`}
+        style={{ marginBottom: 12 }}
+        onPress={() =>
+          router.push({
+            pathname: '/comment-thread',
+            params: {
+              targetType: 'church_highlight',
+              targetId: post.id,
+              title: reference,
+            },
+          })
+        }
+        activeOpacity={0.85}
+      >
+        <SoftCard innerStyle={{ padding: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+            <View
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: '#E5E7EB',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginRight: 10,
+                overflow: 'hidden',
+              }}
+            >
+              {post.userPhotoUrl ? (
+                <ExpoImage
+                  source={{ uri: post.userPhotoUrl }}
+                  style={{ width: 36, height: 36, borderRadius: 18 }}
+                  cachePolicy="memory-disk"
+                  priority="high"
+                  transition={150}
+                />
+              ) : (
+                <User size={20} color="#9CA3AF" />
+              )}
+            </View>
+            <View style={{ flex: 1, justifyContent: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+                <Text style={{ fontSize: 14, color: '#111827', lineHeight: 20 }}>
+                  <Text style={{ fontWeight: '700', color: '#111827' }}>
+                    {isOwner ? 'You' : post.userName}
+                  </Text>
+                  <Text style={{ color: '#4B5563', fontWeight: '400' }}> highlighted </Text>
+                  <Text style={{ fontWeight: '800', color: '#111827' }}>{reference}</Text>
+                </Text>
+                {isOwner && (
+                  <View
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: 4,
+                      backgroundColor: getHighlightColorHex(post.color),
+                      marginLeft: 6,
+                    }}
+                  />
+                )}
+              </View>
+              <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '500', marginTop: 2 }}>
+                {formatPrayerTimeAgo(post.createdAt)}
+              </Text>
+            </View>
+          </View>
+
+          {!!post.text && (
+            <Text
+              style={{
+                fontSize: 14,
+                color: '#4B5563',
+                lineHeight: 20,
+                fontStyle: 'italic',
+                marginBottom: 12,
+              }}
+              numberOfLines={3}
+              ellipsizeMode="tail"
+            >
+              "{post.text.replace(/{{note:[0-9]+}}/g, '').trim()}"
+            </Text>
+          )}
+
+          {/* Social Action Footer: Like, Comment and Options Menu */}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              borderTopWidth: 1,
+              borderTopColor: '#F3F4F6',
+              paddingTop: 10,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+              <TouchableOpacity
+                onPress={() => handleToggleLike(post)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                activeOpacity={0.7}
+              >
+                <Heart
+                  size={18}
+                  color={isLiked ? '#FF759E' : '#6B7280'}
+                  fill={isLiked ? '#FF759E' : 'transparent'}
+                />
+                <Text style={{ fontSize: 13, fontWeight: '600', color: isLiked ? '#FF759E' : '#6B7280' }}>
+                  {Math.max(0, post.likes || 0)}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() =>
+                  router.push({
+                    pathname: '/comment-thread',
+                    params: {
+                      targetType: 'church_highlight',
+                      targetId: post.id,
+                      title: reference,
+                    },
+                  })
+                }
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                activeOpacity={0.7}
+              >
+                <MessageCircle size={18} color="#6B7280" />
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#6B7280' }}>
+                  {post.commentCount || 0}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              onPress={() => handleOptionsPress(post)}
+              style={{ padding: 4 }}
+              activeOpacity={0.7}
+              hitSlop={8}
+            >
+              <MoreVertical size={18} color="#9CA3AF" />
+            </TouchableOpacity>
+          </View>
+        </SoftCard>
+      </BounceCard>
+    );
+  };
+
+  const renderPrayerItem = (req: Prayer) => (
+    <PrayerCardItem
+      key={`p-${req.id}`}
+      req={req}
+      currentUser={currentUser}
+      handlePray={handlePray}
+      handleAnswered={handleAnswered}
+      openPrayerModal={openPrayerModal}
+      deletePrayer={deletePrayer}
+    />
+  );
+
+  const renderNoteItem = (note: SermonNote) => (
+    <SoftCard key={`n-${note.id}`} style={{ marginBottom: 12 }}>
+      <View style={membersStyles.noteCardInner}>
+        <View style={[membersStyles.noteSideBar, { backgroundColor: '#8B5CF6' }]} />
+        <View style={membersStyles.noteCardContent}>
+          <View style={membersStyles.noteHeaderRow}>
+            <View style={membersStyles.noteIconBox}>
+              <BookOpen size={14} color="#8B5CF6" />
+            </View>
+            <Text style={membersStyles.noteDateText}>
+              {note.createdAt ? new Date(note.createdAt).toLocaleDateString() : 'Sermon Note'}
+            </Text>
+          </View>
+          <Text style={membersStyles.noteBodyText} numberOfLines={4}>
+            {note.content}
+          </Text>
+        </View>
+      </View>
+    </SoftCard>
+  );
+
+  const filterTabs = [
+    { key: 'all', label: 'All', count: allCount, icon: Layers },
+    { key: 'prayers', label: 'Prayers', count: prayersCount, icon: HeartHandshake },
+    { key: 'highlights', label: 'Highlights', count: highlightsCount, icon: Bookmark },
+    { key: 'notes', label: 'Notes', count: notesCount, icon: BookOpen },
+  ];
 
   return (
     <View style={membersStyles.wrap}>
       {(todayBirthdays.length > 0 || upcomingBirthdays.length > 0) && (
-        <SoftCard style={{ marginBottom: 16 }} innerStyle={membersStyles.birthdaySnapshotCard}>
+        <SoftCard style={membersStyles.birthdaySnapshotOuter} innerStyle={membersStyles.birthdaySnapshotCard}>
           <LinearGradient
             colors={['#FFD1DF', '#E8D4FF', '#D4E4FF']}
             start={{ x: 0, y: 0 }}
@@ -1040,219 +1298,271 @@ function MembersTab({ searchQuery }: SubScreenProps) {
           <View style={membersStyles.snapshotOrb1} />
           <View style={membersStyles.snapshotOrb2} />
 
-          <View style={membersStyles.birthdaySnapshotHeader}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <View style={membersStyles.cakeIconWrap}>
-                <Cake size={16} color="#FF6596" />
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 20 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', shadowColor: '#FF759E', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8 }}>
+                <Cake size={20} color="#FF759E" />
               </View>
-              <Text style={membersStyles.birthdaySnapshotTitle}>Celebrations</Text>
+              <Text style={{ fontSize: 22, fontWeight: '800', color: '#1F2937' }}>
+                Celebrations
+              </Text>
             </View>
-            <TouchableOpacity onPress={() => router.push('/birthdays')} style={membersStyles.seeAllBtn} activeOpacity={0.7}>
-              <Text style={membersStyles.seeAllText}>View All</Text>
-              <ChevronRight size={14} color="#FF6596" />
+            <TouchableOpacity 
+              style={{
+                borderRadius: 20,
+                shadowColor: '#FF759E',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 2,
+              }}
+              onPress={() => {
+                if (navDebounceRef.current) return;
+                navDebounceRef.current = true;
+                router.push('/birthdays');
+                setTimeout(() => { navDebounceRef.current = false; }, 500);
+              }}
+            >
+              <View style={{
+                borderRadius: 20,
+                overflow: 'hidden',
+              }}>
+                <BlurView intensity={65} tint="light" style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 4,
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#FF759E' }}>View All</Text>
+                  <ChevronRight size={14} color="#FF759E" />
+                </BlurView>
+              </View>
             </TouchableOpacity>
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={membersStyles.birthdaySnapshotList}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24, paddingTop: 16, gap: 10 }}>
             {todayBirthdays.map(m => (
-              <View key={`today-${m.id}`} style={membersStyles.birthdaySnapshotItem}>
-                <View style={membersStyles.snapshotAvatarWrap}>
-                  <Image source={{ uri: m.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(formatMemberName(m))}&background=f0f0f0&color=999` }} style={membersStyles.snapshotAvatar} />
-                  <View style={membersStyles.snapshotBadgeToday}>
-                    <Text style={membersStyles.snapshotBadgeTodayText}>TODAY</Text>
-                  </View>
+              <View key={`today-${m.id}`} style={{
+                borderRadius: 16,
+                width: 175,
+              }}>
+                <View style={{
+                  borderRadius: 16,
+                  overflow: 'hidden',
+                }}>
+                  <BlurView intensity={65} tint="light" style={{
+                    padding: 8,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 8,
+                    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                  }}>
+                    <View style={{ position: 'relative' }}>
+                      <ExpoImage
+                        source={{ uri: m.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(formatMemberName(m))}&background=f0f0f0&color=999` }}
+                        style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#FFE4E6' }}
+                        cachePolicy="memory-disk"
+                        transition={150}
+                      />
+                      <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: '#FFFFFF', borderRadius: 10, padding: 2, shadowColor: '#FF759E', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4 }}>
+                        <Cake size={10} color="#FF759E" />
+                      </View>
+                    </View>
+                    <View style={{ flex: 1, justifyContent: 'center' }}>
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: '#1F2937' }} numberOfLines={1}>
+                        {formatMemberName(m)}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: '#FF759E', fontWeight: '800', marginTop: 1 }}>
+                        TODAY
+                      </Text>
+                    </View>
+                  </BlurView>
                 </View>
-                <Text style={membersStyles.snapshotName} numberOfLines={1}>{formatMemberName(m)}</Text>
               </View>
             ))}
             {upcomingBirthdays.map(m => (
-              <View key={`up-${m.id}`} style={membersStyles.birthdaySnapshotItem}>
-                <Image source={{ uri: m.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(formatMemberName(m))}&background=f0f0f0&color=999` }} style={membersStyles.snapshotAvatar} />
-                <Text style={membersStyles.snapshotName} numberOfLines={1}>{formatMemberName(m)}</Text>
-                <Text style={membersStyles.snapshotUpcomingDate}>{formatBirthday(m)}</Text>
+              <View key={`up-${m.id}`} style={{
+                borderRadius: 16,
+                width: 175,
+              }}>
+                <View style={{
+                  borderRadius: 16,
+                  overflow: 'hidden',
+                }}>
+                  <BlurView intensity={45} tint="light" style={{
+                    padding: 8,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 8,
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                  }}>
+                    <ExpoImage
+                      source={{ uri: m.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(formatMemberName(m))}&background=f0f0f0&color=999` }}
+                      style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#F3F4F6' }}
+                      cachePolicy="memory-disk"
+                      transition={150}
+                    />
+                    <View style={{ flex: 1, justifyContent: 'center' }}>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#374151' }} numberOfLines={1}>
+                        {formatMemberName(m)}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '500', marginTop: 1 }} numberOfLines={1}>
+                        {formatBirthday(m)}
+                      </Text>
+                    </View>
+                  </BlurView>
+                </View>
               </View>
             ))}
           </ScrollView>
         </SoftCard>
       )}
 
-      {/* ─── Church Highlights Feed ─────────────────────────────────────── */}
-      {highlightsLoading ? (
-        <View style={placeholder.wrap}>
-          <Text style={placeholder.subtitle}>Loading church highlights...</Text>
-        </View>
-      ) : filteredHighlights.length === 0 ? (
-        <View style={placeholder.wrap}>
-          <Text style={placeholder.title}>No Church Highlights Yet</Text>
-          <Text style={placeholder.subtitle}>
-            Verses highlighted by members while reading the Bible will appear here.
-          </Text>
-        </View>
-      ) : (
-        <>
-          {filteredHighlights.map((post) => {
-            const reference = `${post.bookName} ${post.chapter}:${post.verseRangeLabel}`;
-            const isLiked = currentUser?.uid ? post.likedBy?.includes(currentUser.uid) : false;
-            const isOwner = currentUser?.uid === post.userId;
-
-            return (
-              <BounceCard
-                key={post.id}
-                style={{ marginBottom: 12 }}
-                onPress={() => 
-                  router.push({
-                    pathname: '/comment-thread',
-                    params: {
-                      targetType: 'church_highlight',
-                      targetId: post.id,
-                      title: reference,
-                    },
-                  })
-                }
-                activeOpacity={0.85}
-              >
-                <SoftCard innerStyle={{ padding: 16 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-                    <View
-                      style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 18,
-                        backgroundColor: '#E5E7EB',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginRight: 10,
-                        overflow: 'hidden',
-                      }}
-                    >
-                      {post.userPhotoUrl ? (
-                        <Image source={{ uri: post.userPhotoUrl }} style={{ width: 36, height: 36 }} />
-                      ) : (
-                        <User size={20} color="#9CA3AF" />
-                      )}
-                    </View>
-                    <View style={{ flex: 1, justifyContent: 'center' }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
-                        <Text style={{ fontSize: 14, color: '#111827', lineHeight: 20 }}>
-                          <Text style={{ fontWeight: '700', color: '#111827' }}>
-                            {isOwner ? 'You' : post.userName}
-                          </Text>
-                          <Text style={{ color: '#4B5563', fontWeight: '400' }}> highlighted </Text>
-                          <Text style={{ fontWeight: '800', color: '#111827' }}>{reference}</Text>
-                        </Text>
-                        {isOwner && (
-                          <View
-                            style={{
-                              width: 8,
-                              height: 8,
-                              borderRadius: 4,
-                              backgroundColor: getHighlightColorHex(post.color),
-                              marginLeft: 6,
-                            }}
-                          />
-                        )}
-                      </View>
-                      <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '500', marginTop: 2 }}>
-                        {formatPrayerTimeAgo(post.createdAt)}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {!!post.text && (
-                    <Text
-                      style={{
-                        fontSize: 14,
-                        color: '#4B5563',
-                        lineHeight: 20,
-                        fontStyle: 'italic',
-                        marginBottom: 12,
-                      }}
-                      numberOfLines={3}
-                      ellipsizeMode="tail"
-                    >
-                      "{post.text.replace(/{{note:[0-9]+}}/g, '').trim()}"
-                    </Text>
-                  )}
-
-                  {/* Social Action Footer: Like, Comment and Options Menu */}
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      borderTopWidth: 1,
-                      borderTopColor: '#F3F4F6',
-                      paddingTop: 10,
-                    }}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-                      <TouchableOpacity
-                        onPress={() => handleToggleLike(post)}
-                        style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
-                        activeOpacity={0.7}
-                      >
-                        <Heart
-                          size={18}
-                          color={isLiked ? '#EF4444' : '#6B7280'}
-                          fill={isLiked ? '#EF4444' : 'transparent'}
-                        />
-                        <Text style={{ fontSize: 13, fontWeight: '600', color: isLiked ? '#EF4444' : '#6B7280' }}>
-                          {Math.max(0, post.likes || 0)}
-                        </Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        onPress={() =>
-                          router.push({
-                            pathname: '/comment-thread',
-                            params: {
-                              targetType: 'church_highlight',
-                              targetId: post.id,
-                              title: reference,
-                            },
-                          })
-                        }
-                        style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
-                        activeOpacity={0.7}
-                      >
-                        <MessageCircle size={18} color="#6B7280" />
-                        <Text style={{ fontSize: 13, fontWeight: '600', color: '#6B7280' }}>
-                          {post.commentCount || 0}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-
-                    <TouchableOpacity
-                      onPress={() => handleOptionsPress(post)}
-                      style={{ padding: 4 }}
-                      activeOpacity={0.7}
-                      hitSlop={8}
-                    >
-                      <MoreVertical size={18} color="#9CA3AF" />
-                    </TouchableOpacity>
-                  </View>
-                </SoftCard>
-              </BounceCard>
-            );
-          })}
-
-          {hasMore && (
+      {/* ─── Frost Tab Filter Bar ───────────────────────────────────────── */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={membersStyles.frostTabFilterScroll}
+        style={membersStyles.frostTabFilterContainer}
+      >
+        {filterTabs.map((tab) => {
+          const isActive = activeTabFilter === tab.key;
+          const IconComponent = tab.icon;
+          return (
             <TouchableOpacity
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                paddingVertical: 12,
-                backgroundColor: '#F3F4F6',
-                borderRadius: 12,
-                marginTop: 4,
-                marginBottom: 16,
+              key={tab.key}
+              style={membersStyles.frostTabChipWrapper}
+              onPress={() => {
+                if (Platform.OS === 'ios') {
+                  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                }
+                setActiveTabFilter(tab.key as any);
               }}
-              onPress={() => setPageLimit((prev) => prev + 10)}
-              activeOpacity={0.7}
+              activeOpacity={0.75}
             >
-              <Text style={{ fontSize: 13, fontWeight: '700', color: '#4B5563' }}>Load More Highlights</Text>
+              <View style={[membersStyles.frostTabChip, isActive && membersStyles.activeFrostTabChip]}>
+                <BlurView intensity={70} tint="light" style={StyleSheet.absoluteFill} />
+                <View
+                  style={[
+                    StyleSheet.absoluteFill,
+                    isActive ? membersStyles.activeFrostOverlay : membersStyles.inactiveFrostOverlay,
+                  ]}
+                  pointerEvents="none"
+                />
+                <IconComponent
+                  size={13}
+                  color={isActive ? '#FFFFFF' : '#6B7280'}
+                  style={{ zIndex: 1 }}
+                />
+                <Text style={[membersStyles.frostTabChipText, isActive && membersStyles.activeFrostTabChipText]}>
+                  {tab.label}
+                </Text>
+              </View>
             </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      {/* ─── Feed Content ──────────────────────────────────────────────── */}
+      {activeTabFilter === 'all' && (
+        <>
+          {highlightsLoading || prayersLoading || notesLoading ? (
+            <View style={placeholder.wrap}>
+              <Text style={placeholder.subtitle}>Loading community activity...</Text>
+            </View>
+          ) : combinedFeed.length === 0 ? (
+            <View style={placeholder.wrap}>
+              <Text style={placeholder.title}>No Activity Yet</Text>
+              <Text style={placeholder.subtitle}>
+                Prayers, verse highlights, and notes will appear here.
+              </Text>
+            </View>
+          ) : (
+            combinedFeed.map((item) => {
+              if (item.type === 'highlight') return renderHighlightPost(item.data);
+              if (item.type === 'prayer') return renderPrayerItem(item.data);
+              if (item.type === 'note') return renderNoteItem(item.data);
+              return null;
+            })
+          )}
+        </>
+      )}
+
+      {activeTabFilter === 'highlights' && (
+        <>
+          {highlightsLoading ? (
+            <View style={placeholder.wrap}>
+              <Text style={placeholder.subtitle}>Loading church highlights...</Text>
+            </View>
+          ) : filteredHighlights.length === 0 ? (
+            <View style={placeholder.wrap}>
+              <Text style={placeholder.title}>No Church Highlights Yet</Text>
+              <Text style={placeholder.subtitle}>
+                Verses highlighted by members while reading the Bible will appear here.
+              </Text>
+            </View>
+          ) : (
+            <>
+              {filteredHighlights.map(renderHighlightPost)}
+              {hasMore && (
+                <TouchableOpacity
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    paddingVertical: 12,
+                    backgroundColor: '#F3F4F6',
+                    borderRadius: 12,
+                    marginTop: 4,
+                    marginBottom: 16,
+                  }}
+                  onPress={() => setPageLimit((prev) => prev + 10)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#4B5563' }}>Load More Highlights</Text>
+                </TouchableOpacity>
+              )}
+            </>
+          )}
+        </>
+      )}
+
+      {activeTabFilter === 'prayers' && (
+        <>
+          {prayersLoading ? (
+            <View style={placeholder.wrap}>
+              <Text style={placeholder.subtitle}>Loading prayer requests...</Text>
+            </View>
+          ) : filteredPrayers.length === 0 ? (
+            <View style={placeholder.wrap}>
+              <Text style={placeholder.title}>No Prayer Requests Yet</Text>
+              <Text style={placeholder.subtitle}>
+                Prayer requests submitted by church members will appear here.
+              </Text>
+            </View>
+          ) : (
+            filteredPrayers.map(renderPrayerItem)
+          )}
+        </>
+      )}
+
+      {activeTabFilter === 'notes' && (
+        <>
+          {notesLoading ? (
+            <View style={placeholder.wrap}>
+              <Text style={placeholder.subtitle}>Loading sermon notes...</Text>
+            </View>
+          ) : filteredNotes.length === 0 ? (
+            <View style={placeholder.wrap}>
+              <Text style={placeholder.title}>No Sermon Notes Yet</Text>
+              <Text style={placeholder.subtitle}>
+                Notes written while listening to sermons will appear here.
+              </Text>
+            </View>
+          ) : (
+            filteredNotes.map(renderNoteItem)
           )}
         </>
       )}
@@ -2237,6 +2547,15 @@ const membersStyles = StyleSheet.create({
   statusTextInactive: {
     color: '#9CA3AF',
   },
+  birthdaySnapshotOuter: {
+    marginBottom: 0,
+    borderWidth: 0,
+    shadowColor: 'rgba(164, 164, 164, 0.3)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 3,
+  },
   birthdaySnapshotCard: {
     overflow: 'hidden',
   },
@@ -2348,6 +2667,117 @@ const membersStyles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     marginTop: 2,
+  },
+  frostTabFilterContainer: {
+    marginHorizontal: -20,
+    marginTop: 0,
+    marginBottom: 0,
+    overflow: 'visible',
+  },
+  frostTabFilterScroll: {
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 6,
+    overflow: 'visible',
+  },
+  frostTabChipWrapper: {
+    borderRadius: 100,
+  },
+  frostTabChip: {
+    ...getSoftShadowStyle(100),
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    gap: 6,
+    borderWidth: 0,
+    shadowColor: 'rgba(164, 164, 164, 0.3)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  activeFrostTabChip: {
+    borderWidth: 0,
+    shadowColor: '#FF759E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 4,
+    boxShadow: '0px 4px 14px rgba(255, 117, 158, 0.25)',
+  },
+  inactiveFrostOverlay: {
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+  },
+  activeFrostOverlay: {
+    backgroundColor: '#FF759E',
+  },
+  frostTabChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#475569',
+    zIndex: 1,
+  },
+  activeFrostTabChipText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    zIndex: 1,
+  },
+  frostBadge: {
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 10,
+    zIndex: 1,
+  },
+  activeFrostBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.28)',
+    zIndex: 1,
+  },
+  frostBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  activeFrostBadgeText: {
+    color: '#FFFFFF',
+  },
+  noteCardInner: {
+    flexDirection: 'row',
+    minHeight: 60,
+  },
+  noteSideBar: {
+    width: 4,
+    borderRadius: 2,
+  },
+  noteCardContent: {
+    flex: 1,
+    padding: 12,
+  },
+  noteHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+    gap: 8,
+  },
+  noteIconBox: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#F3E8FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noteDateText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  noteBodyText: {
+    fontSize: 13,
+    color: '#374151',
+    lineHeight: 18,
   },
 });
 

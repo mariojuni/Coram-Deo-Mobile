@@ -58,12 +58,14 @@ export const parseMemberDate = (member: any) => {
 export const formatBirthday = (member: any) => {
     const d = parseMemberDate(member);
     if (!d) return '';
-    const date = new Date(2000, d.m - 1, d.d);
-    let formatted = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    if (d.y) {
-        formatted += `, ${d.y}`;
+    const now = new Date();
+    let bdayYear = now.getFullYear();
+    const bdayMonth = d.m - 1;
+    if (bdayMonth < now.getMonth() || (bdayMonth === now.getMonth() && d.d < now.getDate())) {
+       bdayYear++;
     }
-    return formatted;
+    const nextBday = new Date(bdayYear, bdayMonth, d.d);
+    return nextBday.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 };
 
 export const createMemberIdMap = (members: any[]) => {
