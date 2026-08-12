@@ -217,12 +217,12 @@ export function ProfileActivityTabs({
                           <Text style={styles.prayerPassageHighlight}>
                             {item.bookName} {item.chapter}:{item.verseRangeLabel || item.verseNumber}
                           </Text>
-                          <Text style={{ verticalAlign: 'middle' }}>
+                          <Text>
                             {' '}
                             <View
                               style={[
                                 styles.colorDotIndicator,
-                                { backgroundColor: getColorHex(item.color), marginBottom: 1 },
+                                { backgroundColor: getColorHex(item.color), transform: [{ translateY: -2 }] },
                               ]}
                             />
                           </Text>
@@ -293,7 +293,7 @@ export function ProfileActivityTabs({
           <View style={styles.emptyContainer}>
             <BookOpen size={32} color="#9CA3AF" style={{ marginBottom: 8 }} />
             <Text style={styles.emptyTitle}>No Notes Yet</Text>
-            <Text style={styles.emptySubtitle}>Sermon notes you save will appear here.</Text>
+            <Text style={styles.emptySubtitle}>Notes you save will appear here.</Text>
           </View>
         </SoftCard>
       );

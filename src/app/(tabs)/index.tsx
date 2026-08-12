@@ -1,35 +1,35 @@
 import DebouncedTouchable from '@/components/DebouncedTouchable';
+import { EventDetailsModal } from '@/components/Events/EventDetailsModal';
+import { BounceCard } from '@/components/ui/BounceCard';
+import HomeScreenSkeleton from '@/components/ui/HomeScreenSkeleton';
+import NetworkErrorScreen from '@/components/ui/NetworkErrorScreen';
+import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
+import { SoftCard } from '@/components/ui/SoftCard';
+import { CommentButton } from '@/features/comments/presentation/components/CommentButton';
+import { CampaignCard } from '@/features/giving/presentation/components/CampaignCard';
+import { useGiving } from '@/features/giving/presentation/hooks/useGiving';
 import { BiblePlanProgressCard } from '@/features/home/presentation/components/BiblePlanProgressCard';
 import { MinistryDutyCard } from '@/features/home/presentation/components/MinistryDutyCard';
 import { VerseOfTheDayCard } from '@/features/home/presentation/components/VerseOfTheDayCard';
 import { useHomeScreenData } from '@/features/home/presentation/hooks/useHomeScreenData';
 import { usePrayerFeed } from '@/features/prayer/presentation/hooks/usePrayerFeed';
+import type { Schedule } from '@/features/schedule/domain/schedule.types';
+import { canModeratePrayerRequests } from '@/permissions/mobilePermissions';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useUIStore } from '@/store/useUIStore';
-import { useGiving } from '@/features/giving/presentation/hooks/useGiving';
-import { CampaignCard } from '@/features/giving/presentation/components/CampaignCard';
 import { useSermonStore } from '@/store/useSermonStore';
+import { useUIStore } from '@/store/useUIStore';
 import { BlurView } from 'expo-blur';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { SoftCard } from '@/components/ui/SoftCard';
-import NetworkErrorScreen from '@/components/ui/NetworkErrorScreen';
-import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
-import HomeScreenSkeleton from '@/components/ui/HomeScreenSkeleton';
-import { BounceCard } from '@/components/ui/BounceCard';
-import { CalendarDays, CheckCircle2, ChevronRight, Clock, Heart, HeartHandshake, HelpCircle, MapPin, Play, XCircle, Pencil, Trash2, MoreHorizontal, MoreVertical, User, MessageCircle } from 'lucide-react-native';
+import { CalendarDays, CheckCircle2, ChevronRight, Clock, Heart, HeartHandshake, HelpCircle, MapPin, MoreVertical, User, XCircle } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert, ActionSheetIOS, Platform } from 'react-native';
-import { Image } from 'expo-image';
+import { ActionSheetIOS, Alert, Animated, Dimensions, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { Schedule } from '@/features/schedule/domain/schedule.types';
-import { EventDetailsModal } from '@/components/Events/EventDetailsModal';
-import { CommentButton } from '@/features/comments/presentation/components/CommentButton';
-import { canModeratePrayerRequests } from '@/permissions/mobilePermissions';
 
 function isThisWeek(dateString: string) {
   let date = new Date(dateString);
-  
+
   // Safely parse YYYY-MM-DD or MM/DD/YYYY to avoid timezone shift
   const ymd = dateString.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
   if (ymd) {
@@ -42,12 +42,12 @@ function isThisWeek(dateString: string) {
   }
 
   const now = new Date();
-  
+
   const currentDay = now.getDay() === 0 ? 7 : now.getDay();
-  
+
   const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - currentDay + 1);
   startOfWeek.setHours(0, 0, 0, 0);
-  
+
   const endOfWeek = new Date(startOfWeek);
   endOfWeek.setDate(startOfWeek.getDate() + 6);
   endOfWeek.setHours(23, 59, 59, 999);
@@ -117,7 +117,7 @@ export default function HomeScreen() {
   const screenWidth = Dimensions.get('window').width;
   const cardWidth = screenWidth - 48;
   const currentUserId = currentUser?.uid ?? '';
-  
+
   const currentMemberIds = useMemo(() => {
     const ids = new Set<string>();
     if (currentUser?.uid) ids.add(currentUser.uid);
@@ -243,9 +243,9 @@ export default function HomeScreen() {
         style={[styles.header, { paddingTop: Math.max(insets.top, 24) }]}
         pointerEvents="box-none"
       >
-        <BlurView 
-          intensity={90} 
-          tint="light" 
+        <BlurView
+          intensity={90}
+          tint="light"
           style={StyleSheet.absoluteFill}
         />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.75)' }]} pointerEvents="none" />
@@ -294,31 +294,31 @@ export default function HomeScreen() {
               onPress={() => router.push('/profile')}
               activeOpacity={0.8}
             >
-            {photoUrl ? (
-              <View style={{ width: 46, height: 46 }}>
-                {imageLoading && (
-                  <View style={[StyleSheet.absoluteFill, { borderRadius: 23, overflow: 'hidden' }]}>
-                    <ShimmerSkeleton width={46} height={46} borderRadius={23} />
-                  </View>
-                )}
-                <Image 
-                  source={{ uri: photoUrl }} 
-                  style={styles.avatarImg}
-                  onLoadStart={() => setImageLoading(true)}
-                  onLoad={() => setImageLoading(false)}
-                  onError={() => setImageLoading(false)}
-                />
-              </View>
-            ) : (
-              <LinearGradient
-                colors={['#FF6596', '#B66DFF']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.avatarInitials}
-              >
-                <Text style={styles.avatarInitialsText}>{initials}</Text>
-              </LinearGradient>
-            )}
+              {photoUrl ? (
+                <View style={{ width: 46, height: 46 }}>
+                  {imageLoading && (
+                    <View style={[StyleSheet.absoluteFill, { borderRadius: 23, overflow: 'hidden' }]}>
+                      <ShimmerSkeleton width={46} height={46} borderRadius={23} />
+                    </View>
+                  )}
+                  <Image
+                    source={{ uri: photoUrl }}
+                    style={styles.avatarImg}
+                    onLoadStart={() => setImageLoading(true)}
+                    onLoad={() => setImageLoading(false)}
+                    onError={() => setImageLoading(false)}
+                  />
+                </View>
+              ) : (
+                <LinearGradient
+                  colors={['#FF6596', '#B66DFF']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.avatarInitials}
+                >
+                  <Text style={styles.avatarInitialsText}>{initials}</Text>
+                </LinearGradient>
+              )}
             </DebouncedTouchable>
           </Animated.View>
         </Animated.View>
@@ -347,12 +347,12 @@ export default function HomeScreen() {
         {/* ─── Active Giving Campaigns ─────────────────────────── */}
         {campaigns.length > 0 && (
           <View style={styles.campaignsSection}>
-            <View style={styles.todayLabelRow}>
+            <View style={[styles.todayLabelRow, { paddingTop: 12, paddingBottom: 12 }]}>
               <View style={styles.todayDot} />
               <Text style={styles.todayLabelText}>SUPPORT A CAUSE</Text>
             </View>
             {campaigns.map(campaign => (
-              <CampaignCard 
+              <CampaignCard
                 key={campaign.id}
                 campaign={campaign}
                 onPress={() => router.push({ pathname: '/giving-campaign-detail', params: { id: campaign.id } })}
@@ -486,7 +486,7 @@ export default function HomeScreen() {
             </View>
 
             {sortedDutyItems.map(({ assignment, schedule }) => (
-              <BounceCard 
+              <BounceCard
                 key={assignment.id}
                 onPress={() => router.push({ pathname: '/serve-assignment-detail', params: { id: assignment.id } })}
               >
@@ -634,10 +634,10 @@ export default function HomeScreen() {
                           >
                             <Heart
                               size={18}
-                              color={isLiked ? '#EF4444' : '#6B7280'}
-                              fill={isLiked ? '#EF4444' : 'transparent'}
+                              color={isLiked ? '#FF759E' : '#6B7280'}
+                              fill={isLiked ? '#FF759E' : 'transparent'}
                             />
-                            <Text style={{ fontSize: 13, fontWeight: '600', color: isLiked ? '#EF4444' : '#6B7280' }}>
+                            <Text style={{ fontSize: 13, fontWeight: '600', color: isLiked ? '#FF759E' : '#6B7280' }}>
                               {Math.max(0, prayer.likes || 0)}
                             </Text>
                           </DebouncedTouchable>
@@ -719,7 +719,7 @@ export default function HomeScreen() {
 
               <DebouncedTouchable
                 style={[styles.seeAllEventsBtn, { marginTop: 0 }]}
-                onPress={() => router.push({ pathname: '/(tabs)/community', params: { tab: 'prayers' } })}
+                onPress={() => router.push({ pathname: '/(tabs)/community', params: { tab: 'feeds', filter: 'prayers' } })}
               >
                 <Text style={styles.seeAllEventsBtnText}>See all prayers</Text>
                 <ChevronRight size={14} color="#FF6596" />
@@ -820,41 +820,41 @@ export default function HomeScreen() {
               const day = d.getDate().toString();
               const weekday = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
               return (
-                <BounceCard 
-                  key={event.id} 
+                <BounceCard
+                  key={event.id}
                   style={{ marginBottom: 10 }}
                   onPress={() => setSelectedEvent(event)}
                 >
                   <SoftCard innerStyle={styles.eventListCardInner}>
-                  <View style={styles.eventDateBlock}>
-                    <Text style={styles.eventDateMonth}>{month}</Text>
-                    <Text style={styles.eventDateDay}>{day}</Text>
-                    <Text style={styles.eventDateWeekday}>{weekday}</Text>
-                  </View>
-
-                  <View style={styles.eventDivider} />
-
-                  <View style={styles.eventDetailsBlock}>
-                    <Text style={styles.eventTitle} numberOfLines={2}>
-                      {event.title || 'Church Event'}
-                    </Text>
-                    <View style={styles.eventTimePill}>
-                      <Clock size={11} color="#9CA3AF" />
-                      <Text style={styles.eventTimePillText}>
-                        {event.time || '9:00 AM'}{event.endTime ? ` – ${event.endTime}` : ''}
-                      </Text>
+                    <View style={styles.eventDateBlock}>
+                      <Text style={styles.eventDateMonth}>{month}</Text>
+                      <Text style={styles.eventDateDay}>{day}</Text>
+                      <Text style={styles.eventDateWeekday}>{weekday}</Text>
                     </View>
-                    {event.location ? (
-                      <View style={styles.eventLocationRow}>
-                        <MapPin size={11} color="#B0B6C8" />
-                        <Text style={styles.eventLocationText} numberOfLines={1}>
-                          {event.location}
+
+                    <View style={styles.eventDivider} />
+
+                    <View style={styles.eventDetailsBlock}>
+                      <Text style={styles.eventTitle} numberOfLines={2}>
+                        {event.title || 'Church Event'}
+                      </Text>
+                      <View style={styles.eventTimePill}>
+                        <Clock size={11} color="#9CA3AF" />
+                        <Text style={styles.eventTimePillText}>
+                          {event.time || '9:00 AM'}{event.endTime ? ` – ${event.endTime}` : ''}
                         </Text>
                       </View>
-                    ) : null}
-                  </View>
+                      {event.location ? (
+                        <View style={styles.eventLocationRow}>
+                          <MapPin size={11} color="#B0B6C8" />
+                          <Text style={styles.eventLocationText} numberOfLines={1}>
+                            {event.location}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
 
-                  <ChevronRight size={14} color="#9CA3AF" />
+                    <ChevronRight size={14} color="#9CA3AF" />
                   </SoftCard>
                 </BounceCard>
               );

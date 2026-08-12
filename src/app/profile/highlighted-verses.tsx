@@ -312,12 +312,12 @@ export default function HighlightedVersesScreen() {
                               <Text style={styles.prayerName}>You</Text>
                               <Text style={styles.prayerActionText}> highlighted </Text>
                               <Text style={styles.prayerPassageHighlight}>{reference}</Text>
-                              <Text style={{ verticalAlign: 'middle' }}>
+                              <Text>
                                 {' '}
                                 <View
                                   style={[
                                     styles.colorDotIndicator,
-                                    { backgroundColor: getColorHex(h.color), marginBottom: 1 },
+                                    { backgroundColor: getColorHex(h.color), transform: [{ translateY: -2 }] },
                                   ]}
                                 />
                               </Text>
