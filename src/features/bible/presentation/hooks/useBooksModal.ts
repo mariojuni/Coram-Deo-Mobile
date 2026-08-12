@@ -29,6 +29,7 @@ export function useBooksModal(books: Book[]) {
   return {
     collapseBook,
     expandedBook,
+    setExpandedBook,
     setSortMode,
     sortMode,
     sortedBooks,

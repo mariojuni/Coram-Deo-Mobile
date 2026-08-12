@@ -156,6 +156,7 @@ export default function BibleScreen() {
         preferences={preferences}
         updatePreferences={handleUpdatePreferences}
         books={books}
+        scrollToVerse={(preferences as any)?.scrollToVerse}
         controlsTabBar
         scrollY={scrollY}
       />

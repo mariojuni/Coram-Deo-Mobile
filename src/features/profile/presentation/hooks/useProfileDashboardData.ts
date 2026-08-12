@@ -18,8 +18,11 @@ export interface UserHighlightItem {
   bookName: string;
   chapter: number;
   verseNumber: number;
+  verseRangeLabel: string;
+  verseNumbers: number[];
   color: string;
   text?: string;
+  createdAt?: string;
 }
 
 export interface UserMinistryMembership {
@@ -230,22 +233,89 @@ export function useProfileDashboardData() {
 
       for (const { passageId, verses, chapterData } of chapterResults) {
         const [book, chapter] = passageId.split('.');
-        for (const [verseNum, color] of Object.entries(verses)) {
-          const textObj = chapterData.find((v: any) => String(v.verseNumber) === String(verseNum));
+        const parsedChapter = parseInt(chapter, 10) || 1;
+        const bName = book || passageId;
+
+        // Group verse numbers by highlight color & track createdAt timestamp
+        // Group verse numbers by color AND createdAt timestamp so same-session highlights merge together
+        const timeMap: Record<string, { vNum: number; color: string; createdAt?: string }[]> = {};
+        for (const [verseStr, val] of Object.entries(verses)) {
+          const vNum = parseInt(verseStr, 10);
+          if (isNaN(vNum)) continue;
+
+          let color = String(val);
+          let createdAt = '';
+          if (typeof val === 'object' && val !== null) {
+            color = String((val as any).color || 'yellow');
+            createdAt = (val as any).createdAt || '';
+          }
+
+          const groupKey = `${color}_${createdAt || 'legacy'}`;
+          if (!timeMap[groupKey]) timeMap[groupKey] = [];
+          timeMap[groupKey].push({ vNum, color, createdAt });
+        }
+
+        for (const verseItems of Object.values(timeMap)) {
+          if (verseItems.length === 0) continue;
+          verseItems.sort((a, b) => a.vNum - b.vNum);
+          const color = verseItems[0].color;
+          const rangeCreatedAt = verseItems.map(r => r.createdAt).filter(Boolean).sort().pop();
+
+          // Build broken verse ranges (e.g. 11, 14-16)
+          const ranges: string[] = [];
+          let rangeStart = verseItems[0].vNum;
+          let prev = verseItems[0].vNum;
+
+          for (let i = 1; i < verseItems.length; i++) {
+            const curr = verseItems[i].vNum;
+            if (curr === prev + 1) {
+              prev = curr;
+            } else {
+              ranges.push(rangeStart === prev ? `${rangeStart}` : `${rangeStart}-${prev}`);
+              rangeStart = curr;
+              prev = curr;
+            }
+          }
+          ranges.push(rangeStart === prev ? `${rangeStart}` : `${rangeStart}-${prev}`);
+          const label = ranges.join(',');
+
+          const combinedTexts: string[] = [];
+          const vNumbers: number[] = [];
+          for (const item of verseItems) {
+            vNumbers.push(item.vNum);
+            const textObj = chapterData.find((v: any) => parseInt(String(v.verseNumber), 10) === item.vNum);
+            if (textObj?.content) {
+              const cleanContent = textObj.content.replace(/{{note:[0-9]+}}/g, '').trim();
+              combinedTexts.push(cleanContent);
+            }
+          }
+
+          const firstNum = verseItems[0].vNum;
+          const lastNum = verseItems[verseItems.length - 1].vNum;
 
           items.push({
-            id: `${passageId}_${verseNum}`,
+            id: `${passageId}_${color}_${firstNum}_${lastNum}_${rangeCreatedAt || ''}`,
             passageId,
-            bookName: book || passageId,
-            chapter: parseInt(chapter, 10) || 1,
-            verseNumber: parseInt(verseNum, 10),
-            color: color as string,
-            text: textObj?.content || undefined,
+            bookName: bName,
+            chapter: parsedChapter,
+            verseNumber: firstNum,
+            verseRangeLabel: label,
+            verseNumbers: vNumbers,
+            color,
+            text: combinedTexts.join(' '),
+            createdAt: rangeCreatedAt,
           });
         }
       }
-      // Sort from latest to oldest
-      setHighlights(items.reverse());
+
+      // Sort highlights from latest created to oldest
+      items.sort((a, b) => {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return timeB - timeA;
+      });
+
+      setHighlights(items);
     } catch (err) {
       console.warn('Failed to fetch user highlights:', err);
     } finally {
@@ -253,18 +323,27 @@ export function useProfileDashboardData() {
     }
   }, []);
 
-  const removeHighlight = useCallback(async (passageId: string, verseNumber: number) => {
+  const removeHighlight = useCallback(async (passageId: string, verseNumbersOrNumber: number | number[]) => {
     try {
       const prefs = await getUserPreferences();
-      const vKey = String(verseNumber);
-      if ((prefs as any)?.highlights?.[passageId]?.[vKey]) {
-        delete (prefs as any).highlights[passageId][vKey];
-        if (Object.keys((prefs as any).highlights[passageId]).length === 0) {
+      const targets = Array.isArray(verseNumbersOrNumber) ? verseNumbersOrNumber : [verseNumbersOrNumber];
+      
+      let modified = false;
+      for (const vNum of targets) {
+        const vKey = String(vNum);
+        if ((prefs as any)?.highlights?.[passageId]?.[vKey]) {
+          delete (prefs as any).highlights[passageId][vKey];
+          modified = true;
+        }
+      }
+
+      if (modified) {
+        if (Object.keys((prefs as any).highlights[passageId] || {}).length === 0) {
           delete (prefs as any).highlights[passageId];
         }
         await saveUserPreferences(prefs);
         setHighlights((prev) =>
-          prev.filter((h) => !(h.passageId === passageId && h.verseNumber === verseNumber))
+          prev.filter((h) => !(h.passageId === passageId && targets.includes(h.verseNumber)))
         );
       }
     } catch (e) {

@@ -2,6 +2,8 @@ import { bibleDataService, BIBLE_DOWNLOAD_COMPLETED_EVENT } from '@/features/bib
 import * as Clipboard from 'expo-clipboard';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { DeviceEventEmitter } from 'react-native';
+import { useAuthStore } from '@/store/useAuthStore';
+import { churchHighlightRepository } from '@/features/bible/data/churchHighlight.repository';
 
 const highlightColors = {
   yellow: 'rgba(254, 240, 138, 0.55)',
@@ -178,6 +180,9 @@ export function useBibleReader(
     await Clipboard.setStringAsync(formattedCopyText);
   }, [activeBook, activeChapter, books, chapterDataByVerseNumber, selectedVerses]);
 
+  const userProfile = useAuthStore((s) => s.userProfile);
+  const currentUser = useAuthStore((s) => s.currentUser);
+
   const handleHighlight = useCallback(
     (color: keyof typeof highlightColors | 'clear') => {
       const newHighlights = { ...(preferences.highlights || {}) };
@@ -185,18 +190,104 @@ export function useBibleReader(
         newHighlights[passageId] = {};
       }
 
+      const nowIso = new Date().toISOString();
+
       selectedVerses.forEach((verseNumber) => {
         if (color === 'clear') {
           delete newHighlights[passageId][verseNumber];
           return;
         }
-        newHighlights[passageId][verseNumber] = color;
+        newHighlights[passageId][verseNumber] = {
+          color,
+          createdAt: nowIso,
+        } as any;
       });
+
+      // Publicly publish to Church Highlights feed if color is selected and user is logged in
+      const effectiveChurchId = userProfile?.churchId || (currentUser as any)?.churchId || (currentUser as any)?.claims?.churchId;
+
+      if (color !== 'clear' && selectedVerses.length > 0 && effectiveChurchId && currentUser?.uid) {
+        const activeBookObj = books.find((b) => String(b.id) === String(activeBook));
+        const bookTitle = (activeBookObj as any)?.localTitle || (activeBookObj as any)?.title || activeBook;
+        const parsedChapter = parseInt(activeChapter, 10) || 1;
+
+        const sortedNums = [...selectedVerses]
+          .map(Number)
+          .filter((n) => !isNaN(n))
+          .sort((a, b) => a - b);
+
+        if (sortedNums.length > 0) {
+          const startNum = sortedNums[0];
+          const endNum = sortedNums[sortedNums.length - 1];
+
+          // Build broken verse range string (e.g. [11, 14, 15, 16] -> '11,14-16')
+          const ranges: string[] = [];
+          let rangeStart = sortedNums[0];
+          let prev = sortedNums[0];
+
+          for (let i = 1; i < sortedNums.length; i++) {
+            const curr = sortedNums[i];
+            if (curr === prev + 1) {
+              prev = curr;
+            } else {
+              ranges.push(rangeStart === prev ? `${rangeStart}` : `${rangeStart}-${prev}`);
+              rangeStart = curr;
+              prev = curr;
+            }
+          }
+          ranges.push(rangeStart === prev ? `${rangeStart}` : `${rangeStart}-${prev}`);
+          const rangeLabel = ranges.join(',');
+
+          const combinedTexts: string[] = [];
+          for (const vNum of sortedNums) {
+            const raw = chapterDataByVerseNumber.get(String(vNum)) || '';
+            if (raw) {
+              const clean = raw.replace(/\{\{note:\d+\}\}/g, '').replace(/<[^>]*>/g, '').trim();
+              combinedTexts.push(clean);
+            }
+          }
+
+          const userName = userProfile?.firstName
+            ? `${userProfile.firstName} ${userProfile.lastName || ''}`.trim()
+            : currentUser?.displayName || 'Member';
+
+          churchHighlightRepository.publishChurchHighlight({
+            churchId: effectiveChurchId,
+            userId: currentUser.uid,
+            userName,
+            userPhotoUrl: userProfile?.photoUrl || currentUser.photoURL || undefined,
+            passageId,
+            bookName: bookTitle,
+            chapter: parsedChapter,
+            verseNumber: startNum,
+            verseRangeLabel: rangeLabel,
+            verseNumbers: sortedNums,
+            color: String(color),
+            text: combinedTexts.join(' '),
+          }).catch((err) => console.warn('[useBibleReader] Failed to publish church highlight:', err));
+        }
+      }
 
       updatePreferences({ highlights: newHighlights });
       setSelectedVerses([]);
     },
-    [passageId, preferences.highlights, selectedVerses, updatePreferences]
+    [
+      activeBook,
+      activeChapter,
+      books,
+      chapterDataByVerseNumber,
+      currentUser?.displayName,
+      currentUser?.photoURL,
+      currentUser?.uid,
+      passageId,
+      preferences.highlights,
+      selectedVerses,
+      updatePreferences,
+      userProfile?.churchId,
+      userProfile?.firstName,
+      userProfile?.lastName,
+      userProfile?.photoUrl,
+    ]
   );
 
   // Derive an effective chapter list for a book — Firestore books expose only
@@ -268,8 +359,11 @@ export function useBibleReader(
 
   const verseBackgroundColor = useCallback(
     (verseNumber: string) => {
-      const colorName = chapterHighlights[verseNumber];
-      return colorName ? highlightColors[colorName] : 'transparent';
+      const raw = chapterHighlights[verseNumber];
+      const colorName = typeof raw === 'object' && raw !== null ? (raw as any).color : raw;
+      return colorName && highlightColors[colorName as keyof typeof highlightColors]
+        ? highlightColors[colorName as keyof typeof highlightColors]
+        : 'transparent';
     },
     [chapterHighlights]
   );

@@ -396,6 +396,22 @@ service cloud.firestore {
         );
       }
 
+      // Verse highlights subcollection
+      match /verse_highlights/{highlightId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+        allow update: if isSignedIn() && (
+          resource.data.userId == request.auth.uid ||
+          isPastorOrAdmin(churchId) ||
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['likes', 'likedBy', 'commentCount', 'color', 'text', 'updatedAt'])
+        );
+        allow delete: if isSignedIn() && (
+          resource.data.userId == request.auth.uid ||
+          isPastorOrAdmin(churchId)
+        );
+      }
+
       // Bible plans subcollection (church-scoped)
       match /bible_plans/{planId} {
         allow read: if isSignedIn();

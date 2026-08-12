@@ -13,6 +13,7 @@ import {
   HeartHandshake,
   HelpCircle,
   MapPin,
+  MessageCircle,
   MoreHorizontal,
   Music,
   PlayCircle,
@@ -58,6 +59,7 @@ import {
   canViewSongInDirectory,
 } from '../../permissions/communitySongsPermissions';
 import { useAuthStore } from '../../store/useAuthStore';
+import { churchHighlightRepository, type ChurchHighlightPost } from '../../features/bible/data/churchHighlight.repository';
 import { Image as ExpoImage } from 'expo-image';
 import { useMemberStore } from '../../store/useMemberStore';
 import { useMinistryStore } from '../../store/useMinistryStore';
@@ -763,6 +765,221 @@ function MembersTab({ searchQuery }: SubScreenProps) {
 
 
 
+  const [churchHighlights, setChurchHighlights] = useState<ChurchHighlightPost[]>([]);
+  const [highlightsLoading, setHighlightsLoading] = useState(true);
+  const [pageLimit, setPageLimit] = useState(10);
+  const [hasMore, setHasMore] = useState(true);
+  const currentUser = useAuthStore((s) => s.currentUser);
+
+  useEffect(() => {
+    if (!userProfile?.churchId) {
+      setHighlightsLoading(false);
+      return;
+    }
+    setHighlightsLoading(true);
+
+    // Sync any existing local highlights to churchHighlights Firestore collection
+    (async () => {
+      try {
+        const { getUserPreferences, fetchChapterData } = await import('@/features/bible/data/bible.repository');
+        const prefs = await getUserPreferences();
+        const rawHighlights = (prefs as any)?.highlights || {};
+        const activeTranslation = (prefs as any)?.activeTranslation || '2692';
+
+        for (const [passageId, verses] of Object.entries(rawHighlights)) {
+          if (!verses || typeof verses !== 'object') continue;
+          const [book, chapter] = passageId.split('.');
+          const parsedChapter = parseInt(chapter, 10) || 1;
+
+          let chapterData: any[] = [];
+          try {
+            chapterData = (await fetchChapterData(activeTranslation, passageId)) || [];
+          } catch (_) {}
+
+          // Group verse numbers by color AND createdAt timestamp so same-session highlights merge together
+          const timeMap: Record<string, { vNum: number; color: string; createdAt?: string }[]> = {};
+          for (const [verseStr, val] of Object.entries(verses as Record<string, any>)) {
+            const vNum = parseInt(verseStr, 10);
+            if (isNaN(vNum)) continue;
+            let color = String(val);
+            let createdAt = '';
+            if (typeof val === 'object' && val !== null) {
+              color = String(val.color || 'yellow');
+              createdAt = val.createdAt || '';
+            }
+            const groupKey = `${color}_${createdAt || 'legacy'}`;
+            if (!timeMap[groupKey]) timeMap[groupKey] = [];
+            timeMap[groupKey].push({ vNum, color, createdAt });
+          }
+
+          for (const verseItems of Object.values(timeMap)) {
+            if (verseItems.length === 0) continue;
+            verseItems.sort((a, b) => a.vNum - b.vNum);
+            const color = verseItems[0].color;
+
+            // Build broken verse range string (e.g. 11,14-16)
+            const ranges: string[] = [];
+            let rangeStart = verseItems[0].vNum;
+            let prev = verseItems[0].vNum;
+
+            for (let i = 1; i < verseItems.length; i++) {
+              const curr = verseItems[i].vNum;
+              if (curr === prev + 1) {
+                prev = curr;
+              } else {
+                ranges.push(rangeStart === prev ? `${rangeStart}` : `${rangeStart}-${prev}`);
+                rangeStart = curr;
+                prev = curr;
+              }
+            }
+            ranges.push(rangeStart === prev ? `${rangeStart}` : `${rangeStart}-${prev}`);
+            const label = ranges.join(',');
+
+            const combinedTexts: string[] = [];
+            const vNumbers: number[] = [];
+            for (const item of verseItems) {
+              vNumbers.push(item.vNum);
+              const textObj = chapterData.find((v: any) => parseInt(String(v.verseNumber), 10) === item.vNum);
+              if (textObj?.content) {
+                const cleanContent = textObj.content.replace(/{{note:[0-9]+}}/g, '').trim();
+                combinedTexts.push(cleanContent);
+              }
+            }
+
+            const userName = userProfile?.firstName
+              ? `${userProfile.firstName} ${userProfile.lastName || ''}`.trim()
+              : currentUser?.displayName || 'Member';
+
+            await churchHighlightRepository.publishChurchHighlight({
+              churchId: userProfile?.churchId || '',
+              userId: currentUser?.uid || '',
+              userName,
+              userPhotoUrl: userProfile?.photoUrl || currentUser?.photoURL || undefined,
+              passageId,
+              bookName: book,
+              chapter: parsedChapter,
+              verseNumber: verseItems[0].vNum,
+              verseRangeLabel: label,
+              verseNumbers: vNumbers,
+              color,
+              text: combinedTexts.join(' '),
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to sync local highlights:', err);
+      }
+    })();
+
+    const unsubscribe = churchHighlightRepository.subscribeChurchHighlights(
+      userProfile.churchId,
+      (posts) => {
+        setChurchHighlights(posts);
+        setHighlightsLoading(false);
+        setHasMore(posts.length >= pageLimit);
+      },
+      pageLimit,
+      (err) => {
+        setHighlightsLoading(false);
+      }
+    );
+    return () => unsubscribe();
+  }, [currentUser?.displayName, currentUser?.photoURL, currentUser?.uid, pageLimit, userProfile?.churchId, userProfile?.firstName, userProfile?.lastName, userProfile?.photoUrl]);
+
+  const filteredHighlights = useMemo(() => {
+    const nonKeys = churchHighlights.filter((h) => h.text && h.text.trim().length > 0);
+    if (!searchQuery) return nonKeys;
+    const query = searchQuery.toLowerCase();
+    return nonKeys.filter(
+      (h) =>
+        h.userName.toLowerCase().includes(query) ||
+        h.bookName.toLowerCase().includes(query) ||
+        h.text.toLowerCase().includes(query)
+    );
+  }, [churchHighlights, searchQuery]);
+
+  const getHighlightColorHex = (colorName: string) => {
+    const map: Record<string, string> = {
+      yellow: '#FACC15',
+      pink: '#F472B6',
+      blue: '#60A5FA',
+      green: '#4ADE80',
+      orange: '#FB923C',
+      purple: '#C084FC',
+      red: '#F87171',
+      teal: '#2DD4BF',
+      indigo: '#818CF8',
+      brown: '#A8A29E',
+    };
+    return map[colorName] || '#FACC15';
+  };
+
+  const handleToggleLike = (post: ChurchHighlightPost) => {
+    if (!currentUser?.uid || !post.churchId) return;
+    const isLiked = post.likedBy?.includes(currentUser.uid);
+    churchHighlightRepository.toggleHighlightLike(post.churchId, post.id, currentUser.uid, !!isLiked);
+  };
+
+  const handleOptionsPress = (post: ChurchHighlightPost) => {
+    const reference = `${post.bookName} ${post.chapter}:${post.verseRangeLabel}`;
+    const isOwner = currentUser?.uid === post.userId;
+
+    const options = ['Cancel', 'Share Highlight'];
+    if (isOwner) options.push('Delete Highlight');
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options,
+          destructiveButtonIndex: isOwner ? 2 : undefined,
+          cancelButtonIndex: 0,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) {
+            Share.share({ message: `"${post.text}" - ${reference}` });
+          } else if (buttonIndex === 2 && isOwner) {
+            Alert.alert('Delete Highlight', 'Are you sure you want to delete this highlight post?', [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Delete', style: 'destructive', onPress: () => churchHighlightRepository.deleteHighlight(post.churchId, post.id) },
+            ]);
+          }
+        }
+      );
+    } else {
+      const alertButtons: any[] = [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Share', onPress: () => Share.share({ message: `"${post.text}" - ${reference}` }) },
+      ];
+      if (isOwner) {
+        alertButtons.push({
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => churchHighlightRepository.deleteHighlight(post.churchId, post.id),
+        });
+      }
+      Alert.alert('Highlight Options', reference, alertButtons);
+    }
+  };
+
+  const handleNavigateToPassage = async (post: ChurchHighlightPost) => {
+    try {
+      const { getUserPreferences, saveUserPreferences } = await import('@/features/bible/data/bible.repository');
+      const prefs = await getUserPreferences();
+      const [book, chapter] = post.passageId.split('.');
+      const startVerse = String(post.verseNumber || post.verseNumbers?.[0] || 1);
+      await saveUserPreferences({
+        ...prefs,
+        activeBook: book,
+        activeChapter: chapter,
+        activePassageId: post.passageId,
+        scrollToVerse: startVerse,
+      } as any);
+      router.navigate('/(tabs)/bible');
+    } catch (e) {
+      console.error('Failed to navigate to Bible passage', e);
+    }
+  };
+
   return (
     <View style={membersStyles.wrap}>
       {(todayBirthdays.length > 0 || upcomingBirthdays.length > 0) && (
@@ -813,47 +1030,176 @@ function MembersTab({ searchQuery }: SubScreenProps) {
         </SoftCard>
       )}
 
-      {membersLoading ? (
+      {/* ─── Church Highlights Feed ─────────────────────────────────────── */}
+      {highlightsLoading ? (
         <View style={placeholder.wrap}>
-          <Text style={placeholder.subtitle}>Loading members...</Text>
+          <Text style={placeholder.subtitle}>Loading church highlights...</Text>
         </View>
-      ) : filteredMembers.length === 0 ? (
+      ) : filteredHighlights.length === 0 ? (
         <View style={placeholder.wrap}>
-          <Text style={placeholder.title}>No members found</Text>
-          <Text style={placeholder.subtitle}>Try another search term.</Text>
+          <Text style={placeholder.title}>No Church Highlights Yet</Text>
+          <Text style={placeholder.subtitle}>
+            Verses highlighted by members while reading the Bible will appear here.
+          </Text>
         </View>
       ) : (
-        filteredMembers.map((member, index) => (
-          <BounceCard key={`${member.id}-${index}`} style={{ marginBottom: 8 }}>
-            <SoftCard innerStyle={membersStyles.card}>
-              <View style={membersStyles.avatarWrap}>
-                <Image
-                  source={{ uri: member.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(formatMemberName(member))}&background=f0f0f0&color=999` }}
-                  style={membersStyles.avatar}
-                />
-              </View>
-              <View style={membersStyles.details}>
-                <Text style={membersStyles.name}>{formatMemberName(member)}</Text>
-                {member.ministryIds && member.ministryIds.length > 0 && (
-                  <LinearGradient
-                    colors={['#F3E8FF', '#E0E7FF']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={membersStyles.ministryBadge}
+        <>
+          {filteredHighlights.map((post) => {
+            const reference = `${post.bookName} ${post.chapter}:${post.verseRangeLabel}`;
+            const isLiked = currentUser?.uid ? post.likedBy?.includes(currentUser.uid) : false;
+            const isOwner = currentUser?.uid === post.userId;
+
+            return (
+              <BounceCard
+                key={post.id}
+                style={{ marginBottom: 12 }}
+                onPress={() => handleNavigateToPassage(post)}
+                activeOpacity={0.85}
+              >
+                <SoftCard innerStyle={{ padding: 16 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                    <View
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 18,
+                        backgroundColor: '#E5E7EB',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginRight: 10,
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {post.userPhotoUrl ? (
+                        <Image source={{ uri: post.userPhotoUrl }} style={{ width: 36, height: 36 }} />
+                      ) : (
+                        <User size={20} color="#9CA3AF" />
+                      )}
+                    </View>
+                    <View style={{ flex: 1, justifyContent: 'center' }}>
+                      <Text style={{ fontSize: 14, color: '#111827', lineHeight: 20 }}>
+                        <Text style={{ fontWeight: '700', color: '#111827' }}>
+                          {isOwner ? 'You' : post.userName}
+                        </Text>
+                        <Text style={{ color: '#4B5563', fontWeight: '400' }}> highlighted </Text>
+                        <Text style={{ fontWeight: '800', color: '#111827' }}>{reference}</Text>
+                        {isOwner && (
+                          <Text style={{ verticalAlign: 'middle' }}>
+                            {' '}
+                            <View
+                              style={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: 4,
+                                backgroundColor: getHighlightColorHex(post.color),
+                                marginBottom: 1,
+                              }}
+                            />
+                          </Text>
+                        )}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '500', marginTop: 2 }}>
+                        {formatPrayerTimeAgo(post.createdAt)}
+                      </Text>
+                    </View>
+
+                    <TouchableOpacity
+                      onPress={() => handleOptionsPress(post)}
+                      style={{ padding: 4 }}
+                      activeOpacity={0.7}
+                      hitSlop={8}
+                    >
+                      <MoreHorizontal size={18} color="#9CA3AF" />
+                    </TouchableOpacity>
+                  </View>
+
+                  {!!post.text && (
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        color: '#4B5563',
+                        lineHeight: 20,
+                        fontStyle: 'italic',
+                        marginBottom: 12,
+                      }}
+                      numberOfLines={3}
+                      ellipsizeMode="tail"
+                    >
+                      "{post.text.replace(/{{note:[0-9]+}}/g, '').trim()}"
+                    </Text>
+                  )}
+
+                  {/* Social Action Footer: Like and Comment */}
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'flex-start',
+                      borderTopWidth: 1,
+                      borderTopColor: '#F3F4F6',
+                      paddingTop: 10,
+                      gap: 16,
+                    }}
                   >
-                    <HeartHandshake size={10} color="#8B5CF6" />
-                    <Text style={membersStyles.ministryBadgeText}>Ministry</Text>
-                  </LinearGradient>
-                )}
-              </View>
-              <View style={[membersStyles.statusPill, member.status === 'inactive' && membersStyles.statusPillInactive]}>
-                <Text style={[membersStyles.statusText, member.status === 'inactive' && membersStyles.statusTextInactive]}>
-                  {member.membershipStatus || (member.status === 'inactive' ? 'Inactive' : 'Active')}
-                </Text>
-              </View>
-            </SoftCard>
-          </BounceCard>
-        ))
+                    <TouchableOpacity
+                      onPress={() => handleToggleLike(post)}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                      activeOpacity={0.7}
+                    >
+                      <Heart
+                        size={18}
+                        color={isLiked ? '#EF4444' : '#6B7280'}
+                        fill={isLiked ? '#EF4444' : 'transparent'}
+                      />
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: isLiked ? '#EF4444' : '#6B7280' }}>
+                        {post.likes || 0}
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() =>
+                        router.push({
+                          pathname: '/comment-thread',
+                          params: {
+                            targetType: 'church_highlight',
+                            targetId: post.id,
+                            title: reference,
+                          },
+                        })
+                      }
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                      activeOpacity={0.7}
+                    >
+                      <MessageCircle size={18} color="#6B7280" />
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: '#6B7280' }}>
+                        {post.commentCount || 0}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </SoftCard>
+              </BounceCard>
+            );
+          })}
+
+          {hasMore && (
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingVertical: 12,
+                backgroundColor: '#F3F4F6',
+                borderRadius: 12,
+                marginTop: 4,
+                marginBottom: 16,
+              }}
+              onPress={() => setPageLimit((prev) => prev + 10)}
+              activeOpacity={0.7}
+            >
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#4B5563' }}>Load More Highlights</Text>
+            </TouchableOpacity>
+          )}
+        </>
       )}
     </View>
   );

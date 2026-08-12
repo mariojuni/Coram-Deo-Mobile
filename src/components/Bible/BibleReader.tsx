@@ -120,7 +120,8 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
     const colors = new Set<string>();
     if (selectedVerses.length === 0) return colors;
     selectedVerses.forEach(v => {
-      const color = chapterHighlights[v];
+      const raw = chapterHighlights[v];
+      const color = typeof raw === 'object' && raw !== null ? (raw as any).color : raw;
       if (color) {
         colors.add(color);
       }
@@ -156,10 +157,10 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
   // Scroll to target verse after chapter finishes loading based on character ratio & container height
   useEffect(() => {
     if (loading || !scrollToVerse || chapterData.length === 0) return;
-    const timer = setTimeout(() => {
-      const targetVerseNum = parseInt(scrollToVerse, 10);
-      if (isNaN(targetVerseNum)) return;
+    const targetVerseNum = parseInt(scrollToVerse, 10);
+    if (isNaN(targetVerseNum)) return;
 
+    const performScroll = () => {
       let charCountBefore = 0;
       let totalCharCount = 0;
 
@@ -175,10 +176,18 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
       if (totalCharCount > 0 && contentHeightRef.current > 0) {
         const ratio = charCountBefore / totalCharCount;
         const targetY = ratio * contentHeightRef.current;
-        scrollRef.current?.scrollTo({ y: Math.max(0, targetY - 60), animated: true });
+        // Position verse near top third / above center
+        const offsetY = Math.max(0, targetY - 120);
+        scrollRef.current?.scrollTo({ y: offsetY, animated: true });
       }
-    }, 150);
-    return () => clearTimeout(timer);
+    };
+
+    const timer = setTimeout(performScroll, 300);
+    const secondaryTimer = setTimeout(performScroll, 600);
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(secondaryTimer);
+    };
   }, [loading, scrollToVerse, chapterData]);
 
   const onNextChapter = () => {

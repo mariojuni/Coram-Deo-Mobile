@@ -23,7 +23,7 @@ function normalizeDate(value: any): Date | null {
   return null;
 }
 
-export function formatPrayerTimeAgo(timestamp: Prayer['createdAt']): string {
+export function formatPrayerTimeAgo(timestamp: any): string {
   const date = normalizeDate(timestamp);
   if (!date) return 'Just now';
 

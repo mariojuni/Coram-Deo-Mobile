@@ -3,7 +3,8 @@ export type CommentTargetType =
   | 'sermon'
   | 'announcement'
   | 'event'
-  | 'discipleship_lesson';
+  | 'discipleship_lesson'
+  | 'church_highlight';
 
 export type CommentStatus = 'active' | 'hidden' | 'deleted' | 'flagged';
 

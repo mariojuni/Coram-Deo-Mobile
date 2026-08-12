@@ -1,4 +1,5 @@
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { LayoutChangeEvent, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { X } from 'lucide-react-native';
 import { BounceCard } from '@/components/ui/BounceCard';
@@ -14,7 +15,39 @@ interface BooksModalProps {
 }
 
 export default function BooksModal({ isOpen, onClose, books, onSelectChapter, activeBookId }: BooksModalProps) {
-  const { collapseBook, expandedBook, setSortMode, sortMode, sortedBooks, toggleBook } = useBooksModal(books);
+  const { collapseBook, expandedBook, setSortMode, sortMode, sortedBooks, toggleBook, setExpandedBook } = useBooksModal(books);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const itemLayouts = useRef<Record<string, number>>({});
+  const [scrollViewHeight, setScrollViewHeight] = useState<number>(0);
+
+  // When modal opens or activeBookId/sortMode changes, scroll to position active book above center without animation
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // Reset/collapse any expanded book state on open if desired, or leave user interaction untouched
+    collapseBook();
+
+    const scrollToActiveBook = () => {
+      if (!activeBookId || !scrollViewRef.current) return;
+      const key = String(activeBookId);
+      const y = itemLayouts.current[key];
+      if (y !== undefined) {
+        // Position selected book above center (approx 30% from top of visible area)
+        const targetOffset = Math.max(0, y - (scrollViewHeight > 0 ? scrollViewHeight * 0.3 : 150));
+        scrollViewRef.current.scrollTo({ y: targetOffset, animated: false });
+      }
+    };
+
+    // Execute instant scroll once layout is available
+    scrollToActiveBook();
+    const timer = setTimeout(scrollToActiveBook, 50);
+
+    return () => clearTimeout(timer);
+  }, [isOpen, activeBookId, sortMode, scrollViewHeight]);
+
+  const handleItemLayout = (bookId: string | number, event: LayoutChangeEvent) => {
+    itemLayouts.current[String(bookId)] = event.nativeEvent.layout.y;
+  };
 
   const renderChapters = (book: any) => {
     // Legacy support: YouVersion uses book.chapters, our new model uses book.chapterCount
@@ -66,26 +99,34 @@ export default function BooksModal({ isOpen, onClose, books, onSelectChapter, ac
         </ModalDragArea>
 
         {/* Book List */}
-        <ScrollView style={styles.content} contentContainerStyle={{ paddingTop: 70 }}>
-        {sortedBooks.map((book) => {
-          const isExpanded = expandedBook === String(book.id);
-          return (
-            <View key={book.id}>
-              <TouchableOpacity
-                style={[styles.bookItem, isExpanded && styles.bookItemExpanded]}
-                onPress={() => toggleBook(book.id)}
+        <ScrollView 
+          ref={scrollViewRef}
+          style={styles.content} 
+          contentContainerStyle={{ paddingTop: 70 }}
+          onLayout={(e) => setScrollViewHeight(e.nativeEvent.layout.height)}
+        >
+          {sortedBooks.map((book) => {
+            const isExpanded = expandedBook === String(book.id);
+            return (
+              <View 
+                key={book.id}
+                onLayout={(e) => handleItemLayout(book.id, e)}
               >
-                <Text style={[styles.bookName, isExpanded && styles.bookNameExpanded, book.id === activeBookId && styles.bookNameActive]}>
-                  {book.title || book.name}
-                </Text>
-              </TouchableOpacity>
-              {isExpanded && renderChapters(book)}
-            </View>
-          );
-        })}
-      </ScrollView>
+                <TouchableOpacity
+                  style={[styles.bookItem, isExpanded && styles.bookItemExpanded]}
+                  onPress={() => toggleBook(book.id)}
+                >
+                  <Text style={[styles.bookName, isExpanded && styles.bookNameExpanded, String(book.id) === String(activeBookId) && styles.bookNameActive]}>
+                    {book.title || book.name}
+                  </Text>
+                </TouchableOpacity>
+                {isExpanded && renderChapters(book)}
+              </View>
+            );
+          })}
+        </ScrollView>
 
-      {/* Segmented Control */}
+        {/* Segmented Control */}
       <View style={styles.bottomBar}>
         <View style={styles.segmentContainer}>
           <TouchableOpacity 

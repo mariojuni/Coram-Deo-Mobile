@@ -1,10 +1,12 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert, Share } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert, Share, Image, Platform, ActionSheetIOS } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Bookmark, BookOpen, Calendar, ChevronRight, Share as ShareIcon, Trash2, ChevronDown } from 'lucide-react-native';
+import { Bookmark, BookOpen, Calendar, ChevronRight, Share as ShareIcon, Trash2, ChevronDown, User, MoreHorizontal } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SoftCard } from '@/components/ui/SoftCard';
 import { BounceCard } from '@/components/ui/BounceCard';
+import { useAuthStore } from '@/store/useAuthStore';
+import { formatPrayerTimeAgo } from '@/features/prayer/domain/prayer.selectors';
 import type { UserHighlightItem } from '../hooks/useProfileDashboardData';
 import type { SermonNote } from '@/features/sermons/domain/sermon.types';
 import type { UserBiblePlan, BiblePlan } from '@/features/biblePlan/domain/biblePlan.types';
@@ -20,7 +22,7 @@ interface ProfileActivityTabsProps {
   activePlans: UserBiblePlan[];
   plansMeta: BiblePlan[];
   plansLoading: boolean;
-  onRemoveHighlight?: (passageId: string, verseNumber: number) => void;
+  onRemoveHighlight?: (passageId: string, verseNumbers: number | number[]) => void;
 }
 
 const PAGE_SIZE = 15;
@@ -39,6 +41,9 @@ export function ProfileActivityTabs({
   const [activeTab, setActiveTab] = useState<ActivityTabKey>('all');
   const [visibleCount, setVisibleCount] = useState<number>(PAGE_SIZE);
 
+  const userProfile = useAuthStore((s) => s.userProfile);
+  const currentUser = useAuthStore((s) => s.currentUser);
+
   const tabs: { key: ActivityTabKey; label: string; count: number }[] = useMemo(
     () => [
       { key: 'all', label: 'All', count: highlights.length + notes.length + activePlans.length },
@@ -50,7 +55,7 @@ export function ProfileActivityTabs({
   );
 
   const handleOpenBiblePassage = useCallback(
-    async (passageId: string) => {
+    async (passageId: string, verseNumber?: number) => {
       try {
         const prefs = await getUserPreferences();
         const [book, chapter] = passageId.split('.');
@@ -59,7 +64,8 @@ export function ProfileActivityTabs({
           activeBook: book || 'GEN',
           activeChapter: chapter || '1',
           activePassageId: passageId,
-        });
+          scrollToVerse: verseNumber ? String(verseNumber) : undefined,
+        } as any);
         router.navigate('/(tabs)/bible');
       } catch (e) {
         console.error('Failed to open passage:', e);
@@ -72,9 +78,10 @@ export function ProfileActivityTabs({
   const handleShareHighlight = useCallback(async (item: UserHighlightItem) => {
     try {
       const cleanText = item.text ? item.text.replace(/{{note:[0-9]+}}/g, '').trim() : '';
+      const verseRefLabel = item.verseRangeLabel || `${item.verseNumber}`;
       const msg = cleanText
-        ? `"${cleanText}" — ${item.bookName} ${item.chapter}:${item.verseNumber}`
-        : `${item.bookName} ${item.chapter}:${item.verseNumber}`;
+        ? `"${cleanText}" — ${item.bookName} ${item.chapter}:${verseRefLabel}`
+        : `${item.bookName} ${item.chapter}:${verseRefLabel}`;
       await Share.share({ message: msg });
     } catch (e) {
       console.error('Failed to share highlight:', e);
@@ -83,15 +90,17 @@ export function ProfileActivityTabs({
 
   const handleConfirmRemove = useCallback(
     (item: UserHighlightItem) => {
+      const verseRefLabel = item.verseRangeLabel || `${item.verseNumber}`;
+      const targets = item.verseNumbers?.length ? item.verseNumbers : item.verseNumber;
       Alert.alert(
         'Remove Highlight',
-        `Are you sure you want to remove the highlight for ${item.bookName} ${item.chapter}:${item.verseNumber}?`,
+        `Are you sure you want to remove the highlight for ${item.bookName} ${item.chapter}:${verseRefLabel}?`,
         [
           { text: 'Cancel', style: 'cancel' },
           {
             text: 'Remove',
             style: 'destructive',
-            onPress: () => onRemoveHighlight?.(item.passageId, item.verseNumber),
+            onPress: () => onRemoveHighlight?.(item.passageId, targets as any),
           },
         ]
       );
@@ -99,14 +108,50 @@ export function ProfileActivityTabs({
     [onRemoveHighlight]
   );
 
+  const handleOptionsPress = useCallback(
+    (item: UserHighlightItem) => {
+      const verseRefLabel = item.verseRangeLabel || `${item.verseNumber}`;
+      const ref = `${item.bookName} ${item.chapter}:${verseRefLabel}`;
+      if (Platform.OS === 'ios') {
+        ActionSheetIOS.showActionSheetWithOptions(
+          {
+            options: ['Cancel', 'Share Highlight', 'Delete Highlight'],
+            destructiveButtonIndex: 2,
+            cancelButtonIndex: 0,
+          },
+          (buttonIndex) => {
+            if (buttonIndex === 1) {
+              handleShareHighlight(item);
+            } else if (buttonIndex === 2) {
+              handleConfirmRemove(item);
+            }
+          }
+        );
+      } else {
+        Alert.alert(`Highlight Options`, ref, [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Share', onPress: () => handleShareHighlight(item) },
+          { text: 'Delete', style: 'destructive', onPress: () => handleConfirmRemove(item) },
+        ]);
+      }
+    },
+    [handleShareHighlight, handleConfirmRemove]
+  );
+
   const getColorHex = useCallback((colorName: string) => {
     const map: Record<string, string> = {
-      yellow: '#F59E0B',
-      pink: '#EC4899',
-      blue: '#3B82F6',
-      green: '#10B981',
+      yellow: '#FACC15',
+      pink: '#F472B6',
+      blue: '#60A5FA',
+      green: '#4ADE80',
+      orange: '#FB923C',
+      purple: '#C084FC',
+      red: '#F87171',
+      teal: '#2DD4BF',
+      indigo: '#818CF8',
+      brown: '#A8A29E',
     };
-    return map[colorName] || '#F59E0B';
+    return map[colorName] || '#FACC15';
   }, []);
 
   // Memoized Highlight Items
@@ -139,46 +184,67 @@ export function ProfileActivityTabs({
       );
     }
 
+    const userName = userProfile?.firstName
+      ? `${userProfile.firstName} ${userProfile.lastName || ''}`.trim()
+      : currentUser?.displayName || 'You';
+    const userPhoto = userProfile?.photoUrl || currentUser?.photoURL;
+
     return (
       <View>
         {displayedHighlights.map((item) => (
           <BounceCard
             key={item.id}
             style={{ marginBottom: 10 }}
-            onPress={() => handleOpenBiblePassage(item.passageId)}
+            onPress={() => handleOpenBiblePassage(item.passageId, item.verseNumbers?.[0] || item.verseNumber)}
             activeOpacity={0.85}
           >
-            <SoftCard>
-              <View style={styles.sideBarCardContainer}>
-                <View style={[styles.sideAccentBar, { backgroundColor: getColorHex(item.color) }]} />
-                <View style={styles.sideBarCardContent}>
-                  <View style={styles.highlightHeader}>
-                    <Text style={styles.highlightReference}>
-                      {item.bookName} {item.chapter}:{item.verseNumber}
-                    </Text>
+            <SoftCard innerStyle={styles.prayerCardInner}>
+              <View style={styles.prayerRow}>
+                <View style={styles.prayerContent}>
+                  <View style={styles.prayerTop}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                      <View style={styles.prayerAvatar}>
+                        {userPhoto ? (
+                          <Image source={{ uri: userPhoto }} style={styles.prayerAvatarImage} />
+                        ) : (
+                          <User size={20} color="#9CA3AF" />
+                        )}
+                      </View>
+                      <View style={{ flex: 1, justifyContent: 'center' }}>
+                        <Text style={{ fontSize: 14, color: '#111827', lineHeight: 20 }}>
+                          <Text style={styles.prayerName}>You</Text>
+                          <Text style={styles.prayerActionText}> highlighted </Text>
+                          <Text style={styles.prayerPassageHighlight}>
+                            {item.bookName} {item.chapter}:{item.verseRangeLabel || item.verseNumber}
+                          </Text>
+                          <Text style={{ verticalAlign: 'middle' }}>
+                            {' '}
+                            <View
+                              style={[
+                                styles.colorDotIndicator,
+                                { backgroundColor: getColorHex(item.color), marginBottom: 1 },
+                              ]}
+                            />
+                          </Text>
+                        </Text>
+                        <Text style={styles.prayerTime}>{formatPrayerTimeAgo(item.createdAt)}</Text>
+                      </View>
 
-                    <View style={styles.actionsRow}>
                       <TouchableOpacity
-                        onPress={() => handleShareHighlight(item)}
+                        onPress={() => handleOptionsPress(item)}
                         style={styles.iconBtn}
                         activeOpacity={0.7}
                         hitSlop={8}
                       >
-                        <ShareIcon size={15} color="#6B7280" />
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        onPress={() => handleConfirmRemove(item)}
-                        style={styles.iconBtn}
-                        activeOpacity={0.7}
-                        hitSlop={8}
-                      >
-                        <Trash2 size={15} color="#EF4444" />
+                        <MoreHorizontal size={18} color="#9CA3AF" />
                       </TouchableOpacity>
                     </View>
                   </View>
 
                   {!!item.text ? (
-                    <Text style={styles.scriptureText}>"{item.text.replace(/{{note:[0-9]+}}/g, '').trim()}"</Text>
+                    <Text style={styles.prayerVerseText} numberOfLines={3} ellipsizeMode="tail">
+                      "{item.text.replace(/{{note:[0-9]+}}/g, '').trim()}"
+                    </Text>
                   ) : (
                     <Text style={styles.scriptureTextFallback}>Tap card to read passage in Bible</Text>
                   )}
@@ -205,12 +271,14 @@ export function ProfileActivityTabs({
     displayedHighlights,
     highlightsLoading,
     visibleCount,
-    getColorHex,
     handleConfirmRemove,
     handleOpenBiblePassage,
     handleShareHighlight,
+    handleOptionsPress,
     router,
     activeTab,
+    userProfile,
+    currentUser,
   ]);
 
   // Memoized Notes Items
@@ -486,6 +554,86 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   progressBarFill: { height: '100%', borderRadius: 3 },
+
+  prayerCardInner: {
+    flexDirection: 'row',
+  },
+  prayerGradientBorder: {
+    width: 4,
+    alignSelf: 'stretch',
+  },
+  prayerRow: {
+    flex: 1,
+    flexDirection: 'row',
+    padding: 12,
+  },
+  prayerContent: {
+    flex: 1,
+    paddingTop: 1,
+  },
+  prayerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  prayerAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#E5E7EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+    overflow: 'hidden',
+  },
+  prayerAvatarImage: {
+    width: 36,
+    height: 36,
+  },
+  prayerHeaderTitle: {
+    fontSize: 14,
+    color: '#111827',
+  },
+  prayerTime: {
+    fontSize: 11,
+    color: '#6B7280',
+    fontWeight: '500',
+    marginTop: 1,
+  },
+  prayerName: {
+    fontWeight: '700',
+    color: '#111827',
+  },
+  prayerActionText: {
+    color: '#4B5563',
+    fontWeight: '400',
+  },
+  prayerPassageHighlight: {
+    fontWeight: '800',
+    color: '#111827',
+  },
+  dotSeparator: {
+    color: '#9CA3AF',
+    fontWeight: '400',
+  },
+  translationText: {
+    fontWeight: '700',
+    color: '#374151',
+  },
+  colorDotIndicator: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginLeft: 6,
+  },
+  prayerVerseText: {
+    fontSize: 14,
+    color: '#4B5563',
+    lineHeight: 20,
+    fontStyle: 'italic',
+    marginTop: 2,
+  },
 
   loadMoreBtn: {
     flexDirection: 'row',
