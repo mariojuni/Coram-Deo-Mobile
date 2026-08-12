@@ -601,7 +601,7 @@ const styles = StyleSheet.create({  container: { flex: 1, backgroundColor: '#faf
   },
   chapterContent: {
     fontSize: 18,
-    lineHeight: 34,
+    lineHeight: 30,
     fontFamily: 'Inter',
     color: '#1a1a1a',
   },
