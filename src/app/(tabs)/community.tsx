@@ -1053,7 +1053,16 @@ function MembersTab({ searchQuery }: SubScreenProps) {
               <BounceCard
                 key={post.id}
                 style={{ marginBottom: 12 }}
-                onPress={() => handleNavigateToPassage(post)}
+                onPress={() => 
+                  router.push({
+                    pathname: '/comment-thread',
+                    params: {
+                      targetType: 'church_highlight',
+                      targetId: post.id,
+                      title: reference,
+                    },
+                  })
+                }
                 activeOpacity={0.85}
               >
                 <SoftCard innerStyle={{ padding: 16 }}>
@@ -1077,27 +1086,26 @@ function MembersTab({ searchQuery }: SubScreenProps) {
                       )}
                     </View>
                     <View style={{ flex: 1, justifyContent: 'center' }}>
-                      <Text style={{ fontSize: 14, color: '#111827', lineHeight: 20 }}>
-                        <Text style={{ fontWeight: '700', color: '#111827' }}>
-                          {isOwner ? 'You' : post.userName}
-                        </Text>
-                        <Text style={{ color: '#4B5563', fontWeight: '400' }}> highlighted </Text>
-                        <Text style={{ fontWeight: '800', color: '#111827' }}>{reference}</Text>
-                        {isOwner && (
-                          <Text style={{ verticalAlign: 'middle' }}>
-                            {' '}
-                            <View
-                              style={{
-                                width: 8,
-                                height: 8,
-                                borderRadius: 4,
-                                backgroundColor: getHighlightColorHex(post.color),
-                                marginBottom: 1,
-                              }}
-                            />
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <Text style={{ fontSize: 14, color: '#111827', lineHeight: 20 }}>
+                          <Text style={{ fontWeight: '700', color: '#111827' }}>
+                            {isOwner ? 'You' : post.userName}
                           </Text>
+                          <Text style={{ color: '#4B5563', fontWeight: '400' }}> highlighted </Text>
+                          <Text style={{ fontWeight: '800', color: '#111827' }}>{reference}</Text>
+                        </Text>
+                        {isOwner && (
+                          <View
+                            style={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: 4,
+                              backgroundColor: getHighlightColorHex(post.color),
+                              marginLeft: 6,
+                            }}
+                          />
                         )}
-                      </Text>
+                      </View>
                       <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '500', marginTop: 2 }}>
                         {formatPrayerTimeAgo(post.createdAt)}
                       </Text>

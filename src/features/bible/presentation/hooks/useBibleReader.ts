@@ -266,6 +266,13 @@ export function useBibleReader(
             text: combinedTexts.join(' '),
           }).catch((err) => console.warn('[useBibleReader] Failed to publish church highlight:', err));
         }
+      } else if (color === 'clear' && selectedVerses.length > 0 && effectiveChurchId && currentUser?.uid) {
+        churchHighlightRepository.deleteHighlightByVerse(
+          effectiveChurchId,
+          currentUser.uid,
+          passageId,
+          selectedVerses.map(Number)
+        ).catch((err) => console.warn('[useBibleReader] Failed to delete church highlight by verse:', err));
       }
 
       updatePreferences({ highlights: newHighlights });

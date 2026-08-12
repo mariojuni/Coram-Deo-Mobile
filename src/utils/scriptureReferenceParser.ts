@@ -92,6 +92,23 @@ function resolveBookId(rawBook: string): string | null {
 }
 
 /**
+ * Returns the human-readable capitalized full book name for a given YouVersion book code.
+ * E.g., 'MAT' -> 'Matthew'
+ */
+export function getHumanReadableBookName(bookId: string): string {
+  // Find the first key in BOOK_NAME_MAP that matches the bookId and is the full name 
+  // (usually the longest or the first one defined).
+  // The map is structured such that the full name is the first entry for each book.
+  const entry = Object.entries(BOOK_NAME_MAP).find(([name, id]) => id === bookId.toUpperCase());
+  if (entry) {
+    const rawName = entry[0];
+    // Capitalize first letters
+    return rawName.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  }
+  return bookId;
+}
+
+/**
  * Parses a human-readable scripture reference into structured parts usable
  * with the existing Bible reader (activeBook + activeChapter).
  *

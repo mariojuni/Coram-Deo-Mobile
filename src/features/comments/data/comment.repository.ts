@@ -7,6 +7,18 @@ import type { Comment, CommentTargetType, CommentStatus } from '../domain/commen
 
 const COMMENTS_COLLECTION = 'comments';
 
+function getParentCollection(targetType: CommentTargetType): string {
+  switch (targetType) {
+    case 'prayer_request': return 'prayer_requests';
+    case 'sermon': return 'sermons';
+    case 'church_highlight': return 'verse_highlights';
+    case 'announcement': return 'announcements';
+    case 'event': return 'events';
+    case 'discipleship_lesson': return 'discipleship_lessons';
+    default: return 'sermons';
+  }
+}
+
 export const commentRepository = {
   
   async getComments(
@@ -38,8 +50,8 @@ export const commentRepository = {
         createdAt: (doc.data().createdAt as Timestamp)?.toDate(),
         updatedAt: (doc.data().updatedAt as Timestamp)?.toDate(),
         deletedAt: doc.data().deletedAt ? (doc.data().deletedAt as Timestamp).toDate() : undefined,
-      }))
-      .filter(doc => doc.status !== 'deleted') as Comment[];
+      } as Comment))
+      .filter(doc => doc.status !== 'deleted');
 
     return { comments, lastDoc: snapshot.docs[snapshot.docs.length - 1] };
   },
@@ -68,8 +80,8 @@ export const commentRepository = {
           createdAt: (doc.data().createdAt as Timestamp)?.toDate(),
           updatedAt: (doc.data().updatedAt as Timestamp)?.toDate(),
           deletedAt: doc.data().deletedAt ? (doc.data().deletedAt as Timestamp).toDate() : undefined,
-        }))
-        .filter(doc => doc.status !== 'deleted') as Comment[];
+        } as Comment))
+        .filter(doc => doc.status !== 'deleted');
       onUpdate(replies);
     });
   },
@@ -80,7 +92,7 @@ export const commentRepository = {
     const commentRef = doc(collection(getActiveDb(), COMMENTS_COLLECTION));
     const now = Timestamp.now();
 
-    const parentCollection = data.targetType === 'prayer_request' ? 'prayer_requests' : 'sermons';
+    const parentCollection = getParentCollection(data.targetType);
     const parentDocRef = doc(getActiveDb(), 'churches', data.churchId, parentCollection, data.targetId);
 
     const newCommentData = {
@@ -130,7 +142,7 @@ export const commentRepository = {
 
   async deleteComment(churchId: string, targetType: CommentTargetType, targetId: string, commentId: string, parentCommentId: string | null) {
     const commentRef = doc(getActiveDb(), COMMENTS_COLLECTION, commentId);
-    const parentCollection = targetType === 'prayer_request' ? 'prayer_requests' : 'sermons';
+    const parentCollection = getParentCollection(targetType);
     const parentDocRef = doc(getActiveDb(), 'churches', churchId, parentCollection, targetId);
 
     // If deleting a parent comment, query all nested replies to delete them as well
@@ -200,5 +212,28 @@ export const commentRepository = {
         transaction.update(commentRef, { status: 'hidden' });
       }
     });
+  },
+
+  async deleteAllCommentsForTarget(churchId: string, targetType: CommentTargetType, targetId: string) {
+    try {
+      const { writeBatch, deleteDoc } = await import('firebase/firestore');
+      const q = query(
+        collection(getActiveDb(), COMMENTS_COLLECTION),
+        where('churchId', '==', churchId),
+        where('targetType', '==', targetType),
+        where('targetId', '==', targetId)
+      );
+      const snapshot = await getDocs(q);
+
+      if (!snapshot.empty) {
+        const batch = writeBatch(getActiveDb());
+        snapshot.docs.forEach(doc => {
+          batch.delete(doc.ref);
+        });
+        await batch.commit();
+      }
+    } catch (e) {
+      console.error(`[CommentRepository] Failed to delete all comments for ${targetType} ${targetId}`, e);
+    }
   }
 };

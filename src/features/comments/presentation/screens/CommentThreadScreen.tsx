@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 
 import { Stack as ExpoStack, useLocalSearchParams as useExpoSearchParams, useRouter as useExpoRouter, useFocusEffect } from 'expo-router';
-import { ArrowLeft, X, Send, User, CheckCircle2, MessageCircle, HeartHandshake, ChevronLeft, MoreVertical } from 'lucide-react-native';
+import { ArrowLeft, X, Send, User, CheckCircle2, MessageCircle, HeartHandshake, ChevronLeft, MoreVertical, BookOpen } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,6 +20,7 @@ import { formatPrayerTimeAgo } from '@/features/prayer/domain/prayer.selectors';
 import { prayerRepository } from '@/features/prayer/data/prayer.repository';
 import { useUIStore } from '@/store/useUIStore';
 import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
+import { getHumanReadableBookName } from '@/utils/scriptureReferenceParser';
 
 import { getActiveDb } from '@/firebase';
 import { doc, getDoc, onSnapshot, DocumentSnapshot, DocumentData } from 'firebase/firestore';
@@ -75,7 +76,16 @@ export function CommentThreadScreen() {
     }
 
     setLoadingParent(true);
-    const parentCollection = targetType === 'prayer_request' ? 'prayer_requests' : 'sermons';
+    let parentCollection = '';
+    if (targetType === 'prayer_request') parentCollection = 'prayer_requests';
+    else if (targetType === 'sermon') parentCollection = 'sermons';
+    else if (targetType === 'church_highlight') parentCollection = 'verse_highlights';
+
+    if (!parentCollection) {
+      setLoadingParent(false);
+      return;
+    }
+
     const docRef = doc(getActiveDb(), 'churches', churchId, parentCollection, targetId);
 
     const unsubscribe = onSnapshot(docRef, (snapshot: DocumentSnapshot<DocumentData>) => {
@@ -84,7 +94,7 @@ export function CommentThreadScreen() {
       }
       setLoadingParent(false);
     }, (err: Error) => {
-      console.error('Error listening to parent doc:', err);
+      console.warn('Error listening to parent doc:', err);
       setLoadingParent(false);
     });
 
@@ -294,6 +304,67 @@ export function CommentThreadScreen() {
           </View>
         </View>
       );
+    } else if (targetType === 'church_highlight') {
+      return (
+        <View style={styles.flatParentContainer}>
+          <Text style={[styles.flatPrayerText, { fontStyle: 'italic', color: '#4B5563', lineHeight: 24 }]}>
+            "{parentData.text}"
+          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 }}>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: '#111827' }}>
+              {getHumanReadableBookName(parentData.bookName)} {parentData.chapter}:{parentData.verseRangeLabel || parentData.verseNumber}
+            </Text>
+            
+            <TouchableOpacity
+              onPress={async () => {
+                try {
+                  const { getUserPreferences, saveUserPreferences } = await import('@/features/bible/data/bible.repository');
+                  const prefs = await getUserPreferences();
+                  const [book, chapter] = parentData.passageId.split('.');
+                  const startVerse = String(parentData.verseNumber || parentData.verseNumbers?.[0] || 1);
+                  await saveUserPreferences({
+                    ...prefs,
+                    activeBook: book,
+                    activeChapter: chapter,
+                    activePassageId: parentData.passageId,
+                    scrollToVerse: startVerse,
+                  } as any);
+                  router.push({ pathname: '/(tabs)/bible' });
+                } catch (e) {
+                  console.error('Failed to navigate to Bible passage', e);
+                }
+              }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#F3F4F6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 }}
+              activeOpacity={0.7}
+            >
+              <BookOpen size={14} color="#4B5563" />
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#4B5563' }}>Read</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <View style={[styles.flatPrayerBottomRow, { marginTop: 16 }]}>
+            <View style={{ flex: 1 }} />
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={[styles.prayIconButton, { marginRight: 16 }]}>
+                <MessageCircle size={18} color="#FF6596" />
+                <Text style={[styles.prayIconCount, { color: '#FF6596' }]}>
+                  {parentData.commentCount || comments.length || 0}
+                </Text>
+              </View>
+
+              {(() => {
+                const isLiked = parentData.likedBy?.includes(currentUser?.uid || '');
+                return (
+                  <TouchableOpacity style={styles.prayIconButton} onPress={handlePray}>
+                    <HeartHandshake size={18} color={isLiked ? "#FF6596" : "#9CA3AF"} />
+                    <Text style={[styles.prayIconCount, isLiked && { color: "#FF6596" }]}>{parentData.likes || 0}</Text>
+                  </TouchableOpacity>
+                );
+              })()}
+            </View>
+          </View>
+        </View>
+      );
     } else if (targetType === 'sermon') {
       return (
         <View style={styles.parentHeaderContainer}>
@@ -325,7 +396,7 @@ export function CommentThreadScreen() {
           <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
         </TouchableOpacity>
         
-        {targetType === 'prayer_request' && loadingParent ? (
+        {['prayer_request', 'church_highlight'].includes(targetType) && loadingParent ? (
           <View style={styles.headerUserInfo}>
             <ShimmerSkeleton width={32} height={32} borderRadius={16} />
             <View style={{ flex: 1 }}>
@@ -333,7 +404,7 @@ export function CommentThreadScreen() {
               <ShimmerSkeleton width={60} height={12} />
             </View>
           </View>
-        ) : targetType === 'prayer_request' && parentData ? (
+        ) : ['prayer_request', 'church_highlight'].includes(targetType) && parentData ? (
           <View style={styles.headerUserInfo}>
             {parentData.userPhotoUrl ? (
               <Image source={{ uri: parentData.userPhotoUrl }} style={styles.headerAvatar} />
@@ -342,7 +413,7 @@ export function CommentThreadScreen() {
             )}
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={styles.headerName} numberOfLines={1}>{parentData.name || parentData.requesterName || parentData.authorName || 'Anonymous'}</Text>
+                <Text style={styles.headerName} numberOfLines={1}>{parentData.name || parentData.userName || parentData.requesterName || parentData.authorName || 'Anonymous'}</Text>
               </View>
               <Text style={styles.headerTime}>{formatPrayerTimeAgo(parentData.createdAt)}</Text>
             </View>

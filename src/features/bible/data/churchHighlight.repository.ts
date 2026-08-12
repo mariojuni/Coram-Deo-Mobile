@@ -17,6 +17,7 @@ import {
   increment,
   serverTimestamp,
 } from 'firebase/firestore';
+import { commentRepository } from '@/features/comments/data/comment.repository';
 
 export interface ChurchHighlightPost {
   id: string;
@@ -254,8 +255,45 @@ export const churchHighlightRepository = {
     if (!churchId || !highlightId) return;
     try {
       await deleteDoc(doc(getActiveDb(), `churches/${churchId}/verse_highlights`, highlightId));
+      await commentRepository.deleteAllCommentsForTarget(churchId, 'church_highlight', highlightId);
     } catch (err) {
       console.error('[ChurchHighlightRepository] Failed to delete highlight:', err);
+    }
+  },
+
+  /**
+   * Delete a church highlight post by passageId and verseNumber.
+   * This is used when a user clears a highlight locally, so we remove the corresponding public post.
+   */
+  async deleteHighlightByVerse(churchId: string, userId: string, passageId: string, targetVerses: number[]) {
+    if (!churchId || !userId || !passageId || targetVerses.length === 0) return;
+    try {
+      // Find all highlights by this user in this passage
+      const q = query(
+        collection(getActiveDb(), `churches/${churchId}/verse_highlights`),
+        where('churchId', '==', churchId),
+        where('userId', '==', userId),
+        where('passageId', '==', passageId)
+      );
+      const snapshot = await getDocs(q);
+
+      const docsToDelete: any[] = [];
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        const postVerses = data.verseNumbers || [data.verseNumber];
+        // If the post contains any of the target verses, delete it
+        const hasOverlap = postVerses.some((v: number) => targetVerses.includes(v));
+        if (hasOverlap) {
+          docsToDelete.push(docSnap.ref);
+        }
+      });
+
+      for (const docRef of docsToDelete) {
+        await deleteDoc(docRef);
+        await commentRepository.deleteAllCommentsForTarget(churchId, 'church_highlight', docRef.id);
+      }
+    } catch (err) {
+      console.error('[ChurchHighlightRepository] Failed to delete highlight by verse:', err);
     }
   },
 };

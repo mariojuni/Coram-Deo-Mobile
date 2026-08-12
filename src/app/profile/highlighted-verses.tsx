@@ -6,6 +6,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router';
 import { ChevronLeft, BookOpen, Share as ShareIcon, Trash2, User, MoreHorizontal } from 'lucide-react-native';
 import { getUserPreferences, saveUserPreferences, fetchChapterData } from '@/features/bible/data/bible.repository';
+import { churchHighlightRepository } from '@/features/bible/data/churchHighlight.repository';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -151,6 +152,17 @@ export default function HighlightedVersesScreen() {
               await saveUserPreferences(prefs);
               
               setHighlights(prev => prev.filter(h => !(h.passageId === passageId && targets.includes(String(h.verseNumber)))));
+
+              // Remove from church highlights feed
+              const effectiveChurchId = userProfile?.churchId || (currentUser as any)?.churchId || (currentUser as any)?.claims?.churchId;
+              if (effectiveChurchId && currentUser?.uid) {
+                churchHighlightRepository.deleteHighlightByVerse(
+                  effectiveChurchId,
+                  currentUser.uid,
+                  passageId,
+                  targets.map(Number)
+                ).catch(err => console.warn('[highlighted-verses] Failed to delete church highlight:', err));
+              }
             }
           } catch (e) {
             console.error('Failed to remove highlight', e);

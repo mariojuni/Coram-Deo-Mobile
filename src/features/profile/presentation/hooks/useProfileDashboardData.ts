@@ -11,6 +11,7 @@ import { isUserInMinistry } from '@/features/member/domain/member.utils';
 import type { SermonNote } from '@/features/sermons/domain/sermon.types';
 import { getUserPreferences, saveUserPreferences, fetchChapterData } from '@/features/bible/data/bible.repository';
 import type { SystemRole } from '@/features/auth/domain/auth.types';
+import { churchHighlightRepository } from '@/features/bible/data/churchHighlight.repository';
 
 export interface UserHighlightItem {
   id: string;
@@ -345,6 +346,17 @@ export function useProfileDashboardData() {
         setHighlights((prev) =>
           prev.filter((h) => !(h.passageId === passageId && targets.includes(h.verseNumber)))
         );
+
+        // Remove from church highlights feed
+        const effectiveChurchId = userProfile?.churchId || (currentUser as any)?.churchId || (currentUser as any)?.claims?.churchId;
+        if (effectiveChurchId && currentUser?.uid) {
+          churchHighlightRepository.deleteHighlightByVerse(
+            effectiveChurchId,
+            currentUser.uid,
+            passageId,
+            targets
+          ).catch(err => console.warn('[useProfileDashboardData] Failed to delete church highlight:', err));
+        }
       }
     } catch (e) {
       console.error('Failed to remove highlight:', e);
