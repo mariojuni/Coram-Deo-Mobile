@@ -11,6 +11,7 @@ import type { UserHighlightItem } from '../hooks/useProfileDashboardData';
 import type { SermonNote } from '@/features/sermons/domain/sermon.types';
 import type { UserBiblePlan, BiblePlan } from '@/features/biblePlan/domain/biblePlan.types';
 import { saveUserPreferences, getUserPreferences } from '@/features/bible/data/bible.repository';
+import { getHumanReadableBookName } from '@/utils/scriptureReferenceParser';
 
 type ActivityTabKey = 'all' | 'highlights' | 'notes' | 'plans';
 
@@ -80,8 +81,8 @@ export function ProfileActivityTabs({
       const cleanText = item.text ? item.text.replace(/{{note:[0-9]+}}/g, '').trim() : '';
       const verseRefLabel = item.verseRangeLabel || `${item.verseNumber}`;
       const msg = cleanText
-        ? `"${cleanText}" — ${item.bookName} ${item.chapter}:${verseRefLabel}`
-        : `${item.bookName} ${item.chapter}:${verseRefLabel}`;
+        ? `"${cleanText}" — ${getHumanReadableBookName(item.bookName)} ${item.chapter}:${verseRefLabel}`
+        : `${getHumanReadableBookName(item.bookName)} ${item.chapter}:${verseRefLabel}`;
       await Share.share({ message: msg });
     } catch (e) {
       console.error('Failed to share highlight:', e);
@@ -94,7 +95,7 @@ export function ProfileActivityTabs({
       const targets = item.verseNumbers?.length ? item.verseNumbers : item.verseNumber;
       Alert.alert(
         'Remove Highlight',
-        `Are you sure you want to remove the highlight for ${item.bookName} ${item.chapter}:${verseRefLabel}?`,
+        `Are you sure you want to remove the highlight for ${getHumanReadableBookName(item.bookName)} ${item.chapter}:${verseRefLabel}?`,
         [
           { text: 'Cancel', style: 'cancel' },
           {
@@ -111,7 +112,7 @@ export function ProfileActivityTabs({
   const handleOptionsPress = useCallback(
     (item: UserHighlightItem) => {
       const verseRefLabel = item.verseRangeLabel || `${item.verseNumber}`;
-      const ref = `${item.bookName} ${item.chapter}:${verseRefLabel}`;
+      const ref = `${getHumanReadableBookName(item.bookName)} ${item.chapter}:${verseRefLabel}`;
       if (Platform.OS === 'ios') {
         ActionSheetIOS.showActionSheetWithOptions(
           {
@@ -215,7 +216,7 @@ export function ProfileActivityTabs({
                           <Text style={styles.prayerName}>You</Text>
                           <Text style={styles.prayerActionText}> highlighted </Text>
                           <Text style={styles.prayerPassageHighlight}>
-                            {item.bookName} {item.chapter}:{item.verseRangeLabel || item.verseNumber}
+                            {getHumanReadableBookName(item.bookName)} {item.chapter}:{item.verseRangeLabel || item.verseNumber}
                           </Text>
                           <Text>
                             {' '}

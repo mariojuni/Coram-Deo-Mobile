@@ -11,6 +11,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useAuthStore } from '@/store/useAuthStore';
 import { formatPrayerTimeAgo } from '@/features/prayer/domain/prayer.selectors';
+import { getHumanReadableBookName } from '@/utils/scriptureReferenceParser';
 
 const BACKGROUND_GRADIENT = ['#F9FAFB', '#F3F4F6'] as const;
 
@@ -281,7 +282,7 @@ export default function HighlightedVersesScreen() {
         ) : (
           highlights.map((h, i) => {
             const verseRefLabel = h.verseRangeLabel || `${h.verseNumber}`;
-            const reference = `${h.book} ${h.chapter}:${verseRefLabel}`;
+            const reference = `${getHumanReadableBookName(h.book)} ${h.chapter}:${verseRefLabel}`;
             const userName = userProfile?.firstName
               ? `${userProfile.firstName} ${userProfile.lastName || ''}`.trim()
               : currentUser?.displayName || 'You';

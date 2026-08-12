@@ -81,6 +81,7 @@ import { formatBirthday, formatMemberName, parseMemberDate } from '../../../../f
 import type { Member } from '../../../../features/member/domain/member.types';
 import { useMemberStore } from '../../../../store/useMemberStore';
 import { useFeedStore } from '../../../../store/useFeedStore';
+import { getHumanReadableBookName } from '@/utils/scriptureReferenceParser';
 
 let isLocalHighlightsSynced = false;
 
@@ -272,7 +273,7 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
     return nonKeys.filter(
       (h) =>
         h.userName.toLowerCase().includes(query) ||
-        h.bookName.toLowerCase().includes(query) ||
+        getHumanReadableBookName(h.bookName).toLowerCase().includes(query) ||
         h.text.toLowerCase().includes(query)
     );
   }, [churchHighlights, searchQuery]);
@@ -329,7 +330,7 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
   };
 
   const handleOptionsPress = (post: ChurchHighlightPost) => {
-    const reference = `${post.bookName} ${post.chapter}:${post.verseRangeLabel}`;
+    const reference = `${getHumanReadableBookName(post.bookName)} ${post.chapter}:${post.verseRangeLabel}`;
     const isOwner = currentUser?.uid === post.userId;
 
     const options = ['Cancel', 'Share Highlight'];
@@ -387,7 +388,7 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
   };
 
   const renderHighlightPost = (post: ChurchHighlightPost) => {
-    const reference = `${post.bookName} ${post.chapter}:${post.verseRangeLabel}`;
+    const reference = `${getHumanReadableBookName(post.bookName)} ${post.chapter}:${post.verseRangeLabel}`;
     const isLiked = currentUser?.uid ? post.likedBy?.includes(currentUser.uid) : false;
     const isOwner = currentUser?.uid === post.userId;
 
