@@ -14,8 +14,8 @@ import {
   Search,
   X,
 } from 'lucide-react-native';
-import { useEffect, useMemo, useState, useRef } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Animated, TouchableWithoutFeedback } from 'react-native';
+import { useEffect, useMemo, useState, useRef, memo } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Animated, TouchableWithoutFeedback, InteractionManager } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Sermon } from '../../domain/sermon.types';
 import { sermonRepository } from '../../data/sermon.repository';
@@ -42,8 +42,15 @@ export function SermonsExperience({
   const currentUser = useAuthStore((s) => s.currentUser);
   const userProfile = useAuthStore((s) => s.userProfile);
 
-  const { sermons, loading, hasMore, fetchSermons, currentSermon, relatedSermons, subscribeSermons, loadFavorites } = useSermonStore();
-  const { loadAllProgresses, getInProgressSermons, progresses } = useSermonPlaybackStore();
+  const sermons = useSermonStore((s) => s.sermons);
+  const loading = useSermonStore((s) => s.loading);
+  const subscribeSermons = useSermonStore((s) => s.subscribeSermons);
+  const loadFavorites = useSermonStore((s) => s.loadFavorites);
+  const currentSermon = useSermonStore((s) => s.currentSermon);
+  const relatedSermons = useSermonStore((s) => s.relatedSermons);
+
+  const loadAllProgresses = useSermonPlaybackStore((s) => s.loadAllProgresses);
+  const getInProgressSermons = useSermonPlaybackStore((s) => s.getInProgressSermons);
 
   const [localSearch, setLocalSearch] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
@@ -71,19 +78,17 @@ export function SermonsExperience({
   useEffect(() => {
     if (sermons.length === 0) return;
     
-    // Fire and forget requests to warm up the URL cache
-    const prefetchVideos = async () => {
-      // Pick first 6 sermons to prefetch their video URLs
+    // Fire and forget requests after interactions complete to avoid tab switch jank
+    const task = InteractionManager.runAfterInteractions(() => {
       const toPrefetch = sermons.slice(0, 6);
       toPrefetch.forEach((s) => {
         if (s.videoStoragePath) {
-          // We don't await because we want them all to fetch in parallel in the background
           sermonRepository.resolveMediaUrl(s.videoStoragePath).catch(() => {});
         }
       });
-    };
-    
-    prefetchVideos();
+    });
+
+    return () => task.cancel();
   }, [sermons]);
 
   // ── Filter & Search ────────────────────────────────────────────────────────
@@ -241,129 +246,140 @@ export function SermonsExperience({
         </View>
       )}
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: inProgressWithSermons.length > 0 && !isSearching ? 100 : 40 }}
-      >
-        {/* ── Filter chips ── */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterRow}
-        >
-          {(['all', 'video', 'audio', 'series'] as const).map((f) => (
-            <TouchableOpacity
-              key={f}
-              style={[styles.filterChip, filterType === f && styles.filterChipActive]}
-              onPress={() => setFilterType(f)}
-            >
-              <Text style={[styles.filterChipText, filterType === f && styles.filterChipTextActive]}>
-                {f === 'all' ? 'All' : f === 'video' ? 'Video' : f === 'audio' ? 'Audio' : 'Series'}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+      {(() => {
+        const ContainerComponent = showSearchInput ? ScrollView : View;
+        const containerProps: any = showSearchInput
+          ? {
+              showsVerticalScrollIndicator: false,
+              contentContainerStyle: { paddingBottom: inProgressWithSermons.length > 0 && !isSearching ? 100 : 40 },
+            }
+          : { style: { paddingBottom: inProgressWithSermons.length > 0 && !isSearching ? 100 : 40 } };
 
-        {/* ── Search results ── */}
-        {isSearching ? (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              {filteredSermons.length} result{filteredSermons.length !== 1 ? 's' : ''}
-            </Text>
-            {filteredSermons.length === 0 ? (
-              <View style={styles.searchEmpty}>
-                <Text style={styles.searchEmptyText}>No sermons match your search.</Text>
+        return (
+          <ContainerComponent {...containerProps}>
+            {/* ── Filter chips ── */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filterRow}
+            >
+              {(['all', 'video', 'audio', 'series'] as const).map((f) => (
+                <TouchableOpacity
+                  key={f}
+                  style={[styles.filterChip, filterType === f && styles.filterChipActive]}
+                  onPress={() => setFilterType(f)}
+                >
+                  <Text style={[styles.filterChipText, filterType === f && styles.filterChipTextActive]}>
+                    {f === 'all' ? 'All' : f === 'video' ? 'Video' : f === 'audio' ? 'Audio' : 'Series'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* ── Search results ── */}
+            {isSearching ? (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>
+                  {filteredSermons.length} result{filteredSermons.length !== 1 ? 's' : ''}
+                </Text>
+                {filteredSermons.length === 0 ? (
+                  <View style={styles.searchEmpty}>
+                    <Text style={styles.searchEmptyText}>No sermons match your search.</Text>
+                  </View>
+                ) : (
+                  filteredSermons.map((s) => (
+                    <SearchResultCard key={s.id} sermon={s} onPress={() => openSermon(s.id)} />
+                  ))
+                )}
               </View>
             ) : (
-              filteredSermons.map((s) => (
-                <SearchResultCard key={s.id} sermon={s} onPress={() => openSermon(s.id)} />
-              ))
-            )}
-          </View>
-        ) : (
-          <>
-            {/* ── Latest Sermon (Featured) ── */}
-            {featuredSermon && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Latest Sermon</Text>
-                <FeaturedCard
-                  sermon={featuredSermon}
-                  onPress={() => openSermon(featuredSermon.id)}
-                  onListen={() => openAudioPlayer(featuredSermon.id)}
-                />
-              </View>
-            )}
-
-            {/* ── Recent Sermons ── */}
-            {recentSermons.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Recent Sermons</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.horizontalList}
-                >
-                  {recentSermons.map((s) => (
-                    <SermonTileCard
-                      key={s.id}
-                      sermon={s}
-                      onPress={() => openSermon(s.id)}
+              <>
+                {/* ── Latest Sermon (Featured) ── */}
+                {featuredSermon && (
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Latest Sermon</Text>
+                    <FeaturedCard
+                      sermon={featuredSermon}
+                      onPress={() => openSermon(featuredSermon.id)}
+                      onListen={() => openAudioPlayer(featuredSermon.id)}
                     />
-                  ))}
-                </ScrollView>
-              </View>
-            )}
+                  </View>
+                )}
 
-            {/* ── Series ── */}
-            {sermonSeries.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Series</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.horizontalList}
-                >
-                  {sermonSeries.map((series) => (
-                    <TouchableOpacity
-                      key={series.id}
-                      style={styles.seriesCard}
-                      onPress={() => setFilterType('series')}
-                      activeOpacity={0.85}
+                {/* ── Recent Sermons ── */}
+                {recentSermons.length > 0 && (
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Recent Sermons</Text>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.horizontalList}
                     >
-                      {series.thumb ? (
-                        <Image
-                          source={{ uri: series.thumb }}
-                          style={styles.seriesThumb}
-                          resizeMode="cover"
-                        cachePolicy="memory-disk" transition={200} />
-                      ) : (
-                        <View style={[styles.seriesThumb, { backgroundColor: '#DDE1E8' }]} />
-                      )}
-                      <LinearGradient
-                        colors={['transparent', 'rgba(26,26,26,0.88)']}
-                        style={StyleSheet.absoluteFill}
-                      />
-                      <View style={styles.seriesInfo}>
-                        <Text style={styles.seriesTitle} numberOfLines={2}>
-                          {series.title}
-                        </Text>
-                        <Text style={styles.seriesCount}>{series.count} sermons</Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
+                      {recentSermons.map((s) => (
+                        <SermonTileCard
+                          key={s.id}
+                          sermon={s}
+                          onPress={() => openSermon(s.id)}
+                        />
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+
+                {/* ── Series ── */}
+                {sermonSeries.length > 0 && (
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Series</Text>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.horizontalList}
+                    >
+                      {sermonSeries.map((series) => (
+                        <TouchableOpacity
+                          key={series.id}
+                          style={styles.seriesCard}
+                          onPress={() => setFilterType('series')}
+                          activeOpacity={0.85}
+                        >
+                          {series.thumb ? (
+                            <Image
+                              source={{ uri: series.thumb }}
+                              style={styles.seriesThumb}
+                              resizeMode="cover"
+                              cachePolicy="memory-disk"
+                              transition={200}
+                            />
+                          ) : (
+                            <View style={[styles.seriesThumb, { backgroundColor: '#DDE1E8' }]} />
+                          )}
+                          <LinearGradient
+                            colors={['transparent', 'rgba(26,26,26,0.88)']}
+                            style={StyleSheet.absoluteFill}
+                          />
+                          <View style={styles.seriesInfo}>
+                            <Text style={styles.seriesTitle} numberOfLines={2}>
+                              {series.title}
+                            </Text>
+                            <Text style={styles.seriesCount}>{series.count} sermons</Text>
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+              </>
             )}
-          </>
-        )}
-      </ScrollView>
+          </ContainerComponent>
+        );
+      })()}
     </View>
   );
 }
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
-function FeaturedCard({ sermon, onPress, onListen }: { sermon: Sermon; onPress: () => void; onListen: () => void }) {
+const FeaturedCard = memo(function FeaturedCard({ sermon, onPress, onListen }: { sermon: Sermon; onPress: () => void; onListen: () => void }) {
   const hasVideo = sermon.mediaType === 'video' || sermon.mediaType === 'both';
   const hasAudio = sermon.mediaType === 'audio' || sermon.mediaType === 'both';
   const formatDate = (d: Date) =>
@@ -414,9 +430,9 @@ function FeaturedCard({ sermon, onPress, onListen }: { sermon: Sermon; onPress: 
       </Animated.View>
     </TouchableWithoutFeedback>
   );
-}
+});
 
-function SermonTileCard({ sermon, onPress }: { sermon: Sermon; onPress: () => void }) {
+const SermonTileCard = memo(function SermonTileCard({ sermon, onPress }: { sermon: Sermon; onPress: () => void }) {
   const hasVideo = sermon.mediaType === 'video' || sermon.mediaType === 'both';
   const formatDuration = (s: number) => {
     const m = Math.floor(s / 60);
@@ -456,9 +472,9 @@ function SermonTileCard({ sermon, onPress }: { sermon: Sermon; onPress: () => vo
       <Text style={styles.tileMeta} numberOfLines={1}>{sermon.preacherName}</Text>
     </TouchableOpacity>
   );
-}
+});
 
-function SearchResultCard({ sermon, onPress }: { sermon: Sermon; onPress: () => void }) {
+const SearchResultCard = memo(function SearchResultCard({ sermon, onPress }: { sermon: Sermon; onPress: () => void }) {
   const hasVideo = sermon.mediaType === 'video' || sermon.mediaType === 'both';
   const formatDate = (d: Date) =>
     d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -486,7 +502,7 @@ function SearchResultCard({ sermon, onPress }: { sermon: Sermon; onPress: () => 
       </View>
     </TouchableOpacity>
   );
-}
+});
 
 // ─── Styles ────────────────────────────────────────────────────────────────────
 

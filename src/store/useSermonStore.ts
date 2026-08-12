@@ -118,7 +118,9 @@ export const useSermonStore = create<SermonState>((set, get) => ({
 
     if (!churchId) return () => {};
 
-    set({ loading: true });
+    if (get().sermons.length === 0) {
+      set({ loading: true });
+    }
 
     const activeFilters = { ...get().filters, churchId, allowedVisibility: getAllowedVisibility() };
 

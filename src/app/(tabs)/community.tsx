@@ -37,7 +37,8 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
+  InteractionManager,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EventDetailsModal } from '../../components/Events/EventDetailsModal';
@@ -693,10 +694,11 @@ function EventsTab({ searchQuery }: SubScreenProps) {
   );
 }
 
-
 function SermonsTab({ searchQuery }: SubScreenProps) {
   return <SermonsExperience searchQuery={searchQuery} showSearchInput={false} showDownloadEntryPoint={false} />;
 }
+
+let isLocalHighlightsSynced = false;
 
 function MembersTab({ searchQuery }: SubScreenProps) {
   const members = useMemberStore((state) => state.members);
@@ -763,8 +765,6 @@ function MembersTab({ searchQuery }: SubScreenProps) {
     });
   };
 
-
-
   const [churchHighlights, setChurchHighlights] = useState<ChurchHighlightPost[]>([]);
   const [highlightsLoading, setHighlightsLoading] = useState(true);
   const [pageLimit, setPageLimit] = useState(10);
@@ -778,98 +778,99 @@ function MembersTab({ searchQuery }: SubScreenProps) {
     }
     setHighlightsLoading(true);
 
-    // Sync any existing local highlights to churchHighlights Firestore collection
-    (async () => {
-      try {
-        const { getUserPreferences, fetchChapterData } = await import('@/features/bible/data/bible.repository');
-        const prefs = await getUserPreferences();
-        const rawHighlights = (prefs as any)?.highlights || {};
-        const activeTranslation = (prefs as any)?.activeTranslation || '2692';
+    // Sync any existing local highlights to churchHighlights Firestore collection once in background
+    if (!isLocalHighlightsSynced) {
+      isLocalHighlightsSynced = true;
+      InteractionManager.runAfterInteractions(async () => {
+        try {
+          const { getUserPreferences, fetchChapterData } = await import('@/features/bible/data/bible.repository');
+          const prefs = await getUserPreferences();
+          const rawHighlights = (prefs as any)?.highlights || {};
+          const activeTranslation = (prefs as any)?.activeTranslation || '2692';
 
-        for (const [passageId, verses] of Object.entries(rawHighlights)) {
-          if (!verses || typeof verses !== 'object') continue;
-          const [book, chapter] = passageId.split('.');
-          const parsedChapter = parseInt(chapter, 10) || 1;
+          for (const [passageId, verses] of Object.entries(rawHighlights)) {
+            if (!verses || typeof verses !== 'object') continue;
+            const [book, chapter] = passageId.split('.');
+            const parsedChapter = parseInt(chapter, 10) || 1;
 
-          let chapterData: any[] = [];
-          try {
-            chapterData = (await fetchChapterData(activeTranslation, passageId)) || [];
-          } catch (_) {}
+            let chapterData: any[] = [];
+            try {
+              chapterData = (await fetchChapterData(activeTranslation, passageId)) || [];
+            } catch (_) {}
 
-          // Group verse numbers by color AND createdAt timestamp so same-session highlights merge together
-          const timeMap: Record<string, { vNum: number; color: string; createdAt?: string }[]> = {};
-          for (const [verseStr, val] of Object.entries(verses as Record<string, any>)) {
-            const vNum = parseInt(verseStr, 10);
-            if (isNaN(vNum)) continue;
-            let color = String(val);
-            let createdAt = '';
-            if (typeof val === 'object' && val !== null) {
-              color = String(val.color || 'yellow');
-              createdAt = val.createdAt || '';
-            }
-            const groupKey = `${color}_${createdAt || 'legacy'}`;
-            if (!timeMap[groupKey]) timeMap[groupKey] = [];
-            timeMap[groupKey].push({ vNum, color, createdAt });
-          }
-
-          for (const verseItems of Object.values(timeMap)) {
-            if (verseItems.length === 0) continue;
-            verseItems.sort((a, b) => a.vNum - b.vNum);
-            const color = verseItems[0].color;
-
-            // Build broken verse range string (e.g. 11,14-16)
-            const ranges: string[] = [];
-            let rangeStart = verseItems[0].vNum;
-            let prev = verseItems[0].vNum;
-
-            for (let i = 1; i < verseItems.length; i++) {
-              const curr = verseItems[i].vNum;
-              if (curr === prev + 1) {
-                prev = curr;
-              } else {
-                ranges.push(rangeStart === prev ? `${rangeStart}` : `${rangeStart}-${prev}`);
-                rangeStart = curr;
-                prev = curr;
+            const timeMap: Record<string, { vNum: number; color: string; createdAt?: string }[]> = {};
+            for (const [verseStr, val] of Object.entries(verses as Record<string, any>)) {
+              const vNum = parseInt(verseStr, 10);
+              if (isNaN(vNum)) continue;
+              let color = String(val);
+              let createdAt = '';
+              if (typeof val === 'object' && val !== null) {
+                color = String(val.color || 'yellow');
+                createdAt = val.createdAt || '';
               }
+              const groupKey = `${color}_${createdAt || 'legacy'}`;
+              if (!timeMap[groupKey]) timeMap[groupKey] = [];
+              timeMap[groupKey].push({ vNum, color, createdAt });
             }
-            ranges.push(rangeStart === prev ? `${rangeStart}` : `${rangeStart}-${prev}`);
-            const label = ranges.join(',');
 
-            const combinedTexts: string[] = [];
-            const vNumbers: number[] = [];
-            for (const item of verseItems) {
-              vNumbers.push(item.vNum);
-              const textObj = chapterData.find((v: any) => parseInt(String(v.verseNumber), 10) === item.vNum);
-              if (textObj?.content) {
-                const cleanContent = textObj.content.replace(/{{note:[0-9]+}}/g, '').trim();
-                combinedTexts.push(cleanContent);
+            for (const verseItems of Object.values(timeMap)) {
+              if (verseItems.length === 0) continue;
+              verseItems.sort((a, b) => a.vNum - b.vNum);
+              const color = verseItems[0].color;
+
+              const ranges: string[] = [];
+              let rangeStart = verseItems[0].vNum;
+              let prev = verseItems[0].vNum;
+
+              for (let i = 1; i < verseItems.length; i++) {
+                const curr = verseItems[i].vNum;
+                if (curr === prev + 1) {
+                  prev = curr;
+                } else {
+                  ranges.push(rangeStart === prev ? `${rangeStart}` : `${rangeStart}-${prev}`);
+                  rangeStart = curr;
+                  prev = curr;
+                }
               }
+              ranges.push(rangeStart === prev ? `${rangeStart}` : `${rangeStart}-${prev}`);
+              const label = ranges.join(',');
+
+              const combinedTexts: string[] = [];
+              const vNumbers: number[] = [];
+              for (const item of verseItems) {
+                vNumbers.push(item.vNum);
+                const textObj = chapterData.find((v: any) => parseInt(String(v.verseNumber), 10) === item.vNum);
+                if (textObj?.content) {
+                  const cleanContent = textObj.content.replace(/{{note:[0-9]+}}/g, '').trim();
+                  combinedTexts.push(cleanContent);
+                }
+              }
+
+              const userName = userProfile?.firstName
+                ? `${userProfile.firstName} ${userProfile.lastName || ''}`.trim()
+                : currentUser?.displayName || 'Member';
+
+              await churchHighlightRepository.publishChurchHighlight({
+                churchId: userProfile?.churchId || '',
+                userId: currentUser?.uid || '',
+                userName,
+                userPhotoUrl: userProfile?.photoUrl || currentUser?.photoURL || undefined,
+                passageId,
+                bookName: book,
+                chapter: parsedChapter,
+                verseNumber: verseItems[0].vNum,
+                verseRangeLabel: label,
+                verseNumbers: vNumbers,
+                color,
+                text: combinedTexts.join(' '),
+              });
             }
-
-            const userName = userProfile?.firstName
-              ? `${userProfile.firstName} ${userProfile.lastName || ''}`.trim()
-              : currentUser?.displayName || 'Member';
-
-            await churchHighlightRepository.publishChurchHighlight({
-              churchId: userProfile?.churchId || '',
-              userId: currentUser?.uid || '',
-              userName,
-              userPhotoUrl: userProfile?.photoUrl || currentUser?.photoURL || undefined,
-              passageId,
-              bookName: book,
-              chapter: parsedChapter,
-              verseNumber: verseItems[0].vNum,
-              verseRangeLabel: label,
-              verseNumbers: vNumbers,
-              color,
-              text: combinedTexts.join(' '),
-            });
           }
+        } catch (err) {
+          console.warn('Failed to sync local highlights:', err);
         }
-      } catch (err) {
-        console.warn('Failed to sync local highlights:', err);
-      }
-    })();
+      });
+    }
 
     const unsubscribe = churchHighlightRepository.subscribeChurchHighlights(
       userProfile.churchId,
