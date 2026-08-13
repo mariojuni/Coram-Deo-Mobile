@@ -75,6 +75,7 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          FIREBASE_TESTER_GROUPS: "coram-deo-tester"
         run: |
           EXPO_PUBLIC_APP_ENV=development npx expo prebuild --platform android --clean
           bundle exec fastlane android staging
@@ -133,6 +134,7 @@ jobs:
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          FIREBASE_TESTER_GROUPS: "coram-deo-tester"
         run: |
           EXPO_PUBLIC_APP_ENV=development npx expo prebuild --platform ios --clean
           CLEAN_URL=$(echo "${{ secrets.MATCH_GIT_URL }}" | tr -d "'\"\r\n ")
