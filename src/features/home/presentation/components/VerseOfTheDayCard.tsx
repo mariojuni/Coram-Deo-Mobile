@@ -8,6 +8,7 @@ import { BookOpen, ChevronRight, Sparkles, Star } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
 
 const decodeHtmlEntities = (text: string) => {
   return text
@@ -98,7 +99,7 @@ export function VerseOfTheDayCard() {
           end={{ x: 1, y: 1 }}
           style={styles.loadingContainer}
         >
-          <ActivityIndicator color="rgba(255,255,255,0.8)" />
+          <ShimmerSkeleton baseColor="transparent" width="100%" height="100%" />
         </LinearGradient>
       </View>
     );
