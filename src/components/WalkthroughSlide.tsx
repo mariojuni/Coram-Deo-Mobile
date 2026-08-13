@@ -1,27 +1,29 @@
 import React from 'react';
-import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, useWindowDimensions, Image } from 'react-native';
 import { LucideIcon } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+
 
 interface WalkthroughSlideProps {
   title: string;
   description: string;
-  Icon: LucideIcon;
+  Icon?: LucideIcon;
+  imageSource?: any;
 }
 
-export default function WalkthroughSlide({ title, description, Icon }: WalkthroughSlideProps) {
+export default function WalkthroughSlide({ title, description, Icon, imageSource }: WalkthroughSlideProps) {
   const { width } = useWindowDimensions();
 
   return (
     <View style={[styles.container, { width }]}>
-      <LinearGradient
-        colors={['#FF6596', '#C084FC']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.iconContainer}
-      >
-        <Icon size={70} color="#ffffff" strokeWidth={1.5} />
-      </LinearGradient>
+      {imageSource ? (
+        <View style={styles.imageContainer}>
+          <Image source={imageSource} style={styles.image} resizeMode="contain" />
+        </View>
+      ) : (
+        <View style={styles.iconContainer}>
+          {Icon && <Icon size={70} color="#FF6596" strokeWidth={1.5} />}
+        </View>
+      )}
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.description}>{description}</Text>
     </View>
@@ -42,14 +44,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 48,
-    shadowColor: '#FF6596',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
+    backgroundColor: 'rgba(255, 101, 150, 0.1)',
   },
   title: {
     fontSize: 28,
@@ -66,4 +61,13 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     fontWeight: '400',
   },
+  imageContainer: {
+    marginBottom: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  image: {
+    width: 220,
+    height: 220,
+  }
 });

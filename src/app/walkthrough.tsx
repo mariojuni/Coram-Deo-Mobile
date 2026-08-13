@@ -12,7 +12,7 @@ const SLIDES = [
     id: '1',
     title: 'Welcome to Coram Deo',
     description: 'Stay connected with worship, sermons, events, prayer, and church updates.',
-    Icon: Church,
+    imageSource: require('../../assets/images/logo.png'),
   },
   {
     id: '2',
@@ -68,8 +68,8 @@ export default function WalkthroughScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Soft geometric background matching systems design */}
-      <AuthGeometricHeader />
+      {/* Soft geometric background matching systems design - hidden for now */}
+      {/* <AuthGeometricHeader /> */}
       
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
@@ -87,7 +87,7 @@ export default function WalkthroughScreen() {
           data={SLIDES}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <WalkthroughSlide title={item.title} description={item.description} Icon={item.Icon} />
+            <WalkthroughSlide title={item.title} description={item.description} Icon={item.Icon} imageSource={item.imageSource} />
           )}
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -216,9 +216,9 @@ const styles = StyleSheet.create({
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 3,
   },
   gradientButtonText: {
     color: '#ffffff',
@@ -232,9 +232,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
-    backgroundColor: 'rgba(255,255,255,0.8)',
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#F3F4F6',
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 1,
   },
   outlineButtonText: {
     color: '#374151',

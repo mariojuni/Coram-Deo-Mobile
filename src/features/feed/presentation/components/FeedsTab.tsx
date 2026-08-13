@@ -473,7 +473,7 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
               numberOfLines={3}
               ellipsizeMode="tail"
             >
-              "{post.text.replace(/{{note:[0-9]+}}/g, '').trim()}"
+              &quot;{post.text.replace(/{{note:[0-9]+}}/g, '').trim()}&quot;
             </Text>
           )}
 
@@ -489,7 +489,7 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
             }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button"
                 onPress={() => handleToggleLike(post)}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
                 activeOpacity={0.7}
@@ -504,7 +504,7 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
                 </Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button"
                 onPress={() =>
                   router.push({
                     pathname: '/comment-thread',
@@ -525,7 +525,7 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity
+            <TouchableOpacity accessibilityRole="button"
               onPress={() => handleOptionsPress(post)}
               style={{ padding: 4 }}
               activeOpacity={0.7}
@@ -582,34 +582,38 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
   return (
     <View style={membersStyles.wrap}>
       {(todayBirthdays.length > 0 || upcomingBirthdays.length > 0) && (
-        <SoftCard style={membersStyles.birthdaySnapshotOuter} innerStyle={membersStyles.birthdaySnapshotCard}>
+        <View style={[membersStyles.birthdaySnapshotOuter, { boxShadow: '0px 8px 24px rgba(182, 109, 255, 0.28)', marginBottom: 10, borderRadius: 24 }]}>
+          <View style={{ borderRadius: 24, overflow: 'hidden' }}>
           <LinearGradient
-            colors={['#FFD1DF', '#E8D4FF', '#D4E4FF']}
+            colors={['#FF6596', '#B66DFF']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={StyleSheet.absoluteFill}
           />
           {/* Orbs */}
-          <View style={membersStyles.snapshotOrb1} />
-          <View style={membersStyles.snapshotOrb2} />
+          <View style={[membersStyles.snapshotOrb1, { backgroundColor: 'rgba(255,255,255,0.05)' }]} />
+          <View style={[membersStyles.snapshotOrb2, { backgroundColor: 'rgba(255,255,255,0.05)' }]} />
 
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 20 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', shadowColor: '#FF759E', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8 }}>
-                <Cake size={20} color="#FF759E" />
-              </View>
-              <Text style={{ fontSize: 22, fontWeight: '800', color: '#1F2937' }}>
-                Celebrations
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 20,
+              borderWidth: 1,
+              borderColor: 'rgba(255, 255, 255, 0.4)',
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            }}>
+              <Cake size={14} color="#FFFFFF" />
+              <Text style={{ fontSize: 12, fontWeight: '800', letterSpacing: 1.2, color: '#FFFFFF', textTransform: 'uppercase' }}>
+                Birthdays
               </Text>
             </View>
-            <TouchableOpacity 
+            <TouchableOpacity accessibilityRole="button" 
               style={{
                 borderRadius: 20,
-                shadowColor: '#FF759E',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.1,
-                shadowRadius: 4,
-                elevation: 2,
               }}
               onPress={() => {
                 if (navDebounceRef.current) return;
@@ -622,17 +626,17 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
                 borderRadius: 20,
                 overflow: 'hidden',
               }}>
-                <BlurView intensity={65} tint="light" style={{
+                <View style={{
                   flexDirection: 'row',
                   alignItems: 'center',
                   gap: 4,
                   paddingHorizontal: 12,
                   paddingVertical: 6,
-                  backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
                 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#FF759E' }}>View All</Text>
-                  <ChevronRight size={14} color="#FF759E" />
-                </BlurView>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#FFFFFF' }}>View All</Text>
+                  <ChevronRight size={14} color="#FFFFFF" />
+                </View>
               </View>
             </TouchableOpacity>
           </View>
@@ -647,13 +651,14 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
                   borderRadius: 16,
                   overflow: 'hidden',
                 }}>
-                  <BlurView intensity={65} tint="light" style={{
+                  <View style={{
                     padding: 8,
                     flexDirection: 'row',
                     alignItems: 'center',
                     gap: 8,
-                    backgroundColor: 'rgba(255, 255, 255, 0.3)',
                   }}>
+                    <BlurView intensity={20} tint="light" style={StyleSheet.absoluteFill} />
+                    <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.2)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)', borderRadius: 16 }]} />
                     <View style={{ position: 'relative' }}>
                       <ExpoImage
                         source={{ uri: m.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(formatMemberName(m))}&background=f0f0f0&color=999` }}
@@ -666,14 +671,14 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
                       </View>
                     </View>
                     <View style={{ flex: 1, justifyContent: 'center' }}>
-                      <Text style={{ fontSize: 13, fontWeight: '800', color: '#1F2937' }} numberOfLines={1}>
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: '#FFFFFF' }} numberOfLines={1}>
                         {formatMemberName(m)}
                       </Text>
-                      <Text style={{ fontSize: 11, color: '#FF759E', fontWeight: '800', marginTop: 1 }}>
+                      <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', fontWeight: '800', marginTop: 1, letterSpacing: 0.5 }}>
                         TODAY
                       </Text>
                     </View>
-                  </BlurView>
+                  </View>
                 </View>
               </View>
             ))}
@@ -686,13 +691,14 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
                   borderRadius: 16,
                   overflow: 'hidden',
                 }}>
-                  <BlurView intensity={45} tint="light" style={{
+                  <View style={{
                     padding: 8,
                     flexDirection: 'row',
                     alignItems: 'center',
                     gap: 8,
-                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
                   }}>
+                    <BlurView intensity={20} tint="light" style={StyleSheet.absoluteFill} />
+                    <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', borderRadius: 16 }]} />
                     <ExpoImage
                       source={{ uri: m.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(formatMemberName(m))}&background=f0f0f0&color=999` }}
                       style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#F3F4F6' }}
@@ -700,19 +706,20 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
                       transition={150}
                     />
                     <View style={{ flex: 1, justifyContent: 'center' }}>
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#374151' }} numberOfLines={1}>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#FFFFFF' }} numberOfLines={1}>
                         {formatMemberName(m)}
                       </Text>
-                      <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '500', marginTop: 1 }} numberOfLines={1}>
+                      <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', fontWeight: '600', marginTop: 1 }} numberOfLines={1}>
                         {formatBirthday(m)}
                       </Text>
                     </View>
-                  </BlurView>
+                  </View>
                 </View>
               </View>
             ))}
           </ScrollView>
-        </SoftCard>
+          </View>
+        </View>
       )}
 
       {/* ─── Frost Tab Filter Bar ───────────────────────────────────────── */}
@@ -726,7 +733,7 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
           const isActive = activeTabFilter === tab.key;
           const IconComponent = tab.icon;
           return (
-            <TouchableOpacity
+            <TouchableOpacity accessibilityRole="button"
               key={tab.key}
               style={membersStyles.frostTabChipWrapper}
               onPress={() => {
@@ -802,7 +809,7 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
             <>
               {filteredHighlights.map(renderHighlightPost)}
               {hasMore && (
-                <TouchableOpacity
+                <TouchableOpacity accessibilityRole="button"
                   style={{
                     backgroundColor: '#FFFFFF',
                     borderRadius: 16,
