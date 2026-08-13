@@ -40,6 +40,8 @@ export interface Sermon {
 export interface SermonNote {
   id: string;
   userId: string;
+  userName?: string;
+  userPhotoUrl?: string;
   sermonId: string;
   content: string;
   timestamp?: number; // playback position in seconds

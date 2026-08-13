@@ -49,7 +49,7 @@ import { EventDetailsModal } from '../../components/Events/EventDetailsModal';
 import { CommunitySongDetailModal } from '../../components/Worship/CommunitySongDetailModal';
 import { BounceCard } from '../../components/ui/BounceCard';
 import { SoftCard, getSoftShadowStyle } from '../../components/ui/SoftCard';
-import { churchHighlightRepository, type ChurchHighlightPost } from '../../features/bible/data/churchHighlight.repository';
+
 import { CommentButton } from '../../features/comments/presentation/components/CommentButton';
 import type { Member } from '../../features/member/domain/member.types';
 import { formatPrayerTimeAgo, getFilteredPrayers } from '../../features/prayer/domain/prayer.selectors';

@@ -5,8 +5,9 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, ActivityIn
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, BookOpen, Share as ShareIcon, Trash2, User, MoreHorizontal } from 'lucide-react-native';
-import { getUserPreferences, saveUserPreferences, fetchChapterData } from '@/features/bible/data/bible.repository';
-import { churchHighlightRepository } from '@/features/bible/data/churchHighlight.repository';
+import { getUserPreferences, saveUserPreferences } from '@/features/bible/data/bible.repository';
+import { bibleHighlightRepository } from '@/features/bibleHighlights/data/bibleHighlight.repository';
+import type { BibleHighlight } from '@/features/bibleHighlights/domain/bibleHighlight.types';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -21,105 +22,18 @@ export default function HighlightedVersesScreen() {
   const userProfile = useAuthStore((s) => s.userProfile);
   const currentUser = useAuthStore((s) => s.currentUser);
   const [loading, setLoading] = useState(true);
-  const [highlights, setHighlights] = useState<any[]>([]);
+  const [highlights, setHighlights] = useState<BibleHighlight[]>([]);
 
   useEffect(() => {
     loadHighlights();
-  }, []);
+  }, [currentUser?.uid]);
 
   const loadHighlights = async () => {
+    if (!currentUser?.uid) return;
     setLoading(true);
     try {
-      const prefs = await getUserPreferences();
-      const rawHighlights = (prefs as any)?.highlights || {};
-      const activeTranslation = (prefs as any)?.activeTranslation || '2692';
-
-      const items: any[] = [];
-
-      for (const [passageId, verses] of Object.entries(rawHighlights)) {
-        if (!verses || typeof verses !== 'object') continue;
-        const [book, chapter] = passageId.split('.');
-        const parsedChapter = parseInt(chapter, 10) || 1;
-
-        let chapterData: any[] = [];
-        try {
-          chapterData = (await fetchChapterData(activeTranslation, passageId)) || [];
-        } catch (e) {
-          console.warn(`Could not fetch text for ${passageId}`);
-        }
-
-        const colorMap: Record<string, { vNum: number; createdAt?: string }[]> = {};
-        for (const [verseStr, val] of Object.entries(verses as Record<string, any>)) {
-          const vNum = parseInt(verseStr, 10);
-          if (isNaN(vNum)) continue;
-
-          let color = String(val);
-          let createdAt: string | undefined = undefined;
-          if (typeof val === 'object' && val !== null) {
-            color = String(val.color || 'yellow');
-            createdAt = val.createdAt;
-          }
-
-          if (!colorMap[color]) colorMap[color] = [];
-          colorMap[color].push({ vNum, createdAt });
-        }
-
-        for (const [color, verseItems] of Object.entries(colorMap)) {
-          verseItems.sort((a, b) => a.vNum - b.vNum);
-          let currentRange: { vNum: number; createdAt?: string }[] = [];
-
-          const pushRange = (range: { vNum: number; createdAt?: string }[]) => {
-            if (range.length === 0) return;
-            const startNum = range[0].vNum;
-            const endNum = range[range.length - 1].vNum;
-            const label = range.length === 1 ? `${startNum}` : `${startNum}-${endNum}`;
-            const rangeCreatedAt = range.map(r => r.createdAt).filter(Boolean).sort().pop();
-
-            const combinedTexts: string[] = [];
-            const vNumbers: number[] = [];
-            for (const item of range) {
-              vNumbers.push(item.vNum);
-              const textObj = chapterData.find((v: any) => parseInt(String(v.verseNumber), 10) === item.vNum);
-              if (textObj?.content) {
-                const cleanContent = textObj.content.replace(/{{note:[0-9]+}}/g, '').trim();
-                combinedTexts.push(cleanContent);
-              }
-            }
-
-            items.push({
-              passageId,
-              book,
-              chapter: parsedChapter,
-              verseNumber: startNum,
-              verseRangeLabel: label,
-              verseNumbers: vNumbers,
-              color,
-              text: combinedTexts.join(' ') || 'Text not available offline.',
-              createdAt: rangeCreatedAt,
-            });
-          };
-
-          for (const item of verseItems) {
-            if (currentRange.length === 0) {
-              currentRange.push(item);
-            } else if (item.vNum === currentRange[currentRange.length - 1].vNum + 1) {
-              currentRange.push(item);
-            } else {
-              pushRange(currentRange);
-              currentRange = [item];
-            }
-          }
-          pushRange(currentRange);
-        }
-      }
-
-      items.sort((a, b) => {
-        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return timeB - timeA;
-      });
-
-      setHighlights(items);
+      const data = await bibleHighlightRepository.getUserHighlights(currentUser.uid);
+      setHighlights(data);
     } catch (error) {
       console.error('Failed to load highlights:', error);
     } finally {
@@ -127,7 +41,7 @@ export default function HighlightedVersesScreen() {
     }
   };
 
-  const handleRemove = async (passageId: string, verseNumbersOrNumber: string | number | number[]) => {
+  const handleRemove = async (highlightId: string) => {
     Alert.alert('Remove Highlight', 'Are you sure you want to remove this highlight?', [
       { text: 'Cancel', style: 'cancel' },
       { 
@@ -135,36 +49,8 @@ export default function HighlightedVersesScreen() {
         style: 'destructive', 
         onPress: async () => {
           try {
-            const prefs = await getUserPreferences();
-            const highlights = prefs.highlights as Record<string, Record<string, string>> | undefined;
-            const targets = Array.isArray(verseNumbersOrNumber) 
-              ? verseNumbersOrNumber.map(String) 
-              : [String(verseNumbersOrNumber)];
-
-            if (highlights?.[passageId]) {
-              for (const vKey of targets) {
-                delete highlights[passageId][vKey];
-              }
-              
-              if (Object.keys(highlights[passageId]).length === 0) {
-                delete highlights[passageId];
-              }
-
-              await saveUserPreferences(prefs);
-              
-              setHighlights(prev => prev.filter(h => !(h.passageId === passageId && targets.includes(String(h.verseNumber)))));
-
-              // Remove from church highlights feed
-              const effectiveChurchId = userProfile?.churchId || (currentUser as any)?.churchId || (currentUser as any)?.claims?.churchId;
-              if (effectiveChurchId && currentUser?.uid) {
-                churchHighlightRepository.deleteHighlightByVerse(
-                  effectiveChurchId,
-                  currentUser.uid,
-                  passageId,
-                  targets.map(Number)
-                ).catch(err => console.warn('[highlighted-verses] Failed to delete church highlight:', err));
-              }
-            }
+            await bibleHighlightRepository.deleteHighlight(highlightId);
+            setHighlights(prev => prev.filter(h => h.id !== highlightId));
           } catch (e) {
             console.error('Failed to remove highlight', e);
           }
@@ -200,7 +86,7 @@ export default function HighlightedVersesScreen() {
     }
   };
 
-  const handleOptionsPress = (passageId: string, verseTargets: any, reference: string, text: string) => {
+  const handleOptionsPress = (highlightId: string, reference: string, text: string) => {
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         {
@@ -212,7 +98,7 @@ export default function HighlightedVersesScreen() {
           if (buttonIndex === 1) {
             handleShare(reference, text);
           } else if (buttonIndex === 2) {
-            handleRemove(passageId, verseTargets);
+            handleRemove(highlightId);
           }
         }
       );
@@ -220,7 +106,7 @@ export default function HighlightedVersesScreen() {
       Alert.alert('Highlight Options', reference, [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Share', onPress: () => handleShare(reference, text) },
-        { text: 'Delete', style: 'destructive', onPress: () => handleRemove(passageId, verseTargets) },
+        { text: 'Delete', style: 'destructive', onPress: () => handleRemove(highlightId) },
       ]);
     }
   };
@@ -281,17 +167,15 @@ export default function HighlightedVersesScreen() {
           </View>
         ) : (
           highlights.map((h, i) => {
-            const verseRefLabel = h.verseRangeLabel || `${h.verseNumber}`;
-            const reference = `${getHumanReadableBookName(h.book)} ${h.chapter}:${verseRefLabel}`;
-            const userName = userProfile?.firstName
-              ? `${userProfile.firstName} ${userProfile.lastName || ''}`.trim()
+            const reference = `${getHumanReadableBookName(h.bookName)} ${h.chapter}:${h.verseRangeLabel}`;
+            const userName = h.userName || userProfile?.firstName
+              ? `${userProfile?.firstName} ${userProfile?.lastName || ''}`.trim()
               : currentUser?.displayName || 'You';
-            const userPhoto = userProfile?.photoUrl || currentUser?.photoURL;
-            const verseTargets = h.verseNumbers?.length ? h.verseNumbers : h.verseNumber;
+            const userPhoto = h.userPhotoUrl || userProfile?.photoUrl || currentUser?.photoURL;
 
             return (
               <BounceCard
-                key={`${h.passageId}-${h.verseNumber}-${i}`}
+                key={h.id}
                 style={{ marginBottom: 12 }}
                 onPress={() => handleOpenBible(h.passageId, h.verseNumbers?.[0] || h.verseNumber)}
                 activeOpacity={0.85}
@@ -323,11 +207,13 @@ export default function HighlightedVersesScreen() {
                                 />
                               </Text>
                             </Text>
-                            <Text style={styles.prayerTime}>{formatPrayerTimeAgo(h.createdAt)}</Text>
+                            <Text style={styles.prayerTime}>
+                              {h.createdAt?.toDate ? formatPrayerTimeAgo(h.createdAt.toDate()) : formatPrayerTimeAgo(new Date(h.createdAt || Date.now()))}
+                            </Text>
                           </View>
 
                           <TouchableOpacity
-                            onPress={() => handleOptionsPress(h.passageId, verseTargets, reference, h.text)}
+                            onPress={() => handleOptionsPress(h.id, reference, h.text)}
                             style={styles.iconBtn}
                             activeOpacity={0.7}
                             hitSlop={8}

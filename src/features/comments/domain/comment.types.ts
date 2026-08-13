@@ -4,7 +4,8 @@ export type CommentTargetType =
   | 'announcement'
   | 'event'
   | 'discipleship_lesson'
-  | 'church_highlight';
+  | 'church_highlight'
+  | 'bible_note';
 
 export type CommentStatus = 'active' | 'hidden' | 'deleted' | 'flagged';
 

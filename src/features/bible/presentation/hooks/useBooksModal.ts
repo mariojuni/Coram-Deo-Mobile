@@ -8,14 +8,10 @@ type Book = {
 
 export function useBooksModal(books: Book[]) {
   const [expandedBook, setExpandedBook] = useState<string | null>(null);
-  const [sortMode, setSortMode] = useState<'Traditional' | 'Alphabetical'>('Traditional');
 
   const sortedBooks = useMemo(() => {
-    if (sortMode === 'Traditional') return [...(books || [])];
-    return [...(books || [])].sort((first, second) =>
-      (first.title || first.name || '').localeCompare(second.title || second.name || '')
-    );
-  }, [books, sortMode]);
+    return [...(books || [])];
+  }, [books]);
 
   const toggleBook = (bookId: string | number) => {
     const normalizedBookId = String(bookId);
@@ -30,8 +26,6 @@ export function useBooksModal(books: Book[]) {
     collapseBook,
     expandedBook,
     setExpandedBook,
-    setSortMode,
-    sortMode,
     sortedBooks,
     toggleBook,
   };

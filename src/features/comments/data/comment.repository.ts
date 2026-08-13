@@ -11,7 +11,7 @@ function getParentCollection(targetType: CommentTargetType): string {
   switch (targetType) {
     case 'prayer_request': return 'prayer_requests';
     case 'sermon': return 'sermons';
-    case 'church_highlight': return 'verse_highlights';
+    case 'church_highlight': return 'bibleVerseHighlights'; // Top-level collection now, handled specially
     case 'announcement': return 'announcements';
     case 'event': return 'events';
     case 'discipleship_lesson': return 'discipleship_lessons';
@@ -93,7 +93,9 @@ export const commentRepository = {
     const now = Timestamp.now();
 
     const parentCollection = getParentCollection(data.targetType);
-    const parentDocRef = doc(getActiveDb(), 'churches', data.churchId, parentCollection, data.targetId);
+    const parentDocRef = data.targetType === 'church_highlight' 
+      ? doc(getActiveDb(), parentCollection, data.targetId)
+      : doc(getActiveDb(), 'churches', data.churchId, parentCollection, data.targetId);
 
     const newCommentData = {
       ...data,
@@ -143,7 +145,9 @@ export const commentRepository = {
   async deleteComment(churchId: string, targetType: CommentTargetType, targetId: string, commentId: string, parentCommentId: string | null) {
     const commentRef = doc(getActiveDb(), COMMENTS_COLLECTION, commentId);
     const parentCollection = getParentCollection(targetType);
-    const parentDocRef = doc(getActiveDb(), 'churches', churchId, parentCollection, targetId);
+    const parentDocRef = targetType === 'church_highlight'
+      ? doc(getActiveDb(), parentCollection, targetId)
+      : doc(getActiveDb(), 'churches', churchId, parentCollection, targetId);
 
     // If deleting a parent comment, query all nested replies to delete them as well
     let replySnapshots: QueryDocumentSnapshot<DocumentData>[] = [];

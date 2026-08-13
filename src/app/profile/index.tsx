@@ -38,6 +38,10 @@ export default function ProfileScreen() {
     plansLoading,
     stats,
     removeHighlight,
+    removeNote,
+    toggleNoteLike,
+    toggleHighlightLike,
+    refreshHighlights,
   } = useProfileDashboardData();
 
   const fullName =
@@ -107,6 +111,8 @@ export default function ProfileScreen() {
           plansMeta={plans}
           plansLoading={plansLoading}
           onRemoveHighlight={removeHighlight}
+          onToggleNoteLike={toggleNoteLike}
+          onToggleHighlightLike={toggleHighlightLike}
         />
 
         <View style={{ height: 40 }} />

@@ -18,9 +18,7 @@ import { useUIStore } from '../../store/useUIStore';
 import { fetchBibleIndex, getSavedVersions, getUserPreferences, saveUserPreferences } from '../../utils/bibleApi';
 import { bibleDataService } from '@/features/bible/data/BibleDataService';
 
-type BiblePreferencesWithHighlights = BiblePreferences & {
-  highlights?: Record<string, Record<string, string>>;
-};
+type BiblePreferencesWithHighlights = BiblePreferences;
 
 type BibleIndexResponse = {
   books?: BibleBook[];
@@ -30,7 +28,6 @@ const DEFAULT_PREFERENCES: BiblePreferencesWithHighlights = {
   activeBook: 'GEN',
   activeChapter: '1',
   activeTranslation: '2692',
-  highlights: {},
 };
 
 let cachedPreferences: BiblePreferencesWithHighlights | null = null;
@@ -96,33 +93,7 @@ export default function BibleScreen() {
     loadBooks();
   }, [preferences?.activeTranslation]);
 
-  // Sync highlights from Firebase
-  useEffect(() => {
-    if (!userProfile?.uid) return;
-    const fetchUserHighlights = async () => {
-      try {
-        const docRef = doc(getActiveDb(), 'users', userProfile.uid, 'bible', 'preferences');
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists() && docSnap.data().highlights) {
-          const remoteHighlights = docSnap.data().highlights as Record<string, Record<string, string>>;
-          setPreferences((previous) => ({
-            ...(previous || DEFAULT_PREFERENCES),
-            highlights: {
-              ...((previous && previous.highlights) || {}),
-              ...remoteHighlights,
-            },
-          }));
-        }
-      } catch (error: any) {
-        console.error('Error fetching Bible highlights from Firebase:', error);
-        if (error?.message?.includes('offline') || error?.code === 'unavailable') {
-          setSyncToastMessage('Device is offline. Cannot fetch latest highlights.', 'error');
-          setTimeout(() => setSyncToastMessage('', 'success'), 3000);
-        }
-      }
-    };
-    fetchUserHighlights();
-  }, [userProfile?.uid]);
+  // Sync highlights from Firebase is removed, now handled inside BibleReader using bibleVerseHighlights collection
 
   const handleUpdatePreferences = async (updates: Partial<BiblePreferencesWithHighlights>) => {
     setPreferences((previous) => {

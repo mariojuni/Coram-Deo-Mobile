@@ -49,7 +49,8 @@ import { EventDetailsModal } from '../../../../components/Events/EventDetailsMod
 import { CommunitySongDetailModal } from '../../../../components/Worship/CommunitySongDetailModal';
 import { BounceCard } from '../../../../components/ui/BounceCard';
 import { SoftCard, getSoftShadowStyle } from '../../../../components/ui/SoftCard';
-import { churchHighlightRepository, type ChurchHighlightPost } from '../../../../features/bible/data/churchHighlight.repository';
+import { bibleHighlightRepository } from '../../../../features/bibleHighlights/data/bibleHighlight.repository';
+import type { BibleHighlight } from '../../../../features/bibleHighlights/domain/bibleHighlight.types';
 import { CommentButton } from '../../../../features/comments/presentation/components/CommentButton';
 import { formatPrayerTimeAgo, getFilteredPrayers } from '../../../../features/prayer/domain/prayer.selectors';
 import type { Prayer, PrayerFilter } from '../../../../features/prayer/domain/prayer.types';
@@ -57,6 +58,7 @@ import { usePrayerFeed } from '../../../../features/prayer/presentation/hooks/us
 import type { Schedule } from '../../../../features/schedule/domain/schedule.types';
 import { sermonRepository } from '../../../../features/sermons/data/sermon.repository';
 import type { SermonNote } from '../../../../features/sermons/domain/sermon.types';
+import type { FeedNoteItem } from '../../../../store/useFeedStore';
 import { SermonsExperience } from '../../../../features/sermons/presentation/components/SermonsExperience';
 import { worshipRepository } from '../../../../features/worship/data/worship.repository';
 import { Song } from '../../../../features/worship/domain/worship.types';
@@ -81,9 +83,10 @@ import { formatBirthday, formatMemberName, parseMemberDate } from '../../../../f
 import type { Member } from '../../../../features/member/domain/member.types';
 import { useMemberStore } from '../../../../store/useMemberStore';
 import { useFeedStore } from '../../../../store/useFeedStore';
+import { bibleNoteRepository } from '@/features/bibleNotes/data/bibleNote.repository';
 import { getHumanReadableBookName } from '@/utils/scriptureReferenceParser';
 
-let isLocalHighlightsSynced = false;
+
 
 
 
@@ -166,105 +169,9 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
   // 3. Notes
   const notes = useFeedStore((s) => s.notes);
   const notesLoading = useFeedStore((s) => s.notesLoading);
+  const toggleNoteLikeStore = useFeedStore((s) => s.toggleNoteLike);
 
-  useEffect(() => {
-    if (!userProfile?.churchId) {
-      return;
-    }
 
-    if (!isLocalHighlightsSynced) {
-      isLocalHighlightsSynced = true;
-      InteractionManager.runAfterInteractions(async () => {
-        try {
-          const { getUserPreferences, fetchChapterData } = await import('@/features/bible/data/bible.repository');
-          const prefs = await getUserPreferences();
-          const rawHighlights = (prefs as any)?.highlights || {};
-          const activeTranslation = (prefs as any)?.activeTranslation || '2692';
-
-          for (const [passageId, verses] of Object.entries(rawHighlights)) {
-            if (!verses || typeof verses !== 'object') continue;
-            const [book, chapter] = passageId.split('.');
-            const parsedChapter = parseInt(chapter, 10) || 1;
-
-            let chapterData: any[] = [];
-            try {
-              chapterData = (await fetchChapterData(activeTranslation, passageId)) || [];
-            } catch (_) { }
-
-            const timeMap: Record<string, { vNum: number; color: string; createdAt?: string }[]> = {};
-            for (const [verseStr, val] of Object.entries(verses as Record<string, any>)) {
-              const vNum = parseInt(verseStr, 10);
-              if (isNaN(vNum)) continue;
-              let color = String(val);
-              let createdAt = '';
-              if (typeof val === 'object' && val !== null) {
-                color = String(val.color || 'yellow');
-                createdAt = val.createdAt || '';
-              }
-              const groupKey = `${color}_${createdAt || 'legacy'}`;
-              if (!timeMap[groupKey]) timeMap[groupKey] = [];
-              timeMap[groupKey].push({ vNum, color, createdAt });
-            }
-
-            for (const verseItems of Object.values(timeMap)) {
-              if (verseItems.length === 0) continue;
-              verseItems.sort((a, b) => a.vNum - b.vNum);
-              const color = verseItems[0].color;
-
-              const ranges: string[] = [];
-              let rangeStart = verseItems[0].vNum;
-              let prev = verseItems[0].vNum;
-
-              for (let i = 1; i < verseItems.length; i++) {
-                const curr = verseItems[i].vNum;
-                if (curr === prev + 1) {
-                  prev = curr;
-                } else {
-                  ranges.push(rangeStart === prev ? `${rangeStart}` : `${rangeStart}-${prev}`);
-                  rangeStart = curr;
-                  prev = curr;
-                }
-              }
-              ranges.push(rangeStart === prev ? `${rangeStart}` : `${rangeStart}-${prev}`);
-              const label = ranges.join(',');
-
-              const combinedTexts: string[] = [];
-              const vNumbers: number[] = [];
-              for (const item of verseItems) {
-                vNumbers.push(item.vNum);
-                const textObj = chapterData.find((v: any) => parseInt(String(v.verseNumber), 10) === item.vNum);
-                if (textObj?.content) {
-                  const cleanContent = textObj.content.replace(/{{note:[0-9]+}}/g, '').trim();
-                  combinedTexts.push(cleanContent);
-                }
-              }
-
-              const userName = userProfile?.firstName
-                ? `${userProfile.firstName} ${userProfile.lastName || ''}`.trim()
-                : currentUser?.displayName || 'Member';
-
-              await churchHighlightRepository.publishChurchHighlight({
-                churchId: userProfile?.churchId || '',
-                userId: currentUser?.uid || '',
-                userName,
-                userPhotoUrl: userProfile?.photoUrl || currentUser?.photoURL || undefined,
-                passageId,
-                bookName: book,
-                chapter: parsedChapter,
-                verseNumber: verseItems[0].vNum,
-                verseRangeLabel: label,
-                verseNumbers: vNumbers,
-                color,
-                text: combinedTexts.join(' '),
-              });
-            }
-          }
-        } catch (err) {
-          console.warn('Failed to sync local highlights:', err);
-        }
-      });
-    }
-  }, [currentUser?.displayName, currentUser?.photoURL, currentUser?.uid, userProfile?.churchId, userProfile?.firstName, userProfile?.lastName, userProfile?.photoUrl]);
 
   const filteredHighlights = useMemo(() => {
     const nonKeys = churchHighlights.filter((h) => h.text && h.text.trim().length > 0);
@@ -272,7 +179,7 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
     const query = searchQuery.toLowerCase();
     return nonKeys.filter(
       (h) =>
-        h.userName.toLowerCase().includes(query) ||
+        (h.userName || '').toLowerCase().includes(query) ||
         getHumanReadableBookName(h.bookName).toLowerCase().includes(query) ||
         h.text.toLowerCase().includes(query)
     );
@@ -323,13 +230,12 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
     return map[colorName] || '#FACC15';
   };
 
-  const handleToggleLike = (post: ChurchHighlightPost) => {
+  const handleToggleLike = (post: BibleHighlight) => {
     if (!currentUser?.uid || !post.churchId) return;
-    const isLiked = post.likedBy?.includes(currentUser.uid);
-    churchHighlightRepository.toggleHighlightLike(post.churchId, post.id, currentUser.uid, !!isLiked);
+    bibleHighlightRepository.toggleLike(post.id, currentUser.uid);
   };
 
-  const handleOptionsPress = (post: ChurchHighlightPost) => {
+  const handleOptionsPress = (post: BibleHighlight) => {
     const reference = `${getHumanReadableBookName(post.bookName)} ${post.chapter}:${post.verseRangeLabel}`;
     const isOwner = currentUser?.uid === post.userId;
 
@@ -349,7 +255,7 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
           } else if (buttonIndex === 2 && isOwner) {
             Alert.alert('Delete Highlight', 'Are you sure you want to delete this highlight post?', [
               { text: 'Cancel', style: 'cancel' },
-              { text: 'Delete', style: 'destructive', onPress: () => churchHighlightRepository.deleteHighlight(post.churchId, post.id) },
+              { text: 'Delete', style: 'destructive', onPress: () => bibleHighlightRepository.deleteHighlight(post.id) },
             ]);
           }
         }
@@ -363,10 +269,92 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
         alertButtons.push({
           text: 'Delete',
           style: 'destructive',
-          onPress: () => churchHighlightRepository.deleteHighlight(post.churchId, post.id),
+          onPress: () => bibleHighlightRepository.deleteHighlight(post.id),
         });
       }
       Alert.alert('Highlight Options', reference, alertButtons);
+    }
+  };
+
+  const removeNote = useFeedStore((s) => s.removeNote);
+
+  const handleNoteOptionsPress = (note: FeedNoteItem) => {
+    const isOwner = currentUser?.uid === note.userId;
+    const isSermon = note._type === 'sermon';
+    
+    let reference = '';
+    if (!isSermon && note.scriptures && note.scriptures.length > 0) {
+      reference = note.scriptures.map((s: any) => {
+        const fullBookName = getHumanReadableBookName(s.bookId);
+        const verseStr = s.verseStart === s.verseEnd ? s.verseStart : `${s.verseStart}-${s.verseEnd}`;
+        return `${fullBookName} ${s.chapter}:${verseStr}`;
+      }).join('; ');
+    } else if (isSermon) {
+      reference = 'Sermon Note';
+    }
+
+    const options = ['Cancel', 'Share Note'];
+    if (isOwner) options.push('Delete Note');
+
+    const handleAction = (buttonIndex: number) => {
+      if (buttonIndex === 1) {
+        Share.share({ message: `${reference}\n\n${note.content || ''}` });
+      } else if (buttonIndex === 2 && isOwner) {
+        Alert.alert('Delete Note', 'Are you sure you want to delete this note?', [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Delete', 
+            style: 'destructive', 
+            onPress: () => {
+              removeNote(note.id);
+              if (isSermon) {
+                sermonRepository.deleteNote(note.id).catch(console.error);
+              } else {
+                bibleNoteRepository.deleteNote(note.id).catch(console.error);
+              }
+            }
+          },
+        ]);
+      }
+    };
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options,
+          destructiveButtonIndex: isOwner ? 2 : undefined,
+          cancelButtonIndex: 0,
+        },
+        handleAction
+      );
+    } else {
+      const alertButtons: any[] = [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Share', onPress: () => handleAction(1) },
+      ];
+      if (isOwner) {
+        alertButtons.push({
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => handleAction(2),
+        });
+      }
+      Alert.alert('Note Options', reference, alertButtons);
+    }
+  };
+
+  const handleToggleNoteLike = async (note: FeedNoteItem) => {
+    if (!currentUser) return;
+    try {
+      const isSermon = note._type === 'sermon';
+      if (!isSermon) {
+        toggleNoteLikeStore(note.id, currentUser.uid); // Optimistic UI update
+        await bibleNoteRepository.toggleLike(note.id, currentUser.uid);
+      }
+    } catch (e) {
+      console.error(e);
+      // Revert in case of failure could be added here
+      toggleNoteLikeStore(note.id, currentUser.uid); 
     }
   };
 
@@ -387,7 +375,7 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
     }
   };
 
-  const renderHighlightPost = (post: ChurchHighlightPost) => {
+  const renderHighlightPost = (post: BibleHighlight) => {
     const reference = `${getHumanReadableBookName(post.bookName)} ${post.chapter}:${post.verseRangeLabel}`;
     const isLiked = currentUser?.uid ? post.likedBy?.includes(currentUser.uid) : false;
     const isOwner = currentUser?.uid === post.userId;
@@ -551,26 +539,164 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
     />
   );
 
-  const renderNoteItem = (note: SermonNote) => (
-    <SoftCard key={`n-${note.id}`} style={{ marginBottom: 12 }}>
-      <View style={membersStyles.noteCardInner}>
-        <View style={[membersStyles.noteSideBar, { backgroundColor: '#8B5CF6' }]} />
-        <View style={membersStyles.noteCardContent}>
-          <View style={membersStyles.noteHeaderRow}>
-            <View style={membersStyles.noteIconBox}>
-              <BookOpen size={14} color="#8B5CF6" />
+  const renderNoteItem = (note: FeedNoteItem) => {
+    const isSermon = note._type === 'sermon';
+    const isOwner = currentUser?.uid === note.userId;
+    
+    let reference = '';
+    let firstReference = '';
+    let textSnapshot = '';
+    
+    if (!isSermon && note.scriptures && note.scriptures.length > 0) {
+      reference = note.scriptures.map((s: any) => {
+        const fullBookName = getHumanReadableBookName(s.bookId);
+        const verseStr = s.verseStart === s.verseEnd ? s.verseStart : `${s.verseStart}-${s.verseEnd}`;
+        return `${fullBookName} ${s.chapter}:${verseStr}`;
+      }).join(', ');
+      
+      const s0 = note.scriptures[0];
+      const fullBookName0 = getHumanReadableBookName(s0.bookId);
+      const verseStr0 = s0.verseStart === s0.verseEnd ? s0.verseStart : `${s0.verseStart}-${s0.verseEnd}`;
+      firstReference = `${fullBookName0} ${s0.chapter}:${verseStr0}`;
+
+      textSnapshot = note.scriptures[0].textSnapshot || '';
+    }
+
+    const timeAgoStr = note.createdAt ? formatPrayerTimeAgo(note.createdAt as any) : 'Just now';
+
+    return (
+      <BounceCard
+        key={`n-${note.id}`}
+        style={{ marginBottom: 12 }}
+        activeOpacity={0.85}
+        onPress={() => router.push(`/comment-thread?targetType=${isSermon ? 'sermon_note' : 'bible_note'}&targetId=${note.id}` as any)}
+      >
+        <SoftCard innerStyle={{ padding: 16 }}>
+          {/* Header */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
+            <View
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: '#E5E7EB',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginRight: 10,
+                overflow: 'hidden',
+              }}
+            >
+              {note.userPhotoUrl ? (
+                <ExpoImage
+                  source={{ uri: note.userPhotoUrl }}
+                  style={{ width: 36, height: 36, borderRadius: 18 }}
+                  cachePolicy="memory-disk"
+                  priority="high"
+                />
+              ) : (
+                <User size={20} color="#9CA3AF" />
+              )}
             </View>
-            <Text style={membersStyles.noteDateText}>
-              {note.createdAt ? new Date(note.createdAt).toLocaleDateString() : 'Note'}
-            </Text>
+            <View style={{ flex: 1, justifyContent: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+                <Text style={{ fontSize: 14, color: '#111827', lineHeight: 20 }}>
+                  <Text style={{ fontWeight: '700', color: '#111827' }}>{isOwner ? 'You' : (note.userName || 'A member')}</Text>
+                  <Text style={{ color: '#4B5563', fontWeight: '400' }}> added a note on </Text>
+                  <Text style={{ fontWeight: '800', color: '#111827' }}>{reference || (isSermon ? 'a Sermon' : 'a Bible passage')}</Text>
+                </Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '500' }}>{timeAgoStr}</Text>
+                {('visibility' in note && note.visibility === 'private') && (
+                  <>
+                    <Text style={{ fontSize: 11, color: '#9CA3AF', marginHorizontal: 6 }}>•</Text>
+                    <BookOpen size={10} color="#9CA3AF" style={{ marginRight: 4 }} />
+                    <Text style={{ fontSize: 11, color: '#9CA3AF' }}>Private</Text>
+                  </>
+                )}
+              </View>
+            </View>
           </View>
-          <Text style={membersStyles.noteBodyText} numberOfLines={4}>
-            {note.content}
-          </Text>
-        </View>
-      </View>
-    </SoftCard>
-  );
+
+          {/* Blockquote for Scripture */}
+          {!isSermon && textSnapshot ? (
+            <View style={{ borderLeftWidth: 3, borderLeftColor: '#FF6596', paddingLeft: 12, marginBottom: 16 }}>
+              <Text
+                style={{
+                  fontSize: 14,
+                  color: '#4B5563',
+                  lineHeight: 20,
+                  fontStyle: 'italic',
+                }}
+                numberOfLines={3}
+                ellipsizeMode="tail"
+              >
+                &quot;{textSnapshot.replace(/{{note:[0-9]+}}/g, '').trim()}&quot;
+              </Text>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#111827', marginTop: 8 }}>
+                {firstReference}
+              </Text>
+            </View>
+          ) : null}
+
+          {/* Note Content */}
+          {!!note.content && (
+            <View style={{ backgroundColor: '#F3F4F6', borderRadius: 8, padding: 12, marginBottom: 16 }}>
+              <Text 
+                style={{ fontSize: 14, color: '#374151', lineHeight: 22 }}
+                numberOfLines={4}
+                ellipsizeMode="tail"
+              >
+                {note.content}
+              </Text>
+            </View>
+          )}
+
+          {/* Action Footer */}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              borderTopWidth: 1,
+              borderTopColor: '#F3F4F6',
+              paddingTop: 10,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+              <TouchableOpacity 
+                accessibilityRole="button" 
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                onPress={() => handleToggleNoteLike(note)}
+              >
+                <Heart 
+                  size={18} 
+                  color={(note as any).likedBy?.includes(currentUser?.uid || '') ? '#FF759E' : '#6B7280'} 
+                  fill={(note as any).likedBy?.includes(currentUser?.uid || '') ? '#FF759E' : 'transparent'}
+                />
+                <Text style={{ fontSize: 13, fontWeight: '600', color: (note as any).likedBy?.includes(currentUser?.uid || '') ? '#FF759E' : '#6B7280' }}>
+                  {Math.max(0, (note as any).likes || 0)}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                accessibilityRole="button" 
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                onPress={() => router.push(`/comment-thread?targetType=${isSermon ? 'sermon_note' : 'bible_note'}&targetId=${note.id}` as any)}
+              >
+                <MessageCircle size={18} color="#6B7280" />
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#6B7280' }}>
+                  {(note as any).commentCount || 0}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity accessibilityRole="button" style={{ padding: 4 }} onPress={() => handleNoteOptionsPress(note)}>
+              <MoreVertical size={18} color="#9CA3AF" />
+            </TouchableOpacity>
+          </View>
+        </SoftCard>
+      </BounceCard>
+    );
+  };
 
   const filterTabs = [
     { key: 'all', label: 'All', count: allCount, icon: Layers },

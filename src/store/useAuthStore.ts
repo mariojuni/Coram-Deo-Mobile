@@ -25,6 +25,8 @@ interface AuthState {
   updateUserProfile: (updates: Partial<UserAccount>) => void;
 }
 
+import { useFeedStore } from './useFeedStore';
+
 export const clearAllStoreListeners = () => {
   useMemberStore.getState().initializeMembersListener(null);
   useMemberStore.getState().initializeServicesListener(null);
@@ -36,6 +38,7 @@ export const clearAllStoreListeners = () => {
   useDiscipleshipGroupStore.getState().clearActiveGroup();
   useMinistryStore.getState().clearMinistryListeners();
   useSermonStore.setState({ sermons: [], loading: false, currentSermon: null });
+  useFeedStore.getState().clearFeedsListener();
 };
 
 export const clearAllCachesAndReset = async () => {

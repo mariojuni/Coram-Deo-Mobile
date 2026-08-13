@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, Text, StyleSheet, FlatList, TextInput, 
   TouchableOpacity, KeyboardAvoidingView, Platform, 
-  ActivityIndicator, Alert, Keyboard, ActionSheetIOS 
+  ActivityIndicator, Alert, Keyboard, ActionSheetIOS,
+  Dimensions, ScrollView
 } from 'react-native';
 
 import { Stack as ExpoStack, useLocalSearchParams as useExpoSearchParams, useRouter as useExpoRouter, useFocusEffect } from 'expo-router';
@@ -18,7 +19,7 @@ import type { Comment, CommentTargetType } from '../../domain/comment.types';
 import { canCreateComment, canDeleteComment, canModerateComments, canModeratePrayerRequests } from '@/permissions/mobilePermissions';
 import { formatPrayerTimeAgo } from '@/features/prayer/domain/prayer.selectors';
 import { prayerRepository } from '@/features/prayer/data/prayer.repository';
-import { churchHighlightRepository } from '@/features/bible/data/churchHighlight.repository';
+
 import { useUIStore } from '@/store/useUIStore';
 import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
 import { getHumanReadableBookName } from '@/utils/scriptureReferenceParser';
@@ -80,18 +81,41 @@ export function CommentThreadScreen() {
     let parentCollection = '';
     if (targetType === 'prayer_request') parentCollection = 'prayer_requests';
     else if (targetType === 'sermon') parentCollection = 'sermons';
-    else if (targetType === 'church_highlight') parentCollection = 'verse_highlights';
+    else if (targetType === 'church_highlight') parentCollection = 'bibleVerseHighlights';
 
-    if (!parentCollection) {
+    if (!parentCollection && targetType !== 'bible_note') {
       setLoadingParent(false);
       return;
     }
 
-    const docRef = doc(getActiveDb(), 'churches', churchId, parentCollection, targetId);
+    let docRef;
+    if (targetType === 'bible_note') {
+      docRef = doc(getActiveDb(), 'bibleNotes', targetId);
+    } else if (targetType === 'church_highlight') {
+      docRef = doc(getActiveDb(), 'bibleVerseHighlights', targetId);
+    } else {
+      docRef = doc(getActiveDb(), 'churches', churchId, parentCollection, targetId);
+    }
 
-    const unsubscribe = onSnapshot(docRef, (snapshot: DocumentSnapshot<DocumentData>) => {
+    const unsubscribe = onSnapshot(docRef, async (snapshot: DocumentSnapshot<DocumentData>) => {
       if (snapshot.exists()) {
-        setParentData({ id: snapshot.id, ...snapshot.data() });
+        const data = snapshot.data();
+        let extraData = {};
+        if (targetType === 'bible_note' && data.userId) {
+          try {
+            const userDoc = await getDoc(doc(getActiveDb(), 'users', data.userId));
+            if (userDoc.exists()) {
+              const profile = userDoc.data();
+              const userName = profile.firstName 
+                  ? `${profile.firstName} ${profile.lastName || ''}`.trim()
+                  : profile.displayName || 'A member';
+              extraData = { userName, userPhotoUrl: profile.photoUrl };
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        }
+        setParentData({ id: snapshot.id, ...data, ...extraData });
       }
       setLoadingParent(false);
     }, (err: Error) => {
@@ -103,7 +127,9 @@ export function CommentThreadScreen() {
   }, [churchId, targetType, targetId]);
 
   const handlePray = async () => {
-    if (!churchId || !parentData || !currentUser?.uid) return;
+    if (!parentData || !currentUser?.uid) return;
+    if (targetType !== 'bible_note' && targetType !== 'sermon' && !churchId) return;
+
     const isLiked = !!parentData.likedBy?.includes(currentUser.uid);
     const targetChurchId = parentData.churchId || churchId;
 
@@ -125,9 +151,13 @@ export function CommentThreadScreen() {
 
     try {
       if (targetType === 'prayer_request') {
-        await prayerRepository.togglePrayerLike(churchId, targetId, currentUser.uid);
+        await prayerRepository.togglePrayerLike(churchId!, targetId, currentUser.uid);
       } else if (targetType === 'church_highlight') {
-        await churchHighlightRepository.toggleHighlightLike(targetChurchId, targetId, currentUser.uid, isLiked);
+        const { bibleHighlightRepository } = await import('@/features/bibleHighlights/data/bibleHighlight.repository');
+        await bibleHighlightRepository.toggleLike(targetId, currentUser.uid);
+      } else if (targetType === 'bible_note') {
+        const { bibleNoteRepository } = await import('@/features/bibleNotes/data/bibleNote.repository');
+        await bibleNoteRepository.toggleLike(targetId, currentUser.uid);
       }
     } catch (e) {
       console.error(e);
@@ -332,7 +362,6 @@ export function CommentThreadScreen() {
       );
     } else if (targetType === 'church_highlight') {
       const isLiked = parentData.likedBy?.includes(currentUser?.uid || '');
-
       return (
         <View style={styles.flatParentContainer}>
           <Text style={[styles.flatPrayerText, { fontStyle: 'italic', color: '#4B5563', lineHeight: 24 }]}>
@@ -370,6 +399,112 @@ export function CommentThreadScreen() {
             </TouchableOpacity>
           </View>
           
+          <View style={styles.flatPrayerBottomRow}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+              <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} onPress={handlePray} activeOpacity={0.7}>
+                <Heart size={20} color={isLiked ? '#FF759E' : '#6B7280'} fill={isLiked ? '#FF759E' : 'transparent'} />
+                <Text style={{ fontSize: 14, color: isLiked ? '#FF759E' : '#6B7280', fontWeight: '500' }}>
+                  {Math.max(0, parentData.likes || 0)}
+                </Text>
+              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <MessageCircle size={20} color="#6B7280" />
+                <Text style={{ fontSize: 14, color: '#6B7280', fontWeight: '500' }}>
+                  {parentData.commentCount || 0}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      );
+    } else if (targetType === 'bible_note') {
+      const isLiked = parentData.likedBy?.includes(currentUser?.uid || '');
+
+      let referenceStr = '';
+      let textSnapshotStr = '';
+      let hasScripture = false;
+      let passageId = '';
+
+      if (parentData.scriptures && parentData.scriptures.length > 0) {
+        referenceStr = parentData.scriptures.map((s: any) => {
+          const fullBookName = getHumanReadableBookName(s.bookId);
+          const verseStr = s.verseStart === s.verseEnd ? s.verseStart : `${s.verseStart}-${s.verseEnd}`;
+          return `${fullBookName} ${s.chapter}:${verseStr}`;
+        }).join('; ');
+        textSnapshotStr = parentData.scriptures[0].textSnapshot || '';
+        hasScripture = true;
+        const s0 = parentData.scriptures[0];
+        passageId = `${s0.bookId}.${s0.chapter}`;
+      }
+
+      return (
+        <TouchableOpacity 
+          style={styles.flatParentContainer} 
+          activeOpacity={0.8}
+          onPress={() => {
+            if (parentData.userId === currentUser?.uid) {
+              const { useBibleNoteStore } = require('@/features/bibleNotes/presentation/hooks/useBibleNoteStore');
+              useBibleNoteStore.getState().initializeEditor(
+                parentData.scriptures,
+                parentData.id,
+                parentData.content,
+                parentData.visibility
+              );
+              router.push('/bible-notes/editor');
+            }
+          }}
+        >
+          {hasScripture && (
+            <View style={{ marginBottom: 12 }}>
+              {(parentData.scriptures?.length > 0 ? parentData.scriptures : [{
+                reference: referenceStr,
+                text: textSnapshotStr
+              }]).map((s: any, index: number) => {
+                const sRef = s.reference || (() => {
+                  const fullBookName = getHumanReadableBookName(s.bookId);
+                  const verseStr = s.verseStart === s.verseEnd ? s.verseStart : `${s.verseStart}-${s.verseEnd}`;
+                  return `${fullBookName} ${s.chapter}:${verseStr}`;
+                })();
+                const sText = s.text || s.textSnapshot || '';
+                
+                return (
+                  <View 
+                    key={index}
+                    style={{ 
+                      borderLeftWidth: 3, 
+                      borderLeftColor: '#FF6596', 
+                      paddingLeft: 12,
+                      marginBottom: index === (parentData.scriptures?.length || 1) - 1 ? 0 : 16
+                    }}
+                  >
+                    <Text style={{ fontSize: 14, color: '#4B5563', lineHeight: 20, fontStyle: 'italic' }}>
+                      "{sText.replace(/{{note:[0-9]+}}/g, '').trim()}"
+                    </Text>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#111827', marginTop: 8 }}>
+                      {sRef}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
+          {!!parentData.content && (
+            <View style={{ backgroundColor: '#F3F4F6', borderRadius: 8, padding: 12, marginBottom: 12 }}>
+              <Text style={{ fontSize: 14, color: '#374151', lineHeight: 22 }}>
+                {parentData.content}
+              </Text>
+            </View>
+          )}
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
+            {!hasScripture && (
+              <Text style={{ fontSize: 15, fontWeight: '700', color: '#111827' }}>
+                {referenceStr || 'Bible Note'}
+              </Text>
+            )}
+          </View>
+          
           <View
             style={{
               flexDirection: 'row',
@@ -397,7 +532,7 @@ export function CommentThreadScreen() {
               </Text>
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
       );
     } else if (targetType === 'sermon') {
       return (
@@ -430,7 +565,7 @@ export function CommentThreadScreen() {
           <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
         </TouchableOpacity>
         
-        {['prayer_request', 'church_highlight'].includes(targetType) && loadingParent ? (
+        {['prayer_request', 'church_highlight', 'bible_note'].includes(targetType) && loadingParent ? (
           <View style={styles.headerUserInfo}>
             <ShimmerSkeleton width={32} height={32} borderRadius={16} />
             <View style={{ flex: 1 }}>
@@ -438,7 +573,7 @@ export function CommentThreadScreen() {
               <ShimmerSkeleton width={60} height={12} />
             </View>
           </View>
-        ) : ['prayer_request', 'church_highlight'].includes(targetType) && parentData ? (
+        ) : ['prayer_request', 'church_highlight', 'bible_note'].includes(targetType) && parentData ? (
           <View style={styles.headerUserInfo}>
             {parentData.userPhotoUrl ? (
               <Image source={{ uri: parentData.userPhotoUrl }} style={styles.headerAvatar} />
@@ -498,12 +633,12 @@ export function CommentThreadScreen() {
           />
         )}
         ListEmptyComponent={
-          !loading ? (
+          (!loading || (parentData && !parentData.commentCount)) ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyTitle}>No comments yet</Text>
               <Text style={styles.emptySub}>Be the first to share your thoughts.</Text>
             </View>
-          ) : loading ? (
+          ) : (
             <View style={{ padding: 20 }}>
               {[1, 2, 3].map((key) => (
                 <View key={key} style={{ flexDirection: 'row', marginBottom: 20 }}>
@@ -519,7 +654,7 @@ export function CommentThreadScreen() {
                 </View>
               ))}
             </View>
-          ) : null
+          )
         }
       />
 

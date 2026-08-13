@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert, Share, Image, Platform, ActionSheetIOS } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Bookmark, BookOpen, Calendar, ChevronRight, Share as ShareIcon, Trash2, ChevronDown, User, MoreHorizontal } from 'lucide-react-native';
+import { Bookmark, BookOpen, Calendar, ChevronRight, Share as ShareIcon, Trash2, ChevronDown, User, MoreHorizontal, Heart, MessageCircle, MoreVertical } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SoftCard } from '@/components/ui/SoftCard';
 import { BounceCard } from '@/components/ui/BounceCard';
@@ -9,21 +9,27 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { formatPrayerTimeAgo } from '@/features/prayer/domain/prayer.selectors';
 import type { UserHighlightItem } from '../hooks/useProfileDashboardData';
 import type { SermonNote } from '@/features/sermons/domain/sermon.types';
+import type { DashboardNoteItem } from '../hooks/useProfileDashboardData';
 import type { UserBiblePlan, BiblePlan } from '@/features/biblePlan/domain/biblePlan.types';
 import { saveUserPreferences, getUserPreferences } from '@/features/bible/data/bible.repository';
 import { getHumanReadableBookName } from '@/utils/scriptureReferenceParser';
+import { bibleNoteRepository } from '@/features/bibleNotes/data/bibleNote.repository';
+import { sermonRepository } from '@/features/sermons/data/sermon.repository';
 
 type ActivityTabKey = 'all' | 'highlights' | 'notes' | 'plans';
 
 interface ProfileActivityTabsProps {
   highlights: UserHighlightItem[];
   highlightsLoading: boolean;
-  notes: SermonNote[];
+  notes: DashboardNoteItem[];
   notesLoading: boolean;
   activePlans: UserBiblePlan[];
   plansMeta: BiblePlan[];
   plansLoading: boolean;
-  onRemoveHighlight?: (passageId: string, verseNumbers: number | number[]) => void;
+  onRemoveHighlight?: (highlightId: string) => void;
+  onRemoveNote?: (noteId: string) => void;
+  onToggleNoteLike?: (id: string, uid: string) => void;
+  onToggleHighlightLike?: (id: string, uid: string) => void;
 }
 
 const PAGE_SIZE = 15;
@@ -37,6 +43,9 @@ export function ProfileActivityTabs({
   plansMeta,
   plansLoading,
   onRemoveHighlight,
+  onRemoveNote,
+  onToggleNoteLike,
+  onToggleHighlightLike,
 }: ProfileActivityTabsProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<ActivityTabKey>('all');
@@ -101,7 +110,7 @@ export function ProfileActivityTabs({
           {
             text: 'Remove',
             style: 'destructive',
-            onPress: () => onRemoveHighlight?.(item.passageId, targets as any),
+            onPress: () => onRemoveHighlight?.(item.id),
           },
         ]
       );
@@ -192,68 +201,149 @@ export function ProfileActivityTabs({
 
     return (
       <View>
-        {displayedHighlights.map((item) => (
-          <BounceCard
-            key={item.id}
-            style={{ marginBottom: 10 }}
-            onPress={() => handleOpenBiblePassage(item.passageId, item.verseNumbers?.[0] || item.verseNumber)}
-            activeOpacity={0.85}
-          >
-            <SoftCard innerStyle={styles.prayerCardInner}>
-              <View style={styles.prayerRow}>
-                <View style={styles.prayerContent}>
-                  <View style={styles.prayerTop}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                      <View style={styles.prayerAvatar}>
-                        {userPhoto ? (
-                          <Image source={{ uri: userPhoto }} style={styles.prayerAvatarImage} />
-                        ) : (
-                          <User size={20} color="#9CA3AF" />
-                        )}
-                      </View>
-                      <View style={{ flex: 1, justifyContent: 'center' }}>
-                        <Text style={{ fontSize: 14, color: '#111827', lineHeight: 20 }}>
-                          <Text style={styles.prayerName}>You</Text>
-                          <Text style={styles.prayerActionText}> highlighted </Text>
-                          <Text style={styles.prayerPassageHighlight}>
-                            {getHumanReadableBookName(item.bookName)} {item.chapter}:{item.verseRangeLabel || item.verseNumber}
-                          </Text>
-                          <Text>
-                            {' '}
-                            <View
-                              style={[
-                                styles.colorDotIndicator,
-                                { backgroundColor: getColorHex(item.color), transform: [{ translateY: -2 }] },
-                              ]}
-                            />
-                          </Text>
+        {displayedHighlights.map((item) => {
+          const reference = `${getHumanReadableBookName(item.bookName)} ${item.chapter}:${item.verseRangeLabel || item.verseNumber}`;
+          return (
+            <BounceCard
+              key={item.id}
+              style={{ marginBottom: 12 }}
+              onPress={() =>
+                router.push({
+                  pathname: '/comment-thread',
+                  params: {
+                    targetType: 'church_highlight',
+                    targetId: item.id,
+                    title: reference,
+                  },
+                })
+              }
+              activeOpacity={0.85}
+            >
+              <SoftCard innerStyle={{ padding: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                  <View
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                      backgroundColor: '#E5E7EB',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginRight: 10,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {userPhoto ? (
+                      <Image source={{ uri: userPhoto }} style={{ width: 36, height: 36, borderRadius: 18 }} />
+                    ) : (
+                      <User size={20} color="#9CA3AF" />
+                    )}
+                  </View>
+                  <View style={{ flex: 1, justifyContent: 'center' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <Text style={{ fontSize: 14, color: '#111827', lineHeight: 20 }}>
+                        <Text style={{ fontWeight: '700', color: '#111827' }}>You</Text>
+                        <Text style={{ color: '#4B5563', fontWeight: '400' }}> highlighted </Text>
+                        <Text style={{ fontWeight: '800', color: '#111827' }}>
+                          {reference}
                         </Text>
-                        <Text style={styles.prayerTime}>{formatPrayerTimeAgo(item.createdAt)}</Text>
-                      </View>
-
-                      <TouchableOpacity
-                        onPress={() => handleOptionsPress(item)}
-                        style={styles.iconBtn}
-                        activeOpacity={0.7}
-                        hitSlop={8}
-                      >
-                        <MoreHorizontal size={18} color="#9CA3AF" />
-                      </TouchableOpacity>
+                      </Text>
+                      <View
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: 4,
+                          backgroundColor: getColorHex(item.color),
+                          marginLeft: 6,
+                        }}
+                      />
                     </View>
+                    <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '500', marginTop: 2 }}>
+                      {item.createdAt ? formatPrayerTimeAgo(item.createdAt as any) : 'Just now'}
+                    </Text>
+                  </View>
+                </View>
+
+                {!!item.text && (
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      color: '#4B5563',
+                      lineHeight: 20,
+                      fontStyle: 'italic',
+                      marginBottom: 12,
+                    }}
+                    numberOfLines={3}
+                    ellipsizeMode="tail"
+                  >
+                    "{item.text.replace(/{{note:[0-9]+}}/g, '').trim()}"
+                  </Text>
+                )}
+
+                {/* Social Action Footer: Like, Comment and Options Menu */}
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    borderTopWidth: 1,
+                    borderTopColor: '#F3F4F6',
+                    paddingTop: 10,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                    <TouchableOpacity
+                      accessibilityRole="button"
+                      onPress={() => onToggleHighlightLike?.(item.id, currentUser?.uid || '')}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                      activeOpacity={0.7}
+                    >
+                      <Heart
+                        size={18}
+                        color={(item as any).likedBy?.includes(currentUser?.uid || '') ? '#FF759E' : '#6B7280'}
+                        fill={(item as any).likedBy?.includes(currentUser?.uid || '') ? '#FF759E' : 'transparent'}
+                      />
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: (item as any).likedBy?.includes(currentUser?.uid || '') ? '#FF759E' : '#6B7280' }}>
+                        {Math.max(0, (item as any).likes || 0)}
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      accessibilityRole="button"
+                      onPress={() =>
+                        router.push({
+                          pathname: '/comment-thread',
+                          params: {
+                            targetType: 'church_highlight',
+                            targetId: item.id,
+                            title: reference,
+                          },
+                        })
+                      }
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                      activeOpacity={0.7}
+                    >
+                      <MessageCircle size={18} color="#6B7280" />
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: '#6B7280' }}>
+                        {(item as any).commentCount || 0}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
 
-                  {!!item.text ? (
-                    <Text style={styles.prayerVerseText} numberOfLines={3} ellipsizeMode="tail">
-                      "{item.text.replace(/{{note:[0-9]+}}/g, '').trim()}"
-                    </Text>
-                  ) : (
-                    <Text style={styles.scriptureTextFallback}>Tap card to read passage in Bible</Text>
-                  )}
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    onPress={() => handleOptionsPress(item)}
+                    style={{ padding: 4 }}
+                    activeOpacity={0.7}
+                    hitSlop={8}
+                  >
+                    <MoreVertical size={18} color="#9CA3AF" />
+                  </TouchableOpacity>
                 </View>
-              </View>
-            </SoftCard>
-          </BounceCard>
-        ))}
+              </SoftCard>
+            </BounceCard>
+          );
+        })}
 
         {highlights.length > visibleCount && (
           <TouchableOpacity
@@ -282,6 +372,76 @@ export function ProfileActivityTabs({
     currentUser,
   ]);
 
+  const handleToggleNoteLike = async (note: DashboardNoteItem) => {
+    if (!currentUser) return;
+    try {
+      const isSermon = note._type === 'sermon';
+      if (!isSermon) {
+        onToggleNoteLike?.(note.id, currentUser.uid); // Optimistic UI update
+        await bibleNoteRepository.toggleLike(note.id, currentUser.uid);
+      }
+    } catch (e) {
+      console.error(e);
+      onToggleNoteLike?.(note.id, currentUser.uid); // Revert on failure
+    }
+  };
+
+  const handleNoteOptionsPress = (note: DashboardNoteItem) => {
+    const isSermon = note._type === 'sermon';
+    
+    let reference = '';
+    if (!isSermon && note.scriptures && note.scriptures.length > 0) {
+      reference = note.scriptures.map((s: any) => {
+        const fullBookName = getHumanReadableBookName(s.bookId);
+        const verseStr = s.verseStart === s.verseEnd ? s.verseStart : `${s.verseStart}-${s.verseEnd}`;
+        return `${fullBookName} ${s.chapter}:${verseStr}`;
+      }).join('; ');
+    } else if (isSermon) {
+      reference = 'Sermon Note';
+    }
+
+    const options = ['Cancel', 'Share Note', 'Delete Note'];
+
+    const handleAction = (buttonIndex: number) => {
+      if (buttonIndex === 1) {
+        Share.share({ message: `${reference}\n\n${note.content || ''}` });
+      } else if (buttonIndex === 2) {
+        Alert.alert('Delete Note', 'Are you sure you want to delete this note?', [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Delete', 
+            style: 'destructive', 
+            onPress: () => {
+              if (onRemoveNote) onRemoveNote(note.id);
+              if (isSermon) {
+                sermonRepository.deleteNote(note.id).catch(console.error);
+              } else {
+                bibleNoteRepository.deleteNote(note.id).catch(console.error);
+              }
+            }
+          },
+        ]);
+      }
+    };
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options,
+          destructiveButtonIndex: 2,
+          cancelButtonIndex: 0,
+        },
+        handleAction
+      );
+    } else {
+      Alert.alert('Note Options', reference, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Share', onPress: () => handleAction(1) },
+        { text: 'Delete', style: 'destructive', onPress: () => handleAction(2) },
+      ]);
+    }
+  };
+
   // Memoized Notes Items
   const renderedNotes = useMemo(() => {
     if (notesLoading) {
@@ -294,29 +454,165 @@ export function ProfileActivityTabs({
           <View style={styles.emptyContainer}>
             <BookOpen size={32} color="#9CA3AF" style={{ marginBottom: 8 }} />
             <Text style={styles.emptyTitle}>No Notes Yet</Text>
-            <Text style={styles.emptySubtitle}>Notes you save will appear here.</Text>
+            <Text style={styles.emptySubtitle}>Your personal notes will appear here.</Text>
           </View>
         </SoftCard>
       );
     }
-    return notes.map((note) => (
-      <SoftCard key={note.id} style={{ marginBottom: 10 }}>
-        <View style={styles.sideBarCardContainer}>
-          <View style={[styles.sideAccentBar, { backgroundColor: '#8B5CF6' }]} />
-          <View style={styles.sideBarCardContent}>
-            <View style={styles.noteHeader}>
-              <View style={styles.noteIconBox}>
-                <BookOpen size={14} color="#8B5CF6" />
+    return notes.map((note) => {
+      const isSermon = note._type === 'sermon';
+      
+      let reference = '';
+      let firstReference = '';
+      let textSnapshot = '';
+      if (!isSermon && note.scriptures && note.scriptures.length > 0) {
+        reference = note.scriptures.map((s: any) => {
+          const fullBookName = getHumanReadableBookName(s.bookId);
+          const verseStr = s.verseStart === s.verseEnd ? s.verseStart : `${s.verseStart}-${s.verseEnd}`;
+          return `${fullBookName} ${s.chapter}:${verseStr}`;
+        }).join(', ');
+        
+        const s0 = note.scriptures[0];
+        const fullBookName0 = getHumanReadableBookName(s0.bookId);
+        const verseStr0 = s0.verseStart === s0.verseEnd ? s0.verseStart : `${s0.verseStart}-${s0.verseEnd}`;
+        firstReference = `${fullBookName0} ${s0.chapter}:${verseStr0}`;
+
+        textSnapshot = note.scriptures[0].textSnapshot || '';
+      }
+
+      const timeAgoStr = note.createdAt ? formatPrayerTimeAgo(note.createdAt as any) : 'Just now';
+
+      return (
+        <BounceCard 
+          key={note.id} 
+          style={{ marginBottom: 12 }} 
+          activeOpacity={0.85}
+          onPress={() => router.push(`/comment-thread?targetType=${isSermon ? 'sermon_note' : 'bible_note'}&targetId=${note.id}` as any)}
+        >
+          <SoftCard innerStyle={{ padding: 16 }}>
+            {/* Header */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
+              <View
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  backgroundColor: '#E5E7EB',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 10,
+                  overflow: 'hidden',
+                }}
+              >
+                {userProfile?.photoUrl || currentUser?.photoURL ? (
+                  <Image
+                    source={{ uri: userProfile?.photoUrl || currentUser?.photoURL! }}
+                    style={{ width: 36, height: 36, borderRadius: 18 }}
+                  />
+                ) : (
+                  <User size={20} color="#9CA3AF" />
+                )}
               </View>
-              <Text style={styles.noteDate}>
-                {note.createdAt ? new Date(note.createdAt).toLocaleDateString() : 'Note'}
-              </Text>
+              <View style={{ flex: 1, justifyContent: 'center' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <Text style={{ fontSize: 14, color: '#111827', lineHeight: 20 }}>
+                    <Text style={{ fontWeight: '700', color: '#111827' }}>You</Text>
+                    <Text style={{ color: '#4B5563', fontWeight: '400' }}> added a note on </Text>
+                    <Text style={{ fontWeight: '800', color: '#111827' }}>{reference || (isSermon ? 'a Sermon' : 'a Bible passage')}</Text>
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                  <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '500' }}>{timeAgoStr}</Text>
+                  {('visibility' in note && note.visibility === 'private') && (
+                    <>
+                      <Text style={{ fontSize: 11, color: '#9CA3AF', marginHorizontal: 6 }}>•</Text>
+                      <BookOpen size={10} color="#9CA3AF" style={{ marginRight: 4 }} />
+                      <Text style={{ fontSize: 11, color: '#9CA3AF' }}>Private</Text>
+                    </>
+                  )}
+                </View>
+              </View>
             </View>
-            <Text style={styles.noteBody} numberOfLines={4}>{note.content}</Text>
-          </View>
-        </View>
-      </SoftCard>
-    ));
+
+            {/* Blockquote for Scripture */}
+            {!isSermon && textSnapshot ? (
+              <View style={{ borderLeftWidth: 3, borderLeftColor: '#FF6596', paddingLeft: 12, marginBottom: 16 }}>
+                <Text
+                  style={{
+                    fontSize: 14,
+                    color: '#4B5563',
+                    lineHeight: 20,
+                    fontStyle: 'italic',
+                  }}
+                  numberOfLines={3}
+                  ellipsizeMode="tail"
+                >
+                  "{textSnapshot.replace(/{{note:[0-9]+}}/g, '').trim()}"
+                </Text>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#111827', marginTop: 8 }}>
+                  {firstReference}
+                </Text>
+              </View>
+            ) : null}
+
+            {/* Note Content */}
+            {!!note.content && (
+              <View style={{ backgroundColor: '#F3F4F6', borderRadius: 8, padding: 12, marginBottom: 16 }}>
+                <Text 
+                  style={{ fontSize: 14, color: '#374151', lineHeight: 22 }}
+                  numberOfLines={4}
+                  ellipsizeMode="tail"
+                >
+                  {note.content}
+                </Text>
+              </View>
+            )}
+
+            {/* Action Footer */}
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                borderTopWidth: 1,
+                borderTopColor: '#F3F4F6',
+                paddingTop: 10,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                <TouchableOpacity 
+                  accessibilityRole="button" 
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                  onPress={() => handleToggleNoteLike(note)}
+                >
+                  <Heart 
+                    size={18} 
+                    color={(note as any).likedBy?.includes(currentUser?.uid || '') ? '#FF759E' : '#6B7280'} 
+                    fill={(note as any).likedBy?.includes(currentUser?.uid || '') ? '#FF759E' : 'transparent'}
+                  />
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: (note as any).likedBy?.includes(currentUser?.uid || '') ? '#FF759E' : '#6B7280' }}>
+                    {Math.max(0, (note as any).likes || 0)}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  accessibilityRole="button" 
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                  onPress={() => router.push(`/comment-thread?targetType=${isSermon ? 'sermon_note' : 'bible_note'}&targetId=${note.id}` as any)}
+                >
+                  <MessageCircle size={18} color="#6B7280" />
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: '#6B7280' }}>
+                    {(note as any).commentCount || 0}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity accessibilityRole="button" style={{ padding: 4 }} onPress={() => handleNoteOptionsPress(note)}>
+                <MoreVertical size={18} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
+          </SoftCard>
+        </BounceCard>
+      );
+    });
   }, [notes, notesLoading, activeTab]);
 
   // Memoized Plans Items

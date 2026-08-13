@@ -398,7 +398,6 @@ const defaultPrefs = {
   activeBook: 'GEN',
   activeChapter: '1',
   activePassageId: 'GEN.1',
-  highlights: {},
 };
 
 export const getUserPreferences = async () => {
@@ -446,7 +445,6 @@ export const getUserPreferences = async () => {
     if (data.activeBook) merged.activeBook = data.activeBook;
     if (data.activeChapter) merged.activeChapter = data.activeChapter;
     if (data.activePassageId) merged.activePassageId = data.activePassageId;
-    if (data.highlights) merged.highlights = data.highlights;
   }
 
   const savedVersions = await getSavedVersions();

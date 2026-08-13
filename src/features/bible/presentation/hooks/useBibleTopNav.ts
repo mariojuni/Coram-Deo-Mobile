@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { getHumanReadableBookName } from '@/utils/scriptureReferenceParser';
 
 export type BibleBook = {
   id: string;
@@ -30,7 +31,7 @@ export function useBibleTopNav(
     );
 
     return {
-      leftText: `${currentBook?.title || currentBook?.name || preferences.activeBook} ${preferences.activeChapter}`,
+      leftText: `${getHumanReadableBookName(preferences.activeBook)} ${preferences.activeChapter}`,
       rightText: activeVersion?.local_abbreviation || activeVersion?.abbreviation || 'BIBLE',
     };
   }, [books, preferences.activeBook, preferences.activeChapter, preferences.activeTranslation, savedVersions]);

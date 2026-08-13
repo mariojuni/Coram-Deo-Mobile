@@ -1,5 +1,8 @@
 import { useBibleReader } from '@/features/bible/presentation/hooks/useBibleReader';
 import { useUIStore } from '@/store/useUIStore';
+import { useBibleNoteStore } from '@/features/bibleNotes/presentation/hooks/useBibleNoteStore';
+import { getHumanReadableBookName } from '@/utils/scriptureReferenceParser';
+import { router } from 'expo-router';
 import { ChevronLeft, ChevronRight, Copy, X, MessageSquareText, Info } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getSoftShadowStyle, getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
@@ -107,6 +110,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
     selectedVerses,
     verseBackgroundColor,
     handleCopy,
+    handleNotePress,
     handleHighlight,
     handleNextChapter,
     handlePrevChapter,
@@ -502,7 +506,13 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
               </TouchableOpacity>
 
               {/* Note Card */}
-              <TouchableOpacity style={styles.actionButton} onPress={() => {}}>
+              <TouchableOpacity style={styles.actionButton} onPress={() => {
+                const scripture = handleNotePress();
+                if (scripture) {
+                  useBibleNoteStore.getState().initializeEditor([scripture]);
+                  router.push('/bible-notes/editor');
+                }
+              }}>
                 <MessageSquareText size={20} color="#4B5563" />
                 <Text style={styles.actionButtonText}>Note</Text>
               </TouchableOpacity>
@@ -537,7 +547,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
       <AppModal
         isOpen={activeVerse !== null}
         onClose={() => setActiveVerse(null)}
-        title={`${activeBookObj?.localTitle || activeBookObj?.title || activeBook} ${activeChapter}:${activeVerse?.verseNumber}`}
+        title={`${getHumanReadableBookName(activeBook || '')} ${activeChapter}:${activeVerse?.verseNumber}`}
         hideHeader={true}
         hideDragHandle={true}
         containerStyle={{ paddingHorizontal: 0, paddingBottom: 0, backgroundColor: '#FAFAFA' }}
@@ -553,7 +563,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
             <View style={styles.noteModalHeaderContent}>
               <View style={styles.noteModalHeaderSpacer} />
               <Text style={styles.noteModalHeaderTitle}>
-                {activeBookObj?.longName || activeBookObj?.name || activeBookObj?.localTitle || activeBookObj?.title || activeBook} {activeChapter}:{activeVerse?.verseNumber}
+                {getHumanReadableBookName(activeBook || '')} {activeChapter}:{activeVerse?.verseNumber}
               </Text>
               <BounceCard bounceScale={0.85} style={styles.noteModalCloseBtn} onPress={() => setActiveVerse(null)} hitSlop={8} activeOpacity={0.8}>
                 <X size={20} color="#111827" strokeWidth={2} />

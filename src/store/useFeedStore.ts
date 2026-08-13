@@ -1,17 +1,24 @@
 import { create } from 'zustand';
-import { churchHighlightRepository, type ChurchHighlightPost } from '../features/bible/data/churchHighlight.repository';
+import { bibleHighlightRepository } from '../features/bibleHighlights/data/bibleHighlight.repository';
+import type { BibleHighlight } from '../features/bibleHighlights/domain/bibleHighlight.types';
 import { sermonRepository } from '../features/sermons/data/sermon.repository';
 import { prayerRepository } from '../features/prayer/data/prayer.repository';
 import type { SermonNote } from '../features/sermons/domain/sermon.types';
 import type { Prayer } from '../features/prayer/domain/prayer.types';
+import { bibleNoteRepository } from '../features/bibleNotes/data/bibleNote.repository';
+import type { BibleNote } from '../features/bibleNotes/domain/bibleNote.types';
+
+export type FeedNoteItem = 
+  | (SermonNote & { _type: 'sermon' })
+  | (BibleNote & { _type: 'bible' });
 
 interface FeedStore {
-  churchHighlights: ChurchHighlightPost[];
+  churchHighlights: BibleHighlight[];
   highlightsLoading: boolean;
   hasMoreHighlights: boolean;
   pageLimit: number;
   
-  notes: SermonNote[];
+  notes: FeedNoteItem[];
   notesLoading: boolean;
 
   prayers: Prayer[];
@@ -20,6 +27,8 @@ interface FeedStore {
   initializeFeedsListener: () => () => void;
   loadMoreHighlights: () => void;
   clearFeedsListener: () => void;
+  removeNote: (id: string) => void;
+  toggleNoteLike: (id: string, uid: string) => void;
 }
 
 let highlightsUnsubscribe: (() => void) | null = null;
@@ -51,7 +60,7 @@ export const useFeedStore = create<FeedStore>((set, get) => ({
         // 1. Subscribe to highlights
         const subscribeHighlights = (limit: number) => {
           if (highlightsUnsubscribe) highlightsUnsubscribe();
-          highlightsUnsubscribe = churchHighlightRepository.subscribeChurchHighlights(
+          highlightsUnsubscribe = bibleHighlightRepository.subscribeChurchHighlights(
             churchId,
             (posts) => {
               set({ churchHighlights: posts, highlightsLoading: false, hasMoreHighlights: posts.length >= limit });
@@ -80,15 +89,24 @@ export const useFeedStore = create<FeedStore>((set, get) => ({
         // 3. Fetch notes (one time)
         if (currentUser?.uid) {
           set({ notesLoading: true });
-          sermonRepository
-            .fetchUserNotes(currentUser.uid, churchId)
-            .then((userNotes) => {
-              set({ notes: userNotes || [], notesLoading: false });
-            })
-            .catch((err) => {
-              console.warn('Failed to fetch user notes:', err);
-              set({ notesLoading: false });
+          Promise.all([
+            sermonRepository.fetchUserNotes(currentUser.uid, churchId).catch(err => []),
+            bibleNoteRepository.getChurchNotes(churchId).catch(err => [])
+          ]).then(([sermonNotes, bibleNotes]) => {
+            const combined: FeedNoteItem[] = [
+              ...sermonNotes.map(n => ({ ...n, _type: 'sermon' as const })),
+              ...bibleNotes.map(n => ({ ...n, _type: 'bible' as const }))
+            ];
+            combined.sort((a, b) => {
+              const timeA = a.createdAt && (a.createdAt as any).toDate ? (a.createdAt as any).toDate().getTime() : (a.createdAt ? new Date(a.createdAt as any).getTime() : 0);
+              const timeB = b.createdAt && (b.createdAt as any).toDate ? (b.createdAt as any).toDate().getTime() : (b.createdAt ? new Date(b.createdAt as any).getTime() : 0);
+              return timeB - timeA;
             });
+            set({ notes: combined, notesLoading: false });
+          }).catch(err => {
+            console.warn('Failed to fetch combined notes:', err);
+            set({ notesLoading: false });
+          });
         } else {
             set({ notesLoading: false });
         }
@@ -122,7 +140,7 @@ export const useFeedStore = create<FeedStore>((set, get) => ({
     
     if (churchId) {
       if (highlightsUnsubscribe) highlightsUnsubscribe();
-      highlightsUnsubscribe = churchHighlightRepository.subscribeChurchHighlights(
+      highlightsUnsubscribe = bibleHighlightRepository.subscribeChurchHighlights(
         churchId,
         (posts) => {
           set({ churchHighlights: posts, highlightsLoading: false, hasMoreHighlights: posts.length >= newLimit });
@@ -150,5 +168,30 @@ export const useFeedStore = create<FeedStore>((set, get) => ({
       prayers: [], prayersLoading: false,
       notes: [], notesLoading: false 
     });
+  },
+
+  removeNote: (id: string) => {
+    set((state) => ({
+      notes: state.notes.filter(n => n.id !== id)
+    }));
+  },
+
+  toggleNoteLike: (id: string, uid: string) => {
+    set((state) => ({
+      notes: state.notes.map(n => {
+        if (n.id !== id) return n;
+        if (n._type === 'sermon') return n;
+        const likedBy = n.likedBy || [];
+        const isLiked = likedBy.includes(uid);
+        const nextLikedBy = isLiked
+          ? likedBy.filter((userId: string) => userId !== uid)
+          : [...likedBy, uid];
+        return {
+          ...n,
+          likes: Math.max(0, (n.likes || 0) + (isLiked ? -1 : 1)),
+          likedBy: nextLikedBy,
+        };
+      })
+    }));
   },
 }));

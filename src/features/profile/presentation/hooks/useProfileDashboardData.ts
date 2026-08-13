@@ -11,7 +11,11 @@ import { isUserInMinistry } from '@/features/member/domain/member.utils';
 import type { SermonNote } from '@/features/sermons/domain/sermon.types';
 import { getUserPreferences, saveUserPreferences, fetchChapterData } from '@/features/bible/data/bible.repository';
 import type { SystemRole } from '@/features/auth/domain/auth.types';
-import { churchHighlightRepository } from '@/features/bible/data/churchHighlight.repository';
+import { bibleHighlightRepository } from '@/features/bibleHighlights/data/bibleHighlight.repository';
+import type { BibleNote } from '@/features/bibleNotes/domain/bibleNote.types';
+import { bibleNoteRepository } from '@/features/bibleNotes/data/bibleNote.repository';
+
+export type DashboardNoteItem = (SermonNote & { _type: 'sermon' }) | (BibleNote & { _type: 'bible' });
 
 export interface UserHighlightItem {
   id: string;
@@ -24,6 +28,9 @@ export interface UserHighlightItem {
   color: string;
   text?: string;
   createdAt?: string;
+  likes?: number;
+  likedBy?: string[];
+  commentCount?: number;
 }
 
 export interface UserMinistryMembership {
@@ -52,7 +59,7 @@ export function useProfileDashboardData() {
   const [highlights, setHighlights] = useState<UserHighlightItem[]>([]);
   const [highlightsLoading, setHighlightsLoading] = useState<boolean>(true);
 
-  const [notes, setNotes] = useState<SermonNote[]>([]);
+  const [notes, setNotes] = useState<DashboardNoteItem[]>([]);
   const [notesLoading, setNotesLoading] = useState<boolean>(true);
 
   const userBiblePlans = useBiblePlanStore((s) => s.userBiblePlans);
@@ -211,103 +218,29 @@ export function useProfileDashboardData() {
 
   // 3. Fetch Highlights
   const loadHighlights = useCallback(async () => {
+    if (!userId) {
+      setHighlights([]);
+      setHighlightsLoading(false);
+      return;
+    }
     setHighlightsLoading(true);
     try {
-      const prefs = await getUserPreferences();
-      const rawHighlights = (prefs as any)?.highlights || {};
-      const activeTranslation = (prefs as any)?.activeTranslation || '2692';
-      const items: UserHighlightItem[] = [];
-
-      const passageEntries = Object.entries(rawHighlights).filter(
-        ([_, verses]) => verses && typeof verses === 'object'
-      );
-
-      const chapterResults = await Promise.all(
-        passageEntries.map(async ([passageId, verses]) => {
-          let chapterData: any[] = [];
-          try {
-            chapterData = (await fetchChapterData(activeTranslation, passageId)) || [];
-          } catch (_) {}
-          return { passageId, verses: verses as Record<string, string>, chapterData };
-        })
-      );
-
-      for (const { passageId, verses, chapterData } of chapterResults) {
-        const [book, chapter] = passageId.split('.');
-        const parsedChapter = parseInt(chapter, 10) || 1;
-        const bName = book || passageId;
-
-        // Group verse numbers by highlight color & track createdAt timestamp
-        // Group verse numbers by color AND createdAt timestamp so same-session highlights merge together
-        const timeMap: Record<string, { vNum: number; color: string; createdAt?: string }[]> = {};
-        for (const [verseStr, val] of Object.entries(verses)) {
-          const vNum = parseInt(verseStr, 10);
-          if (isNaN(vNum)) continue;
-
-          let color = String(val);
-          let createdAt = '';
-          if (typeof val === 'object' && val !== null) {
-            color = String((val as any).color || 'yellow');
-            createdAt = (val as any).createdAt || '';
-          }
-
-          const groupKey = `${color}_${createdAt || 'legacy'}`;
-          if (!timeMap[groupKey]) timeMap[groupKey] = [];
-          timeMap[groupKey].push({ vNum, color, createdAt });
-        }
-
-        for (const verseItems of Object.values(timeMap)) {
-          if (verseItems.length === 0) continue;
-          verseItems.sort((a, b) => a.vNum - b.vNum);
-          const color = verseItems[0].color;
-          const rangeCreatedAt = verseItems.map(r => r.createdAt).filter(Boolean).sort().pop();
-
-          // Build broken verse ranges (e.g. 11, 14-16)
-          const ranges: string[] = [];
-          let rangeStart = verseItems[0].vNum;
-          let prev = verseItems[0].vNum;
-
-          for (let i = 1; i < verseItems.length; i++) {
-            const curr = verseItems[i].vNum;
-            if (curr === prev + 1) {
-              prev = curr;
-            } else {
-              ranges.push(rangeStart === prev ? `${rangeStart}` : `${rangeStart}-${prev}`);
-              rangeStart = curr;
-              prev = curr;
-            }
-          }
-          ranges.push(rangeStart === prev ? `${rangeStart}` : `${rangeStart}-${prev}`);
-          const label = ranges.join(',');
-
-          const combinedTexts: string[] = [];
-          const vNumbers: number[] = [];
-          for (const item of verseItems) {
-            vNumbers.push(item.vNum);
-            const textObj = chapterData.find((v: any) => parseInt(String(v.verseNumber), 10) === item.vNum);
-            if (textObj?.content) {
-              const cleanContent = textObj.content.replace(/{{note:[0-9]+}}/g, '').trim();
-              combinedTexts.push(cleanContent);
-            }
-          }
-
-          const firstNum = verseItems[0].vNum;
-          const lastNum = verseItems[verseItems.length - 1].vNum;
-
-          items.push({
-            id: `${passageId}_${color}_${firstNum}_${lastNum}_${rangeCreatedAt || ''}`,
-            passageId,
-            bookName: bName,
-            chapter: parsedChapter,
-            verseNumber: firstNum,
-            verseRangeLabel: label,
-            verseNumbers: vNumbers,
-            color,
-            text: combinedTexts.join(' '),
-            createdAt: rangeCreatedAt,
-          });
-        }
-      }
+      const result = await bibleHighlightRepository.getUserHighlights(userId);
+      const items: UserHighlightItem[] = result.map(h => ({
+        id: h.id,
+        passageId: h.passageId || `${h.bookName}.${h.chapter}`,
+        bookName: h.bookName,
+        chapter: h.chapter,
+        verseNumber: h.verseNumber,
+        verseRangeLabel: h.verseRangeLabel,
+        verseNumbers: h.verseNumbers,
+        color: h.color,
+        text: h.text,
+        createdAt: h.createdAt?.toDate ? h.createdAt.toDate().toISOString() : h.createdAt?.toString(),
+        likes: h.likes,
+        likedBy: h.likedBy,
+        commentCount: h.commentCount,
+      }));
 
       // Sort highlights from latest created to oldest
       items.sort((a, b) => {
@@ -322,45 +255,60 @@ export function useProfileDashboardData() {
     } finally {
       setHighlightsLoading(false);
     }
-  }, []);
+  }, [userId]);
 
-  const removeHighlight = useCallback(async (passageId: string, verseNumbersOrNumber: number | number[]) => {
+  const removeHighlight = useCallback(async (highlightId: string) => {
     try {
-      const prefs = await getUserPreferences();
-      const targets = Array.isArray(verseNumbersOrNumber) ? verseNumbersOrNumber : [verseNumbersOrNumber];
-      
-      let modified = false;
-      for (const vNum of targets) {
-        const vKey = String(vNum);
-        if ((prefs as any)?.highlights?.[passageId]?.[vKey]) {
-          delete (prefs as any).highlights[passageId][vKey];
-          modified = true;
-        }
-      }
-
-      if (modified) {
-        if (Object.keys((prefs as any).highlights[passageId] || {}).length === 0) {
-          delete (prefs as any).highlights[passageId];
-        }
-        await saveUserPreferences(prefs);
-        setHighlights((prev) =>
-          prev.filter((h) => !(h.passageId === passageId && targets.includes(h.verseNumber)))
-        );
-
-        // Remove from church highlights feed
-        const effectiveChurchId = userProfile?.churchId || (currentUser as any)?.churchId || (currentUser as any)?.claims?.churchId;
-        if (effectiveChurchId && currentUser?.uid) {
-          churchHighlightRepository.deleteHighlightByVerse(
-            effectiveChurchId,
-            currentUser.uid,
-            passageId,
-            targets
-          ).catch(err => console.warn('[useProfileDashboardData] Failed to delete church highlight:', err));
-        }
-      }
+      await bibleHighlightRepository.deleteHighlight(highlightId);
+      setHighlights((prev) => prev.filter((h) => h.id !== highlightId));
     } catch (e) {
       console.error('Failed to remove highlight:', e);
     }
+  }, []);
+
+  const removeNote = (id: string) => {
+    setNotes(prev => prev.filter(n => n.id !== id));
+  };
+
+  const toggleHighlightLike = useCallback(async (id: string, uid: string) => {
+    // Optimistic update
+    setHighlights((prev) =>
+      prev.map((h) => {
+        if (h.id !== id) return h;
+        const likedBy = h.likedBy || [];
+        const isLiked = likedBy.includes(uid);
+        const nextLikedBy = isLiked ? likedBy.filter((x) => x !== uid) : [...likedBy, uid];
+        return {
+          ...h,
+          likes: Math.max(0, (h.likes || 0) + (isLiked ? -1 : 1)),
+          likedBy: nextLikedBy,
+        };
+      })
+    );
+    // Persist
+    try {
+      await bibleHighlightRepository.toggleLike(id, uid);
+    } catch (e) {
+      console.error('Failed to toggle like on highlight:', e);
+      // Revert in case of failure could be added here
+    }
+  }, []);
+
+  const toggleNoteLike = useCallback((id: string, uid: string) => {
+    setNotes(prev => prev.map(n => {
+      if (n.id !== id) return n;
+      if (n._type === 'sermon') return n;
+      const likedBy = n.likedBy || [];
+      const isLiked = likedBy.includes(uid);
+      const nextLikedBy = isLiked
+        ? likedBy.filter((userId: string) => userId !== uid)
+        : [...likedBy, uid];
+      return {
+        ...n,
+        likes: Math.max(0, (n.likes || 0) + (isLiked ? -1 : 1)),
+        likedBy: nextLikedBy,
+      };
+    }));
   }, []);
 
   useEffect(() => {
@@ -375,16 +323,32 @@ export function useProfileDashboardData() {
       return;
     }
     setNotesLoading(true);
-    sermonRepository
-      .fetchUserNotes(userId, churchId)
-      .then((userNotes) => {
-        setNotes(userNotes);
-        setNotesLoading(false);
+
+    Promise.all([
+      sermonRepository.fetchUserNotes(userId, churchId).catch(err => {
+        console.warn('Failed to fetch sermon notes:', err);
+        return [];
+      }),
+      bibleNoteRepository.getUserNotes(userId).catch(err => {
+        console.warn('Failed to fetch bible notes:', err);
+        return [];
       })
-      .catch((err) => {
-        console.warn('Failed to fetch user notes:', err);
-        setNotesLoading(false);
+    ]).then(([sermonNotes, bibleNotes]) => {
+      const combined: DashboardNoteItem[] = [
+        ...sermonNotes.map(n => ({ ...n, _type: 'sermon' as const })),
+        ...bibleNotes.map(n => ({ ...n, _type: 'bible' as const }))
+      ];
+      combined.sort((a, b) => {
+        const timeA = a.createdAt && (a.createdAt as any).toDate ? (a.createdAt as any).toDate().getTime() : (a.createdAt ? new Date(a.createdAt as any).getTime() : 0);
+        const timeB = b.createdAt && (b.createdAt as any).toDate ? (b.createdAt as any).toDate().getTime() : (b.createdAt ? new Date(b.createdAt as any).getTime() : 0);
+        return timeB - timeA;
       });
+      setNotes(combined);
+      setNotesLoading(false);
+    }).catch(err => {
+      console.warn('Failed to fetch combined notes:', err);
+      setNotesLoading(false);
+    });
   }, [userId, churchId]);
 
   // 5. User Bible Plans Listener
@@ -465,5 +429,8 @@ export function useProfileDashboardData() {
     },
     refreshHighlights: loadHighlights,
     removeHighlight,
+    removeNote,
+    toggleNoteLike,
+    toggleHighlightLike,
   };
 }
