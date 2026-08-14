@@ -201,6 +201,7 @@ export default function RootLayout() {
               <Stack.Screen name="giving-campaign-detail" options={{ headerShown: false }} />
               <Stack.Screen name="giving-form" options={{ headerShown: false }} />
               <Stack.Screen name="version-manager" options={{ presentation: 'transparentModal', animation: 'none', headerShown: false }} />
+              <Stack.Screen name="assign-ministries" options={{ presentation: 'transparentModal', animation: 'none', headerShown: false }} />
               <Stack.Screen name="audio-player" options={{ presentation: 'modal', headerShown: false }} />
               <Stack.Screen name="sermon-watch" options={{ headerShown: false }} />
               <Stack.Screen name="sermon-detail" options={{ headerShown: false }} />
@@ -214,7 +215,7 @@ export default function RootLayout() {
               <Stack.Screen name="staff-ministry-applications" options={{ headerShown: false }} />
               <Stack.Screen name="staff-ministry-application-detail" options={{ headerShown: false }} />
               <Stack.Screen name="profile" options={{ headerShown: false }} />
-              <Stack.Screen name="notifications" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="notifications" options={{ presentation: 'fullScreenModal', headerShown: false }} />
               <Stack.Screen name="+not-found" />
             </Stack>
           </VersionProvider>

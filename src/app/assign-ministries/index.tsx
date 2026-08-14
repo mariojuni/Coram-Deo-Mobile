@@ -1,28 +1,22 @@
-/**
- * AssignMinistriesModal
- * Full-screen modal for assigning ministry roles to an event schedule.
- * Migrated to use dynamic Firebase ministries and ministryAssignments.
- */
 import {
   BookOpen, Check, ChevronDown, ChevronUp, Clock, Drum, GraduationCap,
   Guitar, HandCoins, MapPin, Mic, Monitor, Piano, Search, Users, X, Shield, Music, Heart, Star, Settings
 } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, FlatList, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal } from 'react-native';
+import { Alert, FlatList, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
-import { PrayingHands } from '../ui/icons/PrayingHands';
-import { ministryRepository } from '../../features/ministry/data/ministry.repository';
-import type { Schedule } from '../../features/schedule/domain/schedule.types';
-import { useAuthStore } from '../../store/useAuthStore';
-import { useMemberStore } from '../../store/useMemberStore';
-import { useMinistryStore } from '../../store/useMinistryStore';
-import { useScheduleStore } from '../../store/useScheduleStore';
+import { PrayingHands } from '@/components/ui/icons/PrayingHands';
+import { ministryRepository } from '@/features/ministry/data/ministry.repository';
+import type { Schedule } from '@/features/schedule/domain/schedule.types';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useMemberStore } from '@/store/useMemberStore';
+import { useMinistryStore } from '@/store/useMinistryStore';
+import { useScheduleStore } from '@/store/useScheduleStore';
 import { SoftCard, getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
-import AppModal from '@/components/ui/AppModal';
 import { BlurView } from 'expo-blur';
 import { BounceCard } from '@/components/ui/BounceCard';
-import { formatMemberName, createMemberIdMap } from '../../features/member/domain/member.utils';
-import { useModalKeyboard } from '@/hooks/useModalKeyboard';
+import { formatMemberName, createMemberIdMap } from '@/features/member/domain/member.utils';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type FilterTab = 'all' | 'unassigned' | 'assigned';
@@ -88,180 +82,31 @@ function normalizeRole(name: string) {
   return name.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 function getAssignmentKey(ministryId: string, roleName: string) {
   return `${ministryId}::${roleName}`;
 }
 
-// ─── MemberPickerSheet ────────────────────────────────────────────────────────
-interface MemberPickerSheetProps {
-  roleLabel: string;
-  ministry?: import('../../features/ministry/domain/ministry.types').Ministry;
-  currentUserId: string | null;
-  onSelect: (userId: string | null) => void;
-  onClose: () => void;
-  isKeyboardOpen?: boolean;
-  keyboardTopInSheet?: number;
-}
+export default function AssignMinistriesScreen() {
+  const router = useRouter();
+  const { scheduleId } = useLocalSearchParams<{ scheduleId: string }>();
 
-function MemberPickerSheet({ roleLabel, ministry, currentUserId, onSelect, onClose, isKeyboardOpen, keyboardTopInSheet }: MemberPickerSheetProps) {
-  const allMembers = useMemberStore((s) => s.members);
-  const [query, setQuery] = useState('');
-
-  const filtered = useMemo(() => {
-    const q = query.toLowerCase().trim();
-    const ministryTeam = (ministry?.members && ministry.members.length > 0) ? ministry.members : null;
-    const sourceMembers = ministryTeam
-      ? ministryTeam.map(m => {
-          const globalMember = allMembers.find(g => g.id === m.memberId);
-          return {
-            id: m.memberId,
-            name: formatMemberName(globalMember || m),
-            role: m.role || 'Member',
-            avatar: globalMember?.photoUrl || globalMember?.avatar || (m as any).photoUrl || (m as any).avatar
-          };
-        })
-      : allMembers.map(g => ({
-          id: g.id,
-          name: formatMemberName(g),
-          role: g.role || 'Member',
-          avatar: g.photoUrl || g.avatar
-        }));
-
-    const uniqueSourceMembers = Array.from(new Map(sourceMembers.map(m => [m.id, m])).values());
-
-    if (!q) return uniqueSourceMembers;
-    return uniqueSourceMembers.filter((m) => (m.name ?? '').toLowerCase().includes(q) || (m.role ?? '').toLowerCase().includes(q));
-  }, [ministry, query, allMembers]);
-
-  return (
-    <View style={[ms.modalContainer, { flex: 1, backgroundColor: '#FAFAFA' }]}>
-      <View style={[ms.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
-        <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
-        <View style={ms.dragHandle} />
-        <View style={ms.headerContent}>
-          <View style={{ width: 40 }} />
-          <View style={{ flex: 1, alignItems: 'center' }}>
-            <Text style={ms.headerTitle}>Assign Member</Text>
-            <Text style={ps.sheetSubtitle}>{roleLabel}</Text>
-          </View>
-          <BounceCard bounceScale={0.85} style={ms.headerCircle} onPress={onClose} hitSlop={8} activeOpacity={0.8}>
-            <X size={24} color="#111827" strokeWidth={2} />
-          </BounceCard>
-        </View>
-      </View>
-
-      <View style={[{ paddingTop: 70, flex: 1 }, isKeyboardOpen && { maxHeight: keyboardTopInSheet }]}>
-        <View style={ps.searchRow}>
-          <Search size={16} color="#aaa" />
-          <TextInput
-            style={ps.searchInput}
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Search by name or role…"
-            placeholderTextColor="#aaa"
-          />
-          {query.length > 0 && (
-            <TouchableOpacity onPress={() => setQuery('')}>
-              <X size={14} color="#aaa" />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {currentUserId && (
-          <TouchableOpacity style={ps.clearRow} onPress={() => onSelect(null)}>
-            <View style={[ps.avatarBox, { backgroundColor: '#FEE2E2' }]}>
-              <X size={18} color="#EF4444" />
-            </View>
-            <View>
-              <Text style={[ps.memberName, { color: '#EF4444' }]}>Remove Assignment</Text>
-              <Text style={ps.memberRole}>Clear this role</Text>
-            </View>
-          </TouchableOpacity>
-        )}
-
-        {filtered.length === 0 ? (
-          <View style={{ padding: 24, alignItems: 'center' }}>
-            <Text style={{ fontSize: 14, color: '#6B7280', textAlign: 'center', fontWeight: '500' }}>
-              No matching members found.
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            data={filtered}
-            keyExtractor={(item) => item.id}
-            style={{ flex: 1 }}
-            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
-            keyboardShouldPersistTaps="handled"
-            renderItem={({ item }) => {
-              const isSelected = item.id === currentUserId;
-              return (
-                <TouchableOpacity
-                  style={[ps.memberRow, isSelected && ps.memberRowSelected]}
-                  onPress={() => onSelect(item.id)}
-                  activeOpacity={0.7}
-                >
-                  {item.avatar ? (
-                    <Image source={{ uri: item.avatar }} style={ps.avatar} transition={200} cachePolicy="memory-disk" contentFit="cover" />
-                  ) : (
-                    <View style={[ps.avatarBox, { backgroundColor: '#f0f0f0' }]}>
-                      <Users size={18} color="#999" />
-                    </View>
-                  )}
-                  <View style={{ flex: 1 }}>
-                    <Text style={ps.memberName}>{item.name ?? 'Unnamed Member'}</Text>
-                    {item.role ? <Text style={ps.memberRole}>{item.role}</Text> : null}
-                  </View>
-                  {isSelected && <Check size={18} color="#FF6596" />}
-                </TouchableOpacity>
-            );
-          }}
-        />
-      )}
-      </View>
-    </View>
-  );
-}
-
-const ps = StyleSheet.create({
-  sheet: { backgroundColor: '#fff' },
-  handle: { width: 40, height: 4, backgroundColor: '#E5E7EB', borderRadius: 2, alignSelf: 'center', marginTop: 10, marginBottom: 4 },
-  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', padding: 20, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
-  sheetTitle: { fontSize: 17, fontWeight: '800', color: '#1a1a1a' },
-  sheetSubtitle: { fontSize: 13, color: '#888', marginTop: 2 },
-  closeBtn: { padding: 4 },
-  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 10, margin: 16, paddingHorizontal: 14, height: 44, backgroundColor: '#f8f9fb', borderRadius: 12, borderWidth: 1, borderColor: '#ebebeb' },
-  searchInput: { flex: 1, fontSize: 15, color: '#1a1a1a' },
-  clearRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
-  memberRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f5f5f5' },
-  memberRowSelected: { backgroundColor: '#FFF0F5', borderRadius: 10, paddingHorizontal: 8, marginHorizontal: -8 },
-  avatar: { width: 42, height: 42, borderRadius: 21 },
-  avatarBox: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
-  memberName: { fontSize: 15, fontWeight: '700', color: '#1a1a1a' },
-  memberRole: { fontSize: 11, color: '#888', fontWeight: '600', textTransform: 'uppercase', marginTop: 2 },
-});
-
-// ─── Main Modal ───────────────────────────────────────────────────────────────
-interface AssignMinistriesModalProps {
-  schedule: Schedule;
-  onClose: () => void;
-}
-
-export default function AssignMinistriesModal({ schedule, onClose }: AssignMinistriesModalProps) {
   const members = useMemberStore((s) => s.members);
   const memberById = useMemo(() => createMemberIdMap(members), [members]);
-  const _currentUser = useAuthStore((s) => s.currentUser);
   const userProfile = useAuthStore((s) => s.userProfile);
   const schedules = useScheduleStore((s) => s.schedules);
 
   const ministries = useMinistryStore(s => s.ministries);
   const fetchMinistries = useMinistryStore(s => s.fetchMinistries);
   const assignmentsList = useMinistryStore(s => s.assignments);
+
+  const liveSchedule = useMemo(
+    () => schedules.find((s) => s.id === scheduleId),
+    [scheduleId, schedules]
+  );
+
   const eventAssignments = useMemo(
-    () => assignmentsList.filter(a => a.eventId === schedule.id),
-    [assignmentsList, schedule.id]
+    () => assignmentsList.filter(a => a.eventId === scheduleId),
+    [assignmentsList, scheduleId]
   );
 
   useEffect(() => {
@@ -273,28 +118,18 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
     if (ministries.length === 0) fetch();
   }, [ministries.length, userProfile?.churchId, fetchMinistries]);
 
-  const isStaff = ['super_admin', 'church_admin', 'ministry_leader'].includes((userProfile?.role ?? '').toLowerCase());
-
-  const [isMainModalOpen, setIsMainModalOpen] = useState(true);
-  const [showPicker, setShowPicker] = useState(false);
-  const memberPickerKeyboard = useModalKeyboard({ heightRatio: 0.85, backgroundColor: '#FAFAFA' });
-
   const [assignments, setAssignments] = useState<AssignmentsMap>({});
   const [filterTab, setFilterTab] = useState<FilterTab>('all');
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
-  const [selectingRoleKey, setSelectingRoleKey] = useState<{ ministryId: string, roleName: string } | null>(null);
 
   const initialAssignments = useMemo(() => {
     const initialMap: AssignmentsMap = {};
-
     eventAssignments.forEach(a => {
       initialMap[getAssignmentKey(a.ministryId, a.roleName)] = a.memberId;
     });
-
     return initialMap;
   }, [eventAssignments]);
 
-  // Initialize assignments map from store data and default ministry roles
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
       setAssignments(initialAssignments);
@@ -305,116 +140,44 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
   const totalRoles = useMemo(() => ministries.reduce((acc, min) => acc + (min.roles?.length || 0), 0), [ministries]);
   const assignedCount = useMemo(() => Object.keys(assignments).length, [assignments]);
 
-  const liveSchedule = useMemo(
-    () => schedules.find((s) => s.id === schedule.id) ?? schedule,
-    [schedule, schedules]
-  );
-
   const toggleGroup = useCallback((groupId: string) => {
     setExpandedGroups((prev) => ({ ...prev, [groupId]: !prev[groupId] }));
   }, []);
 
   const openPicker = useCallback((ministryId: string, roleName: string) => {
-    setSelectingRoleKey({ ministryId, roleName });
-    setIsMainModalOpen(false);
-    setTimeout(() => {
-      setShowPicker(true);
-    }, 300);
-  }, []);
-
-  const closePicker = useCallback(() => {
-    setShowPicker(false);
-    setTimeout(() => {
-      setSelectingRoleKey(null);
-      setIsMainModalOpen(true);
-    }, 300);
-  }, []);
-
-  const handleSelect = async (userId: string | null) => {
-    if (!selectingRoleKey) return;
-    const { ministryId, roleName } = selectingRoleKey;
-    const key = getAssignmentKey(ministryId, roleName);
-
-    // Optimistic UI update
-    setAssignments((prev) => {
-      const next = { ...prev };
-      if (userId === null) delete next[key];
-      else next[key] = userId;
-      return next;
+    router.push({
+      pathname: '/assign-ministries/assign-member',
+      params: { scheduleId, ministryId, roleName }
     });
+  }, [router, scheduleId]);
 
-    closePicker();
-
-    // API Update
-    try {
-      const existing = eventAssignments.find(a => getAssignmentKey(a.ministryId, a.roleName) === key);
-      const churchId = userProfile?.churchId as string | undefined;
-      if (!churchId) {
-        Alert.alert('Error', 'Missing church context. Cannot update assignment.');
-        return;
-      }
-
-      if (userId === null) {
-        if (existing) await ministryRepository.deleteAssignment(existing.id);
-      } else {
-        const member = memberById.get(userId);
-        if (existing) {
-          if (existing.memberId !== userId) {
-            await ministryRepository.updateAssignment(existing.id, {
-              memberId: userId,
-              memberName: formatMemberName(member),
-              status: 'Pending'
-            });
-          }
-        } else {
-          const ministry = ministries.find(m => m.id === ministryId);
-          await ministryRepository.createAssignment({
-            churchId,
-            eventId: liveSchedule.id,
-            eventName: liveSchedule.title,
-            eventDate: liveSchedule.date,
-            ministryId,
-            ministryName: ministry?.name || 'Unknown Ministry',
-            roleName,
-            memberId: userId,
-            memberName: formatMemberName(member),
-            status: 'Pending',
-            createdAt: new Date().toISOString()
-          });
-        }
-      }
-    } catch (e) {
-      console.error('Failed to update assignment', e);
-      Alert.alert('Update Failed', 'Could not update the assignment. Please try again.');
-    }
-  };
+  if (!liveSchedule) {
+    return (
+      <View style={[ms.modalContainer, { flex: 1, alignItems: 'center', justifyContent: 'center' }]}>
+        <Text>Schedule not found.</Text>
+      </View>
+    );
+  }
 
   return (
-    <>
-      <AppModal
-        isOpen={isMainModalOpen}
-        onClose={onClose}
-        title="Assign Ministries"
-        hideHeader={true}
-        hideDragHandle={true}
-        containerStyle={{ paddingHorizontal: 0, paddingBottom: 0, backgroundColor: '#FAFAFA' }}
-        heightRatio={0.85}
-      >
-        <View style={[ms.modalContainer, { flex: 1 }]}>
-          <View style={[ms.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
-            <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
-            <View style={ms.dragHandle} />
-            <View style={ms.headerContent}>
-              <View style={{ width: 40 }} />
-              <Text style={ms.headerTitle}>Assign Ministries</Text>
-              <BounceCard bounceScale={0.85} style={ms.headerCircle} onPress={onClose} hitSlop={8} activeOpacity={0.8}>
-                <X size={24} color="#111827" strokeWidth={2} />
-              </BounceCard>
-            </View>
-          </View>
+    <View style={[ms.modalContainer, { flex: 1 }]}>
+      <View style={[ms.headerContainer, { paddingTop: 12 }]} pointerEvents="box-none">
+        <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
+        <View style={ms.dragHandle} />
+        <View style={ms.headerContent}>
+          <View style={{ width: 40 }} />
+          <Text style={ms.headerTitle}>Assign Ministries</Text>
+          <BounceCard bounceScale={0.85} style={ms.headerCircle} onPress={() => {
+            if (router.canGoBack()) router.back();
+            else router.replace('/(tabs)/attendance');
+          }} hitSlop={8} activeOpacity={0.8}>
+            <X size={24} color="#111827" strokeWidth={2} />
+          </BounceCard>
+        </View>
+      </View>
 
-          <ScrollView contentContainerStyle={{ paddingBottom: 120, paddingTop: 70 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 120, paddingTop: 70 }} showsVerticalScrollIndicator={false}>
         <SoftCard style={{ margin: 20, marginBottom: 16, borderRadius: 16 }} innerStyle={{ borderRadius: 15 }}>
           <View style={[ms.eventCard, { margin: 0 }]}>
             <View style={ms.eventIconBox}>
@@ -511,9 +274,6 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
 
                 const liveDuty = eventAssignments.find(a => getAssignmentKey(a.ministryId, a.roleName) === assignKey);
 
-                // If we have an assignedUserId but no liveDuty, we check if it's the exact same as the default.
-                // Actually, to make it simple: if there is no liveDuty, we show nothing (or "Saving...") until Firebase syncs.
-                // But the user expects 'Awaiting Response' as soon as they tap.
                 const statusLabel = liveDuty
                   ? liveDuty.status === 'Confirmed'
                     ? 'Confirmed'
@@ -521,7 +281,7 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
                       ? 'Declined'
                       : 'Awaiting Response'
                   : assignedUserId
-                    ? null // Show nothing for defaults until they are saved
+                    ? null
                     : null;
 
                 const statusColor = liveDuty
@@ -530,7 +290,7 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
                     : liveDuty.status === 'Declined'
                       ? '#EF4444'
                       : '#F59E0B'
-                  : '#666'; // Gray for unsaved defaults
+                  : '#666';
 
                 return (
                   <View key={roleName} style={[ms.roleRow, idx > 0 && ms.roleRowBorder]}>
@@ -575,30 +335,7 @@ export default function AssignMinistriesModal({ schedule, onClose }: AssignMinis
           );
         })}
       </ScrollView>
-      </View>
-    </AppModal>
-
-      <AppModal
-        isOpen={showPicker}
-        onClose={closePicker}
-        title="Assign Member"
-        hideHeader={true}
-        hideDragHandle={true}
-        {...memberPickerKeyboard.appModalProps}
-      >
-        {selectingRoleKey && (
-          <MemberPickerSheet
-            roleLabel={selectingRoleKey.roleName}
-            ministry={ministries.find(m => m.id === selectingRoleKey.ministryId)}
-            currentUserId={selectingRoleKey ? (assignments[getAssignmentKey(selectingRoleKey.ministryId, selectingRoleKey.roleName)] ?? null) : null}
-            onSelect={handleSelect}
-            isKeyboardOpen={memberPickerKeyboard.isKeyboardOpen}
-            keyboardTopInSheet={memberPickerKeyboard.keyboardTopInSheet}
-            onClose={closePicker}
-          />
-        )}
-      </AppModal>
-    </>
+    </View>
   );
 }
 
@@ -644,7 +381,6 @@ const ms = StyleSheet.create({
     textAlign: 'center',
     marginHorizontal: 12,
   },
-  templateBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#EBF3FF', alignItems: 'center', justifyContent: 'center' },
   eventCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 14, backgroundColor: '#fff', margin: 16, marginBottom: 0, padding: 16, borderRadius: 16, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
   eventIconBox: { width: 48, height: 48, borderRadius: 14, backgroundColor: '#F3EEFF', alignItems: 'center', justifyContent: 'center' },
   eventName: { fontSize: 16, fontWeight: '800', color: '#1a1a1a', marginBottom: 6 },
@@ -686,8 +422,4 @@ const ms = StyleSheet.create({
   unassignedRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   unassignedPlus: { fontSize: 16, color: '#F59E0B', fontWeight: '700', lineHeight: 18 },
   unassignedText: { fontSize: 12, fontWeight: '600', color: '#D97706' },
-  saveBar: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', paddingHorizontal: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#f0f0f0', shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: -4 }, elevation: 8 },
-  saveButton: { backgroundColor: '#FF6596', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 15, borderRadius: 16 },
-  saveButtonDisabled: { opacity: 0.5 },
-  saveButtonText: { color: '#fff', fontSize: 16, fontWeight: '800' },
 });

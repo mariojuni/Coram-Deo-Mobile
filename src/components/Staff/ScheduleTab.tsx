@@ -6,10 +6,10 @@ import { useMemberStore } from '../../store/useMemberStore';
 import { useMinistryStore } from '../../store/useMinistryStore';
 import { getMinisterialTeam, type Schedule, useScheduleStore } from '../../store/useScheduleStore';
 import AddScheduleModal from './AddScheduleModal';
-import AssignMinistriesModal from './AssignMinistriesModal';
 import { useAuthStore } from '../../store/useAuthStore';
 import { createMemberIdMap } from '../../features/member/domain/member.utils';
 import { SoftCard, getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
+import { useRouter } from 'expo-router';
 
 type TeamMemberCard = {
   avatar: string;
@@ -37,9 +37,9 @@ export default function ScheduleTab({
   const userProfile = useAuthStore((s) => s.userProfile);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [eventToEdit, setEventToEdit] = useState<Schedule | null>(null);
-  const [assignSchedule, setAssignSchedule] = useState<Schedule | null>(null);
   const members = useMemberStore((state) => state.members);
   const memberById = useMemo(() => createMemberIdMap(members), [members]);
+  const router = useRouter();
 
   const formatDate = (dateStr: string) => {
     const normalizeDateToYmd = (value: string): string | null => {
@@ -109,7 +109,7 @@ export default function ScheduleTab({
         <TouchableOpacity
           style={[styles.card, item.team.length === 0 && styles.cardWithoutTeam]}
           activeOpacity={0.7}
-          onPress={() => setAssignSchedule(item.schedule)}
+          onPress={() => router.push({ pathname: '/assign-ministries', params: { scheduleId: item.schedule.id } })}
           onLongPress={() => {
             setEventToEdit(item.schedule);
             setIsAddModalOpen(true);
@@ -291,13 +291,6 @@ export default function ScheduleTab({
         }}
         eventToEdit={eventToEdit}
       />
-
-      {assignSchedule && (
-        <AssignMinistriesModal
-          schedule={assignSchedule}
-          onClose={() => setAssignSchedule(null)}
-        />
-      )}
     </View>
   );
 }

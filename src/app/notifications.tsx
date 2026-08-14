@@ -6,9 +6,12 @@ import { AppNotification, NotificationRepository, NotificationCategory } from '.
 import { useAuthStore } from '../store/useAuthStore';
 import { NotificationItem } from '../components/Notifications/NotificationItem';
 import DebouncedTouchable from '../components/DebouncedTouchable';
-import { CheckCheck } from 'lucide-react-native';
+import { CheckCheck, X } from 'lucide-react-native';
 import { isToday, isYesterday } from 'date-fns';
 import { NotificationNavigationResolver } from '../services/notification/NotificationNavigationResolver';
+import { BlurView } from 'expo-blur';
+import { BounceCard } from '../components/ui/BounceCard';
+import { getTopBarButtonShadowStyle } from '../components/ui/SoftCard';
 
 const CATEGORIES: { label: string; value: NotificationCategory | 'all' }[] = [
   { label: 'All', value: 'all' },
@@ -34,7 +37,10 @@ export default function NotificationsScreen() {
   }, [currentUser?.uid]);
 
   const loadNotifications = async () => {
-    if (!currentUser?.uid) return;
+    if (!currentUser?.uid) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const data = await NotificationRepository.getNotifications(currentUser.uid, 50);
@@ -108,24 +114,26 @@ export default function NotificationsScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen
-        options={{
-          headerTitle: 'Notifications',
-          headerRight: () => (
-            <DebouncedTouchable 
-              onPress={handleMarkAllRead} 
-              style={{ marginRight: 16, flexDirection: 'row', alignItems: 'center' }}
-              accessibilityRole="button"
-              accessibilityLabel="Mark all as read"
-            >
-              <CheckCheck size={20} color="#FF6596" />
-              <Text style={{ color: '#FF6596', marginLeft: 6, fontWeight: '600' }}>Mark all read</Text>
-            </DebouncedTouchable>
-          ),
-        }}
-      />
+      <Stack.Screen options={{ headerShown: false }} />
 
-      <View style={styles.chipContainer}>
+      {/* ─── Top Toolbar Navigation ─────────────────────────────────────── */}
+      <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 24) }]} pointerEvents="box-none">
+        <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.7)' }]} pointerEvents="none" />
+        <View style={styles.headerContent}>
+          <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => router.back()} hitSlop={8} activeOpacity={0.8}>
+            <X size={24} color="#1a1a1a" strokeWidth={2} />
+          </BounceCard>
+
+          <Text style={styles.headerTitle} numberOfLines={1}>Notifications</Text>
+
+          <BounceCard bounceScale={0.85} style={styles.headerActionCircle} onPress={handleMarkAllRead} hitSlop={8} activeOpacity={0.8}>
+            <CheckCheck size={20} color="#FF6596" />
+          </BounceCard>
+        </View>
+      </View>
+
+      <View style={[styles.chipContainer, { marginTop: Math.max(insets.top, 24) + 60 }]}>
         <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -237,5 +245,43 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 20,
     marginBottom: 12,
+  },
+  headerContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.4)',
+    overflow: 'hidden',
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+  },
+  headerCircle: {
+    ...getTopBarButtonShadowStyle(20),
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerActionCircle: {
+    ...getTopBarButtonShadowStyle(20),
+    height: 40,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    textAlign: 'center',
   },
 });
