@@ -27,17 +27,12 @@ export async function createManualGivingRecord(
   const recordId = newRef.id;
 
   await runTransaction(getActiveDb(), async (transaction) => {
-    // If it belongs to a campaign, we need to increment the raisedAmount
+    // 1. ALL READS FIRST
+    let campaignSnap = null;
+    let campaignRef = null;
     if (data.campaignId) {
-      const campaignRef = doc(getActiveDb(), CAMPAIGN_COLLECTION, data.campaignId);
-      const campaignSnap = await transaction.get(campaignRef);
-      if (campaignSnap.exists()) {
-        const currentAmount = campaignSnap.data().raisedAmount || 0;
-        transaction.update(campaignRef, {
-          raisedAmount: currentAmount + (data.amount || 0),
-          updatedAt: serverTimestamp()
-        });
-      }
+      campaignRef = doc(getActiveDb(), CAMPAIGN_COLLECTION, data.campaignId);
+      campaignSnap = await transaction.get(campaignRef);
     }
 
     let fetchedFundType = data.fundType || 'Others';
@@ -51,6 +46,15 @@ export async function createManualGivingRecord(
       } catch (err) {
         console.warn('Failed to fetch fund name on createManualGivingRecord', err);
       }
+    }
+
+    // 2. ALL WRITES
+    if (campaignSnap && campaignSnap.exists() && campaignRef) {
+      const currentAmount = campaignSnap.data().raisedAmount || 0;
+      transaction.update(campaignRef, {
+        raisedAmount: currentAmount + (data.amount || 0),
+        updatedAt: serverTimestamp()
+      });
     }
 
     const newRecord: Partial<GivingRecord> = {
@@ -131,22 +135,18 @@ export async function approveGivingRecord(
   const recordRef = doc(getActiveDb(), GIVING_COLLECTION, recordId);
   
   await runTransaction(getActiveDb(), async (transaction) => {
+    // 1. ALL READS FIRST
     const recordSnap = await transaction.get(recordRef);
     if (!recordSnap.exists()) throw new Error("Record not found");
     const recordData = recordSnap.data();
     if (recordData.churchId !== churchId) throw new Error("Unauthorized");
     if (recordData.status !== 'pending') throw new Error("Record is not pending");
 
+    let campaignSnap = null;
+    let campaignRef = null;
     if (campaignId) {
-      const campaignRef = doc(getActiveDb(), CAMPAIGN_COLLECTION, campaignId);
-      const campaignSnap = await transaction.get(campaignRef);
-      if (campaignSnap.exists()) {
-        const currentAmount = campaignSnap.data().raisedAmount || 0;
-        transaction.update(campaignRef, {
-          raisedAmount: currentAmount + amount,
-          updatedAt: serverTimestamp()
-        });
-      }
+      campaignRef = doc(getActiveDb(), CAMPAIGN_COLLECTION, campaignId);
+      campaignSnap = await transaction.get(campaignRef);
     }
 
     // Fetch actual fund name to populate fundType accurately
@@ -162,6 +162,15 @@ export async function approveGivingRecord(
       } catch (err) {
         console.warn('Failed to fetch fund name on approval', err);
       }
+    }
+
+    // 2. ALL WRITES
+    if (campaignSnap && campaignSnap.exists() && campaignRef) {
+      const currentAmount = campaignSnap.data().raisedAmount || 0;
+      transaction.update(campaignRef, {
+        raisedAmount: currentAmount + amount,
+        updatedAt: serverTimestamp()
+      });
     }
 
     transaction.update(recordRef, {
