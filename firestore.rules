@@ -606,5 +606,19 @@ service cloud.firestore {
         : resource.data.churchId);
       allow delete: if isSignedIn() && isPastorOrAdmin(resource.data.churchId);
     }
+    // ── Notifications ────────────────────────────────────────────────────────
+
+    match /userNotifications/{userId}/items/{notificationId} {
+      allow read: if isOwner(userId);
+      allow update: if isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead', 'readAt']);
+    }
+
+    match /userNotificationState/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    match /userPushTokens/{userId}/devices/{deviceId} {
+      allow read, write: if isOwner(userId);
+    }
   }
 }

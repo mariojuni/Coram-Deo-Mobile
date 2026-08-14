@@ -67,19 +67,6 @@ const AnimatedTabItem = ({ isFocused, route, options, onPress, IconComponent, sh
     >
       <Animated.View style={{ transform: [{ scale }, { translateY }] }}>
         <IconComponent size={24} color={color} />
-        {showBadge && (
-          <View style={{
-            position: 'absolute',
-            top: -2,
-            right: -2,
-            width: 10,
-            height: 10,
-            borderRadius: 5,
-            backgroundColor: '#FF3B30',
-            borderWidth: 1.5,
-            borderColor: '#FFFFFF'
-          }} />
-        )}
       </Animated.View>
     </TouchableOpacity>
   );

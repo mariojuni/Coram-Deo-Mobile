@@ -18,6 +18,7 @@ import { canModeratePrayerRequests } from '@/permissions/mobilePermissions';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useSermonStore } from '@/store/useSermonStore';
 import { useUIStore } from '@/store/useUIStore';
+import { useNotificationStore } from '@/store/useNotificationStore';
 import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -111,6 +112,8 @@ export default function HomeScreen() {
   }, [userProfile?.churchId]);
 
   const { campaigns } = useGiving();
+
+  const unreadCount = useNotificationStore((s) => s.unreadCount);
 
   const [activeSlide, setActiveSlide] = useState(0);
   const [savingEventId, setSavingEventId] = useState<string | null>(null);
@@ -291,12 +294,19 @@ export default function HomeScreen() {
           {/* Header Actions — always visible */}
           <Animated.View style={[styles.actionsContainer, { transform: [{ scale: avatarScale }] }]}>
             <DebouncedTouchable
-              onPress={() => Alert.alert('Notifications', 'Coming soon!')}
+              onPress={() => router.push('/notifications')}
               style={styles.notificationBtn}
+              accessibilityRole="button"
+              accessibilityLabel={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'No unread notifications'}
             >
               <Bell size={24} color="#1a1a1a" />
-              {/* Optional: Add notification badge dot */}
-              <View style={styles.notificationBadge} />
+              {unreadCount > 0 && (
+                <View style={[styles.notificationBadge, unreadCount >= 10 && { width: 20, borderRadius: 10 }]}>
+                  <Text style={styles.notificationBadgeText}>
+                    {unreadCount >= 10 ? '10+' : unreadCount}
+                  </Text>
+                </View>
+              )}
             </DebouncedTouchable>
 
             <DebouncedTouchable
@@ -991,14 +1001,21 @@ const styles = StyleSheet.create({
   },
   notificationBadge: {
     position: 'absolute',
-    top: 8,
+    top: 6,
     right: 8,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     backgroundColor: '#EF4444',
     borderWidth: 1.5,
     borderColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notificationBadgeText: {
+    color: '#fff',
+    fontSize: 8,
+    fontWeight: 'bold',
   },
   // Avatar
   avatarBtn: { position: 'absolute', right: 20, top: 0, bottom: 0, justifyContent: 'center' },

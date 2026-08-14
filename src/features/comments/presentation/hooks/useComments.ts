@@ -30,10 +30,21 @@ export function useComments(churchId: string, targetType: CommentTargetType, tar
         refresh ? undefined : lastDoc
       );
 
+      const activeComments = res.comments.filter(c => c.status !== 'deleted');
+
       if (refresh) {
-        setComments(res.comments);
+        setComments(activeComments);
       } else {
-        setComments(prev => [...prev, ...res.comments]);
+        setComments(prev => {
+          const newComments = [...prev];
+          const existingIds = new Set(prev.map(c => c.id));
+          for (const c of activeComments) {
+            if (!existingIds.has(c.id)) {
+              newComments.push(c);
+            }
+          }
+          return newComments;
+        });
       }
 
       setLastDoc(res.lastDoc);
@@ -72,7 +83,10 @@ export function useComments(churchId: string, targetType: CommentTargetType, tar
       });
 
       if (!parentCommentId) {
-        setComments(prev => [newComment, ...prev]);
+        setComments(prev => {
+          if (prev.some(c => c.id === newComment.id)) return prev;
+          return [newComment, ...prev];
+        });
       } else {
         // Find parent and increment replyCount in local state if we were showing it
         setComments(prev => prev.map(c => 

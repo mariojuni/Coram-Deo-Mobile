@@ -28,7 +28,9 @@ import { getActiveDb } from '@/firebase';
 import { doc, getDoc, onSnapshot, DocumentSnapshot, DocumentData } from 'firebase/firestore';
 
 export function CommentThreadScreen() {
-  const { targetType, targetId } = useExpoSearchParams<{ targetType: CommentTargetType, targetId: string }>();
+  const rawParams = useExpoSearchParams<{ targetType: CommentTargetType | string[], targetId: string | string[] }>();
+  const targetType = Array.isArray(rawParams.targetType) ? rawParams.targetType[0] : rawParams.targetType;
+  const targetId = Array.isArray(rawParams.targetId) ? rawParams.targetId[0] : rawParams.targetId;
   const router = useExpoRouter();
   const insets = useSafeAreaInsets();
   
@@ -558,7 +560,6 @@ export function CommentThreadScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
     >
-      <ExpoStack.Screen options={{ headerShown: false }} />
       
       <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
         <TouchableOpacity style={styles.headerCircle} onPress={() => router.back()} hitSlop={8}>

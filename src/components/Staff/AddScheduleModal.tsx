@@ -150,7 +150,7 @@ export default function AddScheduleModal({ isOpen, onClose, eventToEdit }: AddSc
             <TouchableOpacity onPress={handleSave} style={s.saveBtn} disabled={saving}>
               <Text style={s.saveText}>{saving ? 'Saving…' : 'Save'}</Text>
             </TouchableOpacity>
-            <Text style={s.headerTitle}>{eventToEdit ? 'Edit Event' : 'New Schedule'}</Text>
+            <Text style={s.headerTitle} pointerEvents="none">{eventToEdit ? 'Edit Event' : 'New Schedule'}</Text>
             <BounceCard bounceScale={0.85} style={s.headerCircle} onPress={onClose} hitSlop={8} activeOpacity={0.8}>
               <X size={24} color="#111827" strokeWidth={2} />
             </BounceCard>

@@ -201,17 +201,68 @@ export const scheduleRepository = {
 
 
   async createSchedule(data: Pick<Schedule, 'title' | 'date' | 'time' | 'endTime' | 'location'> & { churchId: string }): Promise<string> {
+    let startTimestamp = null;
+    if (data.date && data.time) {
+      const d = new Date(data.date);
+      const timeStr = String(data.time).trim();
+      const timeMatch12 = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      const timeMatch24 = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+      
+      if (timeMatch12) {
+        let hours = parseInt(timeMatch12[1], 10);
+        const mins = parseInt(timeMatch12[2], 10);
+        const isPM = timeMatch12[3].toUpperCase() === 'PM';
+        if (isPM && hours < 12) hours += 12;
+        if (!isPM && hours === 12) hours = 0;
+        d.setHours(hours, mins, 0, 0);
+        startTimestamp = d;
+      } else if (timeMatch24) {
+        const hours = parseInt(timeMatch24[1], 10);
+        const mins = parseInt(timeMatch24[2], 10);
+        d.setHours(hours, mins, 0, 0);
+        startTimestamp = d;
+      }
+    }
+
     const ref = await addDoc(collection(getActiveDb(), 'events'), {
       ...data,
       duties: [],
       rsvps: [],
+      ...(startTimestamp && { startTimestamp }),
       createdAt: serverTimestamp(),
     });
     return ref.id;
   },
 
   async updateSchedule(id: string, data: Partial<Pick<Schedule, 'title' | 'date' | 'time' | 'endTime' | 'location'>>): Promise<void> {
-    await updateDoc(doc(getActiveDb(), 'events', id), { ...data, updatedAt: serverTimestamp() });
+    let startTimestamp = undefined;
+    if (data.date && data.time) {
+      const d = new Date(data.date);
+      const timeStr = String(data.time).trim();
+      const timeMatch12 = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      const timeMatch24 = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+      
+      if (timeMatch12) {
+        let hours = parseInt(timeMatch12[1], 10);
+        const mins = parseInt(timeMatch12[2], 10);
+        const isPM = timeMatch12[3].toUpperCase() === 'PM';
+        if (isPM && hours < 12) hours += 12;
+        if (!isPM && hours === 12) hours = 0;
+        d.setHours(hours, mins, 0, 0);
+        startTimestamp = d;
+      } else if (timeMatch24) {
+        const hours = parseInt(timeMatch24[1], 10);
+        const mins = parseInt(timeMatch24[2], 10);
+        d.setHours(hours, mins, 0, 0);
+        startTimestamp = d;
+      }
+    }
+
+    await updateDoc(doc(getActiveDb(), 'events', id), { 
+      ...data, 
+      ...(startTimestamp !== undefined && { startTimestamp }),
+      updatedAt: serverTimestamp() 
+    });
   },
 
   async deleteSchedule(id: string): Promise<void> {

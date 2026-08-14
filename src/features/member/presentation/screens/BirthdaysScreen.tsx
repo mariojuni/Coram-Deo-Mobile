@@ -3,7 +3,7 @@ import { BounceCard } from '@/components/ui/BounceCard';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Share } from 'react-native';
 import { Image } from 'expo-image';
 import { Stack, useRouter } from 'expo-router';
-import { ChevronLeft, Cake, Send, Sparkles, Gift, HeartHandshake } from 'lucide-react-native';
+import { ChevronLeft, Cake, Send, Sparkles, Gift, HeartHandshake, Users } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -72,12 +72,18 @@ export function BirthdaysScreen() {
                 </View>
                 {data.map(member => (
                     <View key={member.id} style={styles.card}>
-                        <View style={styles.avatarWrap}>
-                            <Image
-                                source={{ uri: member.photoUrl || member.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(formatMemberName(member))}&background=f0f0f0&color=999` }}
-                                style={styles.avatar}
-                            />
-                        </View>
+        <View style={styles.avatarWrap}>
+            {member.photoUrl || member.avatar ? (
+                <Image
+                    source={{ uri: member.photoUrl || member.avatar }}
+                    style={styles.avatar}
+                />
+            ) : (
+                <View style={[styles.avatar, { alignItems: 'center', justifyContent: 'center' }]}>
+                    <Users size={20} color="#999" />
+                </View>
+            )}
+        </View>
                         <View style={styles.details}>
                             <Text style={styles.name}>{formatMemberName(member)}</Text>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>

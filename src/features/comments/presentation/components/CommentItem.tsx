@@ -183,7 +183,9 @@ export function CommentItem({
                   onLayout={(e) => {
                     if (isLast) {
                       const y = e.nativeEvent.layout.y;
-                      setLastReplyY(y + 8);
+                      if (Math.abs(lastReplyY - (y + 8)) > 1) {
+                        setLastReplyY(y + 8);
+                      }
                     }
                   }}
                 >

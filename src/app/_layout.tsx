@@ -15,6 +15,21 @@ import { useMemberStore } from '../store/useMemberStore';
 import { canAccessMobileApp } from '../permissions/mobilePermissions';
 import PrayerRequestModal from '../features/prayer/presentation/components/PrayerRequestModal';
 import { useUIStore } from '../store/useUIStore';
+import { getMessaging, onMessage, onNotificationOpenedApp, getInitialNotification } from '@react-native-firebase/messaging';
+import { PushTokenService } from '../services/notification/PushTokenService';
+import { useNotificationStore } from '../store/useNotificationStore';
+import { NotificationNavigationResolver } from '../services/notification/NotificationNavigationResolver';
+
+// Register background handler outside of React component lifecycle
+// Register background handler outside of React component lifecycle
+import messaging from '@react-native-firebase/messaging';
+try {
+  messaging().setBackgroundMessageHandler(async remoteMessage => {
+    console.log('Message handled in the background!', remoteMessage);
+  });
+} catch (e) {
+  // Ignore missing native module in Expo Go
+}
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -28,6 +43,7 @@ export default function RootLayout() {
   const initializeAuthListener = useAuthStore((state) => state.initializeAuthListener);
   const initializeMembersListener = useMemberStore((state) => state.initializeMembersListener);
   const initializeServicesListener = useMemberStore((state) => state.initializeServicesListener);
+  const initializeNotificationListener = useNotificationStore((state) => state.initializeListener);
   const loadTranslation = useBibleVersionStore((state) => state.loadTranslation);
   const segments = useSegments();
   const router = useRouter();
@@ -63,35 +79,79 @@ export default function RootLayout() {
     if (initialized) {
       initializeMembersListener(userProfile?.churchId);
       initializeServicesListener(userProfile?.churchId);
-    }
-  }, [initialized, userProfile?.churchId, initializeMembersListener, initializeServicesListener]);
-
-  useEffect(() => {
-    // On fresh install, trigger background download of default Bible (NASB2020: 2692)
-    const initOfflineBible = async () => {
-      try {
-        const { isBibleOffline } = await import('../utils/offlineDb');
-        const offline = await isBibleOffline('2692');
-        if (!offline) {
-          console.log('Initiating background download of default Bible (2692)...');
-          const { downloadBibleOffline } = await import('../utils/bibleApi');
-          downloadBibleOffline('2692');
-        }
-      } catch (e) {
-        console.error('Failed to init offline bible sync:', e);
+      
+      if (currentUser?.uid) {
+        PushTokenService.registerDeviceToken(currentUser.uid);
+        const unsubscribeNotifications = initializeNotificationListener(currentUser.uid);
+        return () => {
+          unsubscribeNotifications();
+        };
       }
-    };
-    initOfflineBible();
+    }
+  }, [initialized, userProfile?.churchId, currentUser?.uid, initializeMembersListener, initializeServicesListener, initializeNotificationListener]);
+
+  // Foreground notification handler
+  useEffect(() => {
+    try {
+      const messaging = getMessaging();
+      const unsubscribe = onMessage(messaging, async (remoteMessage: any) => {
+        console.log('A new FCM message arrived!', JSON.stringify(remoteMessage));
+        // Handled by Firebase backend increasing the unread count implicitly, 
+        // but UI can show a toast here if desired.
+      });
+      return unsubscribe;
+    } catch (e) {
+      console.warn('Firebase Messaging not available (Native Module missing):', e);
+      return () => {};
+    }
   }, []);
+
+  // Background / Terminated notification deep linking
+  const [handledInitial, setHandledInitial] = useState(false);
+  useEffect(() => {
+    if (!initialized || hasSeenWalkthrough === null || handledInitial) return;
+    
+    try {
+      const messaging = getMessaging();
+
+      // Background
+      onNotificationOpenedApp(messaging, (remoteMessage: any) => {
+        console.log('Notification caused app to open from background state:', remoteMessage?.notification);
+        // Data payload should contain category, sourceId
+        if (remoteMessage?.data) {
+          const destination = NotificationNavigationResolver.resolveDestination(remoteMessage.data as any);
+          if (destination) {
+            router.push(destination as any);
+          }
+        }
+      });
+
+      // Terminated
+      getInitialNotification(messaging)
+        .then((remoteMessage: any) => {
+          if (remoteMessage) {
+            console.log('Notification caused app to open from quit state:', remoteMessage?.notification);
+            if (remoteMessage.data) {
+              const destination = NotificationNavigationResolver.resolveDestination(remoteMessage.data as any);
+              if (destination) {
+                setTimeout(() => {
+                  router.push(destination as any);
+                }, 500); // Give layout time to mount
+              }
+            }
+          }
+        });
+        
+      setHandledInitial(true);
+    } catch (e) {
+      console.warn('Firebase Messaging not available (Native Module missing):', e);
+    }
+  }, [initialized, hasSeenWalkthrough, router, handledInitial]);
 
   const appReady = loaded && initialized && hasSeenWalkthrough !== null;
 
-
-
-
-
   useEffect(() => {
-    if (!initialized || hasSeenWalkthrough === null) return;
+    if (!appReady) return;
 
     const inAuthGroup = segments[0] === '(auth)';
     const inPendingScreen = segments[0] === 'pending-church-link';
@@ -154,6 +214,7 @@ export default function RootLayout() {
               <Stack.Screen name="staff-ministry-applications" options={{ headerShown: false }} />
               <Stack.Screen name="staff-ministry-application-detail" options={{ headerShown: false }} />
               <Stack.Screen name="profile" options={{ headerShown: false }} />
+              <Stack.Screen name="notifications" options={{ presentation: 'modal' }} />
               <Stack.Screen name="+not-found" />
             </Stack>
           </VersionProvider>
