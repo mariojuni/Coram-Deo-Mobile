@@ -47,7 +47,6 @@ export interface GivingRecord {
   id: string;
   churchId: string;
   userId: string;
-  memberId?: string;
   householdId?: string;
   giverEntityType?: 'individual' | 'household';
   donorName?: string;

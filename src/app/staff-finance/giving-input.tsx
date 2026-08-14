@@ -107,7 +107,6 @@ export default function GivingInputScreen() {
 
       await createManualGivingRecord(userProfile.churchId, {
         userId,
-        memberId: userId,
         householdId: form.giverType === 'household' ? form.householdId : undefined,
         giverEntityType: form.giverType === 'household' ? 'household' : 'individual',
         donorName,

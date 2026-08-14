@@ -114,7 +114,6 @@ export default function GivingFormScreen() {
       await submitGivingRecord({
         churchId,
         userId,
-        memberId: userProfile?.memberId || undefined,
         fundId: selectedFundId,
         campaignId: (campaignId as string) || undefined,
         amount: Number(amount),
