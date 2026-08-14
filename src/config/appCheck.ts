@@ -70,15 +70,15 @@ export const initAppCheck = (firebaseApp: FirebaseApp) => {
 
         const provider = new ReactNativeFirebaseAppCheckProvider();
 
-        if (!Device.isDevice) {
-          // Production on Simulator: fall back to debug provider
+        if (__DEV__) {
+          // Development build (Simulator or Real Device): fall back to debug provider
           provider.configure({
             android: { provider: 'debug', debugToken: debugTokenAndroid || '' },
             apple:   { provider: 'debug', debugToken: debugTokenIos   || '' },
           });
-          console.log(`RNFB App Check: Debug Provider Configured (Prod Simulator) for ${rnfbApp.name}`);
+          console.log(`RNFB App Check: Debug Provider Configured (Development Build) for ${rnfbApp.name}`);
         } else {
-          // Production on real device: Play Integrity & App Attest
+          // Production build on real device: Play Integrity & App Attest
           provider.configure({
             android: { provider: 'playIntegrity' },
             apple:   { provider: 'appAttestWithDeviceCheckFallback' },

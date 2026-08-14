@@ -22,7 +22,7 @@ import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { CalendarDays, CheckCircle2, ChevronRight, Clock, Heart, HeartHandshake, HelpCircle, MapPin, MoreVertical, User, XCircle } from 'lucide-react-native';
+import { Bell, CalendarDays, CheckCircle2, ChevronRight, Clock, Heart, HeartHandshake, HelpCircle, MapPin, MoreVertical, User, XCircle } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActionSheetIOS, Alert, Animated, Dimensions, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -288,37 +288,61 @@ export default function HomeScreen() {
             <Text style={styles.expandedName}>{firstName}!</Text>
           </Animated.View>
 
-          {/* Avatar — always visible */}
-          <Animated.View style={[styles.avatarBtn, { transform: [{ scale: avatarScale }] }]}>
+          {/* Header Actions — always visible */}
+          <Animated.View style={[styles.actionsContainer, { transform: [{ scale: avatarScale }] }]}>
+            <DebouncedTouchable
+              onPress={() => Alert.alert('Notifications', 'Coming soon!')}
+              style={styles.notificationBtn}
+            >
+              <Bell size={24} color="#1a1a1a" />
+              {/* Optional: Add notification badge dot */}
+              <View style={styles.notificationBadge} />
+            </DebouncedTouchable>
+
             <DebouncedTouchable
               onPress={() => router.push('/profile')}
               activeOpacity={0.8}
             >
-              {photoUrl ? (
-                <View style={{ width: 46, height: 46 }}>
-                  {imageLoading && (
-                    <View style={[StyleSheet.absoluteFill, { borderRadius: 23, overflow: 'hidden' }]}>
-                      <ShimmerSkeleton width={46} height={46} borderRadius={23} />
-                    </View>
-                  )}
-                  <Image
-                    source={{ uri: photoUrl }}
-                    style={styles.avatarImg}
-                    onLoadStart={() => setImageLoading(true)}
-                    onLoad={() => setImageLoading(false)}
-                    onError={() => setImageLoading(false)}
-                  />
-                </View>
-              ) : (
-                <LinearGradient
-                  colors={['#FF6596', '#B66DFF']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.avatarInitials}
-                >
-                  <Text style={styles.avatarInitialsText}>{initials}</Text>
-                </LinearGradient>
-              )}
+              <View>
+                {photoUrl ? (
+                  <View style={{ width: 36, height: 36 }}>
+                    {imageLoading && (
+                      <View style={[StyleSheet.absoluteFill, { borderRadius: 18, overflow: 'hidden' }]}>
+                        <ShimmerSkeleton width={36} height={36} borderRadius={18} />
+                      </View>
+                    )}
+                    <Image
+                      source={{ uri: photoUrl }}
+                      style={styles.avatarImg}
+                      onLoadStart={() => setImageLoading(true)}
+                      onLoad={() => setImageLoading(false)}
+                      onError={() => setImageLoading(false)}
+                    />
+                  </View>
+                ) : (
+                  <LinearGradient
+                    colors={['#FF6596', '#B66DFF']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.avatarInitials}
+                  >
+                    <Text style={styles.avatarInitialsText}>{initials}</Text>
+                  </LinearGradient>
+                )}
+                {false && (
+                  <View style={{
+                    position: 'absolute',
+                    top: 0,
+                    right: 0,
+                    width: 14,
+                    height: 14,
+                    backgroundColor: '#EF4444',
+                    borderRadius: 7,
+                    borderWidth: 2,
+                    borderColor: '#fff',
+                  }} />
+                )}
+              </View>
             </DebouncedTouchable>
           </Animated.View>
         </Animated.View>
@@ -951,17 +975,42 @@ const styles = StyleSheet.create({
   datePillText: { fontSize: 11, fontWeight: '600', color: '#FF6596', letterSpacing: 0.2 },
   expandedGreeting: { fontSize: 14, color: '#9CA3AF', fontWeight: '400', marginTop: 2 },
   expandedName: { fontSize: 26, fontWeight: '800', color: '#1a1a1a', letterSpacing: -0.5 },
+  // Header Actions
+  actionsContainer: { 
+    position: 'absolute', 
+    right: 20, 
+    top: 0, 
+    bottom: 0, 
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12
+  },
+  notificationBtn: {
+    padding: 8,
+    position: 'relative'
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#EF4444',
+    borderWidth: 1.5,
+    borderColor: '#fff',
+  },
   // Avatar
   avatarBtn: { position: 'absolute', right: 20, top: 0, bottom: 0, justifyContent: 'center' },
-  avatarImg: { width: 46, height: 46, borderRadius: 23 },
+  avatarImg: { width: 36, height: 36, borderRadius: 18 },
   avatarInitials: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarInitialsText: { fontSize: 18, fontWeight: '700', color: '#fff' },
+  avatarInitialsText: { fontSize: 16, fontWeight: '700', color: '#fff' },
   avatarOnlineDot: {
     position: 'absolute',
     bottom: 2,
