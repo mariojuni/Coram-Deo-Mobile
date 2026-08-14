@@ -29,6 +29,8 @@ export interface AppNotification {
   };
   actorUserId?: string;
   actorMemberId?: string;
+  actorName?: string;
+  actorPhotoUrl?: string;
   isRead: boolean;
   readAt?: Timestamp | null;
   createdAt: Timestamp;
@@ -57,13 +59,36 @@ export class NotificationRepository {
       );
       
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => {
-        const data = doc.data();
+      const notifications = snapshot.docs.map(docSnap => {
+        const data = docSnap.data();
         return {
-          id: doc.id,
+          id: docSnap.id,
           ...data
         } as AppNotification;
       });
+
+      // Augment with actor data
+      const augmentPromises = notifications.map(async (notif) => {
+        if (notif.actorUserId && (!notif.actorName || !notif.actorPhotoUrl)) {
+          try {
+            const userDoc = await getDoc(doc(db, 'users', notif.actorUserId));
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              if (!notif.actorName) {
+                notif.actorName = [userData.firstName, userData.lastName].filter(Boolean).join(' ') || userData.displayName || '';
+              }
+              if (!notif.actorPhotoUrl) {
+                notif.actorPhotoUrl = userData.photoUrl || userData.photoURL || '';
+              }
+            }
+          } catch (e) {
+            console.warn('Failed to fetch actor user for notification:', notif.id, e);
+          }
+        }
+        return notif;
+      });
+
+      return await Promise.all(augmentPromises);
     } catch (error) {
       console.error('Error fetching notifications:', error);
       return [];

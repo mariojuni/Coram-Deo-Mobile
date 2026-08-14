@@ -299,7 +299,7 @@ export default function HomeScreen() {
               accessibilityRole="button"
               accessibilityLabel={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'No unread notifications'}
             >
-              <Bell size={24} color="#1a1a1a" />
+              <Bell size={18} color="#1a1a1a" />
               {unreadCount > 0 && (
                 <View style={[styles.notificationBadge, unreadCount >= 10 && { width: 20, borderRadius: 10 }]}>
                   <Text style={styles.notificationBadgeText}>
@@ -312,47 +312,33 @@ export default function HomeScreen() {
             <DebouncedTouchable
               onPress={() => router.push('/profile')}
               activeOpacity={0.8}
+              style={styles.avatarContainer}
             >
-              <View>
-                {photoUrl ? (
-                  <View style={{ width: 36, height: 36 }}>
-                    {imageLoading && (
-                      <View style={[StyleSheet.absoluteFill, { borderRadius: 18, overflow: 'hidden' }]}>
-                        <ShimmerSkeleton width={36} height={36} borderRadius={18} />
-                      </View>
-                    )}
-                    <Image
-                      source={{ uri: photoUrl }}
-                      style={styles.avatarImg}
-                      onLoadStart={() => setImageLoading(true)}
-                      onLoad={() => setImageLoading(false)}
-                      onError={() => setImageLoading(false)}
-                    />
-                  </View>
-                ) : (
-                  <LinearGradient
-                    colors={['#FF6596', '#B66DFF']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.avatarInitials}
-                  >
-                    <Text style={styles.avatarInitialsText}>{initials}</Text>
-                  </LinearGradient>
-                )}
-                {false && (
-                  <View style={{
-                    position: 'absolute',
-                    top: 0,
-                    right: 0,
-                    width: 14,
-                    height: 14,
-                    backgroundColor: '#EF4444',
-                    borderRadius: 7,
-                    borderWidth: 2,
-                    borderColor: '#fff',
-                  }} />
-                )}
-              </View>
+              {photoUrl ? (
+                <View style={{ width: 33, height: 33 }}>
+                  {imageLoading && (
+                    <View style={[StyleSheet.absoluteFill, { borderRadius: 16.5, overflow: 'hidden' }]}>
+                      <ShimmerSkeleton width={33} height={33} borderRadius={16.5} />
+                    </View>
+                  )}
+                  <Image
+                    source={{ uri: photoUrl }}
+                    style={styles.avatarImg}
+                    onLoadStart={() => setImageLoading(true)}
+                    onLoad={() => setImageLoading(false)}
+                    onError={() => setImageLoading(false)}
+                  />
+                </View>
+              ) : (
+                <LinearGradient
+                  colors={['#FF6596', '#B66DFF']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.avatarInitials}
+                >
+                  <Text style={styles.avatarInitialsText}>{initials}</Text>
+                </LinearGradient>
+              )}
             </DebouncedTouchable>
           </Animated.View>
         </Animated.View>
@@ -996,34 +982,58 @@ const styles = StyleSheet.create({
     gap: 12
   },
   notificationBtn: {
-    padding: 8,
-    position: 'relative'
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: 6,
-    right: 8,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#EF4444',
-    borderWidth: 1.5,
-    borderColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  notificationBadgeText: {
-    color: '#fff',
-    fontSize: 8,
-    fontWeight: 'bold',
-  },
-  // Avatar
-  avatarBtn: { position: 'absolute', right: 20, top: 0, bottom: 0, justifyContent: 'center' },
-  avatarImg: { width: 36, height: 36, borderRadius: 18 },
-  avatarInitials: {
     width: 36,
     height: 36,
     borderRadius: 18,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    position: 'relative',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: '#fff',
+  },
+  notificationBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  // Avatar
+  avatarContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  avatarBtn: { position: 'absolute', right: 20, top: 0, bottom: 0, justifyContent: 'center' },
+  avatarImg: { width: 33, height: 33, borderRadius: 16.5 },
+  avatarInitials: {
+    width: 33,
+    height: 33,
+    borderRadius: 16.5,
     alignItems: 'center',
     justifyContent: 'center',
   },

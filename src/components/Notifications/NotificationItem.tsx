@@ -2,8 +2,11 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { AppNotification } from '../../services/notification/NotificationRepository';
 import { formatDistanceToNow } from 'date-fns';
-import DebouncedTouchable from '../DebouncedTouchable';
+import { BounceCard } from '../ui/BounceCard';
 import { SoftCard } from '../ui/SoftCard';
+import { Colors } from '../../constants/theme';
+import { Image as ExpoImage } from 'expo-image';
+import { User } from 'lucide-react-native';
 
 interface Props {
   notification: AppNotification;
@@ -12,45 +15,82 @@ interface Props {
 
 export function NotificationItem({ notification, onPress }: Props) {
   const isUnread = !notification.isRead;
+  const theme = Colors.light;
   
   const timeAgo = notification.createdAt
     ? formatDistanceToNow(notification.createdAt.toDate(), { addSuffix: true })
     : '';
 
-  // Formatting for a11y
-  const a11yLabel = `${isUnread ? 'Unread.' : ''} ${notification.title}. ${notification.category}. ${timeAgo}.`;
+  const a11yLabel = `${isUnread ? 'Unread.' : ''} ${notification.title}. ${timeAgo}.`;
+  
+  // Try to extract actorName if it's not provided explicitly
+  let displayActorName = notification.actorName || '';
+  let fallbackText = notification.title;
+  
+  if (!displayActorName && notification.title) {
+    // Basic heuristic: assume the first 2 or 3 words might be the name if not explicitly provided
+    const parts = notification.title.split(' ');
+    if (parts.length > 2) {
+      displayActorName = `${parts[0]} ${parts[1]}`;
+      fallbackText = notification.title.substring(displayActorName.length).trim();
+    }
+  } else if (displayActorName && notification.title.startsWith(displayActorName)) {
+    fallbackText = notification.title.substring(displayActorName.length).trim();
+  }
 
   return (
-    <DebouncedTouchable
+    <BounceCard
       accessibilityRole="button"
       accessibilityLabel={a11yLabel}
       onPress={() => onPress(notification)}
       style={styles.container}
-      activeOpacity={0.7}
+      activeOpacity={0.85}
     >
-      <SoftCard innerStyle={[styles.cardInner, isUnread && styles.unreadCardInner]}>
+      <SoftCard innerStyle={[
+        styles.cardInner, 
+        { backgroundColor: '#FFFFFF' }
+      ]}>
         <View style={styles.contentRow}>
-          {isUnread && <View style={styles.unreadDot} />}
-          <View style={styles.textContainer}>
-            <Text style={[styles.title, isUnread && styles.titleUnread]} numberOfLines={2}>
-              {notification.title}
-            </Text>
-            {!!notification.body && (
-              <Text style={styles.body} numberOfLines={2}>
-                {notification.body}
-              </Text>
-            )}
-            <View style={styles.metaRow}>
-              <Text style={styles.metaCategory}>
-                {notification.category.charAt(0).toUpperCase() + notification.category.slice(1)}
-              </Text>
-              <Text style={styles.metaDot}>·</Text>
-              <Text style={styles.metaTime}>{timeAgo}</Text>
+          
+          <View style={styles.avatarWrapper}>
+            <View style={[styles.avatarCircle, { backgroundColor: '#E5E7EB' }]}>
+              {notification.actorPhotoUrl ? (
+                <ExpoImage
+                  source={{ uri: notification.actorPhotoUrl }}
+                  style={styles.avatarImage}
+                  cachePolicy="memory-disk"
+                  transition={150}
+                />
+              ) : (
+                <User size={24} color="#6B7280" strokeWidth={2} />
+              )}
             </View>
           </View>
+          
+          <View style={styles.textContainer}>
+            <Text style={styles.inlineText}>
+              {displayActorName ? (
+                <Text style={[styles.boldText, { color: isUnread ? theme.text : '#111827' }]}>{displayActorName} </Text>
+              ) : null}
+              {!!notification.body ? (
+                <Text style={{ color: '#4B5563' }}>{notification.body}</Text>
+              ) : (
+                <Text style={{ color: '#4B5563' }}>{fallbackText}</Text>
+              )}
+            </Text>
+            
+            <Text style={[styles.metaTime, { color: '#6B7280' }]}>{timeAgo}</Text>
+          </View>
+
+          {isUnread && (
+            <View style={styles.unreadIndicatorWrapper}>
+              <View style={[styles.unreadDot, { backgroundColor: '#FF0000' }]} />
+            </View>
+          )}
+
         </View>
       </SoftCard>
-    </DebouncedTouchable>
+    </BounceCard>
   );
 }
 
@@ -62,56 +102,54 @@ const styles = StyleSheet.create({
   cardInner: {
     padding: 16,
   },
-  unreadCardInner: {
-    backgroundColor: '#F9FAFB', // subtle highlight for unread
-  },
   contentRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
-  unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#FF6596', // using existing pink accent
-    marginTop: 6,
-    marginRight: 10,
+  avatarWrapper: {
+    marginRight: 12,
+  },
+  avatarCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
   },
   textContainer: {
     flex: 1,
+    justifyContent: 'center',
+    paddingTop: 2,
+    marginRight: 8,
   },
-  title: {
-    fontSize: 15,
-    color: '#374151',
-    lineHeight: 20,
-    marginBottom: 4,
+  inlineText: {
+    fontSize: 16,
+    lineHeight: 24,
+    marginBottom: 8,
   },
-  titleUnread: {
+  boldText: {
     fontWeight: '700',
     color: '#111827',
   },
-  body: {
+  metaTime: {
     fontSize: 14,
-    color: '#4B5563',
-    lineHeight: 20,
-    marginBottom: 6,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  metaCategory: {
-    fontSize: 12,
-    color: '#6B7280',
     fontWeight: '500',
   },
-  metaDot: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    marginHorizontal: 4,
+  unreadIndicatorWrapper: {
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingTop: 8, // align to the center of the first line (name)
+    marginLeft: 4,
   },
-  metaTime: {
-    fontSize: 12,
-    color: '#9CA3AF',
+  unreadDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   }
 });
