@@ -128,6 +128,12 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ── Households ───────────────────────────────────────────────────────────
+    match /households/{householdId} {
+      allow read: if isSignedIn();
+      allow write: if isChurchAdmin(request.resource.data.churchId != null ? request.resource.data.churchId : resource.data.churchId);
+    }
+
     // ── Members ──────────────────────────────────────────────────────────────
     match /members/{memberId} {
       allow read: if isSignedIn();

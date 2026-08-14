@@ -20,6 +20,7 @@ export interface Member {
   membershipStatus?: string;
   baptismStatus?: string;
   ministryIds?: string[];
+  householdId?: string;
   accountId?: string | null;
   authUid?: string | null;
   status?: string;
@@ -32,4 +33,14 @@ export interface Service {
   id: string;
   date?: string;
   [key: string]: any;
+}
+
+export interface Household {
+  id: string;
+  churchId: string;
+  name: string;
+  primaryMemberId: string;
+  memberIds: string[];
+  createdAt?: string;
+  updatedAt?: string;
 }

@@ -16,6 +16,7 @@ export interface UserAccount {
   authUid?: string;
   churchId?: string | null;
   memberId?: string | null;
+  householdId?: string | null;
   firstName: string;
   middleName?: string;
   lastName: string;

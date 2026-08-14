@@ -1,5 +1,5 @@
 import { getActiveDb, getActiveStorage } from '@/firebase';
-import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, orderBy, getDoc, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, orderBy, getDoc, onSnapshot, or } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { GivingFund, GivingCampaign, GivingRecord, PaymentMethod } from '../domain/giving.types';
 
@@ -102,22 +102,39 @@ export async function fetchPaymentMethods(churchId: string): Promise<PaymentMeth
   }
 }
 
-export async function fetchMyGivingRecords(userId: string): Promise<GivingRecord[]> {
+export async function fetchMyGivingRecords(userId: string, householdId?: string | null): Promise<GivingRecord[]> {
   try {
-    const q = query(
-      collection(getActiveDb(), 'givingRecords'),
-      where('userId', '==', userId),
-      orderBy('createdAt', 'desc')
-    );
+    let q;
+    if (householdId) {
+      q = query(
+        collection(getActiveDb(), 'givingRecords'),
+        or(where('userId', '==', userId), where('householdId', '==', householdId)),
+        orderBy('createdAt', 'desc')
+      );
+    } else {
+      q = query(
+        collection(getActiveDb(), 'givingRecords'),
+        where('userId', '==', userId),
+        orderBy('createdAt', 'desc')
+      );
+    }
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GivingRecord));
   } catch (err) {
     console.warn('Error fetching my giving records (possibly missing index):', err);
     // If index is missing, try fetching without orderBy and sort in memory
-    const fallbackQ = query(
-      collection(getActiveDb(), 'givingRecords'),
-      where('userId', '==', userId)
-    );
+    let fallbackQ;
+    if (householdId) {
+      fallbackQ = query(
+        collection(getActiveDb(), 'givingRecords'),
+        or(where('userId', '==', userId), where('householdId', '==', householdId))
+      );
+    } else {
+      fallbackQ = query(
+        collection(getActiveDb(), 'givingRecords'),
+        where('userId', '==', userId)
+      );
+    }
     const fallbackSnapshot = await getDocs(fallbackQ);
     const records = fallbackSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GivingRecord));
     return records.sort((a, b) => {

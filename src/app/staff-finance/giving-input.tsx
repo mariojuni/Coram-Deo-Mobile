@@ -19,14 +19,15 @@ import { formatMemberName } from '../../features/member/domain/member.utils';
 export default function GivingInputScreen() {
   const router = useRouter();
   const { userProfile } = useAuthStore();
-  const { members, initializeMembersListener } = useMemberStore();
+  const { members, households, initializeMembersListener, initializeHouseholdsListener } = useMemberStore();
   const { funds, campaigns } = useGiving();
   const [loading, setLoading] = useState(false);
 
   const insets = useSafeAreaInsets();
   const [form, setForm] = useState({
-    giverType: 'member', // member, non_member, or anonymous
+    giverType: 'member', // member, household, non_member, or anonymous
     memberId: '',
+    householdId: '',
     donorName: '',
     fundId: '',
     campaignId: '',
@@ -39,8 +40,9 @@ export default function GivingInputScreen() {
   useEffect(() => {
     if (userProfile?.churchId) {
       initializeMembersListener(userProfile.churchId);
+      initializeHouseholdsListener(userProfile.churchId);
     }
-  }, [userProfile?.churchId, initializeMembersListener]);
+  }, [userProfile?.churchId, initializeMembersListener, initializeHouseholdsListener]);
 
   const memberOptions: DropdownOption[] = useMemo(() => {
     return members.map(m => {
@@ -57,6 +59,13 @@ export default function GivingInputScreen() {
       };
     }).sort((a, b) => a.label.localeCompare(b.label));
   }, [members]);
+
+  const householdOptions: DropdownOption[] = useMemo(() => {
+    return households.map(h => ({
+      label: h.name,
+      value: h.id,
+    })).sort((a, b) => a.label.localeCompare(b.label));
+  }, [households]);
 
   const fundOptions: DropdownOption[] = useMemo(() => {
     return funds.map(f => ({
@@ -89,11 +98,19 @@ export default function GivingInputScreen() {
     setLoading(true);
     try {
       const selectedFund = funds.find(f => f.id === form.fundId);
+      const selectedHousehold = households.find(h => h.id === form.householdId);
       
+      const userId = form.giverType === 'member' ? form.memberId : form.giverType === 'household' ? (selectedHousehold?.primaryMemberId || '') : null as any;
+      const donorName = form.giverType === 'household' 
+        ? selectedHousehold?.name 
+        : form.giverType === 'non_member' ? form.donorName : form.giverType === 'anonymous' ? 'Anonymous' : undefined;
+
       await createManualGivingRecord(userProfile.churchId, {
-        userId: form.giverType === 'member' ? form.memberId : null as any,
-        memberId: form.giverType === 'member' ? form.memberId : undefined,
-        donorName: form.giverType === 'member' && form.donorName.trim() ? form.donorName : form.giverType === 'non_member' ? form.donorName : form.giverType === 'anonymous' ? 'Anonymous' : undefined,
+        userId,
+        memberId: userId,
+        householdId: form.giverType === 'household' ? form.householdId : undefined,
+        giverEntityType: form.giverType === 'household' ? 'household' : 'individual',
+        donorName,
         fundId: form.fundId,
         fundType: selectedFund?.name || 'Others',
         campaignId: form.campaignId || undefined,
@@ -130,8 +147,8 @@ export default function GivingInputScreen() {
 
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 24) + 70 }]}>
         <Text style={styles.label}>Giver Type</Text>
-        <View style={styles.row}>
-          {['member', 'non_member', 'anonymous'].map(type => (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
+          {['member', 'household', 'non_member', 'anonymous'].map(type => (
             <TouchableOpacity 
               key={type} 
               style={[styles.chip, form.giverType === type && styles.chipActive]}
@@ -142,32 +159,34 @@ export default function GivingInputScreen() {
               </Text>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
+
+        {form.giverType === 'household' && (
+          <View style={[styles.inputGroup, { zIndex: 1000 }]}>
+            <ModernDropdown
+              label="Household"
+              options={householdOptions}
+              value={form.householdId}
+              onSelect={(val) => setForm({ ...form, householdId: val || '' })}
+              placeholder="Search and select household"
+              searchable
+              disableDarkMode
+            />
+          </View>
+        )}
 
         {form.giverType === 'member' && (
-          <>
-            <View style={[styles.inputGroup, { zIndex: 1000 }]}>
-              <ModernDropdown
-                label="Member"
-                options={memberOptions}
-                value={form.memberId}
-                onSelect={(val) => setForm({ ...form, memberId: val || '' })}
-                placeholder="Search and select member"
-                searchable
-                disableDarkMode
-              />
-            </View>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Display Name (Optional for couples)</Text>
-              <TextInput 
-                style={styles.input}
-                placeholder="e.g. Mr. & Mrs. Smith"
-                value={form.donorName}
-                onChangeText={(text) => setForm({ ...form, donorName: text })}
-                autoCapitalize="words"
-              />
-            </View>
-          </>
+          <View style={[styles.inputGroup, { zIndex: 1000 }]}>
+            <ModernDropdown
+              label="Member"
+              options={memberOptions}
+              value={form.memberId}
+              onSelect={(val) => setForm({ ...form, memberId: val || '' })}
+              placeholder="Search and select member"
+              searchable
+              disableDarkMode
+            />
+          </View>
         )}
 
         {form.giverType === 'non_member' && (

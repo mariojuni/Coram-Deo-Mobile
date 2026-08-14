@@ -48,6 +48,8 @@ export interface GivingRecord {
   churchId: string;
   userId: string;
   memberId?: string;
+  householdId?: string;
+  giverEntityType?: 'individual' | 'household';
   donorName?: string;
   fundId: string;
   fundType?: string; // human-readable fund name, written on approval (matches web)

@@ -29,7 +29,11 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       } else {
         set({ unreadCount: 0, loading: false });
       }
-    }, (error) => {
+    }, (error: any) => {
+      if (error?.code === 'permission-denied' || error?.message?.includes('permission')) {
+        set({ loading: false });
+        return;
+      }
       console.error('Error in userNotificationState listener:', error);
       set({ loading: false });
     });

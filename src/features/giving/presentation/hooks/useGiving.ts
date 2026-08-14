@@ -32,7 +32,7 @@ export function useGiving() {
       setPaymentMethods(fetchedPaymentMethods);
       
       if (userId) {
-        const fetchedRecords = await givingRepo.fetchMyGivingRecords(userId);
+        const fetchedRecords = await givingRepo.fetchMyGivingRecords(userId, userProfile?.householdId);
         setMyRecords(fetchedRecords);
       }
     } catch (err: any) {
@@ -63,7 +63,7 @@ export function useGiving() {
   const refreshRecords = useCallback(async () => {
     if (!userId) return;
     try {
-      const fetchedRecords = await givingRepo.fetchMyGivingRecords(userId);
+      const fetchedRecords = await givingRepo.fetchMyGivingRecords(userId, userProfile?.householdId);
       setMyRecords(fetchedRecords);
     } catch (err: any) {
       console.error('Failed to refresh giving records', err);

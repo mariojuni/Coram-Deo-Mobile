@@ -43,5 +43,20 @@ export const memberRepository = {
       onError
     );
   },
+
+  subscribeToHouseholds(churchId: string | undefined | null, onData: (households: any[]) => void, onError: ErrorListener): () => void {
+    if (!churchId) return () => {};
+    const householdsQuery = query(collection(getActiveDb(), 'households'), where('churchId', '==', churchId));
+    return onSnapshot(
+      householdsQuery,
+      (snapshot) => {
+        const households = snapshot.docs.map((docSnap) =>
+          mapDocWithId<any>(docSnap.data() as Record<string, unknown>, docSnap.id)
+        );
+        onData(households);
+      },
+      onError
+    );
+  },
 };
 
