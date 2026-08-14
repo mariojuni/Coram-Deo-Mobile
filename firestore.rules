@@ -193,9 +193,10 @@ service cloud.firestore {
     match /givingRecords/{recordId} {
       allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isFinanceOrChurchAdmin(resource.data.churchId));
 
-      allow create: if isSignedIn()
-        && request.resource.data.userId == request.auth.uid
-        && request.resource.data.churchId != null;
+      allow create: if isSignedIn() && (
+        (request.resource.data.userId == request.auth.uid && request.resource.data.churchId != null) ||
+        isFinanceOrChurchAdmin(request.resource.data.churchId)
+      );
 
       allow update, delete: if isFinanceOrChurchAdmin(resource.data.churchId);
     }
