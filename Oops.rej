@@ -1,0 +1,8 @@
+@@ -128,7 +129,7 @@
+       // Terminated
+       getInitialNotification(messaging)
+         .then((remoteMessage: any) => {
+           if (remoteMessage) {
+             console.log('Notification caused app to open from quit state:', remoteMessage?.notification);
+             if (remoteMessage.data) {
+               const destination = NotificationNavigationResolver.resolveDestination(remoteMessage.data as any);

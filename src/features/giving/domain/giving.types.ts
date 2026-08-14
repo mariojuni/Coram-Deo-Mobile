@@ -56,13 +56,10 @@ export interface GivingRecord {
   campaignId?: string;
   amount: number;
   currency: 'PHP';
-  paymentMethod: PaymentMethodType;
-  method?: string; // mirrors 'method' written by web on approval
+  method: string | PaymentMethodType;
   referenceNumber?: string;
-  proofOfPaymentUrl?: string;
-  proofUrl?: string; // mirrors 'proofUrl' written by web on approval
-  note?: string;
-  notes?: string; // mirrors 'notes' written by web on approval
+  proofUrl?: string;
+  notes?: string;
   status: RecordStatus; // 'completed' is the web app's approved state
   /** YYYY-MM-DD date string — written on approval, used for ledger queries */
   date?: string;

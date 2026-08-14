@@ -119,10 +119,10 @@ export default function GivingFormScreen() {
         campaignId: (campaignId as string) || undefined,
         amount: Number(amount),
         currency: 'PHP',
-        paymentMethod: method?.type || 'other',
+        method: method?.type || 'other',
         referenceNumber,
-        proofOfPaymentUrl: uploadedProofUrl,
-        note,
+        proofUrl: uploadedProofUrl,
+        notes: note,
       }, recordId);
       
       setIsSuccess(true);

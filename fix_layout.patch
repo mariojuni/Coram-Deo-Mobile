@@ -1,0 +1,36 @@
+--- src/app/_layout.tsx
++++ src/app/_layout.tsx
+@@ -107,6 +107,7 @@
+   }, []);
+ 
+   // Background / Terminated notification deep linking
++  const [handledInitial, setHandledInitial] = useState(false);
+   useEffect(() => {
+-    if (!initialized || hasSeenWalkthrough === null) return;
++    if (!initialized || hasSeenWalkthrough === null || handledInitial) return;
+     
+     try {
+@@ -128,7 +129,7 @@
+       // Terminated
+       getInitialNotification(messaging)
+         .then((remoteMessage: any) => {
+           if (remoteMessage) {
+             console.log('Notification caused app to open from quit state:', remoteMessage?.notification);
+             if (remoteMessage.data) {
+               const destination = NotificationNavigationResolver.resolveDestination(remoteMessage.data as any);
+               if (destination) {
+                 setTimeout(() => {
+                   router.push(destination as any);
+                 }, 500); // Give layout time to mount
+               }
+             }
+           }
+         });
++      setHandledInitial(true);
+     } catch (e) {
+       console.warn('Firebase Messaging not available (Native Module missing):', e);
+     }
+-  }, [initialized, hasSeenWalkthrough, router]);
++  }, [initialized, hasSeenWalkthrough, router, handledInitial]);
+ 
+   const appReady = loaded && initialized && hasSeenWalkthrough !== null;

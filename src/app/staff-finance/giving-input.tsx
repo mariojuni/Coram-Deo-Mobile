@@ -32,9 +32,9 @@ export default function GivingInputScreen() {
     fundId: '',
     campaignId: '',
     amount: '',
-    paymentMethod: 'cash' as PaymentMethodType,
+    method: 'cash' as string | PaymentMethodType,
     referenceNumber: '',
-    note: '',
+    notes: '',
   });
 
   useEffect(() => {
@@ -116,9 +116,9 @@ export default function GivingInputScreen() {
         campaignId: form.campaignId || undefined,
         amount: Number(form.amount),
         currency: 'PHP',
-        paymentMethod: form.paymentMethod,
+        method: form.method,
         referenceNumber: form.referenceNumber,
-        note: form.note,
+        notes: form.notes,
       }, userProfile.uid);
       
       Alert.alert('Success', 'Giving record created and approved automatically.', [
@@ -241,13 +241,13 @@ export default function GivingInputScreen() {
 
         <Text style={styles.label}>Payment Method</Text>
         <View style={[styles.row, { flexWrap: 'wrap' }]}>
-          {['cash', 'check', 'gcash', 'maya', 'bank_transfer', 'other'].map(method => (
+          {['cash', 'gcash', 'bank_transfer', 'check'].map(method => (
             <TouchableOpacity 
               key={method} 
-              style={[styles.chip, form.paymentMethod === method && styles.chipActive]}
-              onPress={() => setForm({ ...form, paymentMethod: method as PaymentMethodType })}
+              style={[styles.chip, form.method === method && styles.chipActive]}
+              onPress={() => setForm({ ...form, method: method as any })}
             >
-              <Text style={[styles.chipText, form.paymentMethod === method && styles.chipTextActive]}>
+              <Text style={[styles.chipText, form.method === method && styles.chipTextActive]}>
                 {method.replace('_', ' ').toUpperCase()}
               </Text>
             </TouchableOpacity>
@@ -270,10 +270,10 @@ export default function GivingInputScreen() {
           <Text style={styles.label}>Note (Optional)</Text>
           <TextInput 
             style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
-            placeholder="Additional details..."
+            placeholder="Add any notes here..."
             multiline
-            value={form.note}
-            onChangeText={(text) => setForm({ ...form, note: text })}
+            value={form.notes}
+            onChangeText={(text) => setForm({ ...form, notes: text })}
             autoCorrect={false}
             spellCheck={false}
           />

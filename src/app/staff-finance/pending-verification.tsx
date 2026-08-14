@@ -115,7 +115,7 @@ export default function PendingVerificationScreen() {
             </Text>
           </View>
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>{item.paymentMethod}</Text>
+            <Text style={styles.badgeText}>{item.method}</Text>
           </View>
         </View>
         
@@ -124,11 +124,10 @@ export default function PendingVerificationScreen() {
           <Text style={styles.detailText}><Text style={styles.bold}>Fund:</Text> {fund ? fund.name : item.fundId}</Text>
           {item.campaignId && <Text style={styles.detailText}><Text style={styles.bold}>Campaign:</Text> {campaign ? campaign.title : item.campaignId}</Text>}
           {item.referenceNumber && <Text style={styles.detailText}><Text style={styles.bold}>Ref:</Text> {item.referenceNumber}</Text>}
-          
-          {item.proofOfPaymentUrl && (
+          {item.proofUrl && (
             <TouchableOpacity 
               style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center' }}
-              onPress={() => Linking.openURL(item.proofOfPaymentUrl!)}
+              onPress={() => Linking.openURL(item.proofUrl!)}
             >
               <Text style={{ color: '#4D8BFF', fontSize: 13, fontWeight: '600' }}>View Receipt</Text>
             </TouchableOpacity>

@@ -40,15 +40,18 @@ export async function createManualGivingRecord(
       }
     }
 
-    // Map fundId to human-readable fundType (web app legacy support)
-    const mapFundIdToName = (fid: string) => {
-      const lower = (fid || '').toLowerCase();
-      if (lower.includes('tithe')) return 'Tithe';
-      if (lower.includes('offering')) return 'Offering';
-      if (lower.includes('building')) return 'Building Fund';
-      if (lower.includes('mission')) return 'Missions';
-      return 'Others';
-    };
+    let fetchedFundType = data.fundType || 'Others';
+    if (data.fundId) {
+      try {
+        const fundRef = doc(getActiveDb(), 'givingFunds', data.fundId);
+        const fundSnap = await transaction.get(fundRef);
+        if (fundSnap.exists() && fundSnap.data().name) {
+          fetchedFundType = fundSnap.data().name;
+        }
+      } catch (err) {
+        console.warn('Failed to fetch fund name on createManualGivingRecord', err);
+      }
+    }
 
     const newRecord: Partial<GivingRecord> = {
       ...data,
@@ -57,10 +60,10 @@ export async function createManualGivingRecord(
       status: 'completed',
       date: new Date().toISOString().split('T')[0],
       transactionDate: new Date().toISOString().split('T')[0],
-      fundType: mapFundIdToName(data.fundId || ''),
-      method: data.paymentMethod || 'cash',
-      notes: data.note || '',
-      proofUrl: data.proofOfPaymentUrl || '',
+      fundType: fetchedFundType,
+      method: data.method || 'cash',
+      notes: data.notes || '',
+      proofUrl: data.proofUrl || '',
       reviewedBy: currentUserId,
       reviewedAt: new Date().toISOString(),
       approvedBy: currentUserId,
