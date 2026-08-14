@@ -12,6 +12,8 @@ import {
 } from 'firebase/firestore';
 import { getActiveDb } from '../../../firebase';
 import type { Prayer } from '../domain/prayer.types';
+import { getDocs } from 'firebase/firestore';
+import { where } from 'firebase/firestore';
 
 type PrayersListener = (prayers: Prayer[]) => void;
 type ErrorListener = (error: Error) => void;
@@ -173,5 +175,28 @@ export const prayerRepository = {
   async deletePrayerRequest(churchId: string, prayerId: string): Promise<void> {
     const docRef = doc(getActiveDb(), `churches/${churchId}/prayer_requests`, prayerId);
     await deleteDoc(docRef);
+  },
+
+  async fetchUserPrayers(churchId: string, userId: string): Promise<Prayer[]> {
+    const q = query(
+      collection(getActiveDb(), `churches/${churchId}/prayer_requests`),
+      where('userId', '==', userId)
+    );
+    const snapshot = await getDocs(q);
+    const prayers = snapshot.docs.map(d => toPrayerModel(d.data(), d.id));
+    prayers.sort((a, b) => {
+      const timeA = a.createdAt
+        ? (a.createdAt as any).toDate
+          ? (a.createdAt as any).toDate().getTime()
+          : new Date(a.createdAt as any).getTime()
+        : 0;
+      const timeB = b.createdAt
+        ? (b.createdAt as any).toDate
+          ? (b.createdAt as any).toDate().getTime()
+          : new Date(b.createdAt as any).getTime()
+        : 0;
+      return timeB - timeA;
+    });
+    return prayers;
   },
 };

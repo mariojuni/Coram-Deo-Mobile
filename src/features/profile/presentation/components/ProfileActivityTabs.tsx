@@ -15,14 +15,17 @@ import { saveUserPreferences, getUserPreferences } from '@/features/bible/data/b
 import { getHumanReadableBookName } from '@/utils/scriptureReferenceParser';
 import { bibleNoteRepository } from '@/features/bibleNotes/data/bibleNote.repository';
 import { sermonRepository } from '@/features/sermons/data/sermon.repository';
+import type { Prayer } from '@/features/prayer/domain/prayer.types';
 
-type ActivityTabKey = 'all' | 'highlights' | 'notes' | 'plans';
+type ActivityTabKey = 'all' | 'highlights' | 'notes' | 'prayers' | 'plans';
 
 interface ProfileActivityTabsProps {
   highlights: UserHighlightItem[];
   highlightsLoading: boolean;
   notes: DashboardNoteItem[];
   notesLoading: boolean;
+  prayers?: Prayer[];
+  prayersLoading?: boolean;
   activePlans: UserBiblePlan[];
   plansMeta: BiblePlan[];
   plansLoading: boolean;
@@ -39,6 +42,8 @@ export function ProfileActivityTabs({
   highlightsLoading,
   notes,
   notesLoading,
+  prayers = [],
+  prayersLoading = false,
   activePlans,
   plansMeta,
   plansLoading,
@@ -56,12 +61,13 @@ export function ProfileActivityTabs({
 
   const tabs: { key: ActivityTabKey; label: string; count: number }[] = useMemo(
     () => [
-      { key: 'all', label: 'All', count: highlights.length + notes.length + activePlans.length },
+      { key: 'all', label: 'All', count: highlights.length + notes.length + prayers.length + activePlans.length },
       { key: 'highlights', label: 'Highlights', count: highlights.length },
       { key: 'notes', label: 'Notes', count: notes.length },
+      { key: 'prayers', label: 'Prayers', count: prayers.length },
       { key: 'plans', label: 'Plans', count: activePlans.length },
     ],
-    [highlights.length, notes.length, activePlans.length]
+    [highlights.length, notes.length, prayers.length, activePlans.length]
   );
 
   const handleOpenBiblePassage = useCallback(
@@ -615,6 +621,141 @@ export function ProfileActivityTabs({
     });
   }, [notes, notesLoading, activeTab]);
 
+  // Memoized Prayers Items
+  const renderedPrayers = useMemo(() => {
+    if (prayersLoading) {
+      return <Text style={styles.loadingText}>Loading prayers...</Text>;
+    }
+    if (prayers.length === 0) {
+      if (activeTab !== 'prayers') return null;
+      return (
+        <SoftCard style={styles.emptyCard}>
+          <View style={styles.emptyContainer}>
+            <Heart size={32} color="#9CA3AF" style={{ marginBottom: 8 }} />
+            <Text style={styles.emptyTitle}>No Prayers Yet</Text>
+            <Text style={styles.emptySubtitle}>Your prayer requests will appear here.</Text>
+          </View>
+        </SoftCard>
+      );
+    }
+    return prayers.map((prayer) => {
+      const timeAgoStr = prayer.createdAt ? formatPrayerTimeAgo(prayer.createdAt as any) : 'Just now';
+
+      return (
+        <BounceCard
+          key={prayer.id}
+          style={{ marginBottom: 12 }}
+          activeOpacity={0.85}
+          onPress={() => router.push(`/comment-thread?targetType=prayer_request&targetId=${prayer.id}` as any)}
+        >
+          <SoftCard innerStyle={{ padding: 16 }}>
+            {/* Header */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
+              <View
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  backgroundColor: '#E5E7EB',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 10,
+                  overflow: 'hidden',
+                }}
+              >
+                {userProfile?.photoUrl || currentUser?.photoURL ? (
+                  <Image
+                    source={{ uri: userProfile?.photoUrl || currentUser?.photoURL! }}
+                    style={{ width: 36, height: 36, borderRadius: 18 }}
+                  />
+                ) : (
+                  <User size={20} color="#9CA3AF" />
+                )}
+              </View>
+              <View style={{ flex: 1, justifyContent: 'center' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <Text style={{ fontSize: 14, color: '#111827', lineHeight: 20 }}>
+                    <Text style={{ fontWeight: '700', color: '#111827' }}>You</Text>
+                    <Text style={{ color: '#4B5563', fontWeight: '400' }}> posted a prayer request </Text>
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                  <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '500' }}>{timeAgoStr}</Text>
+                  {prayer.answered && (
+                    <>
+                      <Text style={{ fontSize: 11, color: '#9CA3AF', marginHorizontal: 6 }}>•</Text>
+                      <Text style={{ fontSize: 11, color: '#4ADE80', fontWeight: '700' }}>Answered</Text>
+                    </>
+                  )}
+                </View>
+              </View>
+            </View>
+
+            {/* Prayer Content */}
+            {!!prayer.title && (
+              <Text style={{ fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 6 }}>
+                {prayer.title}
+              </Text>
+            )}
+            {!!prayer.request && (
+              <View style={{ backgroundColor: '#F3F4F6', borderRadius: 8, padding: 12, marginBottom: 16 }}>
+                <Text
+                  style={{ fontSize: 14, color: '#374151', lineHeight: 22 }}
+                  numberOfLines={4}
+                  ellipsizeMode="tail"
+                >
+                  {prayer.request}
+                </Text>
+              </View>
+            )}
+
+            {/* Action Footer */}
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                borderTopWidth: 1,
+                borderTopColor: '#F3F4F6',
+                paddingTop: 10,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                  activeOpacity={0.7}
+                >
+                  <Heart
+                    size={18}
+                    color={(prayer.likedBy || []).includes(currentUser?.uid || '') ? '#FF759E' : '#6B7280'}
+                    fill={(prayer.likedBy || []).includes(currentUser?.uid || '') ? '#FF759E' : 'transparent'}
+                  />
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: (prayer.likedBy || []).includes(currentUser?.uid || '') ? '#FF759E' : '#6B7280' }}>
+                    {Math.max(0, prayer.likes || 0)}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                  onPress={() => router.push(`/comment-thread?targetType=prayer_request&targetId=${prayer.id}` as any)}
+                >
+                  <MessageCircle size={18} color="#6B7280" />
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: '#6B7280' }}>
+                    {prayer.commentCount || 0}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity accessibilityRole="button" style={{ padding: 4 }} onPress={() => {}}>
+                <MoreVertical size={18} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
+          </SoftCard>
+        </BounceCard>
+      );
+    });
+  }, [prayers, prayersLoading, activeTab, currentUser, userProfile, router]);
+
   // Memoized Plans Items
   const renderedPlans = useMemo(() => {
     if (plansLoading) {
@@ -719,7 +860,7 @@ export function ProfileActivityTabs({
       <View style={styles.feedBody}>
         {activeTab === 'all' && (
           <View>
-            {highlights.length === 0 && notes.length === 0 && activePlans.length === 0 ? (
+            {highlights.length === 0 && notes.length === 0 && prayers.length === 0 && activePlans.length === 0 ? (
               <SoftCard style={styles.emptyCard}>
                 <View style={styles.emptyContainer}>
                   <Text style={styles.emptyTitle}>No Activity Records</Text>
@@ -730,6 +871,7 @@ export function ProfileActivityTabs({
               <>
                 {renderedHighlights}
                 {renderedNotes}
+                {renderedPrayers}
                 {renderedPlans}
               </>
             )}
@@ -738,6 +880,7 @@ export function ProfileActivityTabs({
 
         {activeTab === 'highlights' && renderedHighlights}
         {activeTab === 'notes' && renderedNotes}
+        {activeTab === 'prayers' && renderedPrayers}
         {activeTab === 'plans' && renderedPlans}
       </View>
     </View>

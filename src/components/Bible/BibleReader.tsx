@@ -329,16 +329,21 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
 
   if (loading) {
     return (
-      <View style={[styles.loadingContainer, { paddingHorizontal: 24, paddingTop: 32 }]}>
-        <ShimmerSkeleton width="40%" height={32} borderRadius={8} style={{ marginBottom: 24 }} />
-        <ShimmerSkeleton width="100%" height={24} borderRadius={6} style={{ marginBottom: 12 }} />
-        <ShimmerSkeleton width="90%" height={24} borderRadius={6} style={{ marginBottom: 12 }} />
-        <ShimmerSkeleton width="95%" height={24} borderRadius={6} style={{ marginBottom: 12 }} />
-        <ShimmerSkeleton width="80%" height={24} borderRadius={6} style={{ marginBottom: 32 }} />
+      <View style={[styles.container, { paddingHorizontal: 24, paddingTop: 130 }]}>
+        <ShimmerSkeleton width="55%" height={22} borderRadius={6} style={{ marginBottom: 16 }} />
         
-        <ShimmerSkeleton width="100%" height={24} borderRadius={6} style={{ marginBottom: 12 }} />
-        <ShimmerSkeleton width="85%" height={24} borderRadius={6} style={{ marginBottom: 12 }} />
-        <ShimmerSkeleton width="90%" height={24} borderRadius={6} style={{ marginBottom: 12 }} />
+        <ShimmerSkeleton width="100%" height={18} borderRadius={4} style={{ marginBottom: 12 }} />
+        <ShimmerSkeleton width="96%" height={18} borderRadius={4} style={{ marginBottom: 12 }} />
+        <ShimmerSkeleton width="90%" height={18} borderRadius={4} style={{ marginBottom: 12 }} />
+        <ShimmerSkeleton width="98%" height={18} borderRadius={4} style={{ marginBottom: 12 }} />
+        <ShimmerSkeleton width="85%" height={18} borderRadius={4} style={{ marginBottom: 24 }} />
+        
+        <ShimmerSkeleton width="45%" height={22} borderRadius={6} style={{ marginBottom: 16 }} />
+
+        <ShimmerSkeleton width="100%" height={18} borderRadius={4} style={{ marginBottom: 12 }} />
+        <ShimmerSkeleton width="92%" height={18} borderRadius={4} style={{ marginBottom: 12 }} />
+        <ShimmerSkeleton width="97%" height={18} borderRadius={4} style={{ marginBottom: 12 }} />
+        <ShimmerSkeleton width="75%" height={18} borderRadius={4} style={{ marginBottom: 12 }} />
       </View>
     );
   }

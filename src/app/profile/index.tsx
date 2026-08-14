@@ -42,6 +42,8 @@ export default function ProfileScreen() {
     toggleNoteLike,
     toggleHighlightLike,
     refreshHighlights,
+    prayers,
+    prayersLoading,
   } = useProfileDashboardData();
 
   const fullName =
@@ -110,6 +112,8 @@ export default function ProfileScreen() {
           activePlans={activePlans}
           plansMeta={plans}
           plansLoading={plansLoading}
+          prayers={prayers}
+          prayersLoading={prayersLoading}
           onRemoveHighlight={removeHighlight}
           onToggleNoteLike={toggleNoteLike}
           onToggleHighlightLike={toggleHighlightLike}

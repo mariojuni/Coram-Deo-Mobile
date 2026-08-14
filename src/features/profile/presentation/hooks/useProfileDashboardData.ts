@@ -14,6 +14,8 @@ import type { SystemRole } from '@/features/auth/domain/auth.types';
 import { bibleHighlightRepository } from '@/features/bibleHighlights/data/bibleHighlight.repository';
 import type { BibleNote } from '@/features/bibleNotes/domain/bibleNote.types';
 import { bibleNoteRepository } from '@/features/bibleNotes/data/bibleNote.repository';
+import type { Prayer } from '@/features/prayer/domain/prayer.types';
+import { prayerRepository } from '@/features/prayer/data/prayer.repository';
 
 export type DashboardNoteItem = (SermonNote & { _type: 'sermon' }) | (BibleNote & { _type: 'bible' });
 
@@ -61,6 +63,9 @@ export function useProfileDashboardData() {
 
   const [notes, setNotes] = useState<DashboardNoteItem[]>([]);
   const [notesLoading, setNotesLoading] = useState<boolean>(true);
+
+  const [prayers, setPrayers] = useState<Prayer[]>([]);
+  const [prayersLoading, setPrayersLoading] = useState<boolean>(true);
 
   const userBiblePlans = useBiblePlanStore((s) => s.userBiblePlans);
   const userBiblePlansLoading = useBiblePlanStore((s) => s.userBiblePlansLoading);
@@ -351,6 +356,25 @@ export function useProfileDashboardData() {
     });
   }, [userId, churchId]);
 
+  // Fetch Prayers
+  useEffect(() => {
+    if (!userId || !churchId) {
+      setPrayers([]);
+      setPrayersLoading(false);
+      return;
+    }
+    setPrayersLoading(true);
+    prayerRepository.fetchUserPrayers(churchId, userId)
+      .then((data) => {
+        setPrayers(data);
+        setPrayersLoading(false);
+      })
+      .catch((err) => {
+        console.warn('Failed to fetch user prayers:', err);
+        setPrayersLoading(false);
+      });
+  }, [userId, churchId]);
+
   // 5. User Bible Plans Listener
   useEffect(() => {
     if (!userId || !churchId) return;
@@ -417,12 +441,15 @@ export function useProfileDashboardData() {
     highlightsLoading,
     notes,
     notesLoading,
+    prayers,
+    prayersLoading,
     activePlans,
     plans,
     plansLoading: userBiblePlansLoading,
     stats: {
       highlightsCount: highlights.length,
       notesCount: notes.length,
+      prayersCount: prayers.length,
       plansCount: activePlans.length,
       groupsCount: groups.length,
       ministriesCount: userMinistries.length,
