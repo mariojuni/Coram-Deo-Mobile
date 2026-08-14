@@ -368,6 +368,96 @@ export const onCommentDeleted = onDocumentDeleted(
   }
 );
 
+export const onGivingRecordCreated = onDocumentCreated(
+  {
+    document: 'givingRecords/{recordId}',
+    database: databaseName,
+    region: 'asia-southeast1',
+  },
+  async (event) => {
+    const snap = event.data;
+    if (!snap) return null;
+
+    const data = snap.data();
+    if (data.status !== 'pending') return null;
+
+    const churchId = data.churchId;
+    const amount = data.amount || 0;
+    const donorName = data.donorName || 'A member';
+    const db = getFirestore(admin.app(), databaseName);
+
+    try {
+      const usersSnap = await db.collection('users').where('churchId', '==', churchId).get();
+      const notifications: Promise<void>[] = [];
+
+      usersSnap.forEach((doc) => {
+        const userData = doc.data();
+        const roles = userData.systemRoles || (userData.role ? [userData.role] : []);
+        const isAdmin = roles.some((r: string) => ['finance_admin', 'church_admin', 'super_admin'].includes(r));
+        
+        if (isAdmin) {
+          notifications.push(
+            NotificationService.createUserNotification({
+              userId: doc.id,
+              churchId: churchId,
+              category: 'giving',
+              type: 'giving_pending',
+              title: 'Giving Verification Needed',
+              body: `${donorName} submitted a giving of ₱${amount.toLocaleString()} that requires your verification.`,
+              sourceType: 'giving_pending',
+              sourceId: event.params.recordId,
+              actorUserId: data.userId,
+            })
+          );
+        }
+      });
+
+      const chunkSize = 20;
+      for (let i = 0; i < notifications.length; i += chunkSize) {
+        const chunk = notifications.slice(i, i + chunkSize);
+        await Promise.all(chunk);
+      }
+    } catch (error) {
+      console.error('Error notifying admins about giving:', error);
+    }
+    return null;
+  }
+);
+
+export const onGivingRecordUpdated = onDocumentUpdated(
+  {
+    document: 'givingRecords/{recordId}',
+    database: databaseName,
+    region: 'asia-southeast1',
+  },
+  async (event) => {
+    const change = event.data;
+    if (!change) return null;
+
+    const beforeData = change.before.data();
+    const afterData = change.after.data();
+
+    if (beforeData.status !== afterData.status && (afterData.status === 'completed' || afterData.status === 'approved')) {
+      const amount = afterData.amount || 0;
+      try {
+        await NotificationService.createUserNotification({
+          userId: afterData.userId,
+          churchId: afterData.churchId,
+          category: 'giving',
+          type: 'giving_approval',
+          title: 'Giving Approved',
+          body: `Your giving of ₱${amount.toLocaleString()} has been successfully verified. Thank you for your generosity!`,
+          sourceType: 'giving_approval',
+          sourceId: event.params.recordId,
+        });
+      } catch (error) {
+        console.error('Error notifying member about giving approval:', error);
+      }
+    }
+    return null;
+  }
+);
+
 import { onObjectFinalized } from 'firebase-functions/v2/storage';
 import * as path from 'path';
 import * as os from 'os';

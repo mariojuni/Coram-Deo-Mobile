@@ -47,7 +47,7 @@ export default function GivingInputScreen() {
       const name = formatMemberName(m);
       return {
         label: name,
-        value: m.uid,
+        value: m.id,
         icon: (
           <Image
             source={{ uri: m.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=f0f0f0&color=999` }}
@@ -93,7 +93,7 @@ export default function GivingInputScreen() {
       await createManualGivingRecord(userProfile.churchId, {
         userId: form.giverType === 'member' ? form.memberId : null as any,
         memberId: form.giverType === 'member' ? form.memberId : undefined,
-        donorName: form.giverType === 'non_member' ? form.donorName : form.giverType === 'anonymous' ? 'Anonymous' : undefined,
+        donorName: form.giverType === 'member' && form.donorName.trim() ? form.donorName : form.giverType === 'non_member' ? form.donorName : form.giverType === 'anonymous' ? 'Anonymous' : undefined,
         fundId: form.fundId,
         fundType: selectedFund?.name || 'Others',
         campaignId: form.campaignId || undefined,
@@ -145,17 +145,29 @@ export default function GivingInputScreen() {
         </View>
 
         {form.giverType === 'member' && (
-          <View style={[styles.inputGroup, { zIndex: 1000 }]}>
-            <ModernDropdown
-              label="Member"
-              options={memberOptions}
-              value={form.memberId}
-              onSelect={(val) => setForm({ ...form, memberId: val || '' })}
-              placeholder="Search and select member"
-              searchable
-              disableDarkMode
-            />
-          </View>
+          <>
+            <View style={[styles.inputGroup, { zIndex: 1000 }]}>
+              <ModernDropdown
+                label="Member"
+                options={memberOptions}
+                value={form.memberId}
+                onSelect={(val) => setForm({ ...form, memberId: val || '' })}
+                placeholder="Search and select member"
+                searchable
+                disableDarkMode
+              />
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Display Name (Optional for couples)</Text>
+              <TextInput 
+                style={styles.input}
+                placeholder="e.g. Mr. & Mrs. Smith"
+                value={form.donorName}
+                onChangeText={(text) => setForm({ ...form, donorName: text })}
+                autoCapitalize="words"
+              />
+            </View>
+          </>
         )}
 
         {form.giverType === 'non_member' && (

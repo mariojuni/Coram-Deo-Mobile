@@ -70,6 +70,12 @@ export async function createManualGivingRecord(
       submittedAt: new Date().toISOString(),
     } as any;
 
+    Object.keys(newRecord).forEach(key => {
+      if ((newRecord as any)[key] === undefined) {
+        delete (newRecord as any)[key];
+      }
+    });
+
     transaction.set(newRef, newRecord);
   });
 

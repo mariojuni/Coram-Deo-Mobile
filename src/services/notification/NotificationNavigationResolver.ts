@@ -53,6 +53,9 @@ export class NotificationNavigationResolver {
         return null;
 
       case 'giving':
+        if (notification.sourceType === 'giving_pending') {
+          return { pathname: '/staff-finance/pending-verification' };
+        }
         return { pathname: '/my-giving' };
 
       case 'announcement':
