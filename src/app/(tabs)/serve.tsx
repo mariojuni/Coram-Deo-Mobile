@@ -5,6 +5,7 @@ import { ServeEmptyState } from '@/features/serve/presentation/components/ServeE
 import { useMyAssignments } from '@/features/serve/presentation/hooks/useMyAssignments';
 import { useServeMinistries } from '@/features/serve/presentation/hooks/useServeMinistries';
 import { ministryRepository } from '@/features/ministry/data/ministry.repository';
+import { NotificationRepository } from '@/services/notification/NotificationRepository';
 import { useAuthStore } from '@/store/useAuthStore';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -29,6 +30,7 @@ type ServeTab = (typeof TABS)[number];
 export default function ServeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const currentUser = useAuthStore((s) => s.currentUser);
   const userProfile = useAuthStore((s) => s.userProfile);
   const [activeTab, setActiveTab] = useState<ServeTab>('My Schedule');
 
@@ -286,6 +288,7 @@ function MyScheduleTab({
   headerHeight: number;
   onScroll?: any;
 }) {
+  const currentUser = useAuthStore((s) => s.currentUser);
   const [savingAssignmentId, setSavingAssignmentId] = useState<string | null>(null);
 
   const handleConfirm = async (assignmentId: string) => {
@@ -304,6 +307,9 @@ function MyScheduleTab({
         status: 'Declined',
         declineReason: reason ?? '',
       });
+      if (currentUser?.uid) {
+        await NotificationRepository.deleteNotificationBySourceId(currentUser.uid, assignmentId);
+      }
     } finally {
       setSavingAssignmentId(null);
     }

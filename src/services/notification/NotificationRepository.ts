@@ -207,4 +207,47 @@ export class NotificationRepository {
       return 0;
     }
   }
+
+  /**
+   * Delete a notification by its sourceId and decrement the unread count if it was unread.
+   */
+  static async deleteNotificationBySourceId(userId: string, sourceId: string): Promise<void> {
+    if (!userId || !sourceId) return;
+
+    try {
+      const db = getActiveDb();
+      const q = query(
+        collection(db, `userNotifications/${userId}/items`),
+        where('sourceId', '==', sourceId)
+      );
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) return;
+
+      const stateRef = doc(db, 'userNotificationState', userId);
+
+      await runTransaction(db, async (transaction) => {
+        let unreadRemoved = 0;
+
+        for (const docSnap of snapshot.docs) {
+          const data = docSnap.data() as AppNotification;
+          if (!data.isRead) {
+            unreadRemoved++;
+          }
+          transaction.delete(docSnap.ref);
+        }
+
+        if (unreadRemoved > 0) {
+          const stateDoc = await transaction.get(stateRef);
+          if (stateDoc.exists()) {
+            const currentState = stateDoc.data() as UserNotificationState;
+            const newCount = Math.max(0, (currentState.unreadCount || 0) - unreadRemoved);
+            transaction.update(stateRef, { unreadCount: newCount, updatedAt: Timestamp.now() });
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Error deleting notification by sourceId:', error);
+    }
+  }
 }

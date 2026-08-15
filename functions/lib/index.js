@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.notifyUpcomingEvents = exports.optimizeSermonVideo = exports.onCommentDeleted = exports.onPrayerRequestDeleted = exports.onPrayerRequestCreated = exports.onMinistryAssignmentWritten = exports.onCommentCreated = exports.syncUserNameOnUpdate = void 0;
+exports.notifyUpcomingEvents = exports.optimizeSermonVideo = exports.onGivingRecordUpdated = exports.onGivingRecordCreated = exports.onCommentDeleted = exports.onPrayerRequestDeleted = exports.onPrayerRequestCreated = exports.onMinistryAssignmentWritten = exports.onCommentCreated = exports.syncUserNameOnUpdate = void 0;
 const firestore_1 = require("firebase-functions/v2/firestore");
 const firestore_2 = require("firebase-admin/firestore");
 const admin = __importStar(require("firebase-admin"));
@@ -242,9 +242,10 @@ exports.onMinistryAssignmentWritten = (0, firestore_1.onDocumentWritten)({
     }
     const afterData = (_a = change.after) === null || _a === void 0 ? void 0 : _a.data();
     const beforeData = (_b = change.before) === null || _b === void 0 ? void 0 : _b.data();
-    // If it was deleted, do nothing
+    // If it was deleted, clean up notifications
     if (!afterData) {
-        console.log('Assignment was deleted. Skipping.');
+        console.log('Assignment was deleted. Cleaning up notifications.');
+        await NotificationService_1.NotificationService.deleteNotificationsBySource(event.params.assignmentId);
         return null;
     }
     // If it's an update, check if memberId changed
@@ -355,6 +356,83 @@ exports.onCommentDeleted = (0, firestore_1.onDocumentDeleted)({
         console.log(`Comment ${commentId} deleted, cleaning up notifications...`);
         await NotificationService_1.NotificationService.deleteNotificationsBySource(commentId);
     }
+});
+exports.onGivingRecordCreated = (0, firestore_1.onDocumentCreated)({
+    document: 'givingRecords/{recordId}',
+    database: databaseName,
+    region: 'asia-southeast1',
+}, async (event) => {
+    const snap = event.data;
+    if (!snap)
+        return null;
+    const data = snap.data();
+    if (data.status !== 'pending')
+        return null;
+    const churchId = data.churchId;
+    const amount = data.amount || 0;
+    const donorName = data.donorName || 'A member';
+    const db = (0, firestore_2.getFirestore)(admin.app(), databaseName);
+    try {
+        const usersSnap = await db.collection('users').where('churchId', '==', churchId).get();
+        const notifications = [];
+        usersSnap.forEach((doc) => {
+            const userData = doc.data();
+            const roles = userData.systemRoles || (userData.role ? [userData.role] : []);
+            const isAdmin = roles.some((r) => ['finance_admin', 'church_admin', 'super_admin'].includes(r));
+            if (isAdmin) {
+                notifications.push(NotificationService_1.NotificationService.createUserNotification({
+                    userId: doc.id,
+                    churchId: churchId,
+                    category: 'giving',
+                    type: 'giving_pending',
+                    title: 'Giving Verification Needed',
+                    body: `${donorName} submitted a giving of ₱${amount.toLocaleString()} that requires your verification.`,
+                    sourceType: 'giving_pending',
+                    sourceId: event.params.recordId,
+                    actorUserId: data.userId,
+                }));
+            }
+        });
+        const chunkSize = 20;
+        for (let i = 0; i < notifications.length; i += chunkSize) {
+            const chunk = notifications.slice(i, i + chunkSize);
+            await Promise.all(chunk);
+        }
+    }
+    catch (error) {
+        console.error('Error notifying admins about giving:', error);
+    }
+    return null;
+});
+exports.onGivingRecordUpdated = (0, firestore_1.onDocumentUpdated)({
+    document: 'givingRecords/{recordId}',
+    database: databaseName,
+    region: 'asia-southeast1',
+}, async (event) => {
+    const change = event.data;
+    if (!change)
+        return null;
+    const beforeData = change.before.data();
+    const afterData = change.after.data();
+    if (beforeData.status !== afterData.status && (afterData.status === 'completed' || afterData.status === 'approved')) {
+        const amount = afterData.amount || 0;
+        try {
+            await NotificationService_1.NotificationService.createUserNotification({
+                userId: afterData.userId,
+                churchId: afterData.churchId,
+                category: 'giving',
+                type: 'giving_approval',
+                title: 'Giving Approved',
+                body: `Your giving of ₱${amount.toLocaleString()} has been successfully verified. Thank you for your generosity!`,
+                sourceType: 'giving_approval',
+                sourceId: event.params.recordId,
+            });
+        }
+        catch (error) {
+            console.error('Error notifying member about giving approval:', error);
+        }
+    }
+    return null;
 });
 const storage_1 = require("firebase-functions/v2/storage");
 const path = __importStar(require("path"));

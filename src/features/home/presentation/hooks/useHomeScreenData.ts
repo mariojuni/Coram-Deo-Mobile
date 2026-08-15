@@ -1,4 +1,5 @@
 import { ministryRepository } from '@/features/ministry/data/ministry.repository';
+import { NotificationRepository } from '@/services/notification/NotificationRepository';
 import { prayerRepository } from '@/features/prayer/data/prayer.repository';
 import { formatPrayerTimeAgo } from '@/features/prayer/domain/prayer.selectors';
 import type { Prayer } from '@/features/prayer/domain/prayer.types';
@@ -161,7 +162,10 @@ export function useHomeScreenData() {
     if (!currentUser?.uid) return;
     const newStatus = action === 'accept' ? 'Confirmed' : 'Declined';
     await ministryRepository.updateAssignment(assignmentId, { status: newStatus });
-    // No error handling needed here
+    
+    if (action === 'cancel') {
+      await NotificationRepository.deleteNotificationBySourceId(currentUser.uid, assignmentId);
+    }
   };
 
   const clearError = () => setHasError(false);

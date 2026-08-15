@@ -616,7 +616,7 @@ service cloud.firestore {
     // ── Notifications ────────────────────────────────────────────────────────
 
     match /userNotifications/{userId}/items/{notificationId} {
-      allow read: if isOwner(userId);
+      allow read, delete: if isOwner(userId);
       allow update: if isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead', 'readAt']);
     }
 

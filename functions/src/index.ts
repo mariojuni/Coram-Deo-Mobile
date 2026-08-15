@@ -228,9 +228,10 @@ export const onMinistryAssignmentWritten = onDocumentWritten(
     const afterData = change.after?.data();
     const beforeData = change.before?.data();
 
-    // If it was deleted, do nothing
+    // If it was deleted, clean up notifications
     if (!afterData) {
-      console.log('Assignment was deleted. Skipping.');
+      console.log('Assignment was deleted. Cleaning up notifications.');
+      await NotificationService.deleteNotificationsBySource(event.params.assignmentId);
       return null;
     }
 

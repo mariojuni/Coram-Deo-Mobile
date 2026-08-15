@@ -1,5 +1,8 @@
 {
   "ios": {
     "bundleIdentifier": "com.maryow.functions"
+  },
+  "android": {
+    "package": "com.maryow.functions"
   }
 }
