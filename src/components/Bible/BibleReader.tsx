@@ -89,17 +89,15 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
   const { activeBook, activeChapter } = preferences;
   const activeBookObj = books.find(b => b.id === activeBook);
 
-  // Animate nav arrows bottom: 110 (tab bar visible) ↔ 20 (tab bar hidden)
-  const NAV_BOTTOM_SHOWN = 110;
-  const NAV_BOTTOM_HIDDEN = 20;
-  const navBottom = useRef(new Animated.Value(NAV_BOTTOM_SHOWN)).current;
+  // Animate nav arrows translateY: 0 (tab bar visible) ↔ 90 (tab bar hidden)
+  const navTranslateY = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (!controlsTabBar) return;
-    Animated.timing(navBottom, {
-      toValue: tabBarVisible ? NAV_BOTTOM_SHOWN : NAV_BOTTOM_HIDDEN,
+    Animated.timing(navTranslateY, {
+      toValue: tabBarVisible ? 0 : 90,
       duration: 250,
-      useNativeDriver: false,
+      useNativeDriver: true,
     }).start();
   }, [tabBarVisible, controlsTabBar]);
   
@@ -471,7 +469,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
       {/* Navigation Arrows overlay */}
       {selectedVerses.length === 0 && !hideChapterNav && (
         <Animated.View
-          style={[styles.navOverlay, controlsTabBar ? { bottom: navBottom } : undefined]}
+          style={[styles.navOverlay, controlsTabBar ? { transform: [{ translateY: navTranslateY }] } : undefined]}
           pointerEvents="box-none"
         >
           <TouchableOpacity style={styles.navBtn} onPress={onPrevChapter}>

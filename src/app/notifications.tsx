@@ -33,25 +33,28 @@ export default function NotificationsScreen() {
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
-    loadNotifications();
-  }, [currentUser?.uid]);
-
-  const loadNotifications = async () => {
     if (!currentUser?.uid) {
       setLoading(false);
       return;
     }
     setLoading(true);
-    try {
-      const data = await NotificationRepository.getNotifications(currentUser.uid, 50);
-      setNotifications(data);
-    } catch (e) {
-      console.error(e);
-      Alert.alert('Error', 'Failed to load notifications');
-    } finally {
-      setLoading(false);
-    }
-  };
+
+    const unsubscribe = NotificationRepository.subscribeToNotifications(
+      currentUser.uid,
+      50,
+      (data) => {
+        setNotifications(data);
+        setLoading(false);
+      },
+      (error) => {
+        console.error(error);
+        Alert.alert('Error', 'Failed to load notifications');
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [currentUser?.uid]);
 
   const handleMarkAllRead = async () => {
     if (!currentUser?.uid) return;
@@ -63,8 +66,7 @@ export default function NotificationsScreen() {
       await NotificationRepository.markAllAsRead(currentUser.uid);
     } catch (e) {
       console.error(e);
-      // fallback on error, reload
-      loadNotifications();
+      // Let the real-time subscription handle reverting if it fails
     }
   };
 
@@ -84,6 +86,16 @@ export default function NotificationsScreen() {
       // Optimistic read
       setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, isRead: true } : n));
       await NotificationRepository.markAsRead(currentUser.uid, notification.id);
+    }
+  };
+
+  const handleDeleteNotification = async (notification: AppNotification) => {
+    if (!currentUser?.uid) return;
+    try {
+      await NotificationRepository.deleteNotification(currentUser.uid, notification.id);
+    } catch (e) {
+      console.error(e);
+      Alert.alert('Error', 'Failed to delete notification');
     }
   };
 
@@ -182,6 +194,7 @@ export default function NotificationsScreen() {
                   key={notif.id} 
                   notification={notif} 
                   onPress={handleNotificationPress}
+                  onDelete={handleDeleteNotification}
                 />
               ))}
             </View>

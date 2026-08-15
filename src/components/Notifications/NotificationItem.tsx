@@ -1,19 +1,22 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { AppNotification } from '../../services/notification/NotificationRepository';
 import { formatDistanceToNow } from 'date-fns';
 import { BounceCard } from '../ui/BounceCard';
 import { SoftCard } from '../ui/SoftCard';
 import { Colors } from '../../constants/theme';
 import { Image as ExpoImage } from 'expo-image';
-import { User } from 'lucide-react-native';
+import { User, Trash2 } from 'lucide-react-native';
+import Swipeable from 'react-native-gesture-handler/Swipeable';
 
 interface Props {
   notification: AppNotification;
   onPress: (notification: AppNotification) => void;
+  onDelete?: (notification: AppNotification) => void;
 }
 
-export function NotificationItem({ notification, onPress }: Props) {
+export function NotificationItem({ notification, onPress, onDelete }: Props) {
+  const swipeableRef = useRef<Swipeable>(null);
   const isUnread = !notification.isRead;
   const theme = Colors.light;
   
@@ -38,14 +41,44 @@ export function NotificationItem({ notification, onPress }: Props) {
     fallbackText = notification.title.substring(displayActorName.length).trim();
   }
 
+  let displayBodyText = notification.body || fallbackText;
+  if (displayActorName && displayBodyText.startsWith(displayActorName)) {
+    displayBodyText = displayBodyText.substring(displayActorName.length).trim();
+  }
+
+  const renderRightActions = () => {
+    if (!onDelete) return null;
+    return (
+      <View style={styles.deleteActionContainer}>
+        <TouchableOpacity
+          style={styles.deleteActionButton}
+          onPress={() => {
+            swipeableRef.current?.close();
+            onDelete(notification);
+          }}
+          activeOpacity={0.8}
+        >
+          <Trash2 color="#FFFFFF" size={20} />
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   return (
-    <BounceCard
-      accessibilityRole="button"
-      accessibilityLabel={a11yLabel}
-      onPress={() => onPress(notification)}
-      style={styles.container}
-      activeOpacity={0.85}
+    <Swipeable
+      ref={swipeableRef}
+      renderRightActions={renderRightActions}
+      overshootRight={false}
+      friction={2}
+      rightThreshold={40}
     >
+      <BounceCard
+        accessibilityRole="button"
+        accessibilityLabel={a11yLabel}
+        onPress={() => onPress(notification)}
+        style={styles.container}
+        activeOpacity={0.85}
+      >
       <SoftCard innerStyle={[
         styles.cardInner, 
         { backgroundColor: '#FFFFFF' }
@@ -72,11 +105,7 @@ export function NotificationItem({ notification, onPress }: Props) {
               {displayActorName ? (
                 <Text style={[styles.boldText, { color: isUnread ? theme.text : '#111827' }]}>{displayActorName} </Text>
               ) : null}
-              {!!notification.body ? (
-                <Text style={{ color: '#4B5563' }}>{notification.body}</Text>
-              ) : (
-                <Text style={{ color: '#4B5563' }}>{fallbackText}</Text>
-              )}
+              <Text style={{ color: '#4B5563' }}>{displayBodyText}</Text>
             </Text>
             
             <Text style={[styles.metaTime, { color: '#6B7280' }]}>{timeAgo}</Text>
@@ -91,6 +120,7 @@ export function NotificationItem({ notification, onPress }: Props) {
         </View>
       </SoftCard>
     </BounceCard>
+    </Swipeable>
   );
 }
 
@@ -151,5 +181,20 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
+  },
+  deleteActionContainer: {
+    marginRight: 16,
+    marginBottom: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 60,
+  },
+  deleteActionButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#EF4444',
+    justifyContent: 'center',
+    alignItems: 'center',
   }
 });

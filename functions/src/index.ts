@@ -1,6 +1,6 @@
-import { onDocumentUpdated, onDocumentCreated, onDocumentWritten, onDocumentDeleted } from 'firebase-functions/v2/firestore';
-import { getFirestore } from 'firebase-admin/firestore';
 import * as admin from 'firebase-admin';
+import { getFirestore } from 'firebase-admin/firestore';
+import { onDocumentCreated, onDocumentDeleted, onDocumentUpdated, onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { NotificationService } from './services/NotificationService';
 
 admin.initializeApp();
@@ -28,8 +28,8 @@ export const syncUserNameOnUpdate = onDocumentUpdated(
     const afterData = change.after.data();
 
     const nameChanged = beforeData.firstName !== afterData.firstName ||
-                        beforeData.middleName !== afterData.middleName ||
-                        beforeData.lastName !== afterData.lastName;
+      beforeData.middleName !== afterData.middleName ||
+      beforeData.lastName !== afterData.lastName;
     const photoChanged = beforeData.photoUrl !== afterData.photoUrl;
 
     if (!nameChanged && !photoChanged) {
@@ -172,21 +172,21 @@ export const onCommentCreated = onDocumentCreated(
         if (!prayerSnap.exists) return null;
         ownerId = prayerSnap.data()?.userId;
         title = 'New Prayer Comment';
-        body = `${authorName} commented on your prayer request.`;
+        body = `commented on your prayer request.`;
       } else if (data.targetType === 'bible_note') {
         const noteRef = db.collection('bibleNotes').doc(data.targetId);
         const noteSnap = await noteRef.get();
         if (!noteSnap.exists) return null;
         ownerId = noteSnap.data()?.userId;
         title = 'New Note Comment';
-        body = `${authorName} commented on your note.`;
+        body = `commented on your note.`;
       } else if (data.targetType === 'church_highlight') {
         const highlightRef = db.collection('bibleVerseHighlights').doc(data.targetId);
         const highlightSnap = await highlightRef.get();
         if (!highlightSnap.exists) return null;
         ownerId = highlightSnap.data()?.userId;
         title = 'New Highlight Comment';
-        body = `${authorName} commented on your highlight.`;
+        body = `commented on your highlight.`;
       }
     }
 
@@ -292,7 +292,7 @@ export const onPrayerRequestCreated = onDocumentCreated(
     try {
       // Fetch all users in the same church
       const usersSnap = await db.collection('users').where('churchId', '==', churchId).get();
-      
+
       const notifications: Promise<void>[] = [];
       usersSnap.forEach((doc) => {
         const userId = doc.id;
@@ -395,7 +395,7 @@ export const onGivingRecordCreated = onDocumentCreated(
         const userData = doc.data();
         const roles = userData.systemRoles || (userData.role ? [userData.role] : []);
         const isAdmin = roles.some((r: string) => ['finance_admin', 'church_admin', 'super_admin'].includes(r));
-        
+
         if (isAdmin) {
           notifications.push(
             NotificationService.createUserNotification({
@@ -460,9 +460,9 @@ export const onGivingRecordUpdated = onDocumentUpdated(
 );
 
 import { onObjectFinalized } from 'firebase-functions/v2/storage';
-import * as path from 'path';
-import * as os from 'os';
 import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 
 export const optimizeSermonVideo = onObjectFinalized(
   {
@@ -480,33 +480,33 @@ export const optimizeSermonVideo = onObjectFinalized(
     const filePath = event.data.name;
     const contentType = event.data.contentType;
     const metadata = event.data.metadata || {};
-    
+
     // Trigger only for files in the sermons raw media path
     if (!filePath.includes('/sermons/') || !filePath.includes('/media/raw/')) {
       return;
     }
-    
+
     // Must be a video
     if (!contentType || !contentType.startsWith('video/')) {
       return;
     }
-    
+
     // Prevent infinite loops
     if (metadata.optimized === 'true') {
       console.log(`File ${filePath} is already optimized.`);
       return;
     }
-    
+
     const fileName = path.basename(filePath);
     const tempFilePath = path.join(os.tmpdir(), fileName);
     const tempOutputPath = path.join(os.tmpdir(), `optimized_${fileName}`);
-    
+
     const bucket = admin.storage().bucket(fileBucket);
-    
+
     try {
       console.log(`Downloading ${filePath} to ${tempFilePath} for fast-start optimization...`);
       await bucket.file(filePath).download({ destination: tempFilePath });
-      
+
       console.log('Running FFmpeg faststart optimization...');
       await new Promise<void>((resolve, reject) => {
         ffmpeg(tempFilePath)
@@ -521,7 +521,7 @@ export const optimizeSermonVideo = onObjectFinalized(
           })
           .run();
       });
-      
+
       console.log(`Uploading optimized video back to ${filePath}...`);
       await bucket.upload(tempOutputPath, {
         destination: filePath,
@@ -533,7 +533,7 @@ export const optimizeSermonVideo = onObjectFinalized(
           },
         },
       });
-      
+
       console.log('Video optimization complete!');
     } catch (error) {
       console.error('Optimization failed:', error);
@@ -578,7 +578,7 @@ export const notifyUpcomingEvents = onSchedule(
           const timeStr = String(data.startTime).trim();
           const timeMatch12 = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
           const timeMatch24 = timeStr.match(/^(\d{1,2}):(\d{2})$/);
-          
+
           if (timeMatch12) {
             let hours = parseInt(timeMatch12[1], 10);
             const mins = parseInt(timeMatch12[2], 10);

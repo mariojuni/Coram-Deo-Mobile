@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, limit, orderBy, query, runTransaction, Timestamp, updateDoc, where } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, limit, orderBy, query, runTransaction, Timestamp, updateDoc, where, onSnapshot } from 'firebase/firestore';
 import { getActiveDb } from '../../firebase';
 
 export type NotificationCategory =
@@ -44,6 +44,66 @@ export interface UserNotificationState {
 }
 
 export class NotificationRepository {
+  static subscribeToNotifications(
+    userId: string,
+    limitCount: number = 20,
+    onNext: (notifications: AppNotification[]) => void,
+    onError?: (error: Error) => void
+  ): () => void {
+    if (!userId) {
+      onNext([]);
+      return () => {};
+    }
+
+    const db = getActiveDb();
+    const q = query(
+      collection(db, `userNotifications/${userId}/items`),
+      orderBy('createdAt', 'desc'),
+      limit(limitCount)
+    );
+
+    return onSnapshot(
+      q,
+      async (snapshot) => {
+        const notifications = snapshot.docs.map(docSnap => {
+          const data = docSnap.data();
+          return {
+            id: docSnap.id,
+            ...data
+          } as AppNotification;
+        });
+
+        // Augment with actor data
+        const augmentPromises = notifications.map(async (notif) => {
+          if (notif.actorUserId && (!notif.actorName || !notif.actorPhotoUrl)) {
+            try {
+              const userDoc = await getDoc(doc(db, 'users', notif.actorUserId));
+              if (userDoc.exists()) {
+                const userData = userDoc.data();
+                if (!notif.actorName) {
+                  notif.actorName = [userData.firstName, userData.lastName].filter(Boolean).join(' ') || userData.displayName || '';
+                }
+                if (!notif.actorPhotoUrl) {
+                  notif.actorPhotoUrl = userData.photoUrl || userData.photoURL || '';
+                }
+              }
+            } catch (e) {
+              console.warn('Failed to fetch actor user for notification:', notif.id, e);
+            }
+          }
+          return notif;
+        });
+
+        const augmented = await Promise.all(augmentPromises);
+        onNext(augmented);
+      },
+      (error) => {
+        console.error('Error in notifications subscription:', error);
+        if (onError) onError(error);
+      }
+    );
+  }
+
   /**
    * Fetch a paginated list of notifications for a specific user.
    */
@@ -248,6 +308,40 @@ export class NotificationRepository {
       });
     } catch (error) {
       console.error('Error deleting notification by sourceId:', error);
+    }
+  }
+
+  /**
+   * Delete a specific notification by its ID.
+   */
+  static async deleteNotification(userId: string, notificationId: string): Promise<void> {
+    if (!userId || !notificationId) return;
+
+    try {
+      const db = getActiveDb();
+      const notificationRef = doc(db, `userNotifications/${userId}/items`, notificationId);
+      const stateRef = doc(db, 'userNotificationState', userId);
+
+      await runTransaction(db, async (transaction) => {
+        const notifDoc = await transaction.get(notificationRef);
+        if (!notifDoc.exists()) {
+          return;
+        }
+
+        const data = notifDoc.data() as AppNotification;
+        transaction.delete(notificationRef);
+
+        if (!data.isRead) {
+          const stateDoc = await transaction.get(stateRef);
+          if (stateDoc.exists()) {
+            const currentState = stateDoc.data() as UserNotificationState;
+            const newCount = Math.max(0, (currentState.unreadCount || 0) - 1);
+            transaction.update(stateRef, { unreadCount: newCount, updatedAt: Timestamp.now() });
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Error deleting notification:', error);
     }
   }
 }
