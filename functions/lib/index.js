@@ -1,22 +1,22 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function (o, m, k, k2) {
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     var desc = Object.getOwnPropertyDescriptor(m, k);
     if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-        desc = { enumerable: true, get: function () { return m[k]; } };
+      desc = { enumerable: true, get: function() { return m[k]; } };
     }
     Object.defineProperty(o, k2, desc);
-}) : (function (o, m, k, k2) {
+}) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
 }));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function (o, v) {
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
     Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function (o, v) {
+}) : function(o, v) {
     o["default"] = v;
 });
 var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function (o) {
+    var ownKeys = function(o) {
         ownKeys = Object.getOwnPropertyNames || function (o) {
             var ar = [];
             for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
@@ -34,15 +34,15 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.notifyUpcomingEvents = exports.optimizeSermonVideo = exports.onGivingRecordUpdated = exports.onGivingRecordCreated = exports.onCommentDeleted = exports.onPrayerRequestDeleted = exports.onPrayerRequestCreated = exports.onMinistryAssignmentWritten = exports.onCommentCreated = exports.syncUserNameOnUpdate = void 0;
-const firestore_1 = require("firebase-functions/v2/firestore");
-const firestore_2 = require("firebase-admin/firestore");
 const admin = __importStar(require("firebase-admin"));
+const firestore_1 = require("firebase-admin/firestore");
+const firestore_2 = require("firebase-functions/v2/firestore");
 const NotificationService_1 = require("./services/NotificationService");
 admin.initializeApp();
 const databaseName = process.env.GCLOUD_PROJECT === 'coramdeo-prod' ? 'coramdeo' : '(default)';
 // v2 Firestore trigger using Eventarc — required for named databases (Firestore Enterprise).
 // The old v1 trigger (functions.firestore) does NOT support named databases.
-exports.syncUserNameOnUpdate = (0, firestore_1.onDocumentUpdated)({
+exports.syncUserNameOnUpdate = (0, firestore_2.onDocumentUpdated)({
     document: 'users/{userId}',
     database: databaseName,
     region: 'asia-southeast1',
@@ -50,7 +50,7 @@ exports.syncUserNameOnUpdate = (0, firestore_1.onDocumentUpdated)({
     const change = event.data;
     if (!change)
         return null;
-    const db = (0, firestore_2.getFirestore)(admin.app(), databaseName);
+    const db = (0, firestore_1.getFirestore)(admin.app(), databaseName);
     const userId = event.params.userId;
     console.log(`[DEBUG] syncUserNameOnUpdate triggered for user ${userId} in coramdeo database`);
     const beforeData = change.before.data();
@@ -153,7 +153,7 @@ exports.syncUserNameOnUpdate = (0, firestore_1.onDocumentUpdated)({
     }
     return null;
 });
-exports.onCommentCreated = (0, firestore_1.onDocumentCreated)({
+exports.onCommentCreated = (0, firestore_2.onDocumentCreated)({
     document: 'comments/{commentId}',
     database: databaseName,
     region: 'asia-southeast1',
@@ -166,11 +166,10 @@ exports.onCommentCreated = (0, firestore_1.onDocumentCreated)({
     const allowedTypes = ['prayer_request', 'bible_note', 'church_highlight'];
     if (!allowedTypes.includes(data.targetType))
         return null;
-    const db = (0, firestore_2.getFirestore)(admin.app(), databaseName);
+    const db = (0, firestore_1.getFirestore)(admin.app(), databaseName);
     let ownerId;
     let title = 'New Comment';
     let body = '';
-    const authorName = data.authorDisplayName || 'Someone';
     if (data.parentCommentId) {
         // It's a reply to a comment
         const parentRef = db.collection('comments').doc(data.parentCommentId);
@@ -179,7 +178,7 @@ exports.onCommentCreated = (0, firestore_1.onDocumentCreated)({
             return null;
         ownerId = (_a = parentSnap.data()) === null || _a === void 0 ? void 0 : _a.authorUserId;
         title = 'New Reply';
-        body = `${authorName} replied to your comment.`;
+        body = `replied to your comment.`;
     }
     else {
         // Top-level comment
@@ -190,7 +189,7 @@ exports.onCommentCreated = (0, firestore_1.onDocumentCreated)({
                 return null;
             ownerId = (_b = prayerSnap.data()) === null || _b === void 0 ? void 0 : _b.userId;
             title = 'New Prayer Comment';
-            body = `${authorName} commented on your prayer request.`;
+            body = `commented on your prayer request.`;
         }
         else if (data.targetType === 'bible_note') {
             const noteRef = db.collection('bibleNotes').doc(data.targetId);
@@ -199,7 +198,7 @@ exports.onCommentCreated = (0, firestore_1.onDocumentCreated)({
                 return null;
             ownerId = (_c = noteSnap.data()) === null || _c === void 0 ? void 0 : _c.userId;
             title = 'New Note Comment';
-            body = `${authorName} commented on your note.`;
+            body = `commented on your note.`;
         }
         else if (data.targetType === 'church_highlight') {
             const highlightRef = db.collection('bibleVerseHighlights').doc(data.targetId);
@@ -208,7 +207,7 @@ exports.onCommentCreated = (0, firestore_1.onDocumentCreated)({
                 return null;
             ownerId = (_d = highlightSnap.data()) === null || _d === void 0 ? void 0 : _d.userId;
             title = 'New Highlight Comment';
-            body = `${authorName} commented on your highlight.`;
+            body = `commented on your highlight.`;
         }
     }
     // Do not notify if the owner commented/replied on their own item
@@ -229,7 +228,7 @@ exports.onCommentCreated = (0, firestore_1.onDocumentCreated)({
     });
     return null;
 });
-exports.onMinistryAssignmentWritten = (0, firestore_1.onDocumentWritten)({
+exports.onMinistryAssignmentWritten = (0, firestore_2.onDocumentWritten)({
     document: 'ministryAssignments/{assignmentId}',
     database: databaseName,
     region: 'asia-southeast1',
@@ -265,8 +264,8 @@ exports.onMinistryAssignmentWritten = (0, firestore_1.onDocumentWritten)({
             churchId: afterData.churchId,
             category: 'serve',
             type: 'ministry_assignment',
-            title: 'New Ministry Assignment',
-            body: `You have been assigned to ${afterData.ministryName} as ${afterData.roleName} for ${afterData.eventName}.`,
+            title: `${afterData.eventName}`,
+            body: `You have been assigned to ${afterData.ministryName} as ${afterData.roleName}.`,
             sourceType: 'ministry_assignment',
             sourceId: event.params.assignmentId,
         });
@@ -277,7 +276,7 @@ exports.onMinistryAssignmentWritten = (0, firestore_1.onDocumentWritten)({
     }
     return null;
 });
-exports.onPrayerRequestCreated = (0, firestore_1.onDocumentCreated)({
+exports.onPrayerRequestCreated = (0, firestore_2.onDocumentCreated)({
     document: 'churches/{churchId}/prayer_requests/{requestId}',
     database: databaseName,
     region: 'asia-southeast1',
@@ -291,8 +290,7 @@ exports.onPrayerRequestCreated = (0, firestore_1.onDocumentCreated)({
         return null;
     const churchId = event.params.churchId;
     const authorUserId = data.userId;
-    const authorName = data.requesterName || data.name || 'Someone';
-    const db = (0, firestore_2.getFirestore)(admin.app(), databaseName);
+    const db = (0, firestore_1.getFirestore)(admin.app(), databaseName);
     try {
         // Fetch all users in the same church
         const usersSnap = await db.collection('users').where('churchId', '==', churchId).get();
@@ -335,7 +333,7 @@ exports.onPrayerRequestCreated = (0, firestore_1.onDocumentCreated)({
     }
     return null;
 });
-exports.onPrayerRequestDeleted = (0, firestore_1.onDocumentDeleted)({
+exports.onPrayerRequestDeleted = (0, firestore_2.onDocumentDeleted)({
     document: 'churches/{churchId}/prayer_requests/{requestId}',
     database: databaseName,
     region: 'asia-southeast1',
@@ -346,7 +344,7 @@ exports.onPrayerRequestDeleted = (0, firestore_1.onDocumentDeleted)({
         await NotificationService_1.NotificationService.deleteNotificationsBySource(requestId);
     }
 });
-exports.onCommentDeleted = (0, firestore_1.onDocumentDeleted)({
+exports.onCommentDeleted = (0, firestore_2.onDocumentDeleted)({
     document: 'comments/{commentId}',
     database: databaseName,
     region: 'asia-southeast1',
@@ -357,7 +355,7 @@ exports.onCommentDeleted = (0, firestore_1.onDocumentDeleted)({
         await NotificationService_1.NotificationService.deleteNotificationsBySource(commentId);
     }
 });
-exports.onGivingRecordCreated = (0, firestore_1.onDocumentCreated)({
+exports.onGivingRecordCreated = (0, firestore_2.onDocumentCreated)({
     document: 'givingRecords/{recordId}',
     database: databaseName,
     region: 'asia-southeast1',
@@ -371,7 +369,7 @@ exports.onGivingRecordCreated = (0, firestore_1.onDocumentCreated)({
     const churchId = data.churchId;
     const amount = data.amount || 0;
     const donorName = data.donorName || 'A member';
-    const db = (0, firestore_2.getFirestore)(admin.app(), databaseName);
+    const db = (0, firestore_1.getFirestore)(admin.app(), databaseName);
     try {
         const usersSnap = await db.collection('users').where('churchId', '==', churchId).get();
         const notifications = [];
@@ -404,7 +402,7 @@ exports.onGivingRecordCreated = (0, firestore_1.onDocumentCreated)({
     }
     return null;
 });
-exports.onGivingRecordUpdated = (0, firestore_1.onDocumentUpdated)({
+exports.onGivingRecordUpdated = (0, firestore_2.onDocumentUpdated)({
     document: 'givingRecords/{recordId}',
     database: databaseName,
     region: 'asia-southeast1',
@@ -435,9 +433,9 @@ exports.onGivingRecordUpdated = (0, firestore_1.onDocumentUpdated)({
     return null;
 });
 const storage_1 = require("firebase-functions/v2/storage");
-const path = __importStar(require("path"));
-const os = __importStar(require("os"));
 const fs = __importStar(require("fs"));
+const os = __importStar(require("os"));
+const path = __importStar(require("path"));
 exports.optimizeSermonVideo = (0, storage_1.onObjectFinalized)({
     region: 'us-east1',
     memory: '4GiB', // Increased to handle larger video buffering
@@ -480,9 +478,9 @@ exports.optimizeSermonVideo = (0, storage_1.onObjectFinalized)({
                 .output(tempOutputPath)
                 .on('end', () => resolve())
                 .on('error', (err) => {
-                    console.error('FFmpeg error:', err);
-                    reject(err);
-                })
+                console.error('FFmpeg error:', err);
+                reject(err);
+            })
                 .run();
         });
         console.log(`Uploading optimized video back to ${filePath}...`);
@@ -512,7 +510,7 @@ exports.notifyUpcomingEvents = (0, scheduler_1.onSchedule)({
     region: 'asia-southeast1',
     timeZone: 'Asia/Manila',
 }, async (event) => {
-    const db = (0, firestore_2.getFirestore)(admin.app(), databaseName);
+    const db = (0, firestore_1.getFirestore)(admin.app(), databaseName);
     const now = new Date();
     // Look ahead 65 minutes to safely catch events in the next hour without missing due to cron delays
     const lookAheadTime = new Date(now.getTime() + 65 * 60000);

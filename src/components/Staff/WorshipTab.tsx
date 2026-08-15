@@ -11,7 +11,7 @@ import {
   Alert,
   RefreshControl,
 } from 'react-native';
-import { Music, Plus, ListMusic, Calendar, ChevronRight, AlertCircle, X, Check, Trash2, Hash, Clock, ArrowRight, ChevronDown, CalendarDays, ChevronLeft, Search } from 'lucide-react-native';
+import { Music, Plus, ListMusic, Calendar, ChevronRight, AlertCircle, X, Check, Trash2, Hash, Clock, ArrowRight, ChevronDown, CalendarDays, ChevronLeft, Search, ArrowLeft } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -44,6 +44,7 @@ export default function WorshipTab() {
   // Create Setlist Modal State
   const createSetlistKeyboard = useModalKeyboard({ heightRatio: 0.85, backgroundColor: '#FAFAFA' });
   const [createModalVisible, setCreateModalVisible] = useState(false);
+  const [modalStep, setModalStep] = useState<'form' | 'selectEvent'>('form');
   const [newTitle, setNewTitle] = useState('');
   const [newDate, setNewDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [newStatus, setNewStatus] = useState<'draft' | 'published'>('published');
@@ -53,7 +54,6 @@ export default function WorshipTab() {
 
   // Searchable Event Picker State
   const [eventSearchQuery, setEventSearchQuery] = useState('');
-  const [isEventPickerOpen, setIsEventPickerOpen] = useState(false);
 
 
 
@@ -359,18 +359,24 @@ export default function WorshipTab() {
             <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
             <View style={styles.dragHandle} />
             <View style={styles.headerContent}>
-              <TouchableOpacity
-                style={[styles.createBtnModalHeader, creating && { opacity: 0.6 }]}
-                disabled={creating}
-                onPress={handleCreateSetlist}
-              >
-                {creating ? (
-                  <ActivityIndicator size="small" color="#FFF" />
-                ) : (
-                  <Text style={styles.createBtnModalHeaderText}>Create</Text>
-                )}
-              </TouchableOpacity>
-              <Text style={styles.headerTitleCenter}>Create Setlist</Text>
+              {modalStep === 'selectEvent' ? (
+                <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => setModalStep('form')} hitSlop={8} activeOpacity={0.8}>
+                  <ArrowLeft size={24} color="#111827" strokeWidth={2} />
+                </BounceCard>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.createBtnModalHeader, creating && { opacity: 0.6 }]}
+                  disabled={creating}
+                  onPress={handleCreateSetlist}
+                >
+                  {creating ? (
+                    <ActivityIndicator size="small" color="#FFF" />
+                  ) : (
+                    <Text style={styles.createBtnModalHeaderText}>Create</Text>
+                  )}
+                </TouchableOpacity>
+              )}
+              <Text style={styles.headerTitleCenter}>{modalStep === 'selectEvent' ? 'Select Event' : 'Create Setlist'}</Text>
               <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => setCreateModalVisible(false)} hitSlop={8} activeOpacity={0.8}>
                 <X size={24} color="#111827" strokeWidth={2} />
               </BounceCard>
@@ -378,217 +384,175 @@ export default function WorshipTab() {
             </View>
           </ModalDragArea>
 
-          <ScrollView
-            ref={createSetlistKeyboard.scrollViewRef}
-            style={createSetlistKeyboard.scrollViewStyle}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            <View style={{ gap: 20, paddingTop: 24 }}>
-              {/* Link Event Button */}
-              <View>
-                <Text style={styles.inputLabel}>Event</Text>
-                <TouchableOpacity
-                  style={{
-                    height: 52,
-                    backgroundColor: '#F9FAFB',
-                    borderRadius: 14,
-                    paddingHorizontal: 14,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    borderWidth: 1,
-                    borderColor: '#E5E7EB',
-                    marginTop: 4,
-                  }}
-                  onPress={() => {
-                    setCreateModalVisible(false);
-                    setTimeout(() => {
+          {modalStep === 'form' ? (
+            <ScrollView
+              ref={createSetlistKeyboard.scrollViewRef}
+              style={createSetlistKeyboard.scrollViewStyle}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={{ gap: 20, paddingTop: 24 }}>
+                {/* Link Event Button */}
+                <View>
+                  <Text style={styles.inputLabel}>Event</Text>
+                  <TouchableOpacity
+                    style={{
+                      height: 52,
+                      backgroundColor: '#F9FAFB',
+                      borderRadius: 14,
+                      paddingHorizontal: 14,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      borderWidth: 1,
+                      borderColor: '#E5E7EB',
+                      marginTop: 4,
+                    }}
+                    onPress={() => {
                       setEventSearchQuery('');
-                      setIsEventPickerOpen(true);
-                    }, 300);
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <CalendarDays size={20} color="#FF6596" style={{ marginRight: 12 }} />
-                  <Text style={{ fontSize: 14, fontWeight: '600', color: selectedEvent ? '#111827' : '#9CA3AF', flex: 1 }}>
-                    {selectedEvent ? `${selectedEvent.title} • ${selectedEvent.date ? new Date(selectedEvent.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}` : 'Select an event'}
-                  </Text>
-                  <ChevronRight size={18} color="#9CA3AF" />
-                </TouchableOpacity>
-              </View>
-
-              {/* 2. Setlist Title Input */}
-              <View>
-                <Text style={styles.inputLabel}>Setlist Title *</Text>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="e.g. Sunday Morning Service"
-                  placeholderTextColor="#9CA3AF"
-                  value={newTitle}
-                  onChangeText={setNewTitle}
-                />
-              </View>
-
-              {/* 3. Status Options */}
-              <View>
-                <Text style={styles.inputLabel}>Status</Text>
-                <View style={{ flexDirection: 'row', gap: 10 }}>
-                  <TouchableOpacity
-                    style={[styles.statusOption, newStatus === 'published' && styles.statusOptionSelected]}
-                    onPress={() => setNewStatus('published')}
+                      setModalStep('selectEvent');
+                    }}
+                    activeOpacity={0.8}
                   >
-                    <Text style={[styles.statusOptionText, newStatus === 'published' && styles.statusOptionTextSelected]}>Published</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.statusOption, newStatus === 'draft' && styles.statusOptionSelected]}
-                    onPress={() => setNewStatus('draft')}
-                  >
-                    <Text style={[styles.statusOptionText, newStatus === 'draft' && styles.statusOptionTextSelected]}>Draft</Text>
+                    <CalendarDays size={20} color="#FF6596" style={{ marginRight: 12 }} />
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: selectedEvent ? '#111827' : '#9CA3AF', flex: 1 }}>
+                      {selectedEvent ? `${selectedEvent.title} • ${selectedEvent.date ? new Date(selectedEvent.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}` : 'Select an event'}
+                    </Text>
+                    <ChevronRight size={18} color="#9CA3AF" />
                   </TouchableOpacity>
                 </View>
-              </View>
-            </View>
-          </ScrollView>
-        </View>
-      </AppModal>
 
-      {/* Searchable Event Selection Modal */}
-      <AppModal
-        isOpen={isEventPickerOpen}
-        onClose={() => {
-          setIsEventPickerOpen(false);
-          setTimeout(() => setCreateModalVisible(true), 250);
-        }}
-        title="Select Event"
-        hideHeader={true}
-        hideDragHandle={true}
-        containerStyle={{ flex: 1, backgroundColor: '#FAFAFA', paddingHorizontal: 0, paddingBottom: 0 }}
-        heightRatio={0.85}
-      >
-        <View style={[styles.modalContainer, { flex: 1 }]}>
-          {/* Frosted Glass Header */}
-          <ModalDragArea style={[styles.headerContainer, { paddingTop: 12 }]}>
-            <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
-            <View style={styles.dragHandle} />
-            <View style={styles.headerContent}>
-              <View style={styles.headerCirclePlaceholder} />
-              <Text style={styles.headerTitleCenter}>Select Event</Text>
-              <BounceCard
-                bounceScale={0.85}
-                style={styles.headerCircle}
-                onPress={() => {
-                  setIsEventPickerOpen(false);
-                  setTimeout(() => setCreateModalVisible(true), 250);
-                }}
-                hitSlop={8}
-                activeOpacity={0.8}
-              >
-                <X size={24} color="#111827" strokeWidth={2} />
-              </BounceCard>
-            </View>
-          </ModalDragArea>
+                {/* 2. Setlist Title Input */}
+                <View>
+                  <Text style={styles.inputLabel}>Setlist Title *</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="e.g. Sunday Morning Service"
+                    placeholderTextColor="#9CA3AF"
+                    value={newTitle}
+                    onChangeText={setNewTitle}
+                  />
+                </View>
 
-          <View style={{ flex: 1, paddingTop: 90, paddingHorizontal: 20 }}>
-
-            {/* Search Input Bar */}
-            <View style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: '#FFF',
-              borderWidth: 1,
-              borderColor: '#E5E7EB',
-              borderRadius: 14,
-              paddingHorizontal: 14,
-              height: 48,
-              marginBottom: 16,
-              ...getSoftShadowStyle(8),
-            }}>
-              <Search size={18} color="#9CA3AF" style={{ marginRight: 10 }} />
-              <TextInput
-                style={{ flex: 1, fontSize: 14, color: '#111827', fontWeight: '500' }}
-                placeholder="Search events by name or date..."
-                placeholderTextColor="#9CA3AF"
-                value={eventSearchQuery}
-                onChangeText={setEventSearchQuery}
-                autoCapitalize="none"
-              />
-              {eventSearchQuery ? (
-                <TouchableOpacity onPress={() => setEventSearchQuery('')}>
-                  <X size={18} color="#9CA3AF" />
-                </TouchableOpacity>
-              ) : null}
-            </View>
-
-            {/* List of Available Events */}
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-              {filteredEvents.length > 0 ? (
-                filteredEvents.map((ev) => {
-                  const isSelected = selectedEventId === ev.id;
-                  return (
+                {/* 3. Status Options */}
+                <View>
+                  <Text style={styles.inputLabel}>Status</Text>
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
                     <TouchableOpacity
-                      key={ev.id}
-                      style={{
-                        paddingVertical: 14,
-                        paddingHorizontal: 16,
-                        marginBottom: 10,
-                        backgroundColor: isSelected ? '#FFF5F8' : '#FFF',
-                        borderWidth: 1,
-                        borderColor: isSelected ? '#FF6596' : '#F3F4F6',
-                        borderRadius: 14,
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        ...getSoftShadowStyle(10),
-                      }}
-                      onPress={() => {
-                        setSelectedEventId(ev.id);
-                        setNewTitle(ev.title || 'Worship Setlist');
-                        if (ev.date) setNewDate(ev.date);
-                        setIsEventPickerOpen(false);
-                        setTimeout(() => setCreateModalVisible(true), 250);
-                      }}
-                      activeOpacity={0.7}
+                      style={[styles.statusOption, newStatus === 'published' && styles.statusOptionSelected]}
+                      onPress={() => setNewStatus('published')}
                     >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                        <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: isSelected ? '#FF6596' : '#FFF5F8', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
-                          <CalendarDays size={18} color={isSelected ? '#FFF' : '#FF6596'} />
-                        </View>
-                        <View style={{ flex: 1, paddingRight: 12, justifyContent: 'center' }}>
-                          <Text style={{ fontSize: 15, fontWeight: '800', color: isSelected ? '#FF6596' : '#111827', marginBottom: 3 }} numberOfLines={1}>
-                            {ev.title}
-                          </Text>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                            <Text style={{ fontSize: 13, color: isSelected ? '#FF6596' : '#6B7280', fontWeight: '600' }}>
-                              {ev.date ? new Date(ev.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : ''}
-                            </Text>
-                            {ev.time ? (
-                              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                <Clock size={12} color={isSelected ? '#FF6596' : '#6B7280'} style={{ marginRight: 4 }} />
-                                <Text style={{ fontSize: 13, color: isSelected ? '#FF6596' : '#6B7280', fontWeight: '500' }}>
-                                  {ev.time}
-                                </Text>
-                              </View>
-                            ) : null}
-                          </View>
-                        </View>
-                        {isSelected && <Check size={20} color="#FF6596" strokeWidth={2.5} />}
-                      </View>
+                      <Text style={[styles.statusOptionText, newStatus === 'published' && styles.statusOptionTextSelected]}>Published</Text>
                     </TouchableOpacity>
-                  );
-                })
-              ) : (
-                <View style={{ alignItems: 'center', paddingVertical: 40 }}>
-                  <CalendarDays size={32} color="#9CA3AF" style={{ marginBottom: 10 }} />
-                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#374151' }}>No events found</Text>
-                  <Text style={{ fontSize: 13, color: '#9CA3AF', textAlign: 'center', marginTop: 4 }}>
-                    Try searching with another keyword or date.
-                  </Text>
+                    <TouchableOpacity
+                      style={[styles.statusOption, newStatus === 'draft' && styles.statusOptionSelected]}
+                      onPress={() => setNewStatus('draft')}
+                    >
+                      <Text style={[styles.statusOptionText, newStatus === 'draft' && styles.statusOptionTextSelected]}>Draft</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              )}
+              </View>
             </ScrollView>
-          </View>
+          ) : (
+            <View style={{ flex: 1, paddingTop: 90, paddingHorizontal: 20 }}>
+              {/* Search Input Bar */}
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: '#FFF',
+                borderWidth: 1,
+                borderColor: '#E5E7EB',
+                borderRadius: 14,
+                paddingHorizontal: 14,
+                height: 48,
+                marginBottom: 16,
+                ...getSoftShadowStyle(8),
+              }}>
+                <Search size={18} color="#9CA3AF" style={{ marginRight: 10 }} />
+                <TextInput
+                  style={{ flex: 1, fontSize: 14, color: '#111827', fontWeight: '500' }}
+                  placeholder="Search events by name or date..."
+                  placeholderTextColor="#9CA3AF"
+                  value={eventSearchQuery}
+                  onChangeText={setEventSearchQuery}
+                  autoCapitalize="none"
+                />
+                {eventSearchQuery ? (
+                  <TouchableOpacity onPress={() => setEventSearchQuery('')}>
+                    <X size={18} color="#9CA3AF" />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+
+              {/* List of Available Events */}
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+                {filteredEvents.length > 0 ? (
+                  filteredEvents.map((ev) => {
+                    const isSelected = selectedEventId === ev.id;
+                    return (
+                      <TouchableOpacity
+                        key={ev.id}
+                        style={{
+                          paddingVertical: 14,
+                          paddingHorizontal: 16,
+                          marginBottom: 10,
+                          backgroundColor: isSelected ? '#FFF5F8' : '#FFF',
+                          borderWidth: 1,
+                          borderColor: isSelected ? '#FF6596' : '#F3F4F6',
+                          borderRadius: 14,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          ...getSoftShadowStyle(10),
+                        }}
+                        onPress={() => {
+                          setSelectedEventId(ev.id);
+                          setNewTitle(ev.title || 'Worship Setlist');
+                          if (ev.date) setNewDate(ev.date);
+                          setModalStep('form');
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                          <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: isSelected ? '#FF6596' : '#FFF5F8', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                            <CalendarDays size={18} color={isSelected ? '#FFF' : '#FF6596'} />
+                          </View>
+                          <View style={{ flex: 1, paddingRight: 12, justifyContent: 'center' }}>
+                            <Text style={{ fontSize: 15, fontWeight: '800', color: isSelected ? '#FF6596' : '#111827', marginBottom: 3 }} numberOfLines={1}>
+                              {ev.title}
+                            </Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                              <Text style={{ fontSize: 13, color: isSelected ? '#FF6596' : '#6B7280', fontWeight: '600' }}>
+                                {ev.date ? new Date(ev.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : ''}
+                              </Text>
+                              {ev.time ? (
+                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                  <Clock size={12} color={isSelected ? '#FF6596' : '#6B7280'} style={{ marginRight: 4 }} />
+                                  <Text style={{ fontSize: 13, color: isSelected ? '#FF6596' : '#6B7280', fontWeight: '500' }}>
+                                    {ev.time}
+                                  </Text>
+                                </View>
+                              ) : null}
+                            </View>
+                          </View>
+                          {isSelected && <Check size={20} color="#FF6596" strokeWidth={2.5} />}
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })
+                ) : (
+                  <View style={{ alignItems: 'center', paddingVertical: 40 }}>
+                    <CalendarDays size={32} color="#9CA3AF" style={{ marginBottom: 10 }} />
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#374151' }}>No events found</Text>
+                    <Text style={{ fontSize: 13, color: '#9CA3AF', textAlign: 'center', marginTop: 4 }}>
+                      Try searching with another keyword or date.
+                    </Text>
+                  </View>
+                )}
+              </ScrollView>
+            </View>
+          )}
         </View>
       </AppModal>
 

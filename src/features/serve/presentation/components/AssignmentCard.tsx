@@ -4,6 +4,7 @@ import { PrayingHands } from '@/components/ui/icons/PrayingHands';
 import type { MinistryAssignment } from '@/features/ministry/domain/ministry.types';
 import { DeclineModal } from '@/features/serve/presentation/components/DeclineModal';
 import { useMinistryStore } from '@/store/useMinistryStore';
+import { useScheduleStore } from '@/store/useScheduleStore';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
     BookOpen,
@@ -133,6 +134,13 @@ export function AssignmentCard({ assignment, onPress, onConfirm, onDecline, savi
   const ministry = ministries.find((m) => m.id === assignment.ministryId);
   const customDetails = ministry?.roleDetails?.[assignment.roleName];
 
+  // Fetch schedule to fill missing time/location details
+  const schedules = useScheduleStore((s) => s.schedules);
+  const schedule = schedules.find((s) => s.id === assignment.eventId);
+  
+  const displayTime = assignment.callTime || schedule?.time;
+  const displayLocation = assignment.eventLocation || schedule?.location;
+
   // customDetails.color is the BG tint; derive accent from ICON_COLORS map
   const iconBg = customDetails?.color || ROLE_ICON_BG[roleId] || '#F3F4F6';
   const color  = ICON_COLORS[iconBg] || ROLE_COLOR[roleId] || '#6B7280';
@@ -241,16 +249,14 @@ export function AssignmentCard({ assignment, onPress, onConfirm, onDecline, savi
               <Text style={[cs.statusText, { color: statusColor }]}>{statusLabel}</Text>
             </View>
           </View>
-          {isPending ? (
+          {isPending && (
             <View style={cs.chevronWrap}>
               {expanded ? (
-                <ChevronUp size={16} color="#9CA3AF" />
+                <ChevronUp size={15} color="#9CA3AF" />
               ) : (
-                <ChevronDown size={16} color="#9CA3AF" />
+                <ChevronDown size={15} color="#9CA3AF" />
               )}
             </View>
-          ) : (
-            <ChevronRight size={16} color="#9CA3AF" />
           )}
         </LinearGradient>
 
@@ -259,25 +265,22 @@ export function AssignmentCard({ assignment, onPress, onConfirm, onDecline, savi
             <Text style={cs.eventName} numberOfLines={1}>
               {assignment.eventName}
             </Text>
-            <Text style={cs.ministryName} numberOfLines={1}>
-              {assignment.ministryName}
-            </Text>
             <View style={cs.metaRow}>
               <CalendarDays size={11} color="#9CA3AF" />
               <Text style={cs.metaText}>{formattedDate}</Text>
-              {assignment.callTime ? (
+              {displayTime ? (
                 <>
-                  <View style={cs.metaDot} />
+                  <View style={cs.metaDivider} />
                   <Clock size={11} color="#9CA3AF" />
-                  <Text style={cs.metaText}>Call: {assignment.callTime}</Text>
+                  <Text style={cs.metaText}>{displayTime}</Text>
                 </>
               ) : null}
-              {assignment.eventLocation ? (
+              {displayLocation ? (
                 <>
-                  <View style={cs.metaDot} />
+                  <View style={cs.metaDivider} />
                   <MapPin size={11} color="#9CA3AF" />
                   <Text style={cs.metaText} numberOfLines={1}>
-                    {assignment.eventLocation}
+                    {displayLocation}
                   </Text>
                 </>
               ) : null}
@@ -286,7 +289,7 @@ export function AssignmentCard({ assignment, onPress, onConfirm, onDecline, savi
         </TouchableOpacity>
 
         {isPending && (onConfirm || onDecline) && (
-          <Animated.View style={collapseStyle}>
+          <Animated.View style={[cs.actionWrap, collapseStyle]}>
             <View style={cs.actionRow}>
               {onDecline && (
                 <TouchableOpacity
@@ -295,7 +298,7 @@ export function AssignmentCard({ assignment, onPress, onConfirm, onDecline, savi
                   disabled={saving}
                   activeOpacity={0.7}
                 >
-                  <X size={13} color="#EF4444" strokeWidth={2.5} />
+                  <X size={13} color="#F87171" strokeWidth={2.5} />
                   <Text style={cs.declineBtnText}>Decline</Text>
                 </TouchableOpacity>
               )}
@@ -386,43 +389,34 @@ const cs = StyleSheet.create({
   },
   pendingBadgeText: { fontSize: 9, fontWeight: '700', color: '#D97706' },
   chevronWrap: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#F3F4F6',
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignSelf: 'center',
+    flexShrink: 0,
   },
   body: {
     paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: 14,
-    gap: 3,
+    gap: 6,
   },
   eventName: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: '#111827',
     letterSpacing: -0.1,
   },
-  ministryName: {
-    fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
+    gap: 5,
     flexWrap: 'wrap',
   },
   metaText: { fontSize: 11, color: '#9CA3AF', fontWeight: '500' },
-  metaDot: {
+  metaDivider: {
     width: 3,
     height: 3,
-    borderRadius: 1.5,
+    borderRadius: 2,
     backgroundColor: '#D1D5DB',
+    marginHorizontal: 2,
   },
   confirmedBanner: {
     flexDirection: 'row',
@@ -439,13 +433,14 @@ const cs = StyleSheet.create({
     color: '#16A34A',
     fontWeight: '600',
   },
+  actionWrap: {
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 16,
+  },
   actionRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingBottom: 14,
-    paddingTop: 2,
+    gap: 10,
   },
   declineBtn: {
     flex: 1,
@@ -453,33 +448,33 @@ const cs = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
-    paddingVertical: 9,
-    borderRadius: 10,
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1.5,
     borderColor: '#FCA5A5',
+    backgroundColor: '#FFF1F1',
   },
   declineBtnText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#EF4444',
+    color: '#F87171',
   },
   confirmBtn: {
-    flex: 1.5,
+    flex: 2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
-    paddingVertical: 9,
-    borderRadius: 10,
-    backgroundColor: '#22C55E',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: '#3B82F6',
+  },
+  btnDisabled: {
+    opacity: 0.5,
   },
   confirmBtnText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  btnDisabled: {
-    opacity: 0.6,
+    color: '#fff',
   },
 });

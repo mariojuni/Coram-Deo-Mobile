@@ -154,7 +154,6 @@ export const onCommentCreated = onDocumentCreated(
     let ownerId: string | undefined;
     let title = 'New Comment';
     let body = '';
-    const authorName = data.authorDisplayName || 'Someone';
 
     if (data.parentCommentId) {
       // It's a reply to a comment
@@ -163,7 +162,7 @@ export const onCommentCreated = onDocumentCreated(
       if (!parentSnap.exists) return null;
       ownerId = parentSnap.data()?.authorUserId;
       title = 'New Reply';
-      body = `${authorName} replied to your comment.`;
+      body = `replied to your comment.`;
     } else {
       // Top-level comment
       if (data.targetType === 'prayer_request') {
@@ -255,8 +254,8 @@ export const onMinistryAssignmentWritten = onDocumentWritten(
         churchId: afterData.churchId,
         category: 'serve',
         type: 'ministry_assignment',
-        title: 'New Ministry Assignment',
-        body: `You have been assigned to ${afterData.ministryName} as ${afterData.roleName} for ${afterData.eventName}.`,
+        title: `${afterData.eventName}`,
+        body: `You have been assigned to ${afterData.ministryName} as ${afterData.roleName}.`,
         sourceType: 'ministry_assignment',
         sourceId: event.params.assignmentId,
       });
@@ -285,7 +284,6 @@ export const onPrayerRequestCreated = onDocumentCreated(
 
     const churchId = event.params.churchId;
     const authorUserId = data.userId;
-    const authorName = data.requesterName || data.name || 'Someone';
 
     const db = getFirestore(admin.app(), databaseName);
 
@@ -315,7 +313,7 @@ export const onPrayerRequestCreated = onDocumentCreated(
             category: 'prayer',
             type: 'new_prayer_request',
             title: 'New Prayer Request',
-            body: `${authorName} shared a new prayer request.`,
+            body: `shared a new prayer request.`,
             sourceType: 'prayer_request',
             sourceId: event.params.requestId,
             actorUserId: authorUserId,
