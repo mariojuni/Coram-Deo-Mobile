@@ -81,7 +81,15 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       icon: "./assets/expo.icon",
       bundleIdentifier,
       googleServicesFile: isProd ? "./credentials/production/GoogleService-Info.plist" : "./credentials/staging/GoogleService-Info.plist",
+      entitlements: {
+        "aps-environment": isProd ? "production" : "development"
+      },
       infoPlist: {
+        UIBackgroundModes: [
+          "audio",
+          "remote-notification",
+          "fetch"
+        ],
         CFBundleDisplayName: appName,
         ITSAppUsesNonExemptEncryption: false,
         CFBundleURLTypes: [
