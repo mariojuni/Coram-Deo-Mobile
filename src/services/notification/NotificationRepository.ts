@@ -227,6 +227,8 @@ export class NotificationRepository {
       
       for (const chunk of chunks) {
         await runTransaction(db, async (transaction) => {
+          const stateDoc = await transaction.get(stateRef);
+
           chunk.forEach(docSnap => {
             transaction.update(docSnap.ref, {
               isRead: true,
@@ -234,7 +236,6 @@ export class NotificationRepository {
             });
           });
           
-          const stateDoc = await transaction.get(stateRef);
           if (stateDoc.exists()) {
             transaction.update(stateRef, { unreadCount: 0, updatedAt: Timestamp.now() });
           } else {
@@ -294,16 +295,21 @@ export class NotificationRepository {
           if (!data.isRead) {
             unreadRemoved++;
           }
+        }
+
+        let stateDoc = null;
+        if (unreadRemoved > 0) {
+          stateDoc = await transaction.get(stateRef);
+        }
+
+        for (const docSnap of snapshot.docs) {
           transaction.delete(docSnap.ref);
         }
 
-        if (unreadRemoved > 0) {
-          const stateDoc = await transaction.get(stateRef);
-          if (stateDoc.exists()) {
-            const currentState = stateDoc.data() as UserNotificationState;
-            const newCount = Math.max(0, (currentState.unreadCount || 0) - unreadRemoved);
-            transaction.update(stateRef, { unreadCount: newCount, updatedAt: Timestamp.now() });
-          }
+        if (stateDoc && stateDoc.exists()) {
+          const currentState = stateDoc.data() as UserNotificationState;
+          const newCount = Math.max(0, (currentState.unreadCount || 0) - unreadRemoved);
+          transaction.update(stateRef, { unreadCount: newCount, updatedAt: Timestamp.now() });
         }
       });
     } catch (error) {
@@ -329,15 +335,18 @@ export class NotificationRepository {
         }
 
         const data = notifDoc.data() as AppNotification;
+
+        let stateDoc = null;
+        if (!data.isRead) {
+          stateDoc = await transaction.get(stateRef);
+        }
+
         transaction.delete(notificationRef);
 
-        if (!data.isRead) {
-          const stateDoc = await transaction.get(stateRef);
-          if (stateDoc.exists()) {
-            const currentState = stateDoc.data() as UserNotificationState;
-            const newCount = Math.max(0, (currentState.unreadCount || 0) - 1);
-            transaction.update(stateRef, { unreadCount: newCount, updatedAt: Timestamp.now() });
-          }
+        if (stateDoc && stateDoc.exists()) {
+          const currentState = stateDoc.data() as UserNotificationState;
+          const newCount = Math.max(0, (currentState.unreadCount || 0) - 1);
+          transaction.update(stateRef, { unreadCount: newCount, updatedAt: Timestamp.now() });
         }
       });
     } catch (error) {
