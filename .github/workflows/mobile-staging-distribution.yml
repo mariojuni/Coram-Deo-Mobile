@@ -164,6 +164,8 @@ jobs:
   tag-release:
     name: Tag Release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     needs: [android-staging, ios-staging]
     if: always() && (needs.android-staging.result == 'success' || needs.ios-staging.result == 'success')
     steps:

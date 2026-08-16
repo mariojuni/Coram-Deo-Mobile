@@ -34,7 +34,7 @@ export class NotificationService {
    * Creates an in-app notification in Firestore and attempts to send a push notification.
    */
   static async createUserNotification(params: CreateNotificationParams): Promise<void> {
-    const databaseName = process.env.GCLOUD_PROJECT === 'coramdeo-prod' ? 'coramdeo' : '(default)';
+    const databaseName = 'coramdeo';
     const db = getFirestore(admin.app(), databaseName);
     const notificationId = db.collection('_').doc().id; // Generate random ID
 
@@ -83,20 +83,12 @@ export class NotificationService {
    * Sends FCM push notification strictly to matching environment tokens.
    */
   private static async sendPushToUser(userId: string, params: CreateNotificationParams): Promise<void> {
-    const databaseName = process.env.GCLOUD_PROJECT === 'coramdeo-prod' ? 'coramdeo' : '(default)';
+    const databaseName = 'coramdeo';
     const db = getFirestore(admin.app(), databaseName);
     
-    // We determine our current backend environment using process.env or project id.
-    // Assuming standard Firebase setups, `GCLOUD_PROJECT` has the project ID.
-    // e.g., 'coramdeo-prod' vs 'coramdeo-staging'
-    const projectId = process.env.GCLOUD_PROJECT || '';
-    const isProduction = projectId.includes('prod');
-    const targetEnvironment = isProduction ? 'production' : 'staging';
-
     try {
       const tokensSnap = await db.collection(`userPushTokens/${userId}/devices`)
         .where('notificationsEnabled', '==', true)
-        .where('environment', '==', targetEnvironment)
         .get();
 
       if (tokensSnap.empty) {
@@ -183,7 +175,7 @@ export class NotificationService {
   static async deleteNotificationsBySource(sourceId: string): Promise<void> {
     if (!sourceId) return;
 
-    const databaseName = process.env.GCLOUD_PROJECT === 'coramdeo-prod' ? 'coramdeo' : '(default)';
+    const databaseName = 'coramdeo';
     const db = getFirestore(admin.app(), databaseName);
 
     try {

@@ -6,7 +6,7 @@ import { NotificationService } from './services/NotificationService';
 admin.initializeApp();
 
 
-const databaseName = process.env.GCLOUD_PROJECT === 'coramdeo-prod' ? 'coramdeo' : '(default)';
+const databaseName = 'coramdeo';
 
 // v2 Firestore trigger using Eventarc — required for named databases (Firestore Enterprise).
 // The old v1 trigger (functions.firestore) does NOT support named databases.

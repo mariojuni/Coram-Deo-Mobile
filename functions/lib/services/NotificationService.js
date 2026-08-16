@@ -41,7 +41,7 @@ class NotificationService {
      * Creates an in-app notification in Firestore and attempts to send a push notification.
      */
     static async createUserNotification(params) {
-        const databaseName = process.env.GCLOUD_PROJECT === 'coramdeo-prod' ? 'coramdeo' : '(default)';
+        const databaseName = 'coramdeo';
         const db = (0, firestore_1.getFirestore)(admin.app(), databaseName);
         const notificationId = db.collection('_').doc().id; // Generate random ID
         const notificationData = Object.assign(Object.assign({ id: notificationId }, params), { isRead: false, createdAt: admin.firestore.FieldValue.serverTimestamp() });
@@ -80,18 +80,11 @@ class NotificationService {
      * Sends FCM push notification strictly to matching environment tokens.
      */
     static async sendPushToUser(userId, params) {
-        const databaseName = process.env.GCLOUD_PROJECT === 'coramdeo-prod' ? 'coramdeo' : '(default)';
+        const databaseName = 'coramdeo';
         const db = (0, firestore_1.getFirestore)(admin.app(), databaseName);
-        // We determine our current backend environment using process.env or project id.
-        // Assuming standard Firebase setups, `GCLOUD_PROJECT` has the project ID.
-        // e.g., 'coramdeo-prod' vs 'coramdeo-staging'
-        const projectId = process.env.GCLOUD_PROJECT || '';
-        const isProduction = projectId.includes('prod');
-        const targetEnvironment = isProduction ? 'production' : 'staging';
         try {
             const tokensSnap = await db.collection(`userPushTokens/${userId}/devices`)
                 .where('notificationsEnabled', '==', true)
-                .where('environment', '==', targetEnvironment)
                 .get();
             if (tokensSnap.empty) {
                 return; // No tokens for this user in this environment
@@ -172,7 +165,7 @@ class NotificationService {
     static async deleteNotificationsBySource(sourceId) {
         if (!sourceId)
             return;
-        const databaseName = process.env.GCLOUD_PROJECT === 'coramdeo-prod' ? 'coramdeo' : '(default)';
+        const databaseName = 'coramdeo';
         const db = (0, firestore_1.getFirestore)(admin.app(), databaseName);
         try {
             const snap = await db.collectionGroup('items').where('sourceId', '==', sourceId).get();

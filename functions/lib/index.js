@@ -39,7 +39,7 @@ const firestore_1 = require("firebase-admin/firestore");
 const firestore_2 = require("firebase-functions/v2/firestore");
 const NotificationService_1 = require("./services/NotificationService");
 admin.initializeApp();
-const databaseName = process.env.GCLOUD_PROJECT === 'coramdeo-prod' ? 'coramdeo' : '(default)';
+const databaseName = 'coramdeo';
 // v2 Firestore trigger using Eventarc — required for named databases (Firestore Enterprise).
 // The old v1 trigger (functions.firestore) does NOT support named databases.
 exports.syncUserNameOnUpdate = (0, firestore_2.onDocumentUpdated)({
