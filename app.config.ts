@@ -82,7 +82,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       bundleIdentifier,
       googleServicesFile: isProd ? "./credentials/production/GoogleService-Info.plist" : "./credentials/staging/GoogleService-Info.plist",
       entitlements: {
-        "aps-environment": isProd ? "production" : "development"
+        // Must be "production" for all distributed builds (ad-hoc, App Store).
+        // "development" only works when installed directly via Xcode in debug mode.
+        "aps-environment": "production"
       },
       infoPlist: {
         UIBackgroundModes: [

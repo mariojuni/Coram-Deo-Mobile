@@ -120,6 +120,22 @@ class NotificationService {
                 tokens,
                 notification: payload.notification,
                 data: payload.data,
+                // Required for iOS push notifications when app is closed/backgrounded
+                apns: {
+                    headers: {
+                        'apns-priority': '10', // High priority = immediate delivery
+                    },
+                    payload: {
+                        aps: {
+                            'content-available': 1, // Wake app in background
+                            sound: 'default',
+                            badge: 1,
+                        },
+                    },
+                },
+                android: {
+                    priority: 'high',
+                },
             });
             // 3. Clean up invalid tokens
             if (response.failureCount > 0) {
