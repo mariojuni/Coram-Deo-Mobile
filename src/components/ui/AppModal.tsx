@@ -10,7 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export const ModalDragContext = React.createContext<Record<string, any>>({});
 
-export function ModalDragArea({ children, style, pointerEvents }: { children: React.ReactNode, style?: import('react-native').StyleProp<import('react-native').ViewStyle>, pointerEvents?: 'box-none' | 'none' | 'box-only' | 'auto' }) {
+export function ModalDragArea({ children, style, pointerEvents }: { children?: React.ReactNode, style?: import('react-native').StyleProp<import('react-native').ViewStyle>, pointerEvents?: 'box-none' | 'none' | 'box-only' | 'auto' }) {
   const panHandlers = React.useContext(ModalDragContext);
   return (
     <View style={style} pointerEvents={pointerEvents} {...panHandlers}>
