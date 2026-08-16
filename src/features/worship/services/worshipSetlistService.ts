@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, where, orderBy, addDoc, updateDoc, writeBatch, deleteDoc } from 'firebase/firestore';
 import { getActiveDb } from '../../../firebase';
 import type { Song, SongVersion, WorshipSetlist, WorshipSetlistItem } from '../domain/worship.types';
 import type { UserAccount } from '../../auth/domain/auth.types';
@@ -145,7 +145,6 @@ export const worshipSetlistService = {
    * Creates a new worship setlist.
    */
   createWorshipSetlist: async (data: Omit<WorshipSetlist, 'id'>): Promise<string> => {
-    const { addDoc } = await import('firebase/firestore');
     const docRef = await addDoc(collection(getActiveDb(), 'worshipSetlists'), {
       ...data,
       createdAt: new Date().toISOString(),
@@ -158,7 +157,6 @@ export const worshipSetlistService = {
    * Updates an existing worship setlist.
    */
   updateWorshipSetlist: async (setlistId: string, data: Partial<WorshipSetlist>): Promise<void> => {
-    const { updateDoc } = await import('firebase/firestore');
     const docRef = doc(getActiveDb(), 'worshipSetlists', setlistId);
     await updateDoc(docRef, {
       ...data,
@@ -170,7 +168,6 @@ export const worshipSetlistService = {
    * Deletes a worship setlist and its items.
    */
   deleteWorshipSetlist: async (setlistId: string): Promise<void> => {
-    const { writeBatch, deleteDoc } = await import('firebase/firestore');
     const batch = writeBatch(getActiveDb());
 
     const setlistRef = doc(getActiveDb(), 'worshipSetlists', setlistId);
@@ -192,7 +189,6 @@ export const worshipSetlistService = {
    * Creates a setlist item (song in setlist).
    */
   createWorshipSetlistItem: async (itemData: Omit<WorshipSetlistItem, 'id'>): Promise<string> => {
-    const { addDoc } = await import('firebase/firestore');
     const docRef = await addDoc(collection(getActiveDb(), 'worshipSetlistItems'), {
       ...itemData,
       createdAt: new Date().toISOString(),
@@ -205,7 +201,6 @@ export const worshipSetlistService = {
    * Updates a setlist item.
    */
   updateWorshipSetlistItem: async (itemId: string, itemData: Partial<WorshipSetlistItem>): Promise<void> => {
-    const { updateDoc } = await import('firebase/firestore');
     const docRef = doc(getActiveDb(), 'worshipSetlistItems', itemId);
     await updateDoc(docRef, {
       ...itemData,
@@ -217,7 +212,6 @@ export const worshipSetlistService = {
    * Deletes a setlist item.
    */
   deleteWorshipSetlistItem: async (itemId: string): Promise<void> => {
-    const { deleteDoc } = await import('firebase/firestore');
     const docRef = doc(getActiveDb(), 'worshipSetlistItems', itemId);
     await deleteDoc(docRef);
   },

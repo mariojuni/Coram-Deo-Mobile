@@ -1,10 +1,11 @@
 import { Stack, useRouter, useFocusEffect, usePathname } from 'expo-router';
-import { Dimensions, View, Animated, TouchableWithoutFeedback } from 'react-native';
+import { Dimensions, View, Animated, TouchableWithoutFeedback, StyleSheet, Keyboard } from 'react-native';
 import { useEffect, useMemo, useCallback } from 'react';
+import { CreateSetlistProvider } from './CreateSetlistContext';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-export default function AssignMinistriesLayout() {
+export default function CreateSetlistLayout() {
   const router = useRouter();
   const slideAnim = useMemo(() => new Animated.Value(SCREEN_HEIGHT), []);
   const fadeAnim = useMemo(() => new Animated.Value(0), []);
@@ -13,7 +14,7 @@ export default function AssignMinistriesLayout() {
     useCallback(() => {
       slideAnim.setValue(SCREEN_HEIGHT);
       fadeAnim.setValue(0);
-
+      
       Animated.parallel([
         Animated.timing(slideAnim, {
           toValue: 0,
@@ -32,6 +33,7 @@ export default function AssignMinistriesLayout() {
   const pathname = usePathname();
 
   const handleClose = () => {
+    Keyboard.dismiss();
     Animated.parallel([
       Animated.timing(slideAnim, {
         toValue: SCREEN_HEIGHT,
@@ -62,17 +64,20 @@ export default function AssignMinistriesLayout() {
         <Animated.View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.5)', opacity: fadeAnim }} />
       </TouchableWithoutFeedback>
 
-      <Animated.View style={{ backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, height: SCREEN_HEIGHT * 0.9, overflow: 'hidden', transform: [{ translateY: slideAnim }] }}>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: '#FAFAFA' }
-          }}
-        >
-          <Stack.Screen name="index" />
-          <Stack.Screen name="assign-member" />
-        </Stack>
+      <Animated.View style={{ backgroundColor: '#FAFAFA', borderTopLeftRadius: 24, borderTopRightRadius: 24, height: SCREEN_HEIGHT * 0.85, overflow: 'hidden', transform: [{ translateY: slideAnim }] }}>
+        <CreateSetlistProvider onSuccess={handleClose}>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: '#FAFAFA' }
+            }}
+          >
+            <Stack.Screen name="index" />
+            <Stack.Screen name="select-event" />
+          </Stack>
+        </CreateSetlistProvider>
       </Animated.View>
     </View>
   );
 }
+

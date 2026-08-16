@@ -29,11 +29,15 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
+  Share,
+  Animated,
+  Dimensions
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BounceCard } from '@/components/ui/BounceCard';
+import { SetlistForm, SetlistStatus } from '@/components/Worship/SetlistForm';
 import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
 import { SoftCard, getTopBarButtonShadowStyle, getSoftShadowStyle } from '@/components/ui/SoftCard';
 import type { Song, WorshipSetlist, WorshipSetlistItem } from '@/features/worship/domain/worship.types';
@@ -49,7 +53,8 @@ import { useScheduleStore } from '@/store/useScheduleStore';
 import { useModalKeyboard } from '@/hooks/useModalKeyboard';
 
 export default function WorshipSetlistDetailScreen() {
-  const { setlistId, viewOnly } = useLocalSearchParams<{ setlistId: string, viewOnly?: string }>();
+  const { setlistId: rawSetlistId, viewOnly } = useLocalSearchParams<{ setlistId: string, viewOnly?: string }>();
+  const setlistId = Array.isArray(rawSetlistId) ? rawSetlistId[0] : rawSetlistId;
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const userProfile = useAuthStore((s) => s.userProfile);
@@ -57,39 +62,15 @@ export default function WorshipSetlistDetailScreen() {
   const setActiveSetlistItems = useWorshipStore((s) => s.setActiveSetlistItems);
   const schedules = useScheduleStore((state) => state.schedules);
 
-  const userMinistries = ministries.filter((m) =>
+  const userMinistries = useMemo(() => ministries.filter((m) =>
     m.members?.some((mem) => mem.memberId === userProfile?.memberId)
-  );
+  ), [ministries, userProfile?.memberId]);
 
   const [setlist, setSetlist] = useState<WorshipSetlist | null>(null);
   const [items, setItems] = useState<WorshipSetlistItem[]>([]);
   const [availableSongs, setAvailableSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Edit Setlist Modal
-  const [editModalVisible, setEditModalVisible] = useState(false);
-  const [editTitle, setEditTitle] = useState('');
-  const [editDate, setEditDate] = useState('');
-  const [editStatus, setEditStatus] = useState<'draft' | 'published' | 'archived'>('published');
-
-  // Searchable Event Picker State
-  const [eventSearchQuery, setEventSearchQuery] = useState('');
-  const [isEventPickerOpen, setIsEventPickerOpen] = useState(false);
-  const [selectedEventId, setSelectedEventId] = useState<string>('');
-
-  const selectedEvent = schedules.find((s) => s.id === selectedEventId);
-
-  const filteredEvents = useMemo(() => {
-    const availableSchedules = schedules;
-    if (!eventSearchQuery.trim()) return availableSchedules;
-    const query = eventSearchQuery.toLowerCase();
-    return availableSchedules.filter(
-      (e) => (e.title || '').toLowerCase().includes(query) || (e.date || '').includes(query)
-    );
-  }, [schedules, eventSearchQuery]);
-
-  const [savingSetlist, setSavingSetlist] = useState(false);
 
   // Add Song Modal
   const addSongKeyboard = useModalKeyboard({ heightRatio: 0.85, backgroundColor: '#FAFAFA' });
@@ -136,10 +117,6 @@ export default function WorshipSetlistDetailScreen() {
       const songs = await worshipSetlistService.getAllSongs(userProfile.churchId);
 
       setSetlist(fetchedSetlist);
-      setEditTitle(fetchedSetlist.title || '');
-      setEditDate(fetchedSetlist.serviceDate || '');
-      setEditStatus(fetchedSetlist.status || 'published');
-      setSelectedEventId(fetchedSetlist.eventId || '');
       setItems(fetchedItems);
       setAvailableSongs(songs);
       setActiveSetlistItems(fetchedItems);
@@ -153,47 +130,9 @@ export default function WorshipSetlistDetailScreen() {
 
   useEffect(() => {
     loadData();
-  }, [setlistId, userProfile]);
+  }, [typeof setlistId === "object" ? setlistId[0] : setlistId, userProfile]);
 
-  const handleUpdateSetlist = async () => {
-    if (!setlist || !setlistId) return;
-    try {
-      setSavingSetlist(true);
-      await worshipSetlistService.updateWorshipSetlist(setlistId, {
-        title: editTitle.trim(),
-        serviceDate: selectedEvent?.date || editDate,
-        eventId: selectedEventId || '',
-        status: editStatus,
-      });
-      setEditModalVisible(false);
-      loadData();
-    } catch (err) {
-      console.error('Failed to update setlist:', err);
-      Alert.alert('Error', 'Failed to update setlist.');
-    } finally {
-      setSavingSetlist(false);
-    }
-  };
 
-  const handleDeleteSetlist = async () => {
-    if (!setlist || !setlistId) return;
-    Alert.alert('Delete Setlist', 'Are you sure you want to delete this setlist?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await worshipSetlistService.deleteWorshipSetlist(setlistId);
-            router.back();
-          } catch (err) {
-            console.error('Failed to delete setlist:', err);
-            Alert.alert('Error', 'Failed to delete setlist.');
-          }
-        },
-      },
-    ]);
-  };
 
   const handleAddSong = async (song: Song) => {
     if (!setlist || !userProfile?.churchId) return;
@@ -356,7 +295,18 @@ export default function WorshipSetlistDetailScreen() {
             <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
               <TouchableOpacity
                 style={styles.leaderEditBtn}
-                onPress={() => setEditModalVisible(true)}
+                onPress={() => {
+                  router.push({
+                    pathname: '/create-setlist',
+                    params: {
+                      setlistId: setlist.id,
+                      initialTitle: setlist.title,
+                      initialEventId: setlist.eventId,
+                      initialDate: setlist.serviceDate,
+                      initialStatus: setlist.status,
+                    }
+                  } as any);
+                }}
               >
                 <Edit2 size={14} color="#FF6596" />
                 <Text style={styles.leaderEditBtnText}>Edit Setlist</Text>
@@ -534,119 +484,6 @@ export default function WorshipSetlistDetailScreen() {
         </BounceCard>
       </View>
 
-      {/* Edit Setlist Modal */}
-      <AppModal
-        isOpen={editModalVisible}
-        onClose={() => setEditModalVisible(false)}
-        title="Edit Setlist Details"
-        hideHeader={true}
-        hideDragHandle={true}
-        containerStyle={{ flex: 1, backgroundColor: '#FAFAFA', paddingHorizontal: 0, paddingBottom: 0 }}
-        heightRatio={0.85}
-        avoidKeyboard={false}
-      >
-        <View style={styles.modalContainer}>
-          {/* Header with Frosted Glass */}
-          <ModalDragArea style={[styles.headerContainer, { paddingTop: 12 }]}>
-            <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
-            <View style={styles.dragHandle} />
-            <View style={styles.headerContent}>
-              <TouchableOpacity
-                style={[styles.createBtnModalHeader, savingSetlist && { opacity: 0.6 }]}
-                disabled={savingSetlist}
-                onPress={handleUpdateSetlist}
-              >
-                {savingSetlist ? (
-                  <ActivityIndicator size="small" color="#FFF" />
-                ) : (
-                  <Text style={styles.createBtnModalHeaderText}>Save</Text>
-                )}
-              </TouchableOpacity>
-              <Text style={styles.headerTitleCenter}>Edit Setlist</Text>
-              <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => setEditModalVisible(false)} hitSlop={8} activeOpacity={0.8}>
-                <X size={24} color="#111827" strokeWidth={2} />
-              </BounceCard>
-            </View>
-          </ModalDragArea>
-
-          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-            <View style={{ gap: 20, paddingTop: 24 }}>
-              <View>
-                <Text style={styles.inputLabel}>Setlist Title *</Text>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="e.g. Sunday Morning Service"
-                  placeholderTextColor="#9CA3AF"
-                  value={editTitle}
-                  onChangeText={setEditTitle}
-                />
-              </View>
-
-              <View>
-                <Text style={styles.inputLabel}>Event</Text>
-                <TouchableOpacity
-                  style={{
-                    height: 52,
-                    backgroundColor: '#F9FAFB',
-                    borderRadius: 14,
-                    paddingHorizontal: 14,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    borderWidth: 1,
-                    borderColor: '#E5E7EB',
-                    marginTop: 4,
-                  }}
-                  onPress={() => {
-                    setEditModalVisible(false);
-                    setTimeout(() => {
-                      setEventSearchQuery('');
-                      setIsEventPickerOpen(true);
-                    }, 300);
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <CalendarDays size={20} color="#FF6596" style={{ marginRight: 12 }} />
-                  <Text style={{ fontSize: 14, fontWeight: '600', color: selectedEvent ? '#111827' : '#9CA3AF', flex: 1 }}>
-                    {selectedEvent ? `${selectedEvent.title} • ${selectedEvent.date ? new Date(selectedEvent.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}` : 'Select an event'}
-                  </Text>
-                  <ChevronRight size={18} color="#9CA3AF" />
-                </TouchableOpacity>
-              </View>
-
-              <View>
-                <Text style={styles.inputLabel}>Status</Text>
-                <View style={{ flexDirection: 'row', gap: 10 }}>
-                  <TouchableOpacity
-                    style={[styles.statusOption, editStatus === 'published' && styles.statusOptionSelected]}
-                    onPress={() => setEditStatus('published')}
-                  >
-                    <Text style={[styles.statusOptionText, editStatus === 'published' && styles.statusOptionTextSelected]}>Published</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.statusOption, editStatus === 'draft' && styles.statusOptionSelected]}
-                    onPress={() => setEditStatus('draft')}
-                  >
-                    <Text style={[styles.statusOptionText, editStatus === 'draft' && styles.statusOptionTextSelected]}>Draft</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <TouchableOpacity
-                style={styles.deleteDangerBtn}
-                onPress={() => {
-                  setEditModalVisible(false);
-                  handleDeleteSetlist();
-                }}
-              >
-                <Trash2 size={16} color="#EF4444" />
-                <Text style={styles.deleteDangerBtnText}>Delete Setlist</Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-        </View>
-      </AppModal>
-
       {/* Add Song Modal */}
       <AppModal
         isOpen={addSongModalVisible}
@@ -664,7 +501,7 @@ export default function WorshipSetlistDetailScreen() {
             <View style={styles.dragHandle} />
             <View style={styles.headerContent}>
               <View style={styles.headerCirclePlaceholder} />
-              <Text style={styles.headerTitle}>Add Song to Setlist</Text>
+              <Text style={styles.headerTitle} pointerEvents="none">Add Song to Setlist</Text>
               <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => setAddSongModalVisible(false)} hitSlop={8} activeOpacity={0.8}>
                 <X size={24} color="#111827" strokeWidth={2} />
               </BounceCard>
@@ -686,9 +523,6 @@ export default function WorshipSetlistDetailScreen() {
                 value={songSearch}
                 onChangeText={setSongSearch}
               />
-
-
-
 
               {filteredSongs.length === 0 ? (
                 <Text style={{ textAlign: 'center', color: '#9CA3AF', marginVertical: 20 }}>
@@ -718,146 +552,6 @@ export default function WorshipSetlistDetailScreen() {
               )}
             </View>
           </ScrollView>
-        </View>
-      </AppModal>
-
-      {/* Searchable Event Selection Modal */}
-      <AppModal
-        isOpen={isEventPickerOpen}
-        onClose={() => {
-          setIsEventPickerOpen(false);
-          setTimeout(() => setEditModalVisible(true), 250);
-        }}
-        title="Select Event"
-        hideHeader={true}
-        hideDragHandle={true}
-        containerStyle={{ flex: 1, backgroundColor: '#FAFAFA', paddingHorizontal: 0, paddingBottom: 0 }}
-        heightRatio={0.85}
-      >
-        <View style={[styles.modalContainer, { flex: 1 }]}>
-          {/* Frosted Glass Header */}
-          <ModalDragArea style={[styles.headerContainer, { paddingTop: 12 }]}>
-            <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
-            <View style={styles.dragHandle} />
-            <View style={styles.headerContent}>
-              <View style={styles.headerCirclePlaceholder} />
-              <Text style={styles.headerTitleCenter}>Select Event</Text>
-              <BounceCard
-                bounceScale={0.85}
-                style={styles.headerCircle}
-                onPress={() => {
-                  setIsEventPickerOpen(false);
-                  setTimeout(() => setEditModalVisible(true), 250);
-                }}
-                hitSlop={8}
-                activeOpacity={0.8}
-              >
-                <X size={24} color="#111827" strokeWidth={2} />
-              </BounceCard>
-            </View>
-          </ModalDragArea>
-
-          <View style={{ flex: 1, paddingTop: 90, paddingHorizontal: 20 }}>
-            {/* Search Input Bar */}
-            <View style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: '#FFF',
-              borderWidth: 1,
-              borderColor: '#E5E7EB',
-              borderRadius: 14,
-              paddingHorizontal: 14,
-              height: 48,
-              marginBottom: 16,
-              ...getSoftShadowStyle(8),
-            }}>
-              <Search size={18} color="#9CA3AF" style={{ marginRight: 10 }} />
-              <TextInput
-                style={{ flex: 1, fontSize: 14, color: '#111827', fontWeight: '500' }}
-                placeholder="Search events by name or date..."
-                placeholderTextColor="#9CA3AF"
-                value={eventSearchQuery}
-                onChangeText={setEventSearchQuery}
-                autoCapitalize="none"
-              />
-              {eventSearchQuery ? (
-                <TouchableOpacity onPress={() => setEventSearchQuery('')}>
-                  <X size={18} color="#9CA3AF" />
-                </TouchableOpacity>
-              ) : null}
-            </View>
-
-            {/* List of Available Events */}
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-              {filteredEvents.length > 0 ? (
-                filteredEvents.map((ev) => {
-                  const isSelected = selectedEventId === ev.id;
-                  return (
-                    <TouchableOpacity
-                      key={ev.id}
-                      style={{
-                        paddingVertical: 14,
-                        paddingHorizontal: 16,
-                        marginBottom: 10,
-                        backgroundColor: isSelected ? '#FFF5F8' : '#FFF',
-                        borderWidth: 1,
-                        borderColor: isSelected ? '#FF6596' : '#F3F4F6',
-                        borderRadius: 14,
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        ...getSoftShadowStyle(10),
-                      }}
-                      onPress={() => {
-                        setSelectedEventId(ev.id);
-                        if (!editTitle || editTitle === 'Worship Setlist') {
-                          setEditTitle(ev.title || 'Worship Setlist');
-                        }
-                        if (ev.date) setEditDate(ev.date);
-                        setIsEventPickerOpen(false);
-                        setTimeout(() => setEditModalVisible(true), 250);
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                        <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: isSelected ? '#FF6596' : '#FFF5F8', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
-                          <CalendarDays size={18} color={isSelected ? '#FFF' : '#FF6596'} />
-                        </View>
-                        <View style={{ flex: 1, paddingRight: 12, justifyContent: 'center' }}>
-                          <Text style={{ fontSize: 15, fontWeight: '800', color: isSelected ? '#FF6596' : '#111827', marginBottom: 3 }} numberOfLines={1}>
-                            {ev.title}
-                          </Text>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                            <Text style={{ fontSize: 13, color: isSelected ? '#FF6596' : '#6B7280', fontWeight: '600' }}>
-                              {ev.date ? new Date(ev.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : ''}
-                            </Text>
-                            {ev.time ? (
-                              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                <Clock size={12} color={isSelected ? '#FF6596' : '#6B7280'} style={{ marginRight: 4 }} />
-                                <Text style={{ fontSize: 13, color: isSelected ? '#FF6596' : '#6B7280', fontWeight: '500' }}>
-                                  {ev.time}
-                                </Text>
-                              </View>
-                            ) : null}
-                          </View>
-                        </View>
-                        {isSelected && <Check size={20} color="#FF6596" strokeWidth={2.5} />}
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })
-              ) : (
-                <View style={{ alignItems: 'center', paddingVertical: 40 }}>
-                  <CalendarDays size={32} color="#9CA3AF" style={{ marginBottom: 10 }} />
-                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#374151' }}>No events found</Text>
-                  <Text style={{ fontSize: 13, color: '#9CA3AF', textAlign: 'center', marginTop: 4 }}>
-                    Try searching with another keyword or date.
-                  </Text>
-                </View>
-              )}
-            </ScrollView>
-          </View>
         </View>
       </AppModal>
 
@@ -1234,9 +928,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerTitleCenter: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: '#111827',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1a1a1a',
     textAlign: 'center',
     position: 'absolute',
     left: 0,
@@ -1245,17 +939,16 @@ const styles = StyleSheet.create({
   },
   createBtnModalHeader: {
     backgroundColor: '#FF6596',
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 12,
+    borderRadius: 20,
+    minWidth: 80,
     alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
   },
   createBtnModalHeaderText: {
     color: '#FFF',
-    fontSize: 13,
     fontWeight: '700',
+    fontSize: 14,
   },
   headerCirclePlaceholder: {
     width: 40,

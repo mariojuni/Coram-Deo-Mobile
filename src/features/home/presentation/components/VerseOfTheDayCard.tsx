@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
+import { getSoftShadowStyle } from '@/components/ui/SoftCard';
 
 const decodeHtmlEntities = (text: string) => {
   return text
@@ -92,15 +93,15 @@ export function VerseOfTheDayCard() {
 
   if (votdLoading && !votdData) {
     return (
-      <View style={styles.outerContainer}>
-        <LinearGradient
-          colors={['#FC709D', '#B069F5']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.loadingContainer}
-        >
-          <ShimmerSkeleton baseColor="transparent" width="100%" height="100%" />
-        </LinearGradient>
+      <View style={[styles.outerContainer, styles.skeletonCard]}>
+        <View style={styles.votdRow}>
+          <ShimmerSkeleton width={36} height={36} borderRadius={10} style={{ marginRight: 12 }} />
+          <View style={{ flex: 1 }}>
+            <ShimmerSkeleton height={13} width="85%" style={{ marginBottom: 6 }} />
+            <ShimmerSkeleton height={13} width="70%" style={{ marginBottom: 6 }} />
+            <ShimmerSkeleton height={11} width={100} />
+          </View>
+        </View>
       </View>
     );
   }
@@ -211,6 +212,16 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  skeletonCard: {
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    ...getSoftShadowStyle(20),
+  },
+  votdRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
   },
   cardContainer: {
     borderRadius: 24,

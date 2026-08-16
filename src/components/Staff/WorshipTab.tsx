@@ -13,6 +13,7 @@ import {
   LayoutAnimation,
   Animated,
   Dimensions,
+  Keyboard,
 } from 'react-native';
 import { Music, Plus, ListMusic, Calendar, ChevronRight, AlertCircle, X, Check, Trash2, Hash, Clock, ArrowRight, ChevronDown, CalendarDays, ChevronLeft, Search, ArrowLeft } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
@@ -25,8 +26,6 @@ import { useScheduleStore } from '../../store/useScheduleStore';
 import { worshipSetlistService } from '../../features/worship/services/worshipSetlistService';
 import { canViewMobileWorshipSetlists, canCreateMobileWorshipSetlists } from '../../permissions/mobileWorshipPermissions';
 import { SoftCard, getTopBarButtonShadowStyle, getSoftShadowStyle } from '@/components/ui/SoftCard';
-import { BounceCard } from '@/components/ui/BounceCard';
-import { useModalKeyboard } from '@/hooks/useModalKeyboard';
 import type { WorshipSetlist } from '../../features/worship/domain/worship.types';
 
 export default function WorshipTab() {
@@ -35,49 +34,14 @@ export default function WorshipTab() {
   const ministries = useMinistryStore((state) => state.ministries);
   const schedules = useScheduleStore((state) => state.schedules);
 
-  const userMinistries = ministries.filter((m) =>
+  const userMinistries = useMemo(() => ministries.filter((m) =>
     m.members?.some((mem) => mem.memberId === userProfile?.memberId)
-  );
+  ), [ministries, userProfile?.memberId]);
 
   const [setlists, setSetlists] = useState<WorshipSetlist[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [tabFilter, setTabFilter] = useState<'upcoming' | 'this_month' | 'past'>('upcoming');
-
-  // Create Setlist Modal State
-  const { width: SCREEN_WIDTH } = Dimensions.get('window');
-  const slideAnim = useRef(new Animated.Value(0)).current;
-  const createSetlistKeyboard = useModalKeyboard({ heightRatio: 0.85, backgroundColor: '#FAFAFA' });
-  const [createModalVisible, setCreateModalVisible] = useState(false);
-  const [modalStep, setModalStep] = useState<'form' | 'selectEvent'>('form');
-  const [newTitle, setNewTitle] = useState('');
-  const [newDate, setNewDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [newStatus, setNewStatus] = useState<'draft' | 'published'>('published');
-  const [selectedMinistryId, setSelectedMinistryId] = useState<string>('');
-  const [selectedEventId, setSelectedEventId] = useState<string>('');
-  const [creating, setCreating] = useState(false);
-
-  // Searchable Event Picker State
-  const [eventSearchQuery, setEventSearchQuery] = useState('');
-
-
-
-  const selectedEvent = schedules.find((s) => s.id === selectedEventId);
-
-  const filteredEvents = useMemo(() => {
-    const setlistEventIds = new Set(setlists.map(s => s.eventId));
-    const availableSchedules = schedules.filter(s => !setlistEventIds.has(s.id));
-
-    if (!eventSearchQuery.trim()) return availableSchedules;
-    const query = eventSearchQuery.toLowerCase();
-    return availableSchedules.filter(
-      (e) => (e.title || '').toLowerCase().includes(query) || (e.date || '').includes(query)
-    );
-  }, [schedules, eventSearchQuery, setlists]);
-
-
-
-
 
 
   const hasAccess = canViewMobileWorshipSetlists(userProfile, userMinistries);
@@ -108,22 +72,8 @@ export default function WorshipTab() {
     fetchSetlists();
   }, [fetchSetlists]);
 
-  const goToSelectEvent = () => {
-    setModalStep('selectEvent');
-    Animated.timing(slideAnim, {
-      toValue: -SCREEN_WIDTH,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const goToForm = () => {
-    setModalStep('form');
-    Animated.timing(slideAnim, {
-      toValue: 0,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
+  const openCreateModal = () => {
+    router.push('/create-setlist' as any);
   };
 
   const initializeSchedulesListener = useScheduleStore(state => state.initializeSchedulesListener);
@@ -137,46 +87,6 @@ export default function WorshipTab() {
   const onRefresh = () => {
     setRefreshing(true);
     fetchSetlists();
-  };
-
-  const handleCreateSetlist = async () => {
-    if (!newTitle.trim()) {
-      Alert.alert('Required', 'Please enter a setlist title.');
-      return;
-    }
-    if (!userProfile?.churchId) return;
-
-    try {
-      setCreating(true);
-      const worshipMinistry = ministries.find(m => m.features?.songListEnabled || m.name.toLowerCase().includes('worship'));
-      const targetMinistryId = selectedMinistryId || worshipMinistry?.id || ministries[0]?.id || '';
-
-      const newId = await worshipSetlistService.createWorshipSetlist({
-        churchId: userProfile.churchId,
-        eventId: selectedEventId || '',
-        ministryId: targetMinistryId,
-        title: newTitle.trim(),
-        serviceDate: selectedEvent?.date || newDate,
-        status: newStatus,
-        worshipLeaderId: userProfile.memberId || userProfile.uid,
-      });
-
-      setCreateModalVisible(false);
-      setNewTitle('');
-      setSelectedEventId('');
-      fetchSetlists();
-
-
-      router.push({
-        pathname: '/worship-setlist-detail',
-        params: { setlistId: newId },
-      } as any);
-    } catch (err) {
-      console.error('Failed to create setlist:', err);
-      Alert.alert('Error', 'Failed to create setlist. Please try again.');
-    } finally {
-      setCreating(false);
-    }
   };
 
   const now = new Date();
@@ -238,7 +148,7 @@ export default function WorshipTab() {
                 <TouchableOpacity
                   style={styles.createBtnHeader}
                   activeOpacity={0.8}
-                  onPress={() => setCreateModalVisible(true)}
+                  onPress={openCreateModal}
                 >
                   <Plus size={16} color="#FFF" strokeWidth={2.5} />
                   <Text style={styles.createBtnHeaderText}>New</Text>
@@ -291,7 +201,7 @@ export default function WorshipTab() {
             {canCreate && (
               <TouchableOpacity
                 style={[styles.openBtn, { marginTop: 12 }]}
-                onPress={() => setCreateModalVisible(true)}
+                onPress={openCreateModal}
               >
                 <Plus size={18} color="#FFF" />
                 <Text style={styles.openBtnText}>Create First Setlist</Text>
@@ -364,242 +274,6 @@ export default function WorshipTab() {
           );
         })
       )}
-
-      {/* Create Setlist Modal */}
-      <AppModal
-        isOpen={createModalVisible}
-        onClose={() => {
-          setCreateModalVisible(false);
-          setTimeout(() => setModalStep('form'), 300);
-        }}
-        title="Create Setlist"
-        hideHeader={true}
-        hideDragHandle={true}
-        {...createSetlistKeyboard.appModalProps}
-      >
-        <View style={styles.modalContainer}>
-
-          {/* Header with Frosted Glass */}
-          <View style={[styles.headerContainer, { paddingTop: 12 }]}>
-            <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
-            <ModalDragArea style={StyleSheet.absoluteFill} />
-            <View style={styles.dragHandle} pointerEvents="none" />
-            <View style={styles.headerContent} pointerEvents="box-none">
-              {modalStep === 'selectEvent' ? (
-                <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={goToForm} hitSlop={8} activeOpacity={0.8}>
-                  <ArrowLeft size={24} color="#111827" strokeWidth={2} />
-                </BounceCard>
-              ) : (
-                <TouchableOpacity
-                  style={[styles.createBtnModalHeader, creating && { opacity: 0.6 }]}
-                  disabled={creating}
-                  onPress={handleCreateSetlist}
-                >
-                  {creating ? (
-                    <ActivityIndicator size="small" color="#FFF" />
-                  ) : (
-                    <Text style={styles.createBtnModalHeaderText}>Create</Text>
-                  )}
-                </TouchableOpacity>
-              )}
-              <Text style={styles.headerTitleCenter}>{modalStep === 'selectEvent' ? 'Select Event' : 'Create Setlist'}</Text>
-              {modalStep === 'selectEvent' ? (
-                <View style={[styles.headerCircle, { backgroundColor: 'transparent' }]} />
-              ) : (
-                <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => {
-                  setCreateModalVisible(false);
-                  setTimeout(() => goToForm(), 300);
-                }} hitSlop={8} activeOpacity={0.8}>
-                  <X size={24} color="#111827" strokeWidth={2} />
-                </BounceCard>
-              )}
-
-            </View>
-          </View>
-
-          <View style={{ flex: 1, overflow: 'hidden' }}>
-            <Animated.View style={{ flex: 1, flexDirection: 'row', width: SCREEN_WIDTH * 2, transform: [{ translateX: slideAnim }] }}>
-              <View style={{ width: SCREEN_WIDTH, flex: 1 }}>
-                <ScrollView
-                  ref={createSetlistKeyboard.scrollViewRef}
-                  style={createSetlistKeyboard.scrollViewStyle}
-                  contentContainerStyle={styles.scrollContent}
-                  showsVerticalScrollIndicator={false}
-                  keyboardShouldPersistTaps="handled"
-                >
-                  <View style={{ gap: 20, paddingTop: 24 }}>
-                    {/* Link Event Button */}
-                    <View>
-                      <Text style={styles.inputLabel}>Event</Text>
-                      <TouchableOpacity
-                        style={{
-                          height: 52,
-                          backgroundColor: '#F9FAFB',
-                          borderRadius: 14,
-                          paddingHorizontal: 14,
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          borderWidth: 1,
-                          borderColor: '#E5E7EB',
-                          marginTop: 4,
-                        }}
-                        onPress={() => {
-                          setEventSearchQuery('');
-                          goToSelectEvent();
-                        }}
-                        activeOpacity={0.8}
-                      >
-                        <CalendarDays size={20} color="#FF6596" style={{ marginRight: 12 }} />
-                        <Text style={{ fontSize: 14, fontWeight: '600', color: selectedEvent ? '#111827' : '#9CA3AF', flex: 1 }}>
-                          {selectedEvent ? `${selectedEvent.title} • ${selectedEvent.date ? new Date(selectedEvent.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}` : 'Select an event'}
-                        </Text>
-                        <ChevronRight size={18} color="#9CA3AF" />
-                      </TouchableOpacity>
-                    </View>
-
-                    {/* 2. Setlist Title Input */}
-                    <View>
-                      <Text style={styles.inputLabel}>Setlist Title *</Text>
-                      <TextInput
-                        style={styles.textInput}
-                        placeholder="e.g. Sunday Morning Service"
-                        placeholderTextColor="#9CA3AF"
-                        value={newTitle}
-                        onChangeText={setNewTitle}
-                      />
-                    </View>
-
-                    {/* 3. Status Options */}
-                    <View>
-                      <Text style={styles.inputLabel}>Status</Text>
-                      <View style={{ flexDirection: 'row', gap: 10 }}>
-                        <TouchableOpacity
-                          style={[styles.statusOption, newStatus === 'published' && styles.statusOptionSelected]}
-                          onPress={() => setNewStatus('published')}
-                        >
-                          <Text style={[styles.statusOptionText, newStatus === 'published' && styles.statusOptionTextSelected]}>Published</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[styles.statusOption, newStatus === 'draft' && styles.statusOptionSelected]}
-                          onPress={() => setNewStatus('draft')}
-                        >
-                          <Text style={[styles.statusOptionText, newStatus === 'draft' && styles.statusOptionTextSelected]}>Draft</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  </View>
-                </ScrollView>
-              </View>
-
-              <View style={{ width: SCREEN_WIDTH, flex: 1 }}>
-                <View style={{ flex: 1, paddingTop: 90, paddingHorizontal: 20 }}>
-                  {/* Search Input Bar */}
-                  <View style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    backgroundColor: '#FFF',
-                    borderWidth: 1,
-                    borderColor: '#E5E7EB',
-                    borderRadius: 14,
-                    paddingHorizontal: 14,
-                    height: 48,
-                    marginBottom: 16,
-                    ...getSoftShadowStyle(8),
-                  }}>
-                    <Search size={18} color="#9CA3AF" style={{ marginRight: 10 }} />
-                    <TextInput
-                      style={{ flex: 1, fontSize: 14, color: '#111827', fontWeight: '500' }}
-                      placeholder="Search events by name or date..."
-                      placeholderTextColor="#9CA3AF"
-                      value={eventSearchQuery}
-                      onChangeText={setEventSearchQuery}
-                      autoCapitalize="none"
-                    />
-                    {eventSearchQuery ? (
-                      <TouchableOpacity onPress={() => setEventSearchQuery('')}>
-                        <X size={18} color="#9CA3AF" />
-                      </TouchableOpacity>
-                    ) : null}
-                  </View>
-
-                  {/* List of Available Events */}
-                  <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-                    {filteredEvents.length > 0 ? (
-                      filteredEvents.map((ev) => {
-                        const isSelected = selectedEventId === ev.id;
-                        return (
-                          <TouchableOpacity
-                            key={ev.id}
-                            style={{
-                              paddingVertical: 14,
-                              paddingHorizontal: 16,
-                              marginBottom: 10,
-                              backgroundColor: isSelected ? '#FFF5F8' : '#FFF',
-                              borderWidth: 1,
-                              borderColor: isSelected ? '#FF6596' : '#F3F4F6',
-                              borderRadius: 14,
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              ...getSoftShadowStyle(10),
-                            }}
-                            onPress={() => {
-                              setSelectedEventId(ev.id);
-                              setNewTitle(ev.title || 'Worship Setlist');
-                              if (ev.date) setNewDate(ev.date);
-                              goToForm();
-                            }}
-                            activeOpacity={0.7}
-                          >
-                            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                              <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: isSelected ? '#FF6596' : '#FFF5F8', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
-                                <CalendarDays size={18} color={isSelected ? '#FFF' : '#FF6596'} />
-                              </View>
-                              <View style={{ flex: 1, paddingRight: 12, justifyContent: 'center' }}>
-                                <Text style={{ fontSize: 15, fontWeight: '800', color: isSelected ? '#FF6596' : '#111827', marginBottom: 3 }} numberOfLines={1}>
-                                  {ev.title}
-                                </Text>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                                  <Text style={{ fontSize: 13, color: isSelected ? '#FF6596' : '#6B7280', fontWeight: '600' }}>
-                                    {ev.date ? new Date(ev.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : ''}
-                                  </Text>
-                                  {ev.time ? (
-                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                      <Clock size={12} color={isSelected ? '#FF6596' : '#6B7280'} style={{ marginRight: 4 }} />
-                                      <Text style={{ fontSize: 13, color: isSelected ? '#FF6596' : '#6B7280', fontWeight: '500' }}>
-                                        {ev.time}
-                                      </Text>
-                                    </View>
-                                  ) : null}
-                                </View>
-                              </View>
-                              {isSelected && <Check size={20} color="#FF6596" strokeWidth={2.5} />}
-                            </View>
-                          </TouchableOpacity>
-                        );
-                      })
-                    ) : (
-                      <View style={{ alignItems: 'center', paddingVertical: 40 }}>
-                        <CalendarDays size={32} color="#9CA3AF" style={{ marginBottom: 10 }} />
-                        <Text style={{ fontSize: 15, fontWeight: '700', color: '#374151' }}>No events found</Text>
-                        <Text style={{ fontSize: 13, color: '#9CA3AF', textAlign: 'center', marginTop: 4 }}>
-                          Try searching with another keyword or date.
-                        </Text>
-                      </View>
-                    )}
-                  </ScrollView>
-                </View>
-              </View>
-            </Animated.View>
-          </View>
-        </View>
-      </AppModal>
-
-
-
-
-
     </View>
   );
 }
