@@ -99,7 +99,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
             CFBundleURLSchemes: isProd
               ? [(process.env.EXPO_PUBLIC_IOS_REVERSED_CLIENT_ID_PROD || "com.googleusercontent.apps.130463348213-7fqr37i68h4u3jt7hjj30gag2t8ntv1k")]
               : [
-                  "com.googleusercontent.apps.676505939287-dudp40gr0pns1kpff4fc1ohu6qt4ha92",
+                  "com.googleusercontent.apps.130463348213-4vn6d7vfvp1bad7298agpf9n8r0npq7l",
                   (process.env.EXPO_PUBLIC_IOS_REVERSED_CLIENT_ID_PROD || "com.googleusercontent.apps.130463348213-7fqr37i68h4u3jt7hjj30gag2t8ntv1k")
                 ]
           }
@@ -143,7 +143,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         {
           iosUrlScheme: (isProd && process.env.EXPO_PUBLIC_IOS_REVERSED_CLIENT_ID_PROD)
             ? process.env.EXPO_PUBLIC_IOS_REVERSED_CLIENT_ID_PROD
-            : "com.googleusercontent.apps.676505939287-dudp40gr0pns1kpff4fc1ohu6qt4ha92"
+            : "com.googleusercontent.apps.130463348213-4vn6d7vfvp1bad7298agpf9n8r0npq7l"
         }
       ],
       [
