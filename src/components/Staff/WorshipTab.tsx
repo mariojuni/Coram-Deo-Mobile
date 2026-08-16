@@ -118,13 +118,12 @@ export default function WorshipTab() {
   };
 
   const goToForm = () => {
+    setModalStep('form');
     Animated.timing(slideAnim, {
       toValue: 0,
       duration: 300,
       useNativeDriver: true,
-    }).start(() => {
-      setModalStep('form');
-    });
+    }).start();
   };
 
   const initializeSchedulesListener = useScheduleStore(state => state.initializeSchedulesListener);
@@ -405,12 +404,16 @@ export default function WorshipTab() {
                 </TouchableOpacity>
               )}
               <Text style={styles.headerTitleCenter}>{modalStep === 'selectEvent' ? 'Select Event' : 'Create Setlist'}</Text>
-              <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => {
-                setCreateModalVisible(false);
-                setTimeout(() => goToForm(), 300);
-              }} hitSlop={8} activeOpacity={0.8}>
-                <X size={24} color="#111827" strokeWidth={2} />
-              </BounceCard>
+              {modalStep === 'selectEvent' ? (
+                <View style={[styles.headerCircle, { backgroundColor: 'transparent' }]} />
+              ) : (
+                <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => {
+                  setCreateModalVisible(false);
+                  setTimeout(() => goToForm(), 300);
+                }} hitSlop={8} activeOpacity={0.8}>
+                  <X size={24} color="#111827" strokeWidth={2} />
+                </BounceCard>
+              )}
 
             </View>
           </View>
