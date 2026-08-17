@@ -166,7 +166,7 @@ export async function uploadProofOfPayment(churchId: string, recordId: string, f
   const fileExt = fileUri.split('.').pop() || 'jpg';
   const fileName = `${recordId}.${fileExt}`;
   
-  const storageRef = ref(getActiveStorage(), `churches/${churchId}/receipt/${recordId}/${fileName}`);
+  const storageRef = ref(getActiveStorage(), `churches/${churchId}/receipt/${fileName}`);
   await uploadBytes(storageRef, blob);
   
   return await getDownloadURL(storageRef);

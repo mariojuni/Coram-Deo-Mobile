@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { BounceCard } from '@/components/ui/BounceCard';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator, Modal, TextInput, ScrollView } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Plus, Receipt, X, ChevronLeft, Upload, Calendar } from 'lucide-react-native';
+import { Plus, Receipt, X, ChevronLeft, Upload, Calendar, CheckCircle2 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import AppModal, { ModalDragArea } from '../../components/ui/AppModal';
 import CustomDatePicker from '../../components/CustomDatePicker';
@@ -13,7 +13,9 @@ import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 import { SoftCard } from '@/components/ui/SoftCard';
 import { useAuthStore } from '../../store/useAuthStore';
 import { getRecentExpenses, createExpense } from '../../features/giving/data/financeAdmin.service';
+import { uploadProofOfPayment, generateGivingRecordId } from '../../features/giving/data/giving.repository';
 import { GivingExpense, ExpenseCategory } from '../../features/giving/domain/giving.types';
+import * as ImagePicker from 'expo-image-picker';
 import { useGiving } from '../../features/giving/presentation/hooks/useGiving';
 import { useMemo } from 'react';
 
@@ -48,6 +50,8 @@ export default function ExpenseTrackerScreen() {
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [isDatePickerVisible, setDatePickerVisible] = useState(false);
   const [adding, setAdding] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const [proofUri, setProofUri] = useState<string | null>(null);
   
   const [form, setForm] = useState({
     amount: '',
@@ -76,6 +80,23 @@ export default function ExpenseTrackerScreen() {
     }
   };
 
+  const pickImage = async () => {
+    try {
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.1,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setProofUri(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.warn('Image picker error:', error);
+      Alert.alert('Error', 'Image picker is not available or failed to load.');
+    }
+  };
+
   const handleAddExpense = async () => {
     if (!userProfile?.churchId || !userProfile.uid) return;
     if (!form.vendorName.trim() || !form.amount || isNaN(Number(form.amount))) {
@@ -89,6 +110,12 @@ export default function ExpenseTrackerScreen() {
     
     setAdding(true);
     try {
+      let uploadedProofUrl = '';
+      if (proofUri) {
+        const tempId = generateGivingRecordId();
+        uploadedProofUrl = await uploadProofOfPayment(userProfile.churchId, tempId, proofUri);
+      }
+
       const newId = await createExpense(userProfile.churchId, {
         description: form.description,
         payee: form.vendorName, // web compatibility
@@ -98,6 +125,7 @@ export default function ExpenseTrackerScreen() {
         visibility: 'admin_only',
         date: form.date.toISOString().split('T')[0], // web compatibility
         fundId: form.fundId,
+        receiptUrl: uploadedProofUrl || undefined,
       }, userProfile.uid);
       
       setAddModalVisible(false);
@@ -109,6 +137,7 @@ export default function ExpenseTrackerScreen() {
         description: '',
         fundId: ''
       });
+      setProofUri(null);
       fetchExpenses(); // refresh list
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to add expense.');
@@ -205,6 +234,7 @@ export default function ExpenseTrackerScreen() {
         hideDragHandle={true}
         heightRatio={0.85}
         containerStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}
+        avoidKeyboard={false}
       >
         <View style={styles.modalContainer}>
           {/* Header matching Event Details style exactly */}
@@ -221,7 +251,7 @@ export default function ExpenseTrackerScreen() {
             </View>
           </ModalDragArea>
 
-          <ScrollView contentContainerStyle={styles.modalScrollContent} showsVerticalScrollIndicator={false}>
+          <ScrollView ref={scrollRef} contentContainerStyle={styles.modalScrollContent} showsVerticalScrollIndicator={false}>
             <View style={styles.contentWrap}>
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Amount (₱) *</Text>
@@ -266,6 +296,7 @@ export default function ExpenseTrackerScreen() {
                   onSelect={(val) => setForm({ ...form, fundId: val || '' })}
                   placeholder="Select a fund"
                   searchable
+                  disableDarkMode
                 />
               </View>
 
@@ -275,6 +306,7 @@ export default function ExpenseTrackerScreen() {
                   options={CATEGORY_OPTIONS}
                   value={form.category}
                   onSelect={(val) => setForm({ ...form, category: (val as ExpenseCategory) || 'utilities' })}
+                  disableDarkMode
                 />
               </View>
 
@@ -285,13 +317,24 @@ export default function ExpenseTrackerScreen() {
                 multiline
                 value={form.description}
                 onChangeText={(text) => setForm({ ...form, description: text })}
+                onFocus={() => {
+                  setTimeout(() => {
+                    scrollRef.current?.scrollToEnd({ animated: true });
+                  }, 150);
+                }}
               />
 
               <Text style={styles.label}>Receipt Upload (Optional)</Text>
-              <TouchableOpacity style={styles.uploadBox} activeOpacity={0.7}>
-                <Upload size={24} color="#6B7280" style={{ marginBottom: 8 }} />
-                <Text style={styles.uploadTitle}>Upload Receipt</Text>
-                <Text style={styles.uploadSub}>PNG, JPG, PDF up to 5MB</Text>
+              <TouchableOpacity style={styles.uploadBox} activeOpacity={0.7} onPress={pickImage}>
+                {proofUri ? (
+                  <CheckCircle2 size={24} color="#FF6596" style={{ marginBottom: 8 }} />
+                ) : (
+                  <Upload size={24} color="#6B7280" style={{ marginBottom: 8 }} />
+                )}
+                <Text style={[styles.uploadTitle, proofUri && { color: '#FF6596' }]}>
+                  {proofUri ? 'Receipt Selected (Tap to change)' : 'Upload Receipt'}
+                </Text>
+                {!proofUri && <Text style={styles.uploadSub}>PNG, JPG, PDF up to 5MB</Text>}
               </TouchableOpacity>
 
               <TouchableOpacity 
