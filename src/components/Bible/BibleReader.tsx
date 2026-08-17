@@ -1,6 +1,7 @@
 import { useBibleReader } from '@/features/bible/presentation/hooks/useBibleReader';
 import { useUIStore } from '@/store/useUIStore';
 import { useBibleNoteStore } from '@/features/bibleNotes/presentation/hooks/useBibleNoteStore';
+import { useGlobalVideoStore } from '@/store/useGlobalVideoStore';
 import { getHumanReadableBookName } from '@/utils/scriptureReferenceParser';
 import { router } from 'expo-router';
 import { ChevronLeft, ChevronRight, Copy, X, MessageSquareText, Info } from 'lucide-react-native';
@@ -78,6 +79,7 @@ const toSuperscript = (num: string) =>
   num.split('').map(d => SUPERSCRIPT_MAP[d] ?? d).join('');
 
 export default function BibleReader({ preferences, updatePreferences, books, hideChapterNav = false, scrollToVerse, controlsTabBar = false, scrollY }: BibleReaderProps) {
+  const { playerMode } = useGlobalVideoStore();
   const scrollRef = useRef<ScrollView>(null);
   const contentHeightRef = useRef<number>(0);
   const lastScrollY = useRef(0);
@@ -410,7 +412,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
                       >
                         {' '}
                         <Image
-                          source={{ uri: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAABpklEQVR4nNSXMU/CQBTHX4+mg5ujibth1DgZP0ahYVNY9AvIyuSki4suaOJCCp39BMbJSOJC3E0cjavQw/8Rrjm0pa13pfpb+qB39+s9HndXRiXBqCTs71/0+/0tXPYty9rknFukAWNsCl4R3tfr9Rf13sLAvu+3ITwl85ngeIC253lnP8RBEGxjhk9UIMjAjuu6QxFHqQ7DcBezncV4Om80GgWdToeTBujPqtWqi3F96cBlJo5SipsbMjYhnYu5GCvOEYkxS6Z2IEOoY6kOO61jr9fbs23bSbo/mUw+G43GA+VkqRhVfoT0XOJJE9tUKhXR7hgVe0U5+DsLiIqYBVL9vPJUC34zqBFxWnHFkSUL2sUVR5aC+7/FFYd2qgWlFZcuYqOQMeqFr0Qsdyf5GUX6lkk8GAwO0fgc4ToZANX+mCrG36EJaZfMwJHmE3kISBTPZxpJ0ekCp5N3yol65qrVagtnrlgxGl8r0iY63ZBhlv3GU0gPIL2lAkgUQ9oqSipQl8wPGSDVrSLSqxLNeDwedx3HWYN0iKXyjgpG601Bh9J2py8AAAD//9JiXhkAAAAGSURBVAMAgwvIsxSQIioAAAAASUVORK5CYII=' }}
+                          source={{ uri: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAABpklEQVR4nNSXMU/CQBTHX4+mg5ujibth1DgZP0ahYVNY9AvIyuSki4suaOJCCp39BMbJSOJC3E0cjavQw/8Rrjm0pa13pfpb+qB39+s9HndXRiXBqCTs71/0+/0tXPYty9rknFukAWNsCl4R3tfr9Rf13sLAvu+3ITwl85ngeIC253lnP8RBEGxjhk9UIMjAjuu6QxFHqQ7DcBezncV4Om80GgWdToeTBujPqtWqi3F96cBlJo5SipsbMjYhnYu5GCvOEYkxS6Z2IEOoY6kOO61jr9fbs23bSbo/mUw+G43GA+VkqRhVfoT0XOJJE9tUKhXR7hgVe0U5+DsLiIqYBVL9vPJUC34zqBFxWnHFkSUL2sUVR5aC+7/FFYd2qgWlFZcuYqOQMeqFr0Qsdyf5GUX6lkk8GAwO0fgc4ToZANX+mCrG36EJaZfMwJHmE3kISBTPZxpJ0ekCp5N3yol65qrVagtnrlgxGl8r0iY63ZBhlv3GU0gPIL2lAkgUQ9oqSipQl8wPGSDVrSLSqxLNeDwedx3HWYN0iKXyjgpG601Bh9J2py8AAAD//9JiXhkAAAAGSURdVAMAgwvIsxSQIioAAAAASUVORK5CYII=' }}
                           style={{ width: 14, height: 14, tintColor: '#aaa', marginTop: 2 }}
                         />
                       </Text>
@@ -469,9 +471,9 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
       {/* Navigation Arrows overlay */}
       {selectedVerses.length === 0 && !hideChapterNav && (
         <Animated.View
-          style={[styles.navOverlay, controlsTabBar ? { transform: [{ translateY: navTranslateY }] } : undefined]}
-          pointerEvents="box-none"
-        >
+            style={[styles.navOverlay, { bottom: playerMode === 'minimized' ? 205 : 110 }, controlsTabBar ? { transform: [{ translateY: playerMode === 'minimized' ? Animated.multiply(navTranslateY, 85 / 120) : navTranslateY }] } : undefined]}
+            pointerEvents="box-none"
+          >
           <TouchableOpacity style={styles.navBtn} onPress={onPrevChapter}>
             <ChevronLeft size={20} color="#FF6596" />
           </TouchableOpacity>

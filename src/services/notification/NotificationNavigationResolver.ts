@@ -63,7 +63,7 @@ export class NotificationNavigationResolver {
 
       case 'sermon':
         if (sourceId) {
-          return { pathname: '/sermon-watch', params: { id: sourceId } };
+          return { pathname: '/sermon-detail', params: { id: sourceId } };
         }
         return { pathname: '/(tabs)/sermons' };
 

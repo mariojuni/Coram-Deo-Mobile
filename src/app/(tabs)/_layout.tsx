@@ -12,6 +12,7 @@ import { useMinistryStore } from '../../store/useMinistryStore';
 import { useSermonStore } from '../../store/useSermonStore';
 import { useSermonPlaybackStore } from '../../store/useSermonPlaybackStore';
 import { ContinueWatchingCard } from '../../features/sermons/presentation/components/ContinueWatchingCard';
+import { GlobalVideoPlayer } from '../../features/sermons/presentation/components/GlobalVideoPlayer';
 import { useRouter, usePathname } from 'expo-router';
 import { useAudio } from '../../features/sermons/presentation/context/AudioContext';
 import { useShallow } from 'zustand/react/shallow';
@@ -248,7 +249,7 @@ export default function TabLayout() {
       </Tabs>
 
       {/* ── Global Floating Continue Watching ── */}
-      {showMiniPlayer && topSermon && (
+      {showMiniPlayer && topSermon && topSermon.progress.mediaType === 'audio' && (
         <View style={[styles.globalContinueWatching, { bottom: Math.max(insets.bottom, 16) + 64 }]}>
           <ContinueWatchingCard
             progress={topSermon.progress}
@@ -295,6 +296,7 @@ export default function TabLayout() {
         </View>
       )}
 
+      <GlobalVideoPlayer />
     </View>
   );
 }

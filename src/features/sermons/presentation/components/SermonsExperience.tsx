@@ -5,6 +5,7 @@ import { useSermonStore } from '@/store/useSermonStore';
 import { useSermonPlaybackStore } from '@/store/useSermonPlaybackStore';
 import { useShallow } from 'zustand/react/shallow';
 import { LinearGradient } from 'expo-linear-gradient';
+import { getSoftShadowStyle } from '@/components/ui/SoftCard';
 import { useRouter } from 'expo-router';
 import {
   BookOpen,
@@ -54,7 +55,6 @@ export function SermonsExperience({
 
   const [localSearch, setLocalSearch] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
-  const [filterType, setFilterType] = useState<'all' | 'video' | 'audio' | 'series'>('all');
 
   const activeSearch = searchQuery ?? localSearch;
   const churchId = userProfile?.churchId;
@@ -95,10 +95,6 @@ export function SermonsExperience({
   const filteredSermons = useMemo(() => {
     let list = sermons;
 
-    if (filterType === 'video') list = list.filter((s) => s.mediaType === 'video' || s.mediaType === 'both');
-    else if (filterType === 'audio') list = list.filter((s) => s.mediaType === 'audio' || s.mediaType === 'both');
-    else if (filterType === 'series') list = list.filter((s) => !!s.seriesId);
-
     const q = activeSearch.trim().toLowerCase();
     if (!q) return list;
 
@@ -110,7 +106,7 @@ export function SermonsExperience({
         s.seriesTitle?.toLowerCase().includes(q) ||
         s.scriptureReference?.toLowerCase().includes(q)
     );
-  }, [sermons, activeSearch, filterType]);
+  }, [sermons, activeSearch]);
 
   // ── Derived data ───────────────────────────────────────────────────────────
   const featuredSermon = filteredSermons[0] ?? null;
@@ -144,7 +140,9 @@ export function SermonsExperience({
 
   // ── Navigation ─────────────────────────────────────────────────────────────
   const openSermon = (id: string) => {
-    router.navigate({ pathname: '/sermon-watch', params: { id } });
+    import('@/store/useGlobalVideoStore').then((m) => {
+      m.useGlobalVideoStore.getState().openVideo(id);
+    });
   };
 
   const openAudioPlayer = (id: string) => {
@@ -248,26 +246,7 @@ export function SermonsExperience({
 
       {showSearchInput ? (
         <ScrollView showsVerticalScrollIndicator={false}>
-          <View style={{ paddingBottom: inProgressWithSermons.length > 0 && !isSearching ? 100 : 40 }}>
-            {/* ── Filter chips ── */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filterRow}
-            >
-              {(['all', 'video', 'audio', 'series'] as const).map((f) => (
-                <TouchableOpacity
-                  key={f}
-                  style={[styles.filterChip, filterType === f && styles.filterChipActive]}
-                  onPress={() => setFilterType(f)}
-                >
-                  <Text style={[styles.filterChipText, filterType === f && styles.filterChipTextActive]}>
-                    {f === 'all' ? 'All' : f === 'video' ? 'Video' : f === 'audio' ? 'Audio' : 'Series'}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
+          <View style={{ paddingTop: 16, paddingBottom: inProgressWithSermons.length > 0 && !isSearching ? 100 : 40 }}>
             {/* ── Search results ── */}
             {isSearching ? (
               <View style={styles.section}>
@@ -331,7 +310,10 @@ export function SermonsExperience({
                         <TouchableOpacity
                           key={series.id}
                           style={styles.seriesCard}
-                          onPress={() => setFilterType('series')}
+                          onPress={() => {
+                            setLocalSearch(series.title);
+                            setSearchOpen(true);
+                          }}
                           activeOpacity={0.85}
                         >
                           {series.thumb ? (
@@ -365,26 +347,7 @@ export function SermonsExperience({
           </View>
         </ScrollView>
       ) : (
-        <View style={{ paddingBottom: inProgressWithSermons.length > 0 && !isSearching ? 100 : 40 }}>
-          {/* ── Filter chips ── */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterRow}
-          >
-            {(['all', 'video', 'audio', 'series'] as const).map((f) => (
-              <TouchableOpacity
-                key={f}
-                style={[styles.filterChip, filterType === f && styles.filterChipActive]}
-                onPress={() => setFilterType(f)}
-              >
-                <Text style={[styles.filterChipText, filterType === f && styles.filterChipTextActive]}>
-                  {f === 'all' ? 'All' : f === 'video' ? 'Video' : f === 'audio' ? 'Audio' : 'Series'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
+        <View style={{ paddingTop: 16, paddingBottom: inProgressWithSermons.length > 0 && !isSearching ? 100 : 40 }}>
           {/* ── Search results ── */}
           {isSearching ? (
             <View style={styles.section}>
@@ -448,7 +411,10 @@ export function SermonsExperience({
                       <TouchableOpacity
                         key={series.id}
                         style={styles.seriesCard}
-                        onPress={() => setFilterType('series')}
+                          onPress={() => {
+                            setLocalSearch(series.title);
+                            setSearchOpen(true);
+                          }}
                         activeOpacity={0.85}
                       >
                         {series.thumb ? (
@@ -508,32 +474,33 @@ const FeaturedCard = memo(function FeaturedCard({ sermon, onPress, onListen }: {
 
   return (
     <TouchableWithoutFeedback onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut}>
-      <Animated.View style={[styles.featuredCard, { transform: [{ scale }] }]}>
-        {sermon.thumbnailUrl ? (
-          <Image source={{ uri: sermon.thumbnailUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" cachePolicy="memory-disk" transition={200} />
-        ) : (
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: '#DDE1E8' }]} />
-        )}
-        <LinearGradient
-          colors={['transparent', 'rgba(26,26,26,0.95)']}
-          style={[StyleSheet.absoluteFill, { borderRadius: 24 }]}
-        />
-
-
-        {/* Content */}
-        <View style={styles.featuredContent}>
-          {sermon.seriesTitle && (
-            <View style={styles.featuredSeriesBadge}>
-              <Text style={styles.featuredSeriesBadgeText}>{sermon.seriesTitle}</Text>
-            </View>
+      <Animated.View style={[styles.featuredCardOuter, { transform: [{ scale }] }]}>
+        <View style={styles.featuredCardInner}>
+          {sermon.thumbnailUrl ? (
+            <Image source={{ uri: sermon.thumbnailUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" cachePolicy="memory-disk" transition={200} />
+          ) : (
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: '#DDE1E8' }]} />
           )}
-          <Text style={styles.featuredTitle} numberOfLines={2}>{sermon.title}</Text>
-          {sermon.scriptureReference ? (
-            <Text style={styles.featuredScripture} numberOfLines={1}>{sermon.scriptureReference}</Text>
-          ) : null}
-          <Text style={styles.featuredMeta}>
-            {sermon.preacherName} • {formatDate(sermon.sermonDate)}
-          </Text>
+          <LinearGradient
+            colors={['transparent', 'rgba(26,26,26,0.95)']}
+            style={[StyleSheet.absoluteFill, { borderRadius: 24 }]}
+          />
+
+          {/* Content */}
+          <View style={styles.featuredContent}>
+            {sermon.seriesTitle && (
+              <View style={styles.featuredSeriesBadge}>
+                <Text style={styles.featuredSeriesBadgeText}>{sermon.seriesTitle}</Text>
+              </View>
+            )}
+            <Text style={styles.featuredTitle} numberOfLines={2}>{sermon.title}</Text>
+            {sermon.scriptureReference ? (
+              <Text style={styles.featuredScripture} numberOfLines={1}>{sermon.scriptureReference}</Text>
+            ) : null}
+            <Text style={styles.featuredMeta}>
+              {sermon.preacherName} • {formatDate(sermon.sermonDate)}
+            </Text>
+          </View>
         </View>
       </Animated.View>
     </TouchableWithoutFeedback>
@@ -729,9 +696,14 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   // Featured card
-  featuredCard: {
+  featuredCardOuter: {
     marginHorizontal: 20,
     height: 320,
+    borderRadius: 24,
+    ...getSoftShadowStyle(24),
+  },
+  featuredCardInner: {
+    flex: 1,
     borderRadius: 24,
     overflow: 'hidden',
     backgroundColor: '#DDE1E8',

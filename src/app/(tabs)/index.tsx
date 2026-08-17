@@ -788,7 +788,11 @@ export default function HomeScreen() {
                   <BounceCard
                     key={sermon.id}
                     style={styles.sermonCard}
-                    onPress={() => router.navigate({ pathname: '/sermon-watch', params: { id: sermon.id } })}
+                    onPress={() => {
+                      import('@/store/useGlobalVideoStore').then((m) => {
+                        m.useGlobalVideoStore.getState().openVideo(sermon.id);
+                      });
+                    }}
                   >
                     <Image
                       source={{ uri: sermon.thumbnailUrl }}

@@ -72,9 +72,8 @@ export function DownloadsScreen() {
 
 
   const handleSermonPress = (sermonId: string) => {
-    router.navigate({
-      pathname: '/sermon-watch',
-      params: { id: sermonId }
+    import('@/store/useGlobalVideoStore').then((m) => {
+      m.useGlobalVideoStore.getState().openVideo(sermonId);
     });
   };
 

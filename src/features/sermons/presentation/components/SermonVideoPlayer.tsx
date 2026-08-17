@@ -1,8 +1,9 @@
 import { Image } from 'expo-image';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useEventListener } from 'expo';
+import { useFocusEffect } from 'expo-router';
 import {
   Play,
   Pause,
@@ -11,7 +12,9 @@ import {
   SkipForward,
   Maximize,
   AlertCircle,
+  X
 } from 'lucide-react-native';
+import { BlurView } from 'expo-blur';
 import type { Sermon } from '../../domain/sermon.types';
 import type { SermonPlaybackProgress } from '../../domain/sermon.types';
 
@@ -21,6 +24,9 @@ interface SermonVideoPlayerProps {
   onProgress?: (positionSeconds: number, durationSeconds: number) => void;
   onComplete?: () => void;
   videoSource: string | null;
+  isMinimized?: boolean;
+  onClose?: () => void;
+  onExpand?: () => void;
 }
 
 type PlayerState = 'idle' | 'loading' | 'paused' | 'playing' | 'error' | 'completed';
@@ -34,6 +40,9 @@ export function SermonVideoPlayer({
   onProgress,
   onComplete,
   videoSource,
+  isMinimized = false,
+  onClose,
+  onExpand,
 }: SermonVideoPlayerProps) {
   const videoViewRef = useRef<VideoView>(null);
   const [playerState, setPlayerState] = useState<PlayerState>('loading');
@@ -52,6 +61,20 @@ export function SermonVideoPlayer({
     p.play(); // Auto-play like YouTube
     p.timeUpdateEventInterval = 0.5; // Update every half second
   });
+
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        try {
+          if (player && player.playing) {
+            player.pause();
+          }
+        } catch (e) {
+          // Ignore if native player is already destroyed during unmount
+        }
+      };
+    }, [player])
+  );
 
   // Listen to playing state
   useEventListener(player, 'playingChange', ({ isPlaying }) => {
@@ -175,25 +198,95 @@ export function SermonVideoPlayer({
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isMinimized && { backgroundColor: 'transparent' }]}>
       <TouchableOpacity
         activeOpacity={1}
         style={StyleSheet.absoluteFill}
-        onPress={handleTap}
+        onPress={() => {
+          if (isMinimized && onExpand) {
+            onExpand();
+          } else {
+            handleTap();
+          }
+        }}
       >
         {/* Video View */}
         <VideoView
           ref={videoViewRef}
+          style={[StyleSheet.absoluteFill, isMinimized && { opacity: 0 }]}
           player={player}
-          style={StyleSheet.absoluteFill}
           contentFit="contain"
           nativeControls={isFullscreen}
           onFullscreenEnter={() => setIsFullscreen(true)}
           onFullscreenExit={() => setIsFullscreen(false)}
         />
 
+        {/* Minimized Card Overlay */}
+        {isMinimized && (
+          <View style={styles.miniCardOverlay}>
+            <BlurView intensity={80} tint="light" style={[StyleSheet.absoluteFill, { zIndex: 0 }]} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)', zIndex: 0 }]} pointerEvents="none" />
+            <View style={[styles.miniCardContent, { zIndex: 1 }]}>
+              <View style={styles.miniThumbWrap}>
+                {sermon.thumbnailUrl ? (
+                  <Image source={{ uri: sermon.thumbnailUrl }} style={styles.miniThumb} resizeMode="cover" />
+                ) : (
+                  <View style={[styles.miniThumb, { backgroundColor: '#DDE1E8' }]} />
+                )}
+                <View style={styles.miniIconOverlay}>
+                  {playerState === 'playing' ? (
+                    <Pause size={14} color="#fff" fill="#fff" />
+                  ) : (
+                    <Play size={14} color="#fff" fill="#fff" />
+                  )}
+                </View>
+              </View>
+
+              <View style={styles.miniInfo}>
+                <Text style={styles.miniTitle} numberOfLines={1}>
+                  {sermon.title}
+                </Text>
+                <Text style={styles.miniMeta} numberOfLines={1}>
+                  {sermon.preacherName}
+                </Text>
+              </View>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <TouchableOpacity
+                  onPress={(e) => { e.stopPropagation(); handlePlayPause(); }}
+                  style={styles.miniActionBtn}
+                  hitSlop={{top:10, bottom:10, left:10, right:10}}
+                >
+                  {playerState === 'playing' ? (
+                    <Pause size={20} color={NAVY} fill={NAVY} />
+                  ) : (
+                    <Play size={20} color={NAVY} fill={NAVY} />
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={(e) => { e.stopPropagation(); onClose?.(); }}
+                  style={styles.miniActionBtn}
+                  hitSlop={{top:10, bottom:10, left:10, right:10}}
+                >
+                  <X size={20} color="#9CA3AF" />
+                </TouchableOpacity>
+              </View>
+            </View>
+            
+            <View style={[styles.miniProgressBarWrap, { zIndex: 1 }]}>
+              <View
+                style={[
+                  styles.miniProgressBarFill,
+                  { width: `${Math.min(progress * 100, 100)}%` },
+                ]}
+              />
+            </View>
+          </View>
+        )}
+
         {/* Thumbnail overlay before playback starts */}
-        {(!initialSeekDone || playerState === 'idle') && sermon.thumbnailUrl && !isFullscreen && (
+        {(!initialSeekDone || playerState === 'idle') && sermon.thumbnailUrl && !isFullscreen && !isMinimized && (
           <Image
             source={{ uri: sermon.thumbnailUrl }}
             style={[StyleSheet.absoluteFill, { backgroundColor: '#000' }]}
@@ -202,14 +295,14 @@ export function SermonVideoPlayer({
         )}
 
         {/* Loading Spinner */}
-        {playerState === 'loading' && !isFullscreen && (
+        {playerState === 'loading' && !isFullscreen && !isMinimized && (
           <View style={styles.overlay}>
             <ActivityIndicator size="large" color={GOLD} />
           </View>
         )}
 
         {/* Error State */}
-        {playerState === 'error' && !isFullscreen && (
+        {playerState === 'error' && !isFullscreen && !isMinimized && (
           <View style={styles.overlay}>
             <View style={styles.errorBox}>
               <AlertCircle size={32} color="#fff" />
@@ -234,7 +327,7 @@ export function SermonVideoPlayer({
         )}
 
         {/* Big centered play button — idle and controls hidden */}
-        {playerState === 'idle' && !showControls && !isFullscreen && (
+        {playerState === 'idle' && !showControls && !isFullscreen && !isMinimized && (
           <View style={styles.overlay} pointerEvents="none">
             <View style={styles.bigPlayBtn}>
               <Play size={36} color="#fff" fill="#fff" />
@@ -245,7 +338,7 @@ export function SermonVideoPlayer({
 
 
         {/* Completed State */}
-        {playerState === 'completed' && !isFullscreen && (
+        {playerState === 'completed' && !isFullscreen && !isMinimized && (
           <View style={styles.overlay}>
             <TouchableOpacity style={styles.replayBtn} onPress={handlePlayPause}>
               <RotateCcw size={32} color="#fff" />
@@ -255,7 +348,7 @@ export function SermonVideoPlayer({
         )}
 
         {/* Controls overlay */}
-        {showControls && playerState !== 'loading' && playerState !== 'error' && !isFullscreen && (
+        {showControls && playerState !== 'loading' && playerState !== 'error' && !isFullscreen && !isMinimized && (
           <View style={styles.controlsOverlay}>
             {/* Center controls */}
             <View style={styles.centerControls}>
@@ -313,7 +406,7 @@ export function SermonVideoPlayer({
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    aspectRatio: 16 / 9,
+    height: '100%',
     backgroundColor: '#000',
   },
   overlay: {
@@ -464,5 +557,78 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     marginLeft: -7,
+  },
+  miniCardOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.8)',
+  },
+  miniCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  miniThumbWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 10,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: '#DDE1E8',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  miniThumb: {
+    width: '100%',
+    height: '100%',
+    opacity: 0.8,
+  },
+  miniIconOverlay: {
+    position: 'absolute',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  miniInfo: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  miniTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: NAVY,
+    marginBottom: 2,
+  },
+  miniMeta: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  miniActionBtn: {
+    padding: 8,
+  },
+  miniProgressBarWrap: {
+    height: 3,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    width: '100%',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  miniProgressBarFill: {
+    height: '100%',
+    backgroundColor: GOLD,
   },
 });
