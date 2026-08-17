@@ -95,7 +95,7 @@ export default function PendingVerificationScreen() {
     const fund = funds.find(f => f.id === item.fundId);
     const campaign = campaigns.find(c => c.id === item.campaignId);
     
-    const member = members.find(m => m.uid === item.userId || m.uid === item.memberId || m.id === item.memberId || m.id === item.userId);
+    const member = members.find(m => m.uid === item.userId || m.id === item.userId);
     const middleInitial = member?.middleName ? `${member.middleName.charAt(0).toUpperCase()}.` : '';
     const memberFullName = member ? [member.firstName, middleInitial, member.lastName].filter(Boolean).join(' ').trim() || member.name : null;
     const giverName = item.donorName || memberFullName || 'Anonymous';
@@ -174,7 +174,6 @@ export default function PendingVerificationScreen() {
             <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
           </BounceCard>
           <Text style={styles.headerTitle} numberOfLines={1}>Pending Verification</Text>
-          <View style={[styles.headerCircle, { backgroundColor: 'transparent', borderWidth: 0, elevation: 0 }]} />
         </View>
       </View>
 

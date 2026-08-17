@@ -208,6 +208,8 @@ export function NotificationItem({ notification, onPress, onDelete }: Props) {
     );
   };
 
+  const swipeStateRef = useRef<'closed' | 'swiping' | 'open'>('closed');
+
   return (
     <Swipeable
       ref={swipeableRef}
@@ -215,11 +217,24 @@ export function NotificationItem({ notification, onPress, onDelete }: Props) {
       overshootRight={false}
       friction={2}
       rightThreshold={40}
+      onSwipeableWillOpen={() => { swipeStateRef.current = 'swiping'; }}
+      onSwipeableOpen={() => { swipeStateRef.current = 'open'; }}
+      onSwipeableWillClose={() => { swipeStateRef.current = 'swiping'; }}
+      onSwipeableClose={() => { swipeStateRef.current = 'closed'; }}
     >
       <BounceCard
         accessibilityRole="button"
         accessibilityLabel={a11yLabel}
-        onPress={() => onPress(notification)}
+        onPress={() => {
+          if (swipeStateRef.current !== 'closed') {
+            // If it's open, a tap should just close it instead of navigating
+            if (swipeStateRef.current === 'open') {
+               swipeableRef.current?.close();
+            }
+            return;
+          }
+          onPress(notification);
+        }}
         style={styles.container}
         activeOpacity={0.85}
       >
