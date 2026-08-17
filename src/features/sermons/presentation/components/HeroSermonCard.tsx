@@ -9,7 +9,7 @@ import * as Haptics from 'expo-haptics';
 
 interface HeroSermonCardProps {
   sermon: Sermon;
-  onPress: () => void;
+  onPress: (originRect?: any) => void;
   isNew?: boolean;
 }
 
@@ -30,9 +30,17 @@ export function HeroSermonCard({ sermon, onPress, isNew = false }: HeroSermonCar
     scale.set(withTiming(1, { duration: 150 }));
   };
 
+  const imageRef = React.useRef<View>(null);
+
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onPress();
+    if (imageRef.current) {
+      imageRef.current.measure((x, y, width, height, pageX, pageY) => {
+        onPress({ x: pageX, y: pageY, width, height });
+      });
+    } else {
+      onPress();
+    }
   };
 
   const formatDuration = (seconds: number) => {
@@ -55,7 +63,7 @@ export function HeroSermonCard({ sermon, onPress, isNew = false }: HeroSermonCar
       onPressOut={handlePressOut}
       onPress={handlePress}
     >
-      <Animated.View style={[styles.card, animatedStyle]}>
+      <Animated.View ref={imageRef} style={[styles.card, animatedStyle]}>
         <ImageBackground
           source={{ uri: sermon.thumbnailUrl }}
           style={styles.imageBackground}

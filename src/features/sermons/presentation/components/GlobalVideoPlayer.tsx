@@ -38,7 +38,8 @@ const BEIGE = '#FAFAFA';
 export function GlobalVideoPlayer() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { activeSermonId, playerMode, closeVideo, minimize, expand } = useGlobalVideoStore();
+  const { playerMode, closeVideo, minimize, expand, activeSermonId, originRect } = useGlobalVideoStore();
+  const { sermons } = useSermonStore();
 
   const currentUser = useAuthStore((s) => s.currentUser);
   const {
@@ -64,6 +65,7 @@ export function GlobalVideoPlayer() {
 
   // Animation values
   const translateY = useSharedValue(SCREEN_HEIGHT);
+  const openingProgress = useSharedValue(1);
   const tabBarVisible = useUIStore((s) => s.tabBarVisible);
   const hideCompactPlayer = useUIStore((s) => s.hideCompactPlayer);
   
@@ -110,14 +112,24 @@ export function GlobalVideoPlayer() {
 
   useEffect(() => {
     if (playerMode === 'expanded') {
-      translateY.value = withSpring(0, { damping: 40, stiffness: 250, overshootClamping: true });
+      if (originRect && openingProgress.value === 1 && translateY.value >= SCREEN_HEIGHT) {
+        // Start Shared Element Transition
+        translateY.value = 0;
+        openingProgress.value = 0;
+        openingProgress.value = withSpring(1, { damping: 24, stiffness: 220, mass: 0.9 });
+      } else {
+        openingProgress.value = 1;
+        translateY.value = withSpring(0, { damping: 24, stiffness: 220, mass: 0.9 });
+      }
     } else if (playerMode === 'minimized') {
+      openingProgress.value = 1;
       const targetY = hideCompactPlayer ? SCREEN_HEIGHT : (tabBarVisible ? MAX_TRANSLATE_Y : MAX_TRANSLATE_Y + HIDDEN_OFFSET);
-      translateY.value = withSpring(targetY, { damping: 40, stiffness: 250, overshootClamping: true });
+      translateY.value = withSpring(targetY, { damping: 24, stiffness: 220, mass: 0.9 });
     } else if (playerMode === 'hidden') {
-      translateY.value = withTiming(SCREEN_HEIGHT, { duration: 300 });
+      openingProgress.value = 1;
+      translateY.value = withSpring(SCREEN_HEIGHT, { damping: 24, stiffness: 220, mass: 0.9 });
     }
-  }, [playerMode, tabBarVisible, hideCompactPlayer]);
+  }, [playerMode, originRect, tabBarVisible, hideCompactPlayer]);
 
   const panGesture = Gesture.Pan()
     .onUpdate((event) => {
@@ -155,6 +167,22 @@ export function GlobalVideoPlayer() {
   });
 
   const animatedVideoStyle = useAnimatedStyle(() => {
+    if (openingProgress.value < 1 && originRect) {
+      const p = openingProgress.value;
+      const width = interpolate(p, [0, 1], [originRect.width, SCREEN_WIDTH]);
+      const height = interpolate(p, [0, 1], [originRect.height, SCREEN_WIDTH * (9 / 16)]);
+      const top = interpolate(p, [0, 1], [originRect.y, insets.top]);
+      const left = interpolate(p, [0, 1], [originRect.x, 0]);
+      const borderRadius = interpolate(p, [0, 1], [16, 0]);
+      
+      return {
+        width, height, top, left, borderRadius,
+        backgroundColor: 'transparent',
+        shadowOpacity: interpolate(p, [0, 1], [0.1, 0.3]),
+        shadowColor: '#000000',
+      };
+    }
+
     const isMin = translateY.value > MAX_TRANSLATE_Y / 2;
     // Morph from full width to card width
     const width = interpolate(translateY.value, [0, MAX_TRANSLATE_Y], [SCREEN_WIDTH, SCREEN_WIDTH - 32], Extrapolation.CLAMP);
@@ -182,13 +210,22 @@ export function GlobalVideoPlayer() {
   });
 
   const animatedInnerStyle = useAnimatedStyle(() => {
-    return {
-      borderRadius: interpolate(translateY.value, [0, MAX_TRANSLATE_Y], [0, 20], Extrapolation.CLAMP),
-    };
+    let borderRadius = 0;
+    if (openingProgress.value < 1 && originRect) {
+      borderRadius = interpolate(openingProgress.value, [0, 1], [16, 0]);
+    } else {
+      borderRadius = interpolate(translateY.value, [0, MAX_TRANSLATE_Y], [0, 20], Extrapolation.CLAMP);
+    }
+    return { borderRadius };
   });
 
   const animatedContentStyle = useAnimatedStyle(() => {
-    const opacity = interpolate(translateY.value, [0, 20], [1, 0], Extrapolation.CLAMP);
+    let opacity = 1;
+    if (openingProgress.value < 1 && originRect) {
+      opacity = openingProgress.value;
+    } else {
+      opacity = interpolate(translateY.value, [0, 20], [1, 0], Extrapolation.CLAMP);
+    }
     return {
       opacity,
       pointerEvents: opacity === 0 ? 'none' : 'auto',
@@ -281,7 +318,7 @@ export function GlobalVideoPlayer() {
                     <ActivityIndicator size="small" color={GOLD} />
                   ) : (
                     relatedSermons.map(s => (
-                      <RelatedSermonCard key={s.id} sermon={s} onPress={() => useGlobalVideoStore.getState().openVideo(s.id)} />
+                      <RelatedSermonCard key={s.id} sermon={s} onPress={(rect) => useGlobalVideoStore.getState().openVideo(s.id, rect)} />
                     ))
                   )}
                 </View>

@@ -139,9 +139,9 @@ export function SermonsExperience({
     .filter((item) => item.sermon !== null);
 
   // ── Navigation ─────────────────────────────────────────────────────────────
-  const openSermon = (id: string) => {
+  const openSermon = (id: string, originRect?: any) => {
     import('@/store/useGlobalVideoStore').then((m) => {
-      m.useGlobalVideoStore.getState().openVideo(id);
+      m.useGlobalVideoStore.getState().openVideo(id, originRect);
     });
   };
 
@@ -259,7 +259,7 @@ export function SermonsExperience({
                   </View>
                 ) : (
                   filteredSermons.map((s) => (
-                    <SearchResultCard key={s.id} sermon={s} onPress={() => openSermon(s.id)} />
+                    <SearchResultCard key={s.id} sermon={s} onPress={(rect) => openSermon(s.id, rect)} />
                   ))
                 )}
               </View>
@@ -271,7 +271,7 @@ export function SermonsExperience({
                     <Text style={styles.sectionTitle}>Latest Sermon</Text>
                     <FeaturedCard
                       sermon={featuredSermon}
-                      onPress={() => openSermon(featuredSermon.id)}
+                      onPress={(rect) => openSermon(featuredSermon.id, rect)}
                       onListen={() => openAudioPlayer(featuredSermon.id)}
                     />
                   </View>
@@ -290,7 +290,7 @@ export function SermonsExperience({
                         <SermonTileCard
                           key={s.id}
                           sermon={s}
-                          onPress={() => openSermon(s.id)}
+                          onPress={(rect) => openSermon(s.id, rect)}
                         />
                       ))}
                     </ScrollView>
@@ -360,7 +360,7 @@ export function SermonsExperience({
                 </View>
               ) : (
                 filteredSermons.map((s) => (
-                  <SearchResultCard key={s.id} sermon={s} onPress={() => openSermon(s.id)} />
+                  <SearchResultCard key={s.id} sermon={s} onPress={(rect) => openSermon(s.id, rect)} />
                 ))
               )}
             </View>
@@ -372,7 +372,7 @@ export function SermonsExperience({
                   <Text style={styles.sectionTitle}>Latest Sermon</Text>
                   <FeaturedCard
                     sermon={featuredSermon}
-                    onPress={() => openSermon(featuredSermon.id)}
+                    onPress={(rect) => openSermon(featuredSermon.id, rect)}
                     onListen={() => openAudioPlayer(featuredSermon.id)}
                   />
                 </View>
@@ -391,7 +391,7 @@ export function SermonsExperience({
                       <SermonTileCard
                         key={s.id}
                         sermon={s}
-                        onPress={() => openSermon(s.id)}
+                        onPress={(rect) => openSermon(s.id, rect)}
                       />
                     ))}
                   </ScrollView>
@@ -453,7 +453,7 @@ export function SermonsExperience({
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
-const FeaturedCard = memo(function FeaturedCard({ sermon, onPress, onListen }: { sermon: Sermon; onPress: () => void; onListen: () => void }) {
+const FeaturedCard = memo(function FeaturedCard({ sermon, onPress, onListen }: { sermon: Sermon; onPress: (originRect?: any) => void; onListen: () => void }) {
   const hasVideo = sermon.mediaType === 'video' || sermon.mediaType === 'both';
   const hasAudio = sermon.mediaType === 'audio' || sermon.mediaType === 'both';
   const formatDate = (d: Date) =>
@@ -472,9 +472,21 @@ const FeaturedCard = memo(function FeaturedCard({ sermon, onPress, onListen }: {
     Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 15, bounciness: 12 }).start();
   };
 
+  const cardRef = useRef<View>(null);
+
+  const handlePress = () => {
+    if (cardRef.current) {
+      cardRef.current.measure((x, y, width, height, pageX, pageY) => {
+        onPress({ x: pageX, y: pageY, width, height });
+      });
+    } else {
+      onPress();
+    }
+  };
+
   return (
-    <TouchableWithoutFeedback onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut}>
-      <Animated.View style={[styles.featuredCardOuter, { transform: [{ scale }] }]}>
+    <TouchableWithoutFeedback onPress={handlePress} onPressIn={handlePressIn} onPressOut={handlePressOut}>
+      <Animated.View ref={cardRef} style={[styles.featuredCardOuter, { transform: [{ scale }] }]}>
         <View style={styles.featuredCardInner}>
           {sermon.thumbnailUrl ? (
             <Image source={{ uri: sermon.thumbnailUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" cachePolicy="memory-disk" transition={200} />
@@ -507,17 +519,29 @@ const FeaturedCard = memo(function FeaturedCard({ sermon, onPress, onListen }: {
   );
 });
 
-const SermonTileCard = memo(function SermonTileCard({ sermon, onPress }: { sermon: Sermon; onPress: () => void }) {
+const SermonTileCard = memo(function SermonTileCard({ sermon, onPress }: { sermon: Sermon; onPress: (originRect?: any) => void }) {
   const hasVideo = sermon.mediaType === 'video' || sermon.mediaType === 'both';
+  const imageRef = useRef<View>(null);
+  
   const formatDuration = (s: number) => {
     const m = Math.floor(s / 60);
     return `${m}:${String(s % 60).padStart(2, '0')}`;
   };
 
+  const handlePress = () => {
+    if (imageRef.current) {
+      imageRef.current.measure((x, y, width, height, pageX, pageY) => {
+        onPress({ x: pageX, y: pageY, width, height });
+      });
+    } else {
+      onPress();
+    }
+  };
+
   return (
-    <TouchableOpacity style={styles.tileCard} onPress={onPress} activeOpacity={0.88}>
+    <TouchableOpacity style={styles.tileCard} onPress={handlePress} activeOpacity={0.88}>
       {/* Thumbnail */}
-      <View style={styles.tileThumbnailWrap}>
+      <View ref={imageRef} style={styles.tileThumbnailWrap}>
         {sermon.thumbnailUrl ? (
           <Image source={{ uri: sermon.thumbnailUrl }} style={styles.tileThumbnail} resizeMode="cover" cachePolicy="memory-disk" transition={200} />
         ) : (
@@ -549,14 +573,26 @@ const SermonTileCard = memo(function SermonTileCard({ sermon, onPress }: { sermo
   );
 });
 
-const SearchResultCard = memo(function SearchResultCard({ sermon, onPress }: { sermon: Sermon; onPress: () => void }) {
+const SearchResultCard = memo(function SearchResultCard({ sermon, onPress }: { sermon: Sermon; onPress: (originRect?: any) => void }) {
   const hasVideo = sermon.mediaType === 'video' || sermon.mediaType === 'both';
+  const imageRef = useRef<View>(null);
+
   const formatDate = (d: Date) =>
     d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
+  const handlePress = () => {
+    if (imageRef.current) {
+      imageRef.current.measure((x, y, width, height, pageX, pageY) => {
+        onPress({ x: pageX, y: pageY, width, height });
+      });
+    } else {
+      onPress();
+    }
+  };
+
   return (
-    <TouchableOpacity style={styles.searchCard} onPress={onPress} activeOpacity={0.85}>
-      <View style={styles.searchThumbWrap}>
+    <TouchableOpacity style={styles.searchCard} onPress={handlePress} activeOpacity={0.85}>
+      <View ref={imageRef} style={styles.searchThumbWrap}>
         {sermon.thumbnailUrl ? (
           <Image source={{ uri: sermon.thumbnailUrl }} style={styles.searchThumb} resizeMode="cover" cachePolicy="memory-disk" transition={200} />
         ) : (

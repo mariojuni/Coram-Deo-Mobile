@@ -9,9 +9,11 @@ import * as Haptics from 'expo-haptics';
 import { useSermonStore } from '@/store/useSermonStore';
 import { CircularProgress } from './CircularProgress';
 
+import type { OriginRect } from '@/store/useGlobalVideoStore';
+
 interface SermonCardProps {
   sermon: Sermon;
-  onPress: () => void;
+  onPress: (originRect?: OriginRect) => void;
   onFavorite: () => void;
   isFavorited: boolean;
 }
@@ -19,6 +21,7 @@ interface SermonCardProps {
 export function SermonCard({ sermon, onPress, onFavorite, isFavorited }: SermonCardProps) {
   const colors = useTheme();
   const { downloadedSermons, downloads } = useSermonStore();
+  const imageRef = React.useRef<View>(null);
   
   const downloadKey = `${sermon.id}_${sermon.mediaType === 'video' ? 'video' : 'audio'}`;
   const isDownloaded = downloadedSermons.has(downloadKey);
@@ -47,7 +50,13 @@ export function SermonCard({ sermon, onPress, onFavorite, isFavorited }: SermonC
 
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onPress();
+    if (imageRef.current) {
+      imageRef.current.measure((x, y, width, height, pageX, pageY) => {
+        onPress({ x: pageX, y: pageY, width, height });
+      });
+    } else {
+      onPress();
+    }
   };
 
   const handleFavorite = () => {
@@ -85,7 +94,7 @@ export function SermonCard({ sermon, onPress, onFavorite, isFavorited }: SermonC
         ]}
       >
           {/* Thumbnail */}
-          <View style={styles.imageContainer}>
+          <View ref={imageRef} style={styles.imageContainer}>
             <Image 
               source={{ uri: sermon.thumbnailUrl }} 
               style={styles.thumbnail}

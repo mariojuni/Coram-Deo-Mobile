@@ -7,7 +7,7 @@ import * as Haptics from 'expo-haptics';
 
 interface RelatedSermonCardProps {
   sermon: Sermon;
-  onPress: () => void;
+  onPress: (originRect?: any) => void;
 }
 
 const NAVY = '#1A1A1A';
@@ -25,15 +25,23 @@ export function RelatedSermonCard({ sermon, onPress }: RelatedSermonCardProps) {
   const formatDate = (date: Date) =>
     date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
+  const imageRef = React.useRef<View>(null);
+
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onPress();
+    if (imageRef.current) {
+      imageRef.current.measure((x, y, width, height, pageX, pageY) => {
+        onPress({ x: pageX, y: pageY, width, height });
+      });
+    } else {
+      onPress();
+    }
   };
 
   return (
     <TouchableOpacity style={styles.card} onPress={handlePress} activeOpacity={0.85}>
       {/* Thumbnail */}
-      <View style={styles.thumbContainer}>
+      <View ref={imageRef} style={styles.thumbContainer}>
         {sermon.thumbnailUrl ? (
           <Image source={{ uri: sermon.thumbnailUrl }} style={styles.thumb} resizeMode="cover" cachePolicy="memory-disk" transition={200} />
         ) : (

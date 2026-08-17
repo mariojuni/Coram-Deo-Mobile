@@ -329,7 +329,7 @@ export function SermonVideoPlayer({
 
 
         {/* Thumbnail overlay before playback starts */}
-        {(!initialSeekDone || playerState === 'idle') && sermon.thumbnailUrl && !isFullscreen && !isMinimized && (
+        {(!initialSeekDone || playerState === 'idle') && sermon.thumbnailUrl && !isFullscreen && (
           <Image
             source={{ uri: sermon.thumbnailUrl }}
             style={[StyleSheet.absoluteFill, { backgroundColor: '#000' }]}
