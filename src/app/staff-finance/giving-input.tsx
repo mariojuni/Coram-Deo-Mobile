@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BounceCard } from '@/components/ui/BounceCard';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
@@ -144,7 +144,11 @@ export default function GivingInputScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 24) + 70 }]}>
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 24) + 70 }]} keyboardShouldPersistTaps="handled">
         <Text style={styles.label}>Giver Type</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
           {['member', 'household', 'non_member', 'anonymous'].map(type => (
@@ -303,6 +307,7 @@ export default function GivingInputScreen() {
         
         <View style={{ height: 40 }} />
       </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
