@@ -120,6 +120,17 @@ export default function MyGivingScreen() {
                   <Text style={styles.fundText}>{getFundName(record.fundId, record.campaignId)}</Text>
                 </View>
 
+                {record.paymentAccountSnapshot && (
+                  <View style={styles.bankSnapshotBox}>
+                    <Text style={styles.bankSnapshotLabel}>Sent To</Text>
+                    <Text style={styles.bankSnapshotName}>{record.paymentAccountSnapshot.bankName}</Text>
+                    <Text style={styles.bankSnapshotDetail}>Account ending {record.paymentAccountSnapshot.accountNumberLast4}</Text>
+                    {record.bankTransactionReference ? (
+                      <Text style={styles.bankSnapshotDetail}>Ref: {record.bankTransactionReference}</Text>
+                    ) : null}
+                  </View>
+                )}
+
                 {record.status === 'rejected' && record.rejectionReason && (
                   <View style={styles.rejectionBox}>
                     <Text style={styles.rejectionText}>Reason: {record.rejectionReason}</Text>
@@ -243,6 +254,30 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
     color: '#FF6596',
+  },
+  bankSnapshotBox: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
+  },
+  bankSnapshotLabel: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  bankSnapshotName: {
+    fontSize: 14,
+    color: '#4B5563',
+    fontWeight: '600',
+  },
+  bankSnapshotDetail: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 2,
   },
   rejectionBox: {
     marginTop: 16,

@@ -1,14 +1,15 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { BounceCard } from '@/components/ui/BounceCard';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, KeyboardAvoidingView, Platform, Animated } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, KeyboardAvoidingView, Platform, Animated, Modal, Image } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { ChevronLeft, Upload, CheckCircle2 } from 'lucide-react-native';
+import { ChevronLeft, Upload, CheckCircle2, Copy, QrCode, X, Info } from 'lucide-react-native';
 import { useAuthStore } from '../store/useAuthStore';
 import { useGiving } from '../features/giving/presentation/hooks/useGiving';
 import { submitGivingRecord, uploadProofOfPayment, generateGivingRecordId } from '../features/giving/data/giving.repository';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
+import * as Clipboard from 'expo-clipboard';
 import { getSoftShadowStyle, getTopBarButtonShadowStyle } from '../components/ui/SoftCard';
 import { AccessibleTextInput } from '../components/a11y/AccessibleTextInput';
 import { AccessibleButton } from '../components/a11y/AccessibleButton';
@@ -17,12 +18,19 @@ export default function GivingFormScreen() {
   const { campaignId, fundType, fundId } = useLocalSearchParams();
   const router = useRouter();
   const { userProfile, currentUser } = useAuthStore();
-  const { funds, paymentMethods, campaigns } = useGiving();
+  const { funds, donationAccounts, campaigns } = useGiving();
   const insets = useSafeAreaInsets();
 
   const [amount, setAmount] = useState('');
   const [selectedFundId, setSelectedFundId] = useState('');
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('');
+  
+  const initialPreselected = Boolean(fundId || campaignId || fundType);
+  const [isPreselectedFund, setIsPreselectedFund] = useState(initialPreselected);
+  
+  const [selectedAccountId, setSelectedAccountId] = useState('');
+  const [hasSentDonation, setHasSentDonation] = useState(false);
+  const [showQRForAccount, setShowQRForAccount] = useState<any>(null);
+
   const [referenceNumber, setReferenceNumber] = useState('');
   const [note, setNote] = useState('');
   const [proofUri, setProofUri] = useState<string | null>(null);
@@ -38,23 +46,33 @@ export default function GivingFormScreen() {
     extrapolate: 'clamp',
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (fundId && funds.some((f: any) => f.id === fundId)) {
       setSelectedFundId(fundId as string);
+    } else if (campaignId && campaigns.length > 0 && !selectedFundId) {
+      const campaign = campaigns.find((c: any) => c.id === campaignId);
+      if (campaign && funds.some((f: any) => f.id === campaign.fundId)) {
+        setSelectedFundId(campaign.fundId);
+      }
     } else if (fundType && funds.length > 0 && !selectedFundId) {
       const fund = funds.find((f: any) => f.type === fundType || f.name.toLowerCase() === (fundType as string).toLowerCase());
       if (fund) {
         setSelectedFundId(fund.id);
       }
     }
-  }, [fundId, fundType, funds]);
+  }, [fundId, fundType, campaignId, funds, campaigns]);
+
+  useEffect(() => {
+    if (donationAccounts.length > 0 && !selectedAccountId) {
+      const primary = donationAccounts.find(a => a.isPrimary) || donationAccounts[0];
+      setSelectedAccountId(primary.id);
+    }
+  }, [donationAccounts, selectedAccountId]);
 
   const churchId = userProfile?.churchId;
   const userId = currentUser?.uid;
 
-  const requiresProof = ['gcash', 'maya', 'bank_transfer'].includes(
-    paymentMethods.find((m: any) => m.id === selectedPaymentMethod)?.type || ''
-  );
+  const hasVerificationEvidence = referenceNumber.trim().length > 0 || proofUri != null;
 
   const pickImage = async () => {
     try {
@@ -71,6 +89,12 @@ export default function GivingFormScreen() {
       console.warn('Image picker error:', error);
       Alert.alert('Error', 'Image picker is not available or failed to load. You may need to restart the Expo Go app.');
     }
+  };
+
+  const copyToClipboard = async (text: string, label: string) => {
+    await Clipboard.setStringAsync(text);
+    // Ideally use a toast/snackbar here as per instructions, using an Alert for simplicity as requested 'existing toast system' might not be available
+    Alert.alert('Copied', `${label} copied to clipboard.`);
   };
 
   const handleSubmit = async () => {
@@ -91,13 +115,13 @@ export default function GivingFormScreen() {
       return;
     }
     
-    if (!selectedPaymentMethod) {
-      Alert.alert('Validation Error', 'Please select a payment method.');
+    if (!selectedAccountId) {
+      Alert.alert('Validation Error', 'Please select a bank account to transfer to.');
       return;
     }
 
-    if (requiresProof && !proofUri) {
-      Alert.alert('Validation Error', 'Proof of payment is required for this payment method.');
+    if (!hasVerificationEvidence) {
+      Alert.alert('Validation Error', 'Please provide the bank reference number or upload a receipt so the Finance team can verify your donation.');
       return;
     }
 
@@ -109,7 +133,7 @@ export default function GivingFormScreen() {
         uploadedProofUrl = await uploadProofOfPayment(churchId, recordId, proofUri);
       }
 
-      const method = paymentMethods.find((m: any) => m.id === selectedPaymentMethod);
+      const account = donationAccounts.find(a => a.id === selectedAccountId);
 
       await submitGivingRecord({
         churchId,
@@ -118,8 +142,15 @@ export default function GivingFormScreen() {
         campaignId: (campaignId as string) || undefined,
         amount: Number(amount),
         currency: 'PHP',
-        method: method?.type || 'other',
-        referenceNumber,
+        method: 'bank_transfer',
+        paymentAccountId: selectedAccountId,
+        paymentAccountSnapshot: account ? {
+          bankName: account.bankName,
+          accountName: account.accountName,
+          accountNumberLast4: account.accountNumber.slice(-4),
+        } : undefined,
+        bankTransactionReference: referenceNumber.trim(),
+        referenceNumber: referenceNumber.trim(),
         proofUrl: uploadedProofUrl,
         notes: note,
       }, recordId);
@@ -139,10 +170,16 @@ export default function GivingFormScreen() {
           <View style={styles.successIconWrap}>
             <CheckCircle2 size={64} color="#22C55E" />
           </View>
-          <Text style={styles.successTitle}>Thank You!</Text>
+          <Text style={styles.successTitle}>Donation Submitted</Text>
           <Text style={styles.successText}>
-            Thank you for your generosity. Your giving submission is now pending verification.
+            Thank you for your generosity.{"\n"}Your donation has been submitted to our Finance team for verification.
           </Text>
+          
+          <View style={styles.statusBadge}>
+            <Text style={styles.statusBadgeLabel}>Status</Text>
+            <Text style={styles.statusBadgeValue}>Pending Verification</Text>
+          </View>
+
           <TouchableOpacity 
             activeOpacity={0.8} 
             style={styles.doneBtn} 
@@ -154,7 +191,11 @@ export default function GivingFormScreen() {
               end={{ x: 1, y: 0 }}
               style={[StyleSheet.absoluteFill, { borderRadius: 32 }]} 
             />
-            <Text style={styles.doneBtnText}>View My Giving</Text>
+            <Text style={styles.doneBtnText}>View Giving History</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={{ marginTop: 20 }} onPress={() => router.replace('/giving')}>
+            <Text style={{ color: '#6B7280', fontSize: 16, fontWeight: '600' }}>Done</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -163,6 +204,7 @@ export default function GivingFormScreen() {
 
   const selectedCampaign = campaigns.find((c: any) => c.id === campaignId);
   const isCampaignInactive = Boolean(campaignId && !selectedCampaign);
+  const selectedFundObj = funds.find((f: any) => f.id === selectedFundId);
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -176,7 +218,7 @@ export default function GivingFormScreen() {
             <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
           </BounceCard>
           <Animated.Text style={[styles.headerTitleCenter, { opacity: headerTitleOpacity }]}>
-            Make a Gift
+            Give
           </Animated.Text>
           <View style={{ width: 40 }} />
         </View>
@@ -210,7 +252,7 @@ export default function GivingFormScreen() {
         )}
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Amount (₱)</Text>
+          <Text style={styles.label}>Amount</Text>
           <View style={styles.amountInputWrap}>
             <Text style={styles.currencySymbol}>₱</Text>
             <TextInput
@@ -223,123 +265,252 @@ export default function GivingFormScreen() {
               autoCorrect={false}
               spellCheck={false}
               autoCapitalize="none"
+              accessibilityLabel="Donation Amount in PHP"
             />
           </View>
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Fund</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={styles.horizontalScroll}>
-            {funds.filter((f: any) => f.visibility !== 'admin_only' && f.visibility !== 'finance_only').map((fund: any) => {
-              const isActive = selectedFundId === fund.id;
-              return (
-                <TouchableOpacity
-                  key={fund.id}
-                  activeOpacity={0.8}
-                  style={[styles.pill, isActive && styles.pillActive]}
-                  onPress={() => setSelectedFundId(fund.id)}
-                >
-                  {isActive && <LinearGradient colors={['#FF6596', '#FF8AAB']} style={[StyleSheet.absoluteFill, { borderRadius: 24 }]} />}
-                  <Text style={[styles.pillText, isActive && styles.pillTextActive]}>
-                    {fund.name}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+          <Text style={styles.label}>Giving To</Text>
+          {isPreselectedFund && selectedFundObj ? (
+            <View style={styles.preselectedFundBox}>
+              <Text style={styles.preselectedFundName}>{selectedFundObj.name}</Text>
+              <TouchableOpacity onPress={() => setIsPreselectedFund(false)} accessibilityLabel="Change Fund">
+                <Text style={styles.changeBtnText}>Change</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={styles.horizontalScroll}>
+              {funds.filter((f: any) => f.visibility !== 'admin_only' && f.visibility !== 'finance_only').map((fund: any) => {
+                const isActive = selectedFundId === fund.id;
+                return (
+                  <TouchableOpacity
+                    key={fund.id}
+                    activeOpacity={0.8}
+                    style={[styles.pill, isActive && styles.pillActive]}
+                    onPress={() => setSelectedFundId(fund.id)}
+                    accessibilityLabel={`Select fund ${fund.name}`}
+                  >
+                    {isActive && <LinearGradient colors={['#FF6596', '#FF8AAB']} style={[StyleSheet.absoluteFill, { borderRadius: 24 }]} />}
+                    <Text style={[styles.pillText, isActive && styles.pillTextActive]}>
+                      {fund.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          )}
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Payment Method</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={styles.horizontalScroll}>
-            {paymentMethods.map((method: any) => {
-              const isActive = selectedPaymentMethod === method.id;
-              return (
-                <TouchableOpacity
-                  key={method.id}
-                  activeOpacity={0.8}
-                  style={[styles.pill, isActive && styles.pillActive]}
-                  onPress={() => setSelectedPaymentMethod(method.id)}
-                >
-                  {isActive && <LinearGradient colors={['#FF6596', '#FF8AAB']} style={[StyleSheet.absoluteFill, { borderRadius: 24 }]} />}
-                  <Text style={[styles.pillText, isActive && styles.pillTextActive]}>
-                    {method.displayName}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+          <Text style={styles.label}>Bank Transfer</Text>
+          
+          {donationAccounts.length === 0 ? (
+             <View style={styles.noBankBox}>
+                <Info size={24} color="#6B7280" />
+                <Text style={styles.noBankTitle}>Bank Giving Unavailable</Text>
+                <Text style={styles.noBankText}>The church has not configured a bank account for online giving yet. Please contact the church for giving instructions.</Text>
+             </View>
+          ) : (
+             <View>
+                <Text style={styles.instructionsText}>Send your donation to</Text>
+                
+                {donationAccounts.map(account => {
+                   const isSelected = selectedAccountId === account.id;
+                   return (
+                     <TouchableOpacity 
+                       key={account.id}
+                       activeOpacity={0.9}
+                       onPress={() => setSelectedAccountId(account.id)}
+                       style={[styles.bankCard, isSelected && styles.bankCardSelected]}
+                       accessibilityLabel={`${account.bankName}, ${account.accountName}, account ending ${account.accountNumber.slice(-4)}`}
+                     >
+                       <View style={styles.bankCardHeader}>
+                          {isSelected ? (
+                             <CheckCircle2 size={20} color="#FF6596" />
+                          ) : (
+                             <View style={styles.unselectedRadio} />
+                          )}
+                          <View style={{ marginLeft: 12, flex: 1 }}>
+                            {account.isPrimary && <Text style={styles.primaryBadge}>PRIMARY ACCOUNT</Text>}
+                            <Text style={styles.bankName}>{account.bankName}</Text>
+                            <Text style={styles.accountName}>{account.accountName}</Text>
+                          </View>
+                       </View>
+                       
+                       {isSelected && (
+                         <View style={styles.bankCardDetails}>
+                           <View style={styles.divider} />
+                           
+                           <Text style={styles.accountNumberLabel}>Account Number</Text>
+                           <View style={styles.accountNumberRow}>
+                             <Text style={styles.accountNumber}>{account.accountNumber}</Text>
+                             <TouchableOpacity 
+                               style={styles.copyBtn} 
+                               onPress={() => copyToClipboard(account.accountNumber, account.bankName)}
+                               accessibilityLabel={`Copy ${account.bankName} account number`}
+                             >
+                               <Copy size={16} color="#4B5563" />
+                               <Text style={styles.copyBtnText}>Copy</Text>
+                             </TouchableOpacity>
+                           </View>
+
+                           {account.qrImagePath ? (
+                             <TouchableOpacity 
+                               style={styles.qrBtn}
+                               onPress={() => setShowQRForAccount(account)}
+                               accessibilityLabel={`View Official QR for ${account.bankName}`}
+                             >
+                               <QrCode size={18} color="#FF6596" />
+                               <Text style={styles.qrBtnText}>View Official QR</Text>
+                             </TouchableOpacity>
+                           ) : null}
+
+                           {account.instructions ? (
+                             <Text style={styles.bankInstructions}>{account.instructions}</Text>
+                           ) : null}
+                         </View>
+                       )}
+                     </TouchableOpacity>
+                   );
+                })}
+
+                <Text style={styles.disclaimerText}>
+                   Transfer your donation using your preferred banking or e-wallet application. The transfer happens outside this app. After completing the transfer, return here to submit your details for verification.
+                </Text>
+
+                {!hasSentDonation && (
+                  <AccessibleButton 
+                    style={styles.sentDonationBtn}
+                    onPress={() => setHasSentDonation(true)}
+                    accessibilityLabel="Report completed bank transfer"
+                  >
+                    <Text style={styles.sentDonationBtnText}>I Have Sent My Donation</Text>
+                  </AccessibleButton>
+                )}
+             </View>
+          )}
         </View>
 
-        <View style={styles.formGroup}>
-          <AccessibleTextInput
-            label="Reference Number (Optional)"
-            style={styles.textInput}
-            placeholder="e.g. 123456789"
-            placeholderTextColor="#9CA3AF"
-            value={referenceNumber}
-            onChangeText={setReferenceNumber}
-            autoCorrect={false}
-            spellCheck={false}
-          />
-        </View>
+        {hasSentDonation && (
+          <View style={styles.transferDetailsBox}>
+            <Text style={styles.sectionTitle}>Transfer Details</Text>
+            <Text style={styles.sectionSubtitle}>Help us verify your donation</Text>
 
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>
-            Proof of Payment {requiresProof && <Text style={{ color: '#EF4444' }}>*</Text>}
-          </Text>
-          <TouchableOpacity activeOpacity={0.8} style={styles.uploadBtn} onPress={pickImage}>
-            <LinearGradient colors={['rgba(255,101,150,0.05)', 'rgba(255,101,150,0.02)']} style={[StyleSheet.absoluteFill, { borderRadius: 16 }]} />
-            {proofUri ? (
-              <CheckCircle2 size={24} color="#FF6596" />
-            ) : (
-              <Upload size={24} color="#FF6596" />
-            )}
-            <Text style={[styles.uploadBtnText, proofUri && { color: '#FF6596', fontWeight: '700' }]}>
-              {proofUri ? 'Image Selected (Tap to change)' : 'Upload Receipt/Screenshot'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+            <View style={styles.formGroup}>
+              <AccessibleTextInput
+                label="Bank Reference Number (Optional)"
+                style={styles.textInput}
+                placeholder="e.g. 123456789"
+                placeholderTextColor="#9CA3AF"
+                value={referenceNumber}
+                onChangeText={setReferenceNumber}
+                autoCorrect={false}
+                spellCheck={false}
+              />
+            </View>
 
-        <View style={styles.formGroup}>
-          <AccessibleTextInput
-            label="Note (Optional)"
-            style={[styles.textInput, styles.textArea]}
-            placeholder="Add a message..."
-            placeholderTextColor="#9CA3AF"
-            multiline
-            numberOfLines={3}
-            value={note}
-            onChangeText={setNote}
-            autoCorrect={false}
-            spellCheck={false}
-          />
-        </View>
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Proof of Transfer (Optional)</Text>
+              <TouchableOpacity activeOpacity={0.8} style={styles.uploadBtn} onPress={pickImage}>
+                <LinearGradient colors={['rgba(255,101,150,0.05)', 'rgba(255,101,150,0.02)']} style={[StyleSheet.absoluteFill, { borderRadius: 16 }]} />
+                {proofUri ? (
+                  <CheckCircle2 size={24} color="#FF6596" />
+                ) : (
+                  <Upload size={24} color="#FF6596" />
+                )}
+                <Text style={[styles.uploadBtnText, proofUri && { color: '#FF6596', fontWeight: '700' }]}>
+                  {proofUri ? 'Receipt Selected (Tap to change)' : 'Upload Receipt / Screenshot'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.formGroup}>
+              <AccessibleTextInput
+                label="Note (Optional)"
+                style={[styles.textInput, styles.textArea]}
+                placeholder="Add a message..."
+                placeholderTextColor="#9CA3AF"
+                multiline
+                numberOfLines={3}
+                value={note}
+                onChangeText={setNote}
+                autoCorrect={false}
+                spellCheck={false}
+              />
+            </View>
+          </View>
+        )}
+
       </Animated.ScrollView>
 
-      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom + 16, 32) }]}>
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.95)', borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)' }]} pointerEvents="none" />
+      {hasSentDonation && (
+        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom + 16, 32) }]}>
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.95)', borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)' }]} pointerEvents="none" />
 
-        <AccessibleButton 
-          activeOpacity={0.8}
-          style={[styles.submitBtnWrap, (isSubmitting || isCampaignInactive) && styles.submitBtnDisabled]} 
-          onPress={handleSubmit}
-          disabled={isSubmitting || isCampaignInactive}
-          loading={isSubmitting}
-          accessibilityLabel={isCampaignInactive ? 'Campaign Ended' : 'Submit Giving'}
-        >
-          <LinearGradient 
-            colors={isCampaignInactive ? ['#D1D5DB', '#9CA3AF'] : ['#FF6596', '#C084FC']} 
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.submitBtnGradient} 
+          <AccessibleButton 
+            activeOpacity={0.8}
+            style={[styles.submitBtnWrap, (isSubmitting || isCampaignInactive) && styles.submitBtnDisabled]} 
+            onPress={handleSubmit}
+            disabled={isSubmitting || isCampaignInactive}
+            loading={isSubmitting}
+            accessibilityLabel={isCampaignInactive ? 'Campaign Ended' : 'Submit Giving'}
           >
-            {!isSubmitting && (
-              <Text style={styles.submitBtnText}>{isCampaignInactive ? 'Campaign Ended' : 'Submit Giving'}</Text>
-            )}
-          </LinearGradient>
-        </AccessibleButton>
-      </View>
+            <LinearGradient 
+              colors={isCampaignInactive ? ['#D1D5DB', '#9CA3AF'] : ['#FF6596', '#C084FC']} 
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.submitBtnGradient} 
+            >
+              {!isSubmitting && (
+                <Text style={styles.submitBtnText}>{isCampaignInactive ? 'Campaign Ended' : 'Submit Giving'}</Text>
+              )}
+            </LinearGradient>
+          </AccessibleButton>
+        </View>
+      )}
+      
+      {/* QR Code Viewer Modal */}
+      <Modal
+        visible={!!showQRForAccount}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowQRForAccount(null)}
+      >
+        {showQRForAccount && (
+          <View style={styles.modalOverlay}>
+            <View style={styles.qrModalContainer}>
+              <TouchableOpacity style={styles.qrCloseBtn} onPress={() => setShowQRForAccount(null)}>
+                <X size={24} color="#4B5563" />
+              </TouchableOpacity>
+              
+              <Text style={styles.qrBankName}>{showQRForAccount.bankName}</Text>
+              <Text style={styles.qrAccountName}>{showQRForAccount.accountName}</Text>
+              
+              <View style={styles.qrImageWrap}>
+                <Image 
+                  source={{ uri: showQRForAccount.qrImagePath }} 
+                  style={styles.qrImage} 
+                  resizeMode="contain"
+                  accessibilityLabel={`Official receiving QR for ${showQRForAccount.bankName}`}
+                />
+              </View>
+
+              <Text style={styles.qrAccountNumberLabel}>Account Number</Text>
+              <Text style={styles.qrAccountNumber}>{showQRForAccount.accountNumber}</Text>
+              
+              <TouchableOpacity 
+                style={styles.qrCopyBtn} 
+                onPress={() => copyToClipboard(showQRForAccount.accountNumber, showQRForAccount.bankName)}
+              >
+                <Copy size={16} color="#FF6596" />
+                <Text style={styles.qrCopyBtnText}>Copy Account Number</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      </Modal>
+
     </KeyboardAvoidingView>
   );
 }
@@ -434,17 +605,25 @@ const styles = StyleSheet.create({
     height: '100%',
     paddingVertical: 0,
   },
-  textInput: {
-    ...(getSoftShadowStyle(16) as any),
-    fontSize: 16,
-    color: '#1a1a1a',
+  preselectedFundBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     padding: 16,
     backgroundColor: '#fff',
     borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
   },
-  textArea: {
-    height: 120,
-    textAlignVertical: 'top',
+  preselectedFundName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1a1a1a',
+  },
+  changeBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FF6596',
   },
   horizontalScroll: {
     flexDirection: 'row',
@@ -472,6 +651,182 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
   },
+  instructionsText: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 12,
+    marginLeft: 4,
+  },
+  noBankBox: {
+    padding: 24,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 16,
+    alignItems: 'center',
+  },
+  noBankTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#374151',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  noBankText: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  bankCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+  },
+  bankCardSelected: {
+    borderColor: '#FF6596',
+    backgroundColor: '#FFF0F5',
+  },
+  bankCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  unselectedRadio: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#D1D5DB',
+  },
+  primaryBadge: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FF6596',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  bankName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    marginBottom: 2,
+  },
+  accountName: {
+    fontSize: 14,
+    color: '#4B5563',
+  },
+  bankCardDetails: {
+    marginTop: 16,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    marginBottom: 16,
+  },
+  accountNumberLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  accountNumberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  accountNumber: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#1a1a1a',
+    letterSpacing: 1,
+  },
+  copyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    gap: 6,
+  },
+  copyBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#4B5563',
+  },
+  qrBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,101,150,0.1)',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  qrBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FF6596',
+  },
+  bankInstructions: {
+    fontSize: 13,
+    color: '#6B7280',
+    lineHeight: 18,
+    marginTop: 4,
+  },
+  disclaimerText: {
+    fontSize: 13,
+    color: '#6B7280',
+    lineHeight: 20,
+    marginVertical: 16,
+    paddingHorizontal: 4,
+  },
+  sentDonationBtn: {
+    backgroundColor: '#111827',
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  sentDonationBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  transferDetailsBox: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1a1a1a',
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 20,
+    marginTop: 4,
+  },
+  textInput: {
+    ...(getSoftShadowStyle(16) as any),
+    fontSize: 16,
+    color: '#1a1a1a',
+    padding: 16,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+  },
+  textArea: {
+    height: 120,
+    textAlignVertical: 'top',
+  },
   uploadBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -489,7 +844,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#4B5563',
   },
-  
   footer: {
     position: 'absolute',
     bottom: 0,
@@ -518,7 +872,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.3,
   },
-
   successContainer: {
     flex: 1,
     alignItems: 'center',
@@ -550,7 +903,26 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     lineHeight: 24,
+    marginBottom: 24,
+  },
+  statusBadge: {
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
     marginBottom: 40,
+  },
+  statusBadgeLabel: {
+    fontSize: 11,
+    color: '#D97706',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  statusBadgeValue: {
+    fontSize: 15,
+    color: '#92400E',
+    fontWeight: '800',
   },
   doneBtn: {
     paddingHorizontal: 40,
@@ -563,6 +935,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 12,
     elevation: 4,
+    width: '100%',
   },
   doneBtnText: {
     color: '#fff',
@@ -570,4 +943,79 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.3,
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  qrModalContainer: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+  },
+  qrCloseBtn: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    padding: 8,
+  },
+  qrBankName: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#1a1a1a',
+    marginTop: 8,
+  },
+  qrAccountName: {
+    fontSize: 15,
+    color: '#4B5563',
+    marginBottom: 24,
+  },
+  qrImageWrap: {
+    width: 240,
+    height: 240,
+    backgroundColor: '#FAFAFA',
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+  },
+  qrImage: {
+    width: 220,
+    height: 220,
+  },
+  qrAccountNumberLabel: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  qrAccountNumber: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#1a1a1a',
+    letterSpacing: 1,
+    marginBottom: 24,
+  },
+  qrCopyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(255,101,150,0.1)',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    width: '100%',
+    justifyContent: 'center',
+  },
+  qrCopyBtnText: {
+    color: '#FF6596',
+    fontSize: 16,
+    fontWeight: '700',
+  }
 });

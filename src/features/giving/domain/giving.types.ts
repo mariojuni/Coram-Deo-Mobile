@@ -56,6 +56,14 @@ export interface GivingRecord {
   amount: number;
   currency: 'PHP';
   method: string | PaymentMethodType;
+  paymentAccountId?: string;
+  paymentAccountSnapshot?: {
+    bankName: string;
+    accountName: string;
+    accountNumberLast4: string;
+  };
+  bankTransactionReference?: string;
+  proofStoragePath?: string;
   referenceNumber?: string;
   proofUrl?: string;
   notes?: string;
@@ -106,6 +114,21 @@ export interface PaymentMethod {
   qrCodeUrl?: string;
   instructions?: string;
   isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DonationAccount {
+  id: string;
+  churchId: string;
+  bankName: string;
+  accountName: string;
+  accountNumber: string;
+  isPrimary: boolean;
+  isActive: boolean;
+  displayOrder: number;
+  qrImagePath?: string;
+  instructions?: string;
   createdAt: string;
   updatedAt: string;
 }

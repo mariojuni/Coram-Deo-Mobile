@@ -245,7 +245,7 @@ export default function GivingCampaignDetailScreen() {
         <TouchableOpacity 
           style={styles.giveBtnContainer}
           activeOpacity={0.8}
-          onPress={withDebounce(() => router.push({ pathname: '/giving-form', params: { campaignId: campaign.id, fundType: campaign.fundId } }))}
+          onPress={withDebounce(() => router.push({ pathname: '/giving-form', params: { campaignId: campaign.id, fundId: campaign.fundId } }))}
         >
           <LinearGradient
             colors={['#FF6596', '#C084FC']}

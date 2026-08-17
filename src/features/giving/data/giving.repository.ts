@@ -1,7 +1,7 @@
 import { getActiveDb, getActiveStorage } from '@/firebase';
 import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, orderBy, getDoc, onSnapshot, or } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { GivingFund, GivingCampaign, GivingRecord, PaymentMethod } from '../domain/giving.types';
+import { GivingFund, GivingCampaign, GivingRecord, PaymentMethod, DonationAccount } from '../domain/giving.types';
 
 export async function fetchActiveCampaigns(churchId: string): Promise<GivingCampaign[]> {
   if (!churchId) return [];
@@ -75,6 +75,48 @@ export function subscribeToGivingFunds(churchId: string, callback: (funds: Givin
     callback(funds);
   }, (err) => {
     console.warn('Error subscribing to giving funds:', err);
+    callback([]);
+  });
+}
+
+export async function fetchDonationAccounts(churchId: string): Promise<DonationAccount[]> {
+  if (!churchId) return [];
+  try {
+    const q = query(
+      collection(getActiveDb(), 'donationAccounts'),
+      where('churchId', '==', churchId),
+      where('isActive', '==', true)
+    );
+    const snapshot = await getDocs(q);
+    const accounts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DonationAccount));
+    return accounts.sort((a, b) => {
+      if (a.isPrimary && !b.isPrimary) return -1;
+      if (!a.isPrimary && b.isPrimary) return 1;
+      return (a.displayOrder || 0) - (b.displayOrder || 0);
+    });
+  } catch (err) {
+    console.warn('Error fetching donation accounts:', err);
+    return [];
+  }
+}
+
+export function subscribeToDonationAccounts(churchId: string, callback: (accounts: DonationAccount[]) => void): () => void {
+  if (!churchId) return () => {};
+  const q = query(
+    collection(getActiveDb(), 'donationAccounts'),
+    where('churchId', '==', churchId),
+    where('isActive', '==', true)
+  );
+  return onSnapshot(q, (snapshot) => {
+    const accounts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DonationAccount));
+    const sorted = accounts.sort((a, b) => {
+      if (a.isPrimary && !b.isPrimary) return -1;
+      if (!a.isPrimary && b.isPrimary) return 1;
+      return (a.displayOrder || 0) - (b.displayOrder || 0);
+    });
+    callback(sorted);
+  }, (err) => {
+    console.warn('Error subscribing to donation accounts:', err);
     callback([]);
   });
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
-import { GivingCampaign, GivingFund, GivingRecord, PaymentMethod } from '../../domain/giving.types';
+import { GivingCampaign, GivingFund, GivingRecord, PaymentMethod, DonationAccount } from '../../domain/giving.types';
 import * as givingRepo from '../../data/giving.repository';
 
 export function useGiving() {
@@ -12,6 +12,7 @@ export function useGiving() {
   const [campaigns, setCampaigns] = useState<GivingCampaign[]>([]);
   const [funds, setFunds] = useState<GivingFund[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [donationAccounts, setDonationAccounts] = useState<DonationAccount[]>([]);
   const [myRecords, setMyRecords] = useState<GivingRecord[]>([]);
   
   const [isLoading, setIsLoading] = useState(false);
@@ -60,6 +61,13 @@ export function useGiving() {
     });
   }, [churchId]);
 
+  useEffect(() => {
+    if (!churchId) return;
+    return givingRepo.subscribeToDonationAccounts(churchId, (newAccounts) => {
+      setDonationAccounts(newAccounts);
+    });
+  }, [churchId]);
+
   const refreshRecords = useCallback(async () => {
     if (!userId) return;
     try {
@@ -74,6 +82,7 @@ export function useGiving() {
     campaigns,
     funds,
     paymentMethods,
+    donationAccounts,
     myRecords,
     isLoading,
     error,
