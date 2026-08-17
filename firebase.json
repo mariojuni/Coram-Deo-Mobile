@@ -4,11 +4,6 @@
   },
   "firestore": [
     {
-      "database": "(default)",
-      "rules": "firestore.rules",
-      "indexes": "firestore.indexes.json"
-    },
-    {
       "database": "coramdeo",
       "rules": "firestore.rules",
       "indexes": "firestore.indexes.json"

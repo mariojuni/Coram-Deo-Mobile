@@ -24,9 +24,7 @@ initAppCheck(activeApp);
 let activeAuth = Platform.OS === 'web' 
   ? initializeAuth(activeApp, { persistence: [indexedDBLocalPersistence, browserLocalPersistence] })
   : initializeAuth(activeApp, { persistence: getReactNativePersistence(AsyncStorage) });
-let activeDb = initialConfig.firestoreDatabaseId
-  ? getFirestore(activeApp, initialConfig.firestoreDatabaseId)
-  : getFirestore(activeApp);
+let activeDb = getFirestore(activeApp, initialConfig.firestoreDatabaseId || 'coramdeo');
 let activeStorage = getStorage(activeApp);
 
 export const getActiveApp = () => activeApp;
@@ -70,9 +68,7 @@ export const reinitFirebaseForEnv = async (targetEnv: AppEnvironment) => {
     activeAuth = getAuth(activeApp);
   }
 
-  activeDb = config.firestoreDatabaseId
-    ? getFirestore(activeApp, config.firestoreDatabaseId)
-    : getFirestore(activeApp);
+  activeDb = getFirestore(activeApp, config.firestoreDatabaseId || 'coramdeo');
   activeStorage = getStorage(activeApp);
   console.log(`[Firebase] Successfully reinitialized default Firebase app for env '${targetEnv}' (Project: ${config.projectId}, Database ID: ${config.firestoreDatabaseId || '(default)'})`);
 };
