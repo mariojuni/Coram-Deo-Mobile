@@ -168,8 +168,16 @@ exports.onCommentCreated = (0, firestore_2.onDocumentCreated)({
         return null;
     const db = (0, firestore_1.getFirestore)(admin.app(), databaseName);
     let ownerId;
-    let title = 'New Comment';
     let body = '';
+    // Fetch actor's display name
+    let actorName = 'Someone';
+    if (data.authorUserId) {
+        const authorSnap = await db.collection('users').doc(data.authorUserId).get();
+        if (authorSnap.exists) {
+            const authorData = authorSnap.data();
+            actorName = [authorData.firstName, authorData.lastName].filter(Boolean).join(' ') || 'Someone';
+        }
+    }
     if (data.parentCommentId) {
         // It's a reply to a comment
         const parentRef = db.collection('comments').doc(data.parentCommentId);
@@ -177,7 +185,6 @@ exports.onCommentCreated = (0, firestore_2.onDocumentCreated)({
         if (!parentSnap.exists)
             return null;
         ownerId = (_a = parentSnap.data()) === null || _a === void 0 ? void 0 : _a.authorUserId;
-        title = 'New Reply';
         body = `replied to your comment.`;
     }
     else {
@@ -188,7 +195,6 @@ exports.onCommentCreated = (0, firestore_2.onDocumentCreated)({
             if (!prayerSnap.exists)
                 return null;
             ownerId = (_b = prayerSnap.data()) === null || _b === void 0 ? void 0 : _b.userId;
-            title = 'New Prayer Comment';
             body = `commented on your prayer request.`;
         }
         else if (data.targetType === 'bible_note') {
@@ -197,7 +203,6 @@ exports.onCommentCreated = (0, firestore_2.onDocumentCreated)({
             if (!noteSnap.exists)
                 return null;
             ownerId = (_c = noteSnap.data()) === null || _c === void 0 ? void 0 : _c.userId;
-            title = 'New Note Comment';
             body = `commented on your note.`;
         }
         else if (data.targetType === 'church_highlight') {
@@ -206,7 +211,6 @@ exports.onCommentCreated = (0, firestore_2.onDocumentCreated)({
             if (!highlightSnap.exists)
                 return null;
             ownerId = (_d = highlightSnap.data()) === null || _d === void 0 ? void 0 : _d.userId;
-            title = 'New Highlight Comment';
             body = `commented on your highlight.`;
         }
     }
@@ -220,7 +224,7 @@ exports.onCommentCreated = (0, firestore_2.onDocumentCreated)({
         churchId: data.churchId,
         category,
         type: `${data.targetType}_comment`,
-        title,
+        title: actorName, // Use actor's name as title to match in-app display
         body,
         sourceType: data.targetType,
         sourceId: data.targetId,
@@ -313,7 +317,7 @@ exports.onPrayerRequestCreated = (0, firestore_2.onDocumentCreated)({
                 churchId: churchId,
                 category: 'prayer',
                 type: 'new_prayer_request',
-                title: 'New Prayer Request',
+                title: data.requesterName || data.name || 'New Prayer Request',
                 body: `shared a new prayer request.`,
                 sourceType: 'prayer_request',
                 sourceId: event.params.requestId,

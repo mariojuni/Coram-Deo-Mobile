@@ -127,6 +127,10 @@ export class NotificationService {
           },
           payload: {
             aps: {
+              alert: {
+                title: params.title,
+                body: params.body,
+              },
               'content-available': 1, // Wake app in background
               sound: 'default',
               badge: 1,
@@ -136,6 +140,15 @@ export class NotificationService {
         android: {
           priority: 'high',
         },
+      });
+
+      console.log(`FCM multicast result: successCount=${response.successCount}, failureCount=${response.failureCount}, tokens=${tokens.length}`);
+      response.responses.forEach((resp, idx) => {
+        if (resp.success) {
+          console.log(`Token[${idx}] SUCCESS: messageId=${resp.messageId}`);
+        } else {
+          console.error(`Token[${idx}] FAILED: code=${resp.error?.code}, message=${resp.error?.message}`);
+        }
       });
 
       // 3. Clean up invalid tokens
@@ -154,6 +167,7 @@ export class NotificationService {
         });
 
         if (failedTokens.length > 0) {
+          console.log(`Cleaning up ${failedTokens.length} invalid tokens for user ${userId}`);
           const batch = db.batch();
           tokensSnap.docs.forEach(doc => {
             if (failedTokens.includes(doc.data().token)) {

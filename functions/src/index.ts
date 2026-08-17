@@ -152,8 +152,17 @@ export const onCommentCreated = onDocumentCreated(
 
     const db = getFirestore(admin.app(), databaseName);
     let ownerId: string | undefined;
-    let title = 'New Comment';
     let body = '';
+
+    // Fetch actor's display name
+    let actorName = 'Someone';
+    if (data.authorUserId) {
+      const authorSnap = await db.collection('users').doc(data.authorUserId).get();
+      if (authorSnap.exists) {
+        const authorData = authorSnap.data()!;
+        actorName = [authorData.firstName, authorData.lastName].filter(Boolean).join(' ') || 'Someone';
+      }
+    }
 
     if (data.parentCommentId) {
       // It's a reply to a comment
@@ -161,7 +170,6 @@ export const onCommentCreated = onDocumentCreated(
       const parentSnap = await parentRef.get();
       if (!parentSnap.exists) return null;
       ownerId = parentSnap.data()?.authorUserId;
-      title = 'New Reply';
       body = `replied to your comment.`;
     } else {
       // Top-level comment
@@ -170,21 +178,18 @@ export const onCommentCreated = onDocumentCreated(
         const prayerSnap = await prayerRef.get();
         if (!prayerSnap.exists) return null;
         ownerId = prayerSnap.data()?.userId;
-        title = 'New Prayer Comment';
         body = `commented on your prayer request.`;
       } else if (data.targetType === 'bible_note') {
         const noteRef = db.collection('bibleNotes').doc(data.targetId);
         const noteSnap = await noteRef.get();
         if (!noteSnap.exists) return null;
         ownerId = noteSnap.data()?.userId;
-        title = 'New Note Comment';
         body = `commented on your note.`;
       } else if (data.targetType === 'church_highlight') {
         const highlightRef = db.collection('bibleVerseHighlights').doc(data.targetId);
         const highlightSnap = await highlightRef.get();
         if (!highlightSnap.exists) return null;
         ownerId = highlightSnap.data()?.userId;
-        title = 'New Highlight Comment';
         body = `commented on your highlight.`;
       }
     }
@@ -200,7 +205,7 @@ export const onCommentCreated = onDocumentCreated(
       churchId: data.churchId,
       category,
       type: `${data.targetType}_comment`,
-      title,
+      title: actorName,  // Use actor's name as title to match in-app display
       body,
       sourceType: data.targetType,
       sourceId: data.targetId,
@@ -210,6 +215,7 @@ export const onCommentCreated = onDocumentCreated(
     return null;
   }
 );
+
 
 export const onMinistryAssignmentWritten = onDocumentWritten(
   {
@@ -312,7 +318,7 @@ export const onPrayerRequestCreated = onDocumentCreated(
             churchId: churchId,
             category: 'prayer',
             type: 'new_prayer_request',
-            title: 'New Prayer Request',
+            title: data.requesterName || data.name || 'New Prayer Request',
             body: `shared a new prayer request.`,
             sourceType: 'prayer_request',
             sourceId: event.params.requestId,
