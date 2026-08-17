@@ -15,16 +15,14 @@ import { useMemberStore } from '../store/useMemberStore';
 import { canAccessMobileApp } from '../permissions/mobilePermissions';
 import PrayerRequestModal from '../features/prayer/presentation/components/PrayerRequestModal';
 import { useUIStore } from '../store/useUIStore';
-import { getMessaging, onMessage, onNotificationOpenedApp, getInitialNotification } from '@react-native-firebase/messaging';
+import { getMessaging, onMessage, onNotificationOpenedApp, getInitialNotification, setBackgroundMessageHandler } from '@react-native-firebase/messaging';
 import { PushTokenService } from '../services/notification/PushTokenService';
 import { useNotificationStore } from '../store/useNotificationStore';
 import { NotificationNavigationResolver } from '../services/notification/NotificationNavigationResolver';
 
 // Register background handler outside of React component lifecycle
-// Register background handler outside of React component lifecycle
-import messaging from '@react-native-firebase/messaging';
 try {
-  messaging().setBackgroundMessageHandler(async remoteMessage => {
+  setBackgroundMessageHandler(getMessaging(), async (remoteMessage: any) => {
     console.log('Message handled in the background!', remoteMessage);
   });
 } catch (e) {
@@ -225,23 +223,7 @@ export default function RootLayout() {
             onClose={closePrayerModal} 
             initialData={editingPrayer} 
           />
-          {process.env.EXPO_PUBLIC_APP_ENV !== 'production' && (
-            <View pointerEvents="none" style={{
-              position: 'absolute',
-              top: 40, // Below status bar usually
-              alignSelf: 'center',
-              backgroundColor: 'rgba(255, 165, 0, 0.9)',
-              paddingHorizontal: 12,
-              paddingVertical: 4,
-              borderRadius: 16,
-              zIndex: 9999,
-              elevation: 9999,
-            }}>
-              <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 12 }}>
-                {require('../firebase').currentActiveFirebaseEnv.toUpperCase()} ENVIRONMENT
-              </Text>
-            </View>
-          )}
+
         </AudioProvider>
       </ThemeProvider>
       {showAnimatedSplash && (

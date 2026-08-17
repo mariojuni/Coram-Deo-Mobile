@@ -1,0 +1,140 @@
+name: Distribute Production App to App Stores
+
+on:
+  push:
+    branches:
+      - release
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to build'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - both
+          - ios
+          - android
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android-production:
+    if: github.event_name == 'push' || github.event.inputs.platform == 'both' || github.event.inputs.platform == 'android'
+    name: Build and Upload Android Production
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Node dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+
+      - name: Decode Keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          mkdir -p fastlane
+          echo "$KEYSTORE_BASE64" | tr -d '\n' | base64 --decode > fastlane/upload-key.keystore
+
+      - name: Create Google Play Service Account JSON
+        env:
+          SERVICE_ACCOUNT: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          mkdir -p fastlane
+          echo "$SERVICE_ACCOUNT" > fastlane/play-service-account.json
+
+      - name: Inject google-services.json (Production)
+        env:
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON_PROD }}
+        run: |
+          mkdir -p credentials/production
+          echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > credentials/production/google-services.json
+
+      - name: Run Fastlane Android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          EXPO_PUBLIC_APP_ENV=production npx expo prebuild --platform android --clean
+          bundle exec fastlane android production
+          
+      - name: Cleanup Keystore and Service Account
+        if: always()
+        run: |
+          rm -f fastlane/upload-key.keystore
+          rm -f fastlane/play-service-account.json
+
+  ios-production:
+    if: github.event_name == 'push' || github.event.inputs.platform == 'both' || github.event.inputs.platform == 'ios'
+    name: Build and Upload iOS Production
+    runs-on: macos-latest
+    environment: production
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Node dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+
+      - name: Inject GoogleService-Info.plist (Production)
+        env:
+          GOOGLE_SERVICE_INFO_PLIST_BASE64: ${{ secrets.IOS_GOOGLE_SERVICE_INFO_PLIST_PROD }}
+        run: |
+          mkdir -p credentials/production
+          echo "$GOOGLE_SERVICE_INFO_PLIST_BASE64" | base64 --decode > credentials/production/GoogleService-Info.plist
+
+      - name: Run Fastlane iOS
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+        run: |
+          EXPO_PUBLIC_APP_ENV=production npx expo prebuild --platform ios --clean
+          CLEAN_URL=$(echo "${{ secrets.MATCH_GIT_URL }}" | tr -d "'\"\r\n ")
+          export MATCH_GIT_URL="$CLEAN_URL"
+          RAW_AUTH="${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}"
+          CLEAN_AUTH=$(echo "$RAW_AUTH" | tr -d '\r\n ' | sed 's/^Basic//I')
+          if [ -n "$CLEAN_AUTH" ]; then
+            export MATCH_GIT_BASIC_AUTHORIZATION="$CLEAN_AUTH"
+          else
+            unset MATCH_GIT_BASIC_AUTHORIZATION
+          fi
+          bundle exec fastlane ios production

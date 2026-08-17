@@ -106,11 +106,7 @@ export default function LoginScreen() {
   return (
     <TouchableWithoutFeedback accessibilityRole="none" onPress={handleScreenTap}>
       <View style={styles.container}>
-        {BUILD_ENV !== 'production' && (
-          <View pointerEvents="none" style={styles.envBadge}>
-            <Text style={styles.envBadgeText}>{currentActiveFirebaseEnv.toUpperCase()}</Text>
-          </View>
-        )}
+
 
         <SafeAreaView style={{ flex: 1 }}>
           <KeyboardAvoidingView 
@@ -233,24 +229,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ffffff',
   },
-  envBadge: {
-    position: 'absolute',
-    top: 50,
-    alignSelf: 'center',
-    backgroundColor: 'rgba(182, 109, 255, 0.15)',
-    borderWidth: 1,
-    borderColor: '#B66DFF',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-    zIndex: 99,
-  },
-  envBadgeText: {
-    color: '#7C3AED',
-    fontWeight: '800',
-    fontSize: 11,
-    letterSpacing: 0.5,
-  },
+
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 32,
