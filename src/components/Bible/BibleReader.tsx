@@ -85,6 +85,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
   const lastScrollY = useRef(0);
   const setTabBarVisible = useUIStore((s) => s.setTabBarVisible);
   const tabBarVisible = useUIStore((s) => s.tabBarVisible);
+  const setHideCompactPlayer = useUIStore((s) => s.setHideCompactPlayer);
   const insets = useSafeAreaInsets();
   
   const [activeVerse, setActiveVerse] = useState<Verse | null>(null);
@@ -138,8 +139,9 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
     if (!controlsTabBar) return;
     return () => {
       setTabBarVisible(true);
+      setHideCompactPlayer(false);
     };
-  }, [controlsTabBar, setTabBarVisible]);
+  }, [controlsTabBar, setTabBarVisible, setHideCompactPlayer]);
 
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY || new Animated.Value(0) } } }],
@@ -266,12 +268,14 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
         }).start();
       }
       setTabBarVisible(false);
+      setHideCompactPlayer(true);
     } else {
       highlightTranslateY.setValue(200);
       setTabBarVisible(true);
+      setHideCompactPlayer(false);
     }
     lastSelectedVersesCount.current = selectedVerses.length;
-  }, [selectedVerses.length, highlightTranslateY, setTabBarVisible]);
+  }, [selectedVerses.length, highlightTranslateY, setTabBarVisible, setHideCompactPlayer]);
 
   const highlightPanResponder = useRef(
     PanResponder.create({

@@ -65,6 +65,7 @@ export function GlobalVideoPlayer() {
   // Animation values
   const translateY = useSharedValue(SCREEN_HEIGHT);
   const tabBarVisible = useUIStore((s) => s.tabBarVisible);
+  const hideCompactPlayer = useUIStore((s) => s.hideCompactPlayer);
   
   const MAX_TRANSLATE_Y = SCREEN_HEIGHT - MINI_PLAYER_HEIGHT - Math.max(insets.bottom, 16) - 90; // Above tab bar
   const HIDDEN_OFFSET = 85; // Distance to slide down to stick to bottom safe area
@@ -111,12 +112,12 @@ export function GlobalVideoPlayer() {
     if (playerMode === 'expanded') {
       translateY.value = withSpring(0, { damping: 40, stiffness: 250, overshootClamping: true });
     } else if (playerMode === 'minimized') {
-      const targetY = tabBarVisible ? MAX_TRANSLATE_Y : MAX_TRANSLATE_Y + HIDDEN_OFFSET;
+      const targetY = hideCompactPlayer ? SCREEN_HEIGHT : (tabBarVisible ? MAX_TRANSLATE_Y : MAX_TRANSLATE_Y + HIDDEN_OFFSET);
       translateY.value = withSpring(targetY, { damping: 40, stiffness: 250, overshootClamping: true });
     } else if (playerMode === 'hidden') {
       translateY.value = withTiming(SCREEN_HEIGHT, { duration: 300 });
     }
-  }, [playerMode, tabBarVisible]);
+  }, [playerMode, tabBarVisible, hideCompactPlayer]);
 
   const panGesture = Gesture.Pan()
     .onUpdate((event) => {
@@ -164,7 +165,7 @@ export function GlobalVideoPlayer() {
     const borderRadius = interpolate(translateY.value, [0, MAX_TRANSLATE_Y], [0, 20], Extrapolation.CLAMP);
     
     // Background and shadow morphing
-    const backgroundColor = interpolateColor(translateY.value, [0, MAX_TRANSLATE_Y], ['#000000', 'transparent']);
+    const backgroundColor = 'transparent';
     const shadowOpacity = interpolate(translateY.value, [0, MAX_TRANSLATE_Y], [0.3, 0.04], Extrapolation.CLAMP);
     const shadowColor = interpolateColor(translateY.value, [0, MAX_TRANSLATE_Y], ['#000000', '#A4A4A4']);
     
@@ -187,7 +188,7 @@ export function GlobalVideoPlayer() {
   });
 
   const animatedContentStyle = useAnimatedStyle(() => {
-    const opacity = interpolate(translateY.value, [0, MAX_TRANSLATE_Y / 2], [1, 0], Extrapolation.CLAMP);
+    const opacity = interpolate(translateY.value, [0, 20], [1, 0], Extrapolation.CLAMP);
     return {
       opacity,
       pointerEvents: opacity === 0 ? 'none' : 'auto',
@@ -300,6 +301,8 @@ export function GlobalVideoPlayer() {
                   isMinimized={playerMode === 'minimized'}
                   onClose={() => closeVideo()}
                   onExpand={() => expand()}
+                  translateY={translateY}
+                  maxTranslateY={MAX_TRANSLATE_Y}
                 />
               )}
             </Animated.View>

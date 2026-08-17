@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Dimensions } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useEventListener } from 'expo';
 import { useFocusEffect } from 'expo-router';
@@ -15,8 +15,19 @@ import {
   X
 } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  interpolate,
+  Extrapolation,
+  SharedValue,
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Sermon } from '../../domain/sermon.types';
 import type { SermonPlaybackProgress } from '../../domain/sermon.types';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface SermonVideoPlayerProps {
   sermon: Sermon;
@@ -24,9 +35,11 @@ interface SermonVideoPlayerProps {
   onProgress?: (positionSeconds: number, durationSeconds: number) => void;
   onComplete?: () => void;
   videoSource: string | null;
-  isMinimized?: boolean;
+  isMinimized: boolean;
   onClose?: () => void;
   onExpand?: () => void;
+  translateY?: SharedValue<number>;
+  maxTranslateY?: number;
 }
 
 type PlayerState = 'idle' | 'loading' | 'paused' | 'playing' | 'error' | 'completed';
@@ -40,10 +53,13 @@ export function SermonVideoPlayer({
   onProgress,
   onComplete,
   videoSource,
-  isMinimized = false,
+  isMinimized,
   onClose,
   onExpand,
+  translateY,
+  maxTranslateY,
 }: SermonVideoPlayerProps) {
+  const insets = useSafeAreaInsets();
   const videoViewRef = useRef<VideoView>(null);
   const [playerState, setPlayerState] = useState<PlayerState>('loading');
   const [showControls, setShowControls] = useState(false);
@@ -182,6 +198,35 @@ export function SermonVideoPlayer({
   const bufferedProgress = durationMs > 0 ? bufferedPositionMs / durationMs : 0;
   const isIdle = playerState === 'idle' || playerState === 'paused';
 
+  const animatedVideoViewStyle = useAnimatedStyle(() => {
+    if (!translateY || maxTranslateY === undefined) {
+      return { width: '100%', height: '100%' };
+    }
+    const width = interpolate(translateY.value, [0, maxTranslateY], [SCREEN_WIDTH, 56], Extrapolation.CLAMP);
+    const height = interpolate(translateY.value, [0, maxTranslateY], [SCREEN_WIDTH * (9 / 16), 56], Extrapolation.CLAMP);
+    const top = interpolate(translateY.value, [0, maxTranslateY], [0, 8], Extrapolation.CLAMP);
+    const left = interpolate(translateY.value, [0, maxTranslateY], [0, 8], Extrapolation.CLAMP);
+    const borderRadius = interpolate(translateY.value, [0, maxTranslateY], [0, 16], Extrapolation.CLAMP);
+    
+    return {
+      width,
+      height,
+      top,
+      left,
+      borderRadius,
+      overflow: 'hidden',
+      backgroundColor: '#000000',
+    };
+  });
+
+  const animatedCardOverlayStyle = useAnimatedStyle(() => {
+    if (!translateY || maxTranslateY === undefined) {
+      return { opacity: isMinimized ? 1 : 0 };
+    }
+    const opacity = interpolate(translateY.value, [maxTranslateY * 0.8, maxTranslateY], [0, 1], Extrapolation.CLAMP);
+    return { opacity };
+  });
+
   if (!videoSource) {
     return (
       <View style={styles.container}>
@@ -210,29 +255,13 @@ export function SermonVideoPlayer({
           }
         }}
       >
-        {/* Video View */}
-        <VideoView
-          ref={videoViewRef}
-          style={[StyleSheet.absoluteFill, isMinimized && { opacity: 0 }]}
-          player={player}
-          contentFit="contain"
-          nativeControls={isFullscreen}
-          onFullscreenEnter={() => setIsFullscreen(true)}
-          onFullscreenExit={() => setIsFullscreen(false)}
-        />
-
-        {/* Minimized Card Overlay */}
-        {isMinimized && (
-          <View style={styles.miniCardOverlay}>
-            <BlurView intensity={80} tint="light" style={[StyleSheet.absoluteFill, { zIndex: 0 }]} />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)', zIndex: 0 }]} pointerEvents="none" />
-            <View style={[styles.miniCardContent, { zIndex: 1 }]}>
-              <View style={styles.miniThumbWrap}>
-                {sermon.thumbnailUrl ? (
-                  <Image source={{ uri: sermon.thumbnailUrl }} style={styles.miniThumb} resizeMode="cover" />
-                ) : (
-                  <View style={[styles.miniThumb, { backgroundColor: '#DDE1E8' }]} />
-                )}
+        {/* Minimized Card Overlay (Fades in dynamically during drag) */}
+        <Animated.View style={[styles.miniCardOverlay, animatedCardOverlayStyle]} pointerEvents={isMinimized ? 'auto' : 'none'}>
+          <BlurView intensity={80} tint="light" style={[StyleSheet.absoluteFill, { zIndex: 0 }]} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)', zIndex: 0 }]} pointerEvents="none" />
+          <View style={[styles.miniCardContent, { zIndex: 1 }]} pointerEvents="box-none">
+              <View style={styles.miniThumbWrap} pointerEvents="box-none">
+                {/* The VideoView itself acts as the thumbnail now, so no static image needed here */}
                 <View style={styles.miniIconOverlay}>
                   {playerState === 'playing' ? (
                     <Pause size={14} color="#fff" fill="#fff" />
@@ -282,8 +311,22 @@ export function SermonVideoPlayer({
                 ]}
               />
             </View>
-          </View>
-        )}
+        </Animated.View>
+
+        {/* Animated Video Container (Morphs to thumbnail) AND holds controls */}
+        <Animated.View style={[StyleSheet.absoluteFill, { zIndex: 2 }, animatedVideoViewStyle]}>
+          <VideoView
+            ref={videoViewRef}
+            style={StyleSheet.absoluteFill}
+            player={player}
+            contentFit="cover"
+            allowsVideoFrameAnalysis={false}
+            nativeControls={isFullscreen}
+            onFullscreenEnter={() => setIsFullscreen(true)}
+            onFullscreenExit={() => setIsFullscreen(false)}
+          />
+
+
 
         {/* Thumbnail overlay before playback starts */}
         {(!initialSeekDone || playerState === 'idle') && sermon.thumbnailUrl && !isFullscreen && !isMinimized && (
@@ -398,6 +441,8 @@ export function SermonVideoPlayer({
             </View>
           </View>
         )}
+        
+        </Animated.View>
       </TouchableOpacity>
     </View>
   );
@@ -407,10 +452,10 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#000',
   },
   overlay: {
     ...StyleSheet.absoluteFill,
+    zIndex: 10,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(0,0,0,0.45)',
@@ -471,6 +516,7 @@ const styles = StyleSheet.create({
   },
   controlsOverlay: {
     ...StyleSheet.absoluteFill,
+    zIndex: 10,
     backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
   },

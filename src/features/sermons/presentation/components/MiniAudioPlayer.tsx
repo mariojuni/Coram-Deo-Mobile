@@ -11,6 +11,7 @@ import { Spacing } from '@/constants/theme';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import { useUIStore } from '@/store/useUIStore';
 
 interface MiniAudioPlayerProps {
   onPlayPause: () => void;
@@ -24,6 +25,7 @@ export function MiniAudioPlayer({ onPlayPause, onClose }: MiniAudioPlayerProps) 
   const insets = useSafeAreaInsets();
   
   const { currentSermon, isPlaying, currentPosition } = useSermonStore();
+  const hideCompactPlayer = useUIStore((s) => s.hideCompactPlayer);
 
   const handlePlayPause = async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -50,7 +52,7 @@ export function MiniAudioPlayer({ onPlayPause, onClose }: MiniAudioPlayerProps) 
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  if (!currentSermon) return null;
+  if (!currentSermon || hideCompactPlayer) return null;
 
   const progress = currentSermon.durationSeconds && currentSermon.durationSeconds > 0 
     ? (currentPosition / currentSermon.durationSeconds) * 100 

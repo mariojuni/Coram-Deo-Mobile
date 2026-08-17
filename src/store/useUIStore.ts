@@ -12,6 +12,8 @@ interface UIStore {
   openPrayerModal: (prayer?: Prayer) => void;
   closePrayerModal: () => void;
   setSyncToastMessage: (msg: string, type?: 'success' | 'loading' | 'error') => void;
+  hideCompactPlayer: boolean;
+  setHideCompactPlayer: (hidden: boolean) => void;
 }
 
 export const useUIStore = create<UIStore>((set) => ({
@@ -24,4 +26,6 @@ export const useUIStore = create<UIStore>((set) => ({
   openPrayerModal: (prayer) => set({ prayerModalOpen: true, editingPrayer: prayer || null }),
   closePrayerModal: () => set({ prayerModalOpen: false, editingPrayer: null }),
   setSyncToastMessage: (msg, type) => set({ syncToastMessage: msg, syncToastType: type || 'success' }),
+  hideCompactPlayer: false,
+  setHideCompactPlayer: (hidden) => set({ hideCompactPlayer: hidden }),
 }));
