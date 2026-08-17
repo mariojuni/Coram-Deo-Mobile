@@ -18,7 +18,7 @@ export default function GivingFormScreen() {
   const { campaignId, fundType, fundId } = useLocalSearchParams();
   const router = useRouter();
   const { userProfile, currentUser } = useAuthStore();
-  const { funds, donationAccounts, campaigns } = useGiving();
+  const { funds = [], donationAccounts = [], campaigns = [] } = useGiving();
   const insets = useSafeAreaInsets();
 
   const [amount, setAmount] = useState('');
