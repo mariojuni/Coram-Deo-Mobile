@@ -208,8 +208,8 @@ export async function createExpense(
   data: Partial<GivingExpense>, 
   currentUserId: string
 ): Promise<string> {
-  const newRef = doc(collection(getActiveDb(), EXPENSE_COLLECTION));
-  const expenseId = newRef.id;
+  const expenseId = data.id || doc(collection(getActiveDb(), EXPENSE_COLLECTION)).id;
+  const newRef = doc(getActiveDb(), EXPENSE_COLLECTION, expenseId);
 
   const expense: Partial<GivingExpense> = {
     ...data,

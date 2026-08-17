@@ -111,12 +111,13 @@ export default function ExpenseTrackerScreen() {
     setAdding(true);
     try {
       let uploadedProofUrl = '';
+      const tempId = generateGivingRecordId();
       if (proofUri) {
-        const tempId = generateGivingRecordId();
         uploadedProofUrl = await uploadProofOfPayment(userProfile.churchId, tempId, proofUri);
       }
 
       const newId = await createExpense(userProfile.churchId, {
+        id: tempId,
         description: form.description,
         payee: form.vendorName, // web compatibility
         amount: Number(form.amount),
