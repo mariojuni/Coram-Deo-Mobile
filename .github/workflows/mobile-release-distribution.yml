@@ -2,8 +2,8 @@ name: Distribute Production App to App Stores
 
 on:
   push:
-    branches:
-      - release
+    tags:
+      - 'v*'
   workflow_dispatch:
     inputs:
       platform:
