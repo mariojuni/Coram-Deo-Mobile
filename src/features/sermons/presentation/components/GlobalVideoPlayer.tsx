@@ -123,13 +123,13 @@ export function GlobalVideoPlayer() {
       }
     } else if (playerMode === 'minimized') {
       openingProgress.value = 1;
-      const targetY = hideCompactPlayer ? SCREEN_HEIGHT : (tabBarVisible ? MAX_TRANSLATE_Y : MAX_TRANSLATE_Y + HIDDEN_OFFSET);
+      const targetY = tabBarVisible ? MAX_TRANSLATE_Y : MAX_TRANSLATE_Y + HIDDEN_OFFSET;
       translateY.value = withSpring(targetY, { damping: 24, stiffness: 220, mass: 0.9 });
     } else if (playerMode === 'hidden') {
       openingProgress.value = 1;
       translateY.value = withSpring(SCREEN_HEIGHT, { damping: 24, stiffness: 220, mass: 0.9 });
     }
-  }, [playerMode, originRect, tabBarVisible, hideCompactPlayer]);
+  }, [playerMode, originRect, tabBarVisible]);
 
   const panGesture = Gesture.Pan()
     .onUpdate((event) => {
@@ -162,7 +162,8 @@ export function GlobalVideoPlayer() {
   const animatedContainerStyle = useAnimatedStyle(() => {
     return {
       transform: [{ translateY: translateY.value }],
-      opacity: playerMode === 'hidden' && translateY.value >= SCREEN_HEIGHT ? 0 : 1,
+      opacity: (playerMode === 'hidden' && translateY.value >= SCREEN_HEIGHT) || hideCompactPlayer ? 0 : 1,
+      pointerEvents: hideCompactPlayer ? 'none' : 'box-none',
     };
   });
 
@@ -254,7 +255,7 @@ export function GlobalVideoPlayer() {
   if (playerMode === 'hidden' && translateY.value >= SCREEN_HEIGHT) return null;
 
   return (
-    <Animated.View style={[styles.container, animatedContainerStyle]} pointerEvents="box-none">
+    <Animated.View style={[styles.container, animatedContainerStyle]} pointerEvents={hideCompactPlayer ? 'none' : 'box-none'}>
       <GestureDetector gesture={panGesture}>
         <Animated.View style={styles.contentWrapper} pointerEvents="box-none">
           

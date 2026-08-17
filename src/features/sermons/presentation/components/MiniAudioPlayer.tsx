@@ -52,7 +52,7 @@ export function MiniAudioPlayer({ onPlayPause, onClose }: MiniAudioPlayerProps) 
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  if (!currentSermon || hideCompactPlayer) return null;
+  if (!currentSermon) return null;
 
   const progress = currentSermon.durationSeconds && currentSermon.durationSeconds > 0 
     ? (currentPosition / currentSermon.durationSeconds) * 100 
@@ -66,6 +66,8 @@ export function MiniAudioPlayer({ onPlayPause, onClose }: MiniAudioPlayerProps) 
         styles.container, 
         { 
           bottom: Math.max(insets.bottom, 16) + 80, // Generous padding above tab bar
+          opacity: hideCompactPlayer ? 0 : 1,
+          pointerEvents: hideCompactPlayer ? 'none' : 'auto',
         }
       ]}
     >
