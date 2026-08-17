@@ -305,7 +305,7 @@ export function GlobalVideoPlayer() {
             </Animated.View>
             
             {/* Expanded Header Overlay (Close button) */}
-            <Animated.View style={[styles.expandedOverlay, animatedContentStyle, { top: insets.top + 12 }]}>
+            <Animated.View style={[styles.expandedOverlay, animatedContentStyle]}>
               <TouchableOpacity style={styles.backBtnInner} onPress={() => minimize()}>
                 <ChevronDown size={28} color="#fff" />
               </TouchableOpacity>
@@ -343,6 +343,7 @@ const styles = StyleSheet.create({
   },
   expandedOverlay: {
     position: 'absolute',
+    top: 12,
     left: 12,
     zIndex: 100,
   },
