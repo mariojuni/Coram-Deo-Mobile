@@ -132,7 +132,7 @@ jobs:
           GOOGLE_SERVICE_INFO_PLIST_BASE64: ${{ secrets.IOS_GOOGLE_SERVICE_INFO_PLIST_STAGING }}
         run: |
           mkdir -p credentials/staging
-          echo "$GOOGLE_SERVICE_INFO_PLIST_BASE64" | base64 --decode > credentials/staging/GoogleService-Info.plist
+          echo "$GOOGLE_SERVICE_INFO_PLIST_BASE64" | tr -d '\n\r' | base64 --decode > credentials/staging/GoogleService-Info.plist
 
       - name: Run Fastlane iOS
         env:
