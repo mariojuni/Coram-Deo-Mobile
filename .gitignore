@@ -50,3 +50,9 @@ google-services.json
 GoogleService-Info.plist
 credentials/
 scripts/serviceAccountKey.json
+
+# IDEs
+.vscode/
+
+# Debug and Test Scripts
+debug/

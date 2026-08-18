@@ -38,6 +38,7 @@ interface SermonVideoPlayerProps {
   isMinimized: boolean;
   onClose?: () => void;
   onExpand?: () => void;
+  isHidden?: boolean;
   translateY?: SharedValue<number>;
   maxTranslateY?: number;
 }
@@ -54,6 +55,7 @@ export function SermonVideoPlayer({
   onComplete,
   videoSource,
   isMinimized,
+  isHidden,
   onClose,
   onExpand,
   translateY,
@@ -91,6 +93,19 @@ export function SermonVideoPlayer({
       };
     }, [player])
   );
+
+  useEffect(() => {
+    if (isHidden) {
+      try {
+        if (player && player.playing) {
+          player.pause();
+        }
+        onProgress?.(Math.floor(player.currentTime), Math.floor(player.duration ?? 0));
+      } catch (e) {
+        // Ignore errors
+      }
+    }
+  }, [isHidden, player]);
 
   // Listen to playing state
   useEventListener(player, 'playingChange', ({ isPlaying }) => {
@@ -294,7 +309,14 @@ export function SermonVideoPlayer({
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  onPress={(e) => { e.stopPropagation(); onClose?.(); }}
+                  onPress={(e) => { 
+                    e.stopPropagation(); 
+                    if (player.playing) {
+                      player.pause();
+                    }
+                    onProgress?.(Math.floor(player.currentTime), Math.floor(player.duration ?? 0));
+                    onClose?.(); 
+                  }}
                   style={styles.miniActionBtn}
                   hitSlop={{top:10, bottom:10, left:10, right:10}}
                 >

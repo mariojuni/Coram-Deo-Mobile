@@ -108,8 +108,11 @@ export function GlobalVideoPlayer() {
   useEffect(() => {
     if (currentSermon) {
       fetchRelatedSermons(currentSermon);
+      if (currentUser) {
+        checkIfDownloaded(currentUser.uid, currentSermon.id, 'audio').then(setIsDownloaded);
+      }
     }
-  }, [currentSermon?.id]);
+  }, [currentSermon?.id, currentUser?.uid]);
 
   useEffect(() => {
     if (playerMode === 'expanded') {
@@ -298,8 +301,17 @@ export function GlobalVideoPlayer() {
                   sermon={currentSermon}
                   onWatch={() => {}}
                   onListen={() => { closeVideo(); router.push(`/audio-player?id=${currentSermon.id}`); }}
-                  onDownloadAudio={() => {}}
-                  isDownloading={false}
+                  onDownloadAudio={async () => {
+                    if (!currentUser) return;
+                    if (isDownloaded) {
+                      await deleteDownload(currentUser.uid, currentSermon.id, 'audio');
+                      setIsDownloaded(false);
+                    } else {
+                      await downloadSermon(currentUser.uid, currentSermon, 'audio');
+                      setIsDownloaded(true);
+                    }
+                  }}
+                  isDownloading={downloads.get(`${currentSermon.id}_audio`)?.isDownloading ?? false}
                   isDownloaded={isDownloaded}
                 />
                 
@@ -342,6 +354,7 @@ export function GlobalVideoPlayer() {
                   onProgress={handleVideoProgress}
                   videoSource={isProgressLoaded ? videoSource : null}
                   isMinimized={playerMode === 'minimized'}
+                  isHidden={playerMode === 'hidden'}
                   onClose={() => closeVideo()}
                   onExpand={() => expand()}
                   translateY={translateY}

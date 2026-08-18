@@ -5,6 +5,7 @@
     "source.sortMembers": "explicit"
   },
   "github-actions.workflows.pinned.workflows": [
-    ".github/workflows/mobile-staging-distribution.yml"
+    ".github/workflows/mobile-staging-distribution.yml",
+    ".github/workflows/mobile-release-distribution.yml"
   ]
 }
