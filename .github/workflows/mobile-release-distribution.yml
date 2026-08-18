@@ -115,15 +115,24 @@ jobs:
         env:
           GOOGLE_SERVICE_INFO_PLIST_BASE64: ${{ secrets.IOS_GOOGLE_SERVICE_INFO_PLIST_PROD }}
         run: |
+          if [ -z "$GOOGLE_SERVICE_INFO_PLIST_BASE64" ]; then
+            echo "❌ IOS_GOOGLE_SERVICE_INFO_PLIST_PROD secret is not set or empty!"
+            exit 1
+          fi
           mkdir -p credentials/production
           echo "$GOOGLE_SERVICE_INFO_PLIST_BASE64" | tr -d '\n\r' | base64 --decode > credentials/production/GoogleService-Info.plist
+          if [ ! -s credentials/production/GoogleService-Info.plist ]; then
+            echo "❌ GoogleService-Info.plist decoded to an empty file — check your base64 secret!"
+            exit 1
+          fi
+          echo "✅ GoogleService-Info.plist injected successfully ($(wc -c < credentials/production/GoogleService-Info.plist) bytes)"
 
       - name: Run Fastlane iOS
         env:
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
-          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD_PROD }}
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
         run: |
