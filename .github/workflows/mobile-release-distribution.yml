@@ -136,6 +136,11 @@ jobs:
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
         run: |
+          if [ -z "$MATCH_PASSWORD" ]; then
+            echo "❌ MATCH_PASSWORD environment variable is empty!"
+            exit 1
+          fi
+          echo "MATCH_PASSWORD length: ${#MATCH_PASSWORD}"
           EXPO_PUBLIC_APP_ENV=production npx expo prebuild --platform ios --clean
           CLEAN_URL=$(echo "${{ secrets.MATCH_GIT_URL }}" | tr -d "'\"\r\n ")
           export MATCH_GIT_URL="$CLEAN_URL"
