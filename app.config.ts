@@ -139,6 +139,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       ],
       "@react-native-firebase/app",
       "@react-native-firebase/app-check",
+      "@react-native-firebase/messaging",
       "expo-router",
       [
         "@react-native-google-signin/google-signin",
