@@ -47,6 +47,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EventDetailsModal } from '../../../../components/Events/EventDetailsModal';
 import { CommunitySongDetailModal } from '../../../../components/Worship/CommunitySongDetailModal';
+import { FeedListSkeleton } from '../../../../components/ui/FeedItemSkeleton';
+import { ApiErrorState } from '../../../../components/ui/ApiErrorState';
 import { BounceCard } from '../../../../components/ui/BounceCard';
 import { SoftCard, getSoftShadowStyle } from '../../../../components/ui/SoftCard';
 import { bibleHighlightRepository } from '../../../../features/bibleHighlights/data/bibleHighlight.repository';
@@ -170,6 +172,10 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
   const notes = useFeedStore((s) => s.notes);
   const notesLoading = useFeedStore((s) => s.notesLoading);
   const toggleNoteLikeStore = useFeedStore((s) => s.toggleNoteLike);
+
+  // 4. Global Error State
+  const feedError = useFeedStore((s) => s.feedError);
+  const retryFeeds = useFeedStore((s) => s.retryFeeds);
 
 
 
@@ -896,10 +902,14 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
       {/* ─── Feed Content ──────────────────────────────────────────────── */}
       {activeTabFilter === 'all' && (
         <>
-          {highlightsLoading || prayersLoading || notesLoading ? (
-            <View style={placeholder.wrap}>
-              <Text style={placeholder.subtitle}>Loading community activity...</Text>
-            </View>
+          {feedError ? (
+            <ApiErrorState
+              title="Failed to Load Activity"
+              message={feedError}
+              onRetry={retryFeeds}
+            />
+          ) : highlightsLoading || prayersLoading || notesLoading ? (
+            <FeedListSkeleton count={4} />
           ) : combinedFeed.length === 0 ? (
             <View style={placeholder.wrap}>
               <Text style={placeholder.title}>No Activity Yet</Text>
@@ -920,10 +930,14 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
 
       {activeTabFilter === 'highlights' && (
         <>
-          {highlightsLoading ? (
-            <View style={placeholder.wrap}>
-              <Text style={placeholder.subtitle}>Loading church highlights...</Text>
-            </View>
+          {feedError ? (
+            <ApiErrorState
+              title="Failed to Load Highlights"
+              message={feedError}
+              onRetry={retryFeeds}
+            />
+          ) : highlightsLoading ? (
+            <FeedListSkeleton count={3} />
           ) : filteredHighlights.length === 0 ? (
             <View style={placeholder.wrap}>
               <Text style={placeholder.title}>No Church Highlights Yet</Text>
@@ -958,10 +972,14 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
 
       {activeTabFilter === 'prayers' && (
         <>
-          {prayersLoading ? (
-            <View style={placeholder.wrap}>
-              <Text style={placeholder.subtitle}>Loading prayer requests...</Text>
-            </View>
+          {feedError ? (
+            <ApiErrorState
+              title="Failed to Load Prayers"
+              message={feedError}
+              onRetry={retryFeeds}
+            />
+          ) : prayersLoading ? (
+            <FeedListSkeleton count={3} />
           ) : filteredPrayers.length === 0 ? (
             <View style={placeholder.wrap}>
               <Text style={placeholder.title}>No Prayer Requests Yet</Text>
@@ -977,10 +995,14 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
 
       {activeTabFilter === 'notes' && (
         <>
-          {notesLoading ? (
-            <View style={placeholder.wrap}>
-              <Text style={placeholder.subtitle}>Loading notes...</Text>
-            </View>
+          {feedError ? (
+            <ApiErrorState
+              title="Failed to Load Notes"
+              message={feedError}
+              onRetry={retryFeeds}
+            />
+          ) : notesLoading ? (
+            <FeedListSkeleton count={3} />
           ) : filteredNotes.length === 0 ? (
             <View style={placeholder.wrap}>
               <Text style={placeholder.title}>No Notes Yet</Text>

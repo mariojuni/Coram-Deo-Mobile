@@ -24,9 +24,12 @@ interface FeedStore {
   prayers: Prayer[];
   prayersLoading: boolean;
 
+  feedError: string | null;
+
   initializeFeedsListener: () => () => void;
   loadMoreHighlights: () => void;
   clearFeedsListener: () => void;
+  retryFeeds: () => void;
   removeNote: (id: string) => void;
   toggleNoteLike: (id: string, uid: string) => void;
 }
@@ -47,6 +50,8 @@ export const useFeedStore = create<FeedStore>((set, get) => ({
   prayers: [],
   prayersLoading: true,
 
+  feedError: null,
+
   initializeFeedsListener: () => {
     feedsSubscriberCount += 1;
     
@@ -63,11 +68,11 @@ export const useFeedStore = create<FeedStore>((set, get) => ({
           highlightsUnsubscribe = bibleHighlightRepository.subscribeChurchHighlights(
             churchId,
             (posts) => {
-              set({ churchHighlights: posts, highlightsLoading: false, hasMoreHighlights: posts.length >= limit });
+              set({ churchHighlights: posts, highlightsLoading: false, hasMoreHighlights: posts.length >= limit, feedError: null });
             },
             limit,
             (err) => {
-              set({ highlightsLoading: false });
+              set({ highlightsLoading: false, feedError: 'Failed to load highlights. Please try again.' });
             }
           );
         };
@@ -78,10 +83,10 @@ export const useFeedStore = create<FeedStore>((set, get) => ({
           prayersUnsubscribe = prayerRepository.subscribeToPrayers(
             churchId,
             (nextPrayers) => {
-              set({ prayers: nextPrayers, prayersLoading: false });
+              set({ prayers: nextPrayers, prayersLoading: false, feedError: null });
             },
             (error: any) => {
-              set({ prayersLoading: false });
+              set({ prayersLoading: false, feedError: 'Failed to load prayers. Please try again.' });
             }
           );
         }
@@ -102,10 +107,10 @@ export const useFeedStore = create<FeedStore>((set, get) => ({
               const timeB = b.createdAt && (b.createdAt as any).toDate ? (b.createdAt as any).toDate().getTime() : (b.createdAt ? new Date(b.createdAt as any).getTime() : 0);
               return timeB - timeA;
             });
-            set({ notes: combined, notesLoading: false });
+            set({ notes: combined, notesLoading: false, feedError: null });
           }).catch(err => {
             console.warn('Failed to fetch combined notes:', err);
-            set({ notesLoading: false });
+            set({ notesLoading: false, feedError: 'Failed to load notes. Please try again.' });
           });
         } else {
             set({ notesLoading: false });
@@ -162,12 +167,19 @@ export const useFeedStore = create<FeedStore>((set, get) => ({
       prayersUnsubscribe();
       prayersUnsubscribe = null;
     }
-    feedsSubscriberCount = 0;
+     feedsSubscriberCount = 0;
     set({ 
       churchHighlights: [], highlightsLoading: false, pageLimit: 10, hasMoreHighlights: true,
       prayers: [], prayersLoading: false,
-      notes: [], notesLoading: false 
+      notes: [], notesLoading: false,
+      feedError: null
     });
+  },
+
+  retryFeeds: () => {
+    // Clear and restart the feeds listener for the current church
+    get().clearFeedsListener();
+    get().initializeFeedsListener();
   },
 
   removeNote: (id: string) => {

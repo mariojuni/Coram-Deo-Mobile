@@ -20,6 +20,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOp
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Sermon } from '../../domain/sermon.types';
 import { sermonRepository } from '../../data/sermon.repository';
+import { SermonsExperienceSkeleton } from './SermonsExperienceSkeleton';
 
 // ─── Design Tokens ─────────────────────────────────────────────────────────────
 const NAVY = '#1A1A1A';
@@ -161,12 +162,7 @@ export function SermonsExperience({
 
   // ── Loading ────────────────────────────────────────────────────────────────
   if (loading && sermons.length === 0) {
-    return (
-      <View style={styles.centerBox}>
-        <ActivityIndicator size="large" color={GOLD} />
-        <Text style={styles.loadingText}>Loading sermons...</Text>
-      </View>
-    );
+    return <SermonsExperienceSkeleton showSearchInput={showSearchInput} />;
   }
 
   // ── Empty state ────────────────────────────────────────────────────────────

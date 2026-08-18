@@ -16,6 +16,7 @@ import { CircularProgress } from '../components/CircularProgress';
 import { NotesSheet } from '../components/NotesSheet';
 import { CommentButton } from '@/features/comments/presentation/components/CommentButton';
 import { SermonActionMenu } from '../components/SermonActionMenu';
+import { SermonDetailSkeleton } from './SermonDetailSkeleton';
 
 export function SermonDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -38,6 +39,7 @@ export function SermonDetailScreen() {
     downloadSermon,
     checkIfDownloaded,
     deleteDownload,
+    downloads,
   } = useSermonStore();
   
   const currentUser = useAuthStore((state) => state.currentUser);
@@ -127,11 +129,7 @@ export function SermonDetailScreen() {
   };
 
   if (loading || !currentSermon) {
-    return (
-      <View style={[styles.screen, { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color="#FF6596" />
-      </View>
-    );
+    return <SermonDetailSkeleton />;
   }
 
   const isFavorited = favorites.has(currentSermon.id);

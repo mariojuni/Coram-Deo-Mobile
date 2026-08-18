@@ -364,7 +364,7 @@ export default function BiblePlanDetailScreen() {
                 <Settings size={20} color="#1a1a1a" strokeWidth={2} />
               </Pressable>
             ) : (
-              <View style={[styles.headerCircle, { backgroundColor: 'transparent', borderWidth: 0, elevation: 0 }]} />
+              <View style={{ width: 40, height: 40 }} />
             )}
           </View>
         </View>

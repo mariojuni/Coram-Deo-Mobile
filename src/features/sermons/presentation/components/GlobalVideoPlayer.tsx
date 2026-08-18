@@ -24,6 +24,7 @@ import { getLocalSermonMediaUri } from '../../services/sermonDownloadService';
 import { sermonRepository } from '../../data/sermon.repository';
 import { SermonActionBar } from './SermonActionBar';
 import { RelatedSermonCard } from './RelatedSermonCard';
+import { RelatedSermonSkeleton } from './RelatedSermonSkeleton';
 import { SermonActionMenu } from './SermonActionMenu';
 import { CircularProgress } from './CircularProgress';
 import * as Haptics from 'expo-haptics';
@@ -252,7 +253,7 @@ export function GlobalVideoPlayer() {
 
   const savedProgress = activeSermonId ? getProgress(activeSermonId) : undefined;
   
-  if (playerMode === 'hidden' && translateY.value >= SCREEN_HEIGHT) return null;
+
 
   return (
     <Animated.View style={[styles.container, animatedContainerStyle]} pointerEvents={hideCompactPlayer ? 'none' : 'box-none'}>
@@ -316,7 +317,11 @@ export function GlobalVideoPlayer() {
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Related Sermons</Text>
                   {relatedLoading ? (
-                    <ActivityIndicator size="small" color={GOLD} />
+                    <>
+                      <RelatedSermonSkeleton />
+                      <RelatedSermonSkeleton />
+                      <RelatedSermonSkeleton />
+                    </>
                   ) : (
                     relatedSermons.map(s => (
                       <RelatedSermonCard key={s.id} sermon={s} onPress={(rect) => useGlobalVideoStore.getState().openVideo(s.id, rect)} />
