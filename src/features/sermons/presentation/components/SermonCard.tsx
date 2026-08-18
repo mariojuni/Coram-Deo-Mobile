@@ -1,3 +1,4 @@
+import React from 'react';
 import { Image } from 'expo-image';
 import { View, Text, Pressable, StyleSheet, TouchableOpacity } from 'react-native';
 import Animated, { useAnimatedStyle, withTiming, useSharedValue } from 'react-native-reanimated';
