@@ -190,6 +190,13 @@ service cloud.firestore {
       allow write: if isFinanceOrChurchAdmin(request.resource.data.churchId) || isFinanceOrChurchAdmin(resource.data.churchId);
     }
 
+    match /donationAccounts/{accountId} {
+      allow read: if isSignedIn() && ((userDocExists() && resource.data.churchId == userDoc().get('churchId', null)) || isFinanceOrChurchAdmin(resource.data.churchId));
+      allow create: if isFinanceOrChurchAdmin(request.resource.data.churchId);
+      allow update: if isFinanceOrChurchAdmin(resource.data.churchId) && isFinanceOrChurchAdmin(request.resource.data.churchId);
+      allow delete: if isFinanceOrChurchAdmin(resource.data.churchId);
+    }
+
     match /givingRecords/{recordId} {
       allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isFinanceOrChurchAdmin(resource.data.churchId));
 
