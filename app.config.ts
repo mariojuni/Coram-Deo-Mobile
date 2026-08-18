@@ -84,7 +84,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       entitlements: {
         // Must be "production" for all distributed builds (ad-hoc, App Store).
         // "development" only works when installed directly via Xcode in debug mode.
-        "aps-environment": "production"
+        "aps-environment": "production",
+        "com.apple.developer.devicecheck.appattest-environment": isProd ? "production" : "development"
       },
       infoPlist: {
         UIBackgroundModes: [
@@ -137,6 +138,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         }
       ],
       "@react-native-firebase/app",
+      "@react-native-firebase/app-check",
       "expo-router",
       [
         "@react-native-google-signin/google-signin",
