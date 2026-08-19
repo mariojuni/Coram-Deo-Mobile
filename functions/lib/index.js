@@ -237,7 +237,7 @@ exports.onMinistryAssignmentWritten = (0, firestore_2.onDocumentWritten)({
     database: databaseName,
     region: 'asia-southeast1',
 }, async (event) => {
-    var _a, _b;
+    var _a, _b, _c;
     const change = event.data;
     if (!change) {
         console.log('No change data found.');
@@ -265,7 +265,7 @@ exports.onMinistryAssignmentWritten = (0, firestore_2.onDocumentWritten)({
     if (eventId) {
         const eventDoc = await admin.firestore().collection('events').doc(eventId).get();
         const eventData = eventDoc.data();
-        if (eventData && eventData.status !== 'published') {
+        if (eventData && ((_c = eventData.status) === null || _c === void 0 ? void 0 : _c.toLowerCase()) !== 'published') {
             console.log(`Event ${eventId} is not published (status: ${eventData.status}). Holding notification.`);
             return null;
         }
@@ -294,7 +294,7 @@ exports.onEventWritten = (0, firestore_2.onDocumentWritten)({
     database: databaseName,
     region: 'asia-southeast1',
 }, async (event) => {
-    var _a, _b;
+    var _a, _b, _c, _d;
     const change = event.data;
     if (!change)
         return null;
@@ -303,8 +303,8 @@ exports.onEventWritten = (0, firestore_2.onDocumentWritten)({
     if (!afterData)
         return null;
     // Check if event transitioned to "published"
-    const wasPublished = (beforeData === null || beforeData === void 0 ? void 0 : beforeData.status) === 'published';
-    const isPublished = afterData.status === 'published';
+    const wasPublished = ((_c = beforeData === null || beforeData === void 0 ? void 0 : beforeData.status) === null || _c === void 0 ? void 0 : _c.toLowerCase()) === 'published';
+    const isPublished = ((_d = afterData.status) === null || _d === void 0 ? void 0 : _d.toLowerCase()) === 'published';
     if (!wasPublished && isPublished) {
         console.log(`Event ${event.params.eventId} was published. Sending held notifications and updating assignments.`);
         const db = admin.firestore();

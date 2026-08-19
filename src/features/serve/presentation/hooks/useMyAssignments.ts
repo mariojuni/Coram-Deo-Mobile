@@ -61,7 +61,7 @@ export function useMyAssignments() {
   }, [churchId, memberIds, initializeMemberAssignmentsListener]);
 
   const filteredAssignments = useMemo(() => {
-    return [...memberAssignments].filter((a) => a.eventStatus !== 'draft').sort((a, b) =>
+    return [...memberAssignments].filter((a) => a.eventStatus?.toLowerCase() !== 'draft').sort((a, b) =>
       parseAssignmentDate(a.eventDate).getTime() -
       parseAssignmentDate(b.eventDate).getTime()
     );

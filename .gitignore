@@ -56,3 +56,6 @@ scripts/serviceAccountKey.json
 
 # Debug and Test Scripts
 debug/
+
+# Backend
+Coram-Deo-Backend/

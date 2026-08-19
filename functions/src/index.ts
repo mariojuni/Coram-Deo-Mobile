@@ -256,7 +256,7 @@ export const onMinistryAssignmentWritten = onDocumentWritten(
     if (eventId) {
       const eventDoc = await admin.firestore().collection('events').doc(eventId).get();
       const eventData = eventDoc.data();
-      if (eventData && eventData.status !== 'published') {
+      if (eventData && eventData.status?.toLowerCase() !== 'published') {
         console.log(`Event ${eventId} is not published (status: ${eventData.status}). Holding notification.`);
         return null;
       }
@@ -300,8 +300,8 @@ export const onEventWritten = onDocumentWritten(
     if (!afterData) return null;
 
     // Check if event transitioned to "published"
-    const wasPublished = beforeData?.status === 'published';
-    const isPublished = afterData.status === 'published';
+    const wasPublished = beforeData?.status?.toLowerCase() === 'published';
+    const isPublished = afterData.status?.toLowerCase() === 'published';
 
     if (!wasPublished && isPublished) {
       console.log(`Event ${event.params.eventId} was published. Sending held notifications and updating assignments.`);

@@ -122,8 +122,8 @@ export function useHomeScreenData() {
     if (userProfile?.memberId) memberIds.add(userProfile.memberId);
     
     if (memberIds.size === 0) return [];
-    return getUpcomingMinisterialDuties(schedules, assignments, Array.from(memberIds));
-  }, [currentUser?.uid, userProfile?.memberId, schedules, assignments]);
+    return getUpcomingMinisterialDuties(activeSchedules, assignments, Array.from(memberIds));
+  }, [currentUser?.uid, userProfile?.memberId, activeSchedules, assignments]);
 
   const rawDisplayName = [userProfile?.firstName, userProfile?.lastName].filter(Boolean).join(' ') || currentUser?.displayName || 'Guest';
   const displayName = userProfile?.firstName || rawDisplayName.split(' ')[0];
