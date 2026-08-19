@@ -81,6 +81,7 @@ export function GlobalVideoPlayer() {
   }, [activeSermonId]);
 
   useEffect(() => {
+    setIsProgressLoaded(false);
     if (currentUser && activeSermonId) {
       loadProgress(currentUser.uid, activeSermonId).finally(() => {
         setIsProgressLoaded(true);
@@ -91,6 +92,7 @@ export function GlobalVideoPlayer() {
   }, [currentUser, activeSermonId]);
 
   useEffect(() => {
+    setVideoSource(null);
     if (!currentSermon?.videoStoragePath) return;
     const resolve = async () => {
       try {
@@ -349,6 +351,7 @@ export function GlobalVideoPlayer() {
             <Animated.View style={[StyleSheet.absoluteFill, styles.videoHeaderInner, animatedInnerStyle]}>
               {currentSermon && (
                 <SermonVideoPlayer
+                  key={currentSermon.id}
                   sermon={currentSermon}
                   savedProgress={savedProgress}
                   onProgress={handleVideoProgress}
