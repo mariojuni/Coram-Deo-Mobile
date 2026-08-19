@@ -252,6 +252,16 @@ export const onMinistryAssignmentWritten = onDocumentWritten(
       return null;
     }
 
+    const eventId = afterData.eventId;
+    if (eventId) {
+      const eventDoc = await admin.firestore().collection('events').doc(eventId).get();
+      const eventData = eventDoc.data();
+      if (eventData && eventData.status !== 'published') {
+        console.log(`Event ${eventId} is not published (status: ${eventData.status}). Holding notification.`);
+        return null;
+      }
+    }
+
     console.log(`Sending notification to user ${memberId} for assignment ${event.params.assignmentId}`);
 
     try {
@@ -268,6 +278,73 @@ export const onMinistryAssignmentWritten = onDocumentWritten(
       console.log('Notification sent successfully.');
     } catch (err) {
       console.error('Failed to send notification:', err);
+    }
+
+    return null;
+  }
+);
+
+export const onEventWritten = onDocumentWritten(
+  {
+    document: 'events/{eventId}',
+    database: databaseName,
+    region: 'asia-southeast1',
+  },
+  async (event) => {
+    const change = event.data;
+    if (!change) return null;
+
+    const afterData = change.after?.data();
+    const beforeData = change.before?.data();
+
+    if (!afterData) return null;
+
+    // Check if event transitioned to "published"
+    const wasPublished = beforeData?.status === 'published';
+    const isPublished = afterData.status === 'published';
+
+    if (!wasPublished && isPublished) {
+      console.log(`Event ${event.params.eventId} was published. Sending held notifications and updating assignments.`);
+      
+      const db = admin.firestore();
+      const assignmentsSnapshot = await db.collection('ministryAssignments')
+        .where('eventId', '==', event.params.eventId)
+        .get();
+
+      if (assignmentsSnapshot.empty) {
+        console.log('No assignments found for this event.');
+        return null;
+      }
+
+      const batch = db.batch();
+
+      for (const doc of assignmentsSnapshot.docs) {
+        const assignmentData = doc.data();
+        
+        // Update eventStatus on the assignment so the mobile app will show it
+        batch.update(doc.ref, { eventStatus: 'published' });
+
+        const memberId = assignmentData.memberId;
+        if (memberId) {
+          try {
+            await NotificationService.createUserNotification({
+              userId: memberId,
+              churchId: assignmentData.churchId,
+              category: 'serve',
+              type: 'ministry_assignment',
+              title: `${assignmentData.eventName}`,
+              body: `You have been assigned to ${assignmentData.ministryName} as ${assignmentData.roleName}.`,
+              sourceType: 'ministry_assignment',
+              sourceId: doc.id,
+            });
+          } catch (err) {
+            console.error(`Failed to send notification for assignment ${doc.id}:`, err);
+          }
+        }
+      }
+
+      await batch.commit();
+      console.log('Successfully updated assignments and sent notifications.');
     }
 
     return null;

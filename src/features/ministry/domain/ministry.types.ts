@@ -92,6 +92,7 @@ export interface MinistryAssignment {
   declinedAt?: string;
   declineReason?: string;
   isAcknowledged?: boolean;
+  eventStatus?: string;
   createdAt?: string;
   updatedAt?: string;
 }

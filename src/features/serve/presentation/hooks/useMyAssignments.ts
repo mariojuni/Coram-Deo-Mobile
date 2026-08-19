@@ -60,8 +60,15 @@ export function useMyAssignments() {
     return () => unsub();
   }, [churchId, memberIds, initializeMemberAssignmentsListener]);
 
+  const filteredAssignments = useMemo(() => {
+    return [...memberAssignments].filter((a) => a.eventStatus !== 'draft').sort((a, b) =>
+      parseAssignmentDate(a.eventDate).getTime() -
+      parseAssignmentDate(b.eventDate).getTime()
+    );
+  }, [memberAssignments]);
+
   const grouped = useMemo<AssignmentGroup[]>(() => {
-    if (!memberAssignments.length) return [];
+    if (!filteredAssignments.length) return [];
     const { startOfWeek, endOfWeek } = getWeekBounds();
     const now = new Date();
 
@@ -69,12 +76,7 @@ export function useMyAssignments() {
     const upcoming: MinistryAssignment[] = [];
     const past: MinistryAssignment[] = [];
 
-    const sorted = [...memberAssignments].sort((a, b) =>
-      parseAssignmentDate(a.eventDate).getTime() -
-      parseAssignmentDate(b.eventDate).getTime()
-    );
-
-    for (const a of sorted) {
+    for (const a of filteredAssignments) {
       const d = parseAssignmentDate(a.eventDate);
       if (d < now && d < startOfWeek) {
         past.push(a);
@@ -90,14 +92,14 @@ export function useMyAssignments() {
     if (upcoming.length) groups.push({ label: 'Upcoming', data: upcoming });
     if (past.length) groups.push({ label: 'Past', data: past });
     return groups;
-  }, [memberAssignments]);
+  }, [filteredAssignments]);
 
   // If user has no church/member link, there's nothing to load — resolve immediately
   const resolvedLoading = (!churchId || memberIds.length === 0) ? false : memberAssignmentsLoading;
 
   return {
     grouped,
-    allAssignments: memberAssignments,
+    allAssignments: filteredAssignments,
     loading: resolvedLoading,
     hasChurchId: !!churchId && memberIds.length > 0,
   };

@@ -43,6 +43,20 @@ export const clearAllStoreListeners = () => {
 
 export const clearAllCachesAndReset = async () => {
   try {
+    const currentUser = useAuthStore.getState().currentUser;
+    if (currentUser) {
+      try {
+        const { getMessaging, getToken } = await import('@react-native-firebase/messaging');
+        const messaging = getMessaging();
+        const token = await getToken(messaging);
+        if (token) {
+          const { PushTokenService } = await import('../services/notification/PushTokenService');
+          await PushTokenService.unregisterDeviceToken(currentUser.uid, token);
+        }
+      } catch (err) {
+        console.warn('Failed to unregister push token on clearAllCachesAndReset', err);
+      }
+    }
     clearAllStoreListeners();
     await clearSensitiveCache();
     await import('@react-native-async-storage/async-storage').then(m => m.default.removeItem('bible_prefs'));
@@ -85,6 +99,20 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   logout: async () => {
     try {
+      const currentUser = useAuthStore.getState().currentUser;
+      if (currentUser) {
+        try {
+          const { getMessaging, getToken } = await import('@react-native-firebase/messaging');
+          const messaging = getMessaging();
+          const token = await getToken(messaging);
+          if (token) {
+            const { PushTokenService } = await import('../services/notification/PushTokenService');
+            await PushTokenService.unregisterDeviceToken(currentUser.uid, token);
+          }
+        } catch (err) {
+          console.warn('Failed to unregister push token on logout', err);
+        }
+      }
       clearAllStoreListeners();
       await clearSensitiveCache();
       await import('@react-native-async-storage/async-storage').then(m => m.default.removeItem('bible_prefs'));

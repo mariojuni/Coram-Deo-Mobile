@@ -88,7 +88,8 @@ export default function AssignMemberScreen() {
             await ministryRepository.updateAssignment(existing.id, {
               memberId: userId,
               memberName: formatMemberName(member),
-              status: 'Pending'
+              status: 'Pending',
+              eventStatus: liveSchedule.status,
             });
           }
         } else {
@@ -103,6 +104,7 @@ export default function AssignMemberScreen() {
             memberId: userId,
             memberName: formatMemberName(member),
             status: 'Pending',
+            eventStatus: liveSchedule.status,
             createdAt: new Date().toISOString()
           });
         }
