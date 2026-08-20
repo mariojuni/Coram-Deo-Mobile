@@ -1,5 +1,5 @@
 import { Check, Search, Users, X, ArrowLeft } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Alert, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -12,6 +12,9 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { formatMemberName, createMemberIdMap } from '@/features/member/domain/member.utils';
 import { ministryRepository } from '@/features/ministry/data/ministry.repository';
 import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
+
+import { collection, query as firestoreQuery, where, getDocs } from 'firebase/firestore';
+import { getActiveDb } from '@/firebase';
 
 function getAssignmentKey(ministryId: string, roleName: string) {
   return `${ministryId}::${roleName}`;
@@ -38,28 +41,65 @@ export default function AssignMemberScreen() {
   }, [assignmentsList, scheduleId, ministryId, roleName]);
 
   const [query, setQuery] = useState('');
+  const [ministryRoster, setMinistryRoster] = useState<{ memberId: string; role: string }[]>([]);
+
+  // Fetch ministryMembers for this ministry
+  useEffect(() => {
+    if (!ministryId || !userProfile?.churchId) return;
+    const loadRoster = async () => {
+      try {
+        const q = firestoreQuery(
+          collection(getActiveDb(), 'ministryMembers'),
+          where('ministryId', '==', ministryId),
+          where('status', '==', 'active')
+        );
+        const snap = await getDocs(q);
+        const roster = snap.docs.map(d => {
+          const data = d.data();
+          return {
+            memberId: data.memberId,
+            role: data.ministryRole || 'Member'
+          };
+        });
+        setMinistryRoster(roster);
+      } catch (err) {
+        console.warn('Failed to fetch ministry members:', err);
+      }
+    };
+    loadRoster();
+  }, [ministryId, userProfile?.churchId]);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
-    const ministryTeam = (ministry?.members && ministry.members.length > 0) ? ministry.members : null;
-    const sourceMembers = ministryTeam
-      ? ministryTeam.map(m => {
+    
+    // Combine legacy members and new ministryMembers
+    const legacyTeam = (ministry?.members && ministry.members.length > 0) ? ministry.members : [];
+    
+    // Create a map to deduplicate by memberId
+    const rosterMap = new Map<string, { memberId: string; role: string }>();
+    
+    legacyTeam.forEach(m => rosterMap.set(m.memberId, { memberId: m.memberId, role: m.role || 'Member' }));
+    ministryRoster.forEach(m => rosterMap.set(m.memberId, m)); // new ones overwrite legacy if duplicate
+
+    const combinedTeam = Array.from(rosterMap.values());
+
+    const sourceMembers = combinedTeam.length > 0
+      ? combinedTeam.map(m => {
           const globalMember = allMembers.find(g => g.id === m.memberId);
           return {
             id: m.memberId,
-            name: formatMemberName(globalMember || m),
+            name: formatMemberName(globalMember || (m as any)),
             role: m.role || 'Member',
-            avatar: globalMember?.photoUrl || globalMember?.avatar || (m as any).photoUrl || (m as any).avatar
+            avatar: globalMember?.photoUrl || globalMember?.avatar
           };
         })
-      : []; // Only list members if they are in the ministry roster
+      : [];
 
-    const uniqueSourceMembers = Array.from(new Map(sourceMembers.map(m => [m.id, m])).values())
-      .filter(m => m.name && m.name !== 'Unnamed Member'); // Filter out unnamed members
-
+    const uniqueSourceMembers = sourceMembers.filter(m => m.name && m.name !== 'Unnamed Member');
+    
     if (!q) return uniqueSourceMembers;
     return uniqueSourceMembers.filter((m) => (m.name ?? '').toLowerCase().includes(q) || (m.role ?? '').toLowerCase().includes(q));
-  }, [ministry, query, allMembers]);
+  }, [ministry, query, allMembers, ministryRoster]);
 
   const handleSelect = async (userId: string | null) => {
     if (!ministryId || !roleName || !scheduleId || !liveSchedule) return;
