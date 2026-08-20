@@ -307,8 +307,11 @@ function EventsTab({ searchQuery }: SubScreenProps) {
   const [activeTodaySlide, setActiveTodaySlide] = useState(0);
 
   const searchableEvents = useMemo(() => {
-    // Only show published events in the community tab
-    const activeEvents = schedules.filter((e) => e.status?.toLowerCase() === 'published');
+    // Only show published or cancelled events in the community tab
+    const activeEvents = schedules.filter((e) => {
+      const status = e.status?.toLowerCase();
+      return status === 'published' || status === 'cancelled';
+    });
 
     const query = searchQuery.trim().toLowerCase();
     if (!query) return activeEvents;
@@ -455,6 +458,7 @@ function EventsTab({ searchQuery }: SubScreenProps) {
                   key={todayEvent.id}
                   activeOpacity={0.92}
                   onPress={() => setSelectedEvent(todayEvent)}
+                  disabled={todayEvent.status?.toLowerCase() === 'cancelled'}
                   style={[eventsStyles.heroSlide, { width: screenWidth }]}
                 >
                   <View style={[eventsStyles.heroCardOuter, { marginHorizontal: heroCardHorizontalMargin }]}>
@@ -481,9 +485,16 @@ function EventsTab({ searchQuery }: SubScreenProps) {
                         <Text style={eventsStyles.heroDateLabel}>
                           {dateParts.weekday}, {dateParts.month} {dateParts.day}
                         </Text>
-                        <Text style={eventsStyles.heroTitle} numberOfLines={2}>
-                          {todayEvent.title || 'Church Event'}
-                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Text style={[eventsStyles.heroTitle, { flex: 1 }]} numberOfLines={2}>
+                            {todayEvent.title || 'Church Event'}
+                          </Text>
+                          {todayEvent.status?.toLowerCase() === 'cancelled' && (
+                            <View style={{ backgroundColor: 'rgba(255,255,255,0.25)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                              <Text style={{ fontSize: 10, fontWeight: '800', color: '#FFFFFF' }}>CANCELLED</Text>
+                            </View>
+                          )}
+                        </View>
                       </View>
 
                       {/* Time + location */}
@@ -586,7 +597,13 @@ function EventsTab({ searchQuery }: SubScreenProps) {
           </BounceCard>
         ) : (
           upcomingList.map((event) => (
-            <BounceCard key={event.id} activeOpacity={0.82} onPress={() => setSelectedEvent(event)} style={{ marginBottom: 10 }}>
+            <BounceCard 
+              key={event.id} 
+              activeOpacity={0.82} 
+              onPress={() => setSelectedEvent(event)} 
+              disabled={event.status?.toLowerCase() === 'cancelled'}
+              style={{ marginBottom: 10 }}
+            >
               <SoftCard innerStyle={eventsStyles.listCardInner}>
                 <View style={eventsStyles.listDateBlock}>
                   <Text style={eventsStyles.listDateMonth}>{getEventDateParts(event).month}</Text>
@@ -601,9 +618,16 @@ function EventsTab({ searchQuery }: SubScreenProps) {
                 <View style={eventsStyles.listDivider} />
 
                 <View style={eventsStyles.listDetailsBlock}>
-                  <Text style={eventsStyles.listEventTitle} numberOfLines={2}>
-                    {event.title || 'Church Event'}
-                  </Text>
+                  <View style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
+                    {event.status?.toLowerCase() === 'cancelled' && (
+                      <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                        <Text style={{ fontSize: 10, fontWeight: '700', color: '#DC2626' }}>CANCELLED</Text>
+                      </View>
+                    )}
+                    <Text style={eventsStyles.listEventTitle} numberOfLines={2}>
+                      {event.title || 'Church Event'}
+                    </Text>
+                  </View>
 
                   <View style={eventsStyles.listTimePill}>
                     <Clock size={11} color="#9CA3AF" />
@@ -620,9 +644,11 @@ function EventsTab({ searchQuery }: SubScreenProps) {
                   </View>
                 </View>
 
-                <View style={eventsStyles.listChevronWrap}>
-                  <ChevronRight size={18} color="#C0C8D8" strokeWidth={2.5} />
-                </View>
+                {event.status?.toLowerCase() !== 'cancelled' && (
+                  <View style={eventsStyles.listChevronWrap}>
+                    <ChevronRight size={18} color="#C0C8D8" strokeWidth={2.5} />
+                  </View>
+                )}
               </SoftCard>
             </BounceCard>
           ))

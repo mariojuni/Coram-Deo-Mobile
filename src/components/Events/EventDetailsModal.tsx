@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BounceCard } from '@/components/ui/BounceCard';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { CalendarDays, CheckCircle2, HelpCircle, XCircle, X } from 'lucide-react-native';
@@ -34,6 +34,20 @@ export function EventDetailsModal({
   getUserRsvpStatus,
   handleRsvp,
 }: EventDetailsModalProps) {
+  const currentRsvp = (currentUser && event) ? getUserRsvpStatus(event, currentUser.uid) : null;
+  const [localRsvp, setLocalRsvp] = useState<string | null>(currentRsvp);
+
+  useEffect(() => {
+    setLocalRsvp(currentRsvp);
+  }, [currentRsvp]);
+
+  const onRsvpPress = (status: 'going' | 'maybe' | 'not_going') => {
+    setLocalRsvp(status);
+    if (event) {
+      handleRsvp(event.id, status);
+    }
+  };
+
   if (!event) return null;
 
   const formatEventDate = (event: Schedule): string => {
@@ -64,7 +78,7 @@ export function EventDetailsModal({
     });
   };
 
-  const currentRsvp = currentUser ? getUserRsvpStatus(event, currentUser.uid) : null;
+
 
   return (
     <AppModal
@@ -135,32 +149,34 @@ export function EventDetailsModal({
           />
         )}
 
-        <View style={styles.rsvpSection}>
-          <Text style={styles.rsvpTitle}>Your Response</Text>
-          <View style={styles.rsvpRow}>
-            <RsvpButton
-              active={currentRsvp === 'going'}
-              label="Going"
-              icon={<CheckCircle2 size={14} color={currentRsvp === 'going' ? '#fff' : '#FF6596'} />}
-              onPress={() => handleRsvp(event.id, 'going')}
-              activeColor="#FF6596"
-            />
-            <RsvpButton
-              active={currentRsvp === 'maybe'}
-              label="Maybe"
-              icon={<HelpCircle size={14} color={currentRsvp === 'maybe' ? '#fff' : '#F59E0B'} />}
-              onPress={() => handleRsvp(event.id, 'maybe')}
-              activeColor="#F59E0B"
-            />
-            <RsvpButton
-              active={currentRsvp === 'not_going'}
-              label="Can't Go"
-              icon={<XCircle size={14} color={currentRsvp === 'not_going' ? '#fff' : '#EF4444'} />}
-              onPress={() => handleRsvp(event.id, 'not_going')}
-              activeColor="#EF4444"
-            />
+        {event.enableRSVP === true && (
+          <View style={styles.rsvpSection}>
+            <Text style={styles.rsvpTitle}>Your Response</Text>
+            <View style={styles.rsvpRow}>
+              <RsvpButton
+                active={localRsvp === 'going'}
+                label="Going"
+                icon={<CheckCircle2 size={14} color={localRsvp === 'going' ? '#fff' : '#FF6596'} />}
+                onPress={() => onRsvpPress('going')}
+                activeColor="#FF6596"
+              />
+              <RsvpButton
+                active={localRsvp === 'maybe'}
+                label="Maybe"
+                icon={<HelpCircle size={14} color={localRsvp === 'maybe' ? '#fff' : '#F59E0B'} />}
+                onPress={() => onRsvpPress('maybe')}
+                activeColor="#F59E0B"
+              />
+              <RsvpButton
+                active={localRsvp === 'not_going'}
+                label="Can't Go"
+                icon={<XCircle size={14} color={localRsvp === 'not_going' ? '#fff' : '#EF4444'} />}
+                onPress={() => onRsvpPress('not_going')}
+                activeColor="#EF4444"
+              />
+            </View>
           </View>
-        </View>
+        )}
         </View>
         </ScrollView>
       </View>

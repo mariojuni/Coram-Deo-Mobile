@@ -23,6 +23,7 @@ export interface Schedule {
   location: string;
   duties: Duty[];
   rsvps: Rsvp[];
+  enableRSVP?: boolean;
   songList?: any[];
   setlistStatus?: string;
   status?: string;

@@ -56,6 +56,7 @@ function toSchedule(docId: string, data: Record<string, unknown>): Schedule {
     duties,
     rsvps,
     songList: Array.isArray(data.songList) ? data.songList : undefined,
+    enableRSVP: typeof data.enableRSVP === 'boolean' ? data.enableRSVP : false,
     status: typeof data.status === 'string' ? data.status : 'Published',
     createdAt: data.createdAt,
   };

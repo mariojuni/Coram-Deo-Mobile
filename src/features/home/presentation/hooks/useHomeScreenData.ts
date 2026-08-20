@@ -21,7 +21,10 @@ export function useHomeScreenData() {
   const userProfile = useAuthStore((state) => state.userProfile);
   const schedules = useScheduleStore((state) => state.schedules);
   const initializeSchedulesListener = useScheduleStore((state) => state.initializeSchedulesListener);
-  const activeSchedules = useMemo(() => schedules.filter(s => s.status?.toLowerCase() === 'published'), [schedules]);
+  const activeSchedules = useMemo(() => schedules.filter(s => {
+    const status = s.status?.toLowerCase();
+    return status === 'published' || status === 'cancelled';
+  }), [schedules]);
 
   const assignments = useMinistryStore((state) => state.assignments);
   const initializeAssignmentsListener = useMinistryStore((state) => state.initializeAssignmentsListener);

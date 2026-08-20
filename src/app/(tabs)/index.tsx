@@ -407,6 +407,7 @@ export default function HomeScreen() {
                       <BounceCard
                         style={{ marginBottom: 0 }}
                         onPress={() => router.push({ pathname: '/(tabs)/community', params: { tab: 'events' } })}
+                        disabled={event.status?.toLowerCase() === 'cancelled'}
                       >
                         <SoftCard innerStyle={styles.todayCardInner}>
                           {/* Left — gradient calendar tile */}
@@ -423,9 +424,16 @@ export default function HomeScreen() {
 
                           {/* Right — event info */}
                           <View style={styles.todayCardContent}>
-                            <Text style={styles.todayEventTitle} numberOfLines={2}>
-                              {event.title || 'Church Event'}
-                            </Text>
+                            <View style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
+                              {event.status?.toLowerCase() === 'cancelled' && (
+                                <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#DC2626' }}>CANCELLED</Text>
+                                </View>
+                              )}
+                              <Text style={styles.todayEventTitle} numberOfLines={2}>
+                                {event.title || 'Church Event'}
+                              </Text>
+                            </View>
 
                             <View style={styles.todayMetaRow}>
                               <Clock size={11} color="#9CA3AF" />
@@ -848,6 +856,7 @@ export default function HomeScreen() {
                   key={event.id}
                   style={{ marginBottom: 10 }}
                   onPress={() => setSelectedEvent(event)}
+                  disabled={event.status?.toLowerCase() === 'cancelled'}
                 >
                   <SoftCard innerStyle={styles.eventListCardInner}>
                     <View style={styles.eventDateBlock}>
@@ -855,13 +864,19 @@ export default function HomeScreen() {
                       <Text style={styles.eventDateDay}>{day}</Text>
                       <Text style={styles.eventDateWeekday}>{weekday}</Text>
                     </View>
-
                     <View style={styles.eventDivider} />
 
                     <View style={styles.eventDetailsBlock}>
-                      <Text style={styles.eventTitle} numberOfLines={2}>
-                        {event.title || 'Church Event'}
-                      </Text>
+                      <View style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
+                        {event.status?.toLowerCase() === 'cancelled' && (
+                          <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                            <Text style={{ fontSize: 10, fontWeight: '700', color: '#DC2626' }}>CANCELLED</Text>
+                          </View>
+                        )}
+                        <Text style={styles.eventTitle} numberOfLines={2}>
+                          {event.title || 'Church Event'}
+                        </Text>
+                      </View>
                       <View style={styles.eventTimePill}>
                         <Clock size={11} color="#9CA3AF" />
                         <Text style={styles.eventTimePillText}>
@@ -878,7 +893,9 @@ export default function HomeScreen() {
                       ) : null}
                     </View>
 
-                    <ChevronRight size={14} color="#9CA3AF" />
+                    {event.status?.toLowerCase() !== 'cancelled' && (
+                      <ChevronRight size={14} color="#9CA3AF" />
+                    )}
                   </SoftCard>
                 </BounceCard>
               );
