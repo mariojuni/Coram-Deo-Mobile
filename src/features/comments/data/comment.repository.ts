@@ -1,7 +1,8 @@
 import { getActiveDb } from '@/firebase';
 import { 
   collection, doc, getDoc, getDocs, query, where, orderBy, 
-  limit, startAfter, runTransaction, Timestamp, DocumentData, QueryDocumentSnapshot, onSnapshot 
+  limit, startAfter, runTransaction, Timestamp, DocumentData, QueryDocumentSnapshot, onSnapshot,
+  writeBatch
 } from 'firebase/firestore';
 import type { Comment, CommentTargetType, CommentStatus } from '../domain/comment.types';
 
@@ -220,7 +221,6 @@ export const commentRepository = {
 
   async deleteAllCommentsForTarget(churchId: string, targetType: CommentTargetType, targetId: string) {
     try {
-      const { writeBatch, deleteDoc } = await import('firebase/firestore');
       const q = query(
         collection(getActiveDb(), COMMENTS_COLLECTION),
         where('churchId', '==', churchId),
@@ -238,6 +238,7 @@ export const commentRepository = {
       }
     } catch (e) {
       console.error(`[CommentRepository] Failed to delete all comments for ${targetType} ${targetId}`, e);
+      throw e;
     }
   }
 };

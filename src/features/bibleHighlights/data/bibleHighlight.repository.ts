@@ -16,6 +16,8 @@ import {
   arrayRemove,
   increment,
   onSnapshot,
+  startAfter,
+  deleteDoc,
 } from 'firebase/firestore';
 import type { BibleHighlight } from '../domain/bibleHighlight.types';
 import { commentRepository } from '@/features/comments/data/comment.repository';
@@ -123,7 +125,6 @@ export const bibleHighlightRepository = {
     );
 
     if (lastDoc) {
-      const { startAfter } = await import('firebase/firestore');
       q = query(q, startAfter(lastDoc));
     }
 
@@ -184,7 +185,6 @@ export const bibleHighlightRepository = {
       } catch (e) {}
     } else {
       // For private highlights, we can just delete the document entirely to save space
-      const { deleteDoc } = await import('firebase/firestore');
       await deleteDoc(highlightRef);
     }
   },
