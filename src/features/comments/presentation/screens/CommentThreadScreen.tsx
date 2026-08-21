@@ -462,11 +462,11 @@ export function CommentThreadScreen() {
                 reference: referenceStr,
                 text: textSnapshotStr
               }]).map((s: any, index: number) => {
-                const sRef = s.reference || (() => {
+                const sRef = s.bookId && s.chapter && s.verseStart ? (() => {
                   const fullBookName = getHumanReadableBookName(s.bookId);
                   const verseStr = s.verseStart === s.verseEnd ? s.verseStart : `${s.verseStart}-${s.verseEnd}`;
                   return `${fullBookName} ${s.chapter}:${verseStr}`;
-                })();
+                })() : s.reference;
                 const sText = s.text || s.textSnapshot || '';
                 
                 return (

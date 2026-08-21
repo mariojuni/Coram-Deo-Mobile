@@ -707,8 +707,8 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
   const filterTabs = [
     { key: 'all', label: 'All', count: allCount, icon: Layers },
     { key: 'prayers', label: 'Prayers', count: prayersCount, icon: HeartHandshake },
-    { key: 'highlights', label: 'Highlights', count: highlightsCount, icon: Bookmark },
     { key: 'notes', label: 'Notes', count: notesCount, icon: BookOpen },
+    { key: 'highlights', label: 'Highlights', count: highlightsCount, icon: Bookmark },
   ];
 
   return (
