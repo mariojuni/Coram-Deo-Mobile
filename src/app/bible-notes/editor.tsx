@@ -62,7 +62,7 @@ export default function BibleNoteEditorScreen() {
 
     setSaving(true);
     try {
-      const churchId = userProfile?.churchId || (currentUser as any).churchId || (currentUser as any).claims?.churchId;
+      const churchId = userProfile?.churchId || (userProfile as any)?.church_id || (currentUser as any).churchId || (currentUser as any).claims?.churchId;
       
       if (noteIdToEdit) {
         await bibleNoteRepository.updateNote(noteIdToEdit, {

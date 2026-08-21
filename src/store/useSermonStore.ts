@@ -306,7 +306,13 @@ export const useSermonStore = create<SermonState>((set, get) => ({
 
   addNote: async (note) => {
     try {
-      await sermonRepository.saveNote(note);
+      const { useAuthStore } = require('./useAuthStore');
+      const userProfile = useAuthStore.getState().userProfile;
+      const currentUser = useAuthStore.getState().currentUser;
+      const churchId = userProfile?.churchId || (userProfile as any)?.church_id || (currentUser as any)?.churchId || (currentUser as any)?.claims?.churchId;
+      
+      const noteWithChurchId = { ...note, churchId };
+      await sermonRepository.saveNote(noteWithChurchId);
       get().fetchNotes(note.userId, note.sermonId);
     } catch (error) {
       console.error('Error adding note:', error);

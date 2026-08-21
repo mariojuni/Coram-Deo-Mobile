@@ -40,6 +40,7 @@ export interface Sermon {
 export interface SermonNote {
   id: string;
   userId: string;
+  churchId?: string;
   userName?: string;
   userPhotoUrl?: string;
   sermonId: string;
