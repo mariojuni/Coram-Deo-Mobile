@@ -45,6 +45,8 @@ export const bibleHighlightRepository = {
       status: 'active',
     };
 
+    Object.keys(newHighlight).forEach(key => newHighlight[key] === undefined && delete newHighlight[key]);
+
     await setDoc(newHighlightRef, newHighlight);
     return newHighlight as any as BibleHighlight;
   },
@@ -52,10 +54,12 @@ export const bibleHighlightRepository = {
   async updateHighlight(id: string, updates: Partial<Omit<BibleHighlight, 'id' | 'createdAt'>>): Promise<void> {
     const highlightRef = doc(getActiveDb(), COLLECTION_NAME, id);
     
-    const finalUpdates = {
+    const finalUpdates: any = {
       ...updates,
       updatedAt: serverTimestamp(),
     };
+
+    Object.keys(finalUpdates).forEach(key => finalUpdates[key] === undefined && delete finalUpdates[key]);
 
     await updateDoc(highlightRef, finalUpdates);
   },

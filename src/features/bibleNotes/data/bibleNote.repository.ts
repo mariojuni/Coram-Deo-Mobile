@@ -44,6 +44,8 @@ export const bibleNoteRepository = {
       newNote.moderationStatus = 'published';
     }
 
+    Object.keys(newNote).forEach(key => newNote[key] === undefined && delete newNote[key]);
+
     await setDoc(newNoteRef, newNote);
     return newNote as any as BibleNote;
   },
@@ -60,6 +62,8 @@ export const bibleNoteRepository = {
     if (updates.visibility === 'church' && !updates.moderationStatus) {
       finalUpdates.moderationStatus = 'published';
     }
+
+    Object.keys(finalUpdates).forEach(key => finalUpdates[key] === undefined && delete finalUpdates[key]);
 
     await updateDoc(noteRef, finalUpdates);
   },
