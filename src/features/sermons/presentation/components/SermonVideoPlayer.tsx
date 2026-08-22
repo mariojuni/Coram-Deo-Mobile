@@ -257,8 +257,10 @@ export function SermonVideoPlayer({
     );
   }
 
+  const isSmall = isMinimized || isHidden;
+
   return (
-    <View style={[styles.container, isMinimized && { backgroundColor: 'transparent' }]}>
+    <View style={[styles.container, isSmall && { backgroundColor: 'transparent' }]}>
       <TouchableOpacity
         activeOpacity={1}
         style={StyleSheet.absoluteFill}
@@ -271,7 +273,7 @@ export function SermonVideoPlayer({
         }}
       >
         {/* Minimized Card Overlay (Fades in dynamically during drag) */}
-        <Animated.View style={[styles.miniCardOverlay, animatedCardOverlayStyle]} pointerEvents={isMinimized ? 'auto' : 'none'}>
+        <Animated.View style={[styles.miniCardOverlay, animatedCardOverlayStyle]} pointerEvents={isMinimized && !isHidden ? 'auto' : 'none'}>
           <BlurView intensity={80} tint="light" style={[StyleSheet.absoluteFill, { zIndex: 0 }]} />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)', zIndex: 0 }]} pointerEvents="none" />
           <View style={[styles.miniCardContent, { zIndex: 1 }]} pointerEvents="box-none">
@@ -360,14 +362,14 @@ export function SermonVideoPlayer({
         )}
 
         {/* Loading Spinner */}
-        {playerState === 'loading' && !isFullscreen && !isMinimized && (
+        {playerState === 'loading' && !isFullscreen && !isSmall && (
           <View style={styles.overlay}>
             <ActivityIndicator size="large" color={GOLD} />
           </View>
         )}
 
         {/* Error State */}
-        {playerState === 'error' && !isFullscreen && !isMinimized && (
+        {playerState === 'error' && !isFullscreen && !isSmall && (
           <View style={styles.overlay}>
             <View style={styles.errorBox}>
               <AlertCircle size={32} color="#fff" />
@@ -392,7 +394,7 @@ export function SermonVideoPlayer({
         )}
 
         {/* Big centered play button — idle and controls hidden */}
-        {playerState === 'idle' && !showControls && !isFullscreen && !isMinimized && (
+        {playerState === 'idle' && !showControls && !isFullscreen && !isSmall && (
           <View style={styles.overlay} pointerEvents="none">
             <View style={styles.bigPlayBtn}>
               <Play size={36} color="#fff" fill="#fff" />
@@ -403,7 +405,7 @@ export function SermonVideoPlayer({
 
 
         {/* Completed State */}
-        {playerState === 'completed' && !isFullscreen && !isMinimized && (
+        {playerState === 'completed' && !isFullscreen && !isSmall && (
           <View style={styles.overlay}>
             <TouchableOpacity style={styles.replayBtn} onPress={handlePlayPause}>
               <RotateCcw size={32} color="#fff" />
@@ -413,7 +415,7 @@ export function SermonVideoPlayer({
         )}
 
         {/* Controls overlay */}
-        {showControls && playerState !== 'loading' && playerState !== 'error' && !isFullscreen && !isMinimized && (
+        {showControls && playerState !== 'loading' && playerState !== 'error' && !isFullscreen && !isSmall && (
           <View style={styles.controlsOverlay}>
             {/* Center controls */}
             <View style={styles.centerControls}>
