@@ -27,7 +27,7 @@ export default function GivingInputScreen() {
 
   const insets = useSafeAreaInsets();
   const [form, setForm] = useState({
-    giverType: 'member', // member, household, non_member, or anonymous
+    giverType: 'loose_offering', // loose_offering, member, household, non_member, or anonymous
     memberId: '',
     householdId: '',
     donorName: '',
@@ -158,7 +158,7 @@ export default function GivingInputScreen() {
         <ScrollView contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 24) + 70 }]} keyboardShouldPersistTaps="handled">
         <Text style={styles.label}>Giver Type</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
-          {['member', 'household', 'non_member', 'anonymous', 'loose_offering'].map(type => (
+          {['loose_offering', 'member', 'household', 'non_member', 'anonymous'].map(type => (
             <TouchableOpacity 
               key={type} 
               style={[styles.chip, form.giverType === type && styles.chipActive]}
