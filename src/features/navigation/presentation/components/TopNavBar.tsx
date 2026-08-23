@@ -77,31 +77,39 @@ export function TopNavBar({
           ]} 
           pointerEvents="box-none"
         >
-          {isSplitMode && (
-            <>
+          {isSplitMode ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <DebouncedTouchable style={styles.versionBtn} onPress={onRightPress}>
                 <Text style={styles.versionText}>{rightText}</Text>
               </DebouncedTouchable>
+
               <View style={styles.divider} />
-            </>
-          )}
 
-          <DebouncedTouchable style={styles.bookBtn} onPress={onLeftPress}>
-            <Text style={styles.bookText}>{leftText}</Text>
-          </DebouncedTouchable>
-
-          <View style={styles.divider} />
-
-          {isSplitMode ? (
-            !!(secondaryRightText && onSecondaryRightPress) && (
-              <DebouncedTouchable style={styles.versionBtn} onPress={onSecondaryRightPress}>
-                <Text style={styles.versionText}>{secondaryRightText}</Text>
+              <DebouncedTouchable style={styles.bookBtn} onPress={onLeftPress}>
+                <Text style={styles.bookText}>{leftText}</Text>
               </DebouncedTouchable>
-            )
+
+              {!!(secondaryRightText && onSecondaryRightPress) ? (
+                <>
+                  <View style={styles.divider} />
+                  <DebouncedTouchable style={styles.versionBtn} onPress={onSecondaryRightPress}>
+                    <Text style={styles.versionText}>{secondaryRightText}</Text>
+                  </DebouncedTouchable>
+                </>
+              ) : null}
+            </View>
           ) : (
-            <DebouncedTouchable style={styles.versionBtn} onPress={onRightPress}>
-              <Text style={styles.versionText}>{rightText}</Text>
-            </DebouncedTouchable>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <DebouncedTouchable style={styles.bookBtn} onPress={onLeftPress}>
+                <Text style={styles.bookText}>{leftText}</Text>
+              </DebouncedTouchable>
+
+              <View style={styles.divider} />
+
+              <DebouncedTouchable style={styles.versionBtn} onPress={onRightPress}>
+                <Text style={styles.versionText}>{rightText}</Text>
+              </DebouncedTouchable>
+            </View>
           )}
         </Animated.View>
         
