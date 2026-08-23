@@ -5,8 +5,9 @@ import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 import { useRouter } from 'expo-router';
-import { Check, ChevronLeft } from 'lucide-react-native';
+import { Check, ChevronLeft, Calendar } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import CustomDatePicker from '../../components/CustomDatePicker';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useMemberStore } from '../../store/useMemberStore';
 import { useGiving } from '../../features/giving/presentation/hooks/useGiving';
@@ -22,6 +23,7 @@ export default function GivingInputScreen() {
   const { members, households, initializeMembersListener, initializeHouseholdsListener } = useMemberStore();
   const { funds, campaigns } = useGiving();
   const [loading, setLoading] = useState(false);
+  const [isDatePickerVisible, setDatePickerVisible] = useState(false);
 
   const insets = useSafeAreaInsets();
   const [form, setForm] = useState({
@@ -33,6 +35,7 @@ export default function GivingInputScreen() {
     campaignId: '',
     amount: '',
     method: 'cash' as string | PaymentMethodType,
+    date: new Date(),
     referenceNumber: '',
     notes: '',
   });
@@ -103,7 +106,10 @@ export default function GivingInputScreen() {
       const userId = form.giverType === 'member' ? form.memberId : form.giverType === 'household' ? (selectedHousehold?.primaryMemberId || '') : null as any;
       const donorName = form.giverType === 'household' 
         ? selectedHousehold?.name 
-        : form.giverType === 'non_member' ? form.donorName : form.giverType === 'anonymous' ? 'Anonymous' : undefined;
+        : form.giverType === 'non_member' ? form.donorName 
+        : form.giverType === 'anonymous' ? 'Anonymous' 
+        : form.giverType === 'loose_offering' ? 'Loose Offering' 
+        : undefined;
 
       await createManualGivingRecord(userProfile.churchId, {
         userId,
@@ -116,6 +122,7 @@ export default function GivingInputScreen() {
         amount: Number(form.amount),
         currency: 'PHP',
         method: form.method,
+        date: form.date.toISOString().split('T')[0],
         referenceNumber: form.referenceNumber,
         notes: form.notes,
       }, userProfile.uid);
@@ -151,14 +158,14 @@ export default function GivingInputScreen() {
         <ScrollView contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 24) + 70 }]} keyboardShouldPersistTaps="handled">
         <Text style={styles.label}>Giver Type</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
-          {['member', 'household', 'non_member', 'anonymous'].map(type => (
+          {['member', 'household', 'non_member', 'anonymous', 'loose_offering'].map(type => (
             <TouchableOpacity 
               key={type} 
               style={[styles.chip, form.giverType === type && styles.chipActive]}
               onPress={() => setForm({ ...form, giverType: type })}
             >
               <Text style={[styles.chipText, form.giverType === type && styles.chipTextActive]}>
-                {type === 'non_member' ? 'Not Member' : type.charAt(0).toUpperCase() + type.slice(1)}
+                {type === 'non_member' ? 'Not Member' : type === 'loose_offering' ? 'Loose Offering' : type.charAt(0).toUpperCase() + type.slice(1)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -216,6 +223,20 @@ export default function GivingInputScreen() {
             autoCorrect={false}
             spellCheck={false}
           />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Date *</Text>
+          <TouchableOpacity 
+            style={[styles.input, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]} 
+            activeOpacity={0.7}
+            onPress={() => setDatePickerVisible(true)}
+          >
+            <Text style={{ fontSize: 16, color: form.date ? '#1a1a1a' : '#888' }}>
+              {form.date ? form.date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : 'MM/DD/YYYY'}
+            </Text>
+            <Calendar size={20} color="#888" />
+          </TouchableOpacity>
         </View>
 
         <View style={[styles.inputGroup, { zIndex: 900 }]}>
@@ -306,7 +327,16 @@ export default function GivingInputScreen() {
         </TouchableOpacity>
         
         <View style={{ height: 40 }} />
-      </ScrollView>
+        </ScrollView>
+        <CustomDatePicker
+          visible={isDatePickerVisible}
+          date={form.date || new Date()}
+          onConfirm={(d) => {
+            setForm({ ...form, date: d });
+            setDatePickerVisible(false);
+          }}
+          onCancel={() => setDatePickerVisible(false)}
+        />
       </KeyboardAvoidingView>
     </View>
   );
