@@ -169,10 +169,12 @@ export function GlobalVideoPlayer() {
     });
 
   const animatedContainerStyle = useAnimatedStyle(() => {
+    const isExpanded = translateY.value < MAX_TRANSLATE_Y - 50;
     return {
       transform: [{ translateY: translateY.value }],
       opacity: (playerMode === 'hidden' && translateY.value >= SCREEN_HEIGHT) || hideCompactPlayer ? 0 : 1,
       pointerEvents: hideCompactPlayer ? 'none' : 'box-none',
+      zIndex: isExpanded ? 9999 : 100,
     };
   });
 
