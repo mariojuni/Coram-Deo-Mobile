@@ -87,6 +87,7 @@ import { useMemberStore } from '../../../../store/useMemberStore';
 import { useFeedStore } from '../../../../store/useFeedStore';
 import { bibleNoteRepository } from '@/features/bibleNotes/data/bibleNote.repository';
 import { getHumanReadableBookName } from '@/utils/scriptureReferenceParser';
+import { ShareImageGenerator, ShareImageGeneratorRef } from '../../../../components/Share/ShareImageGenerator';
 
 
 
@@ -103,6 +104,7 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
   const router = useRouter();
   const navDebounceRef = useRef(false);
   const openPrayerModal = useUIStore((state) => state.openPrayerModal);
+  const shareImageGeneratorRef = useRef<ShareImageGeneratorRef>(null);
 
   const { filter } = useLocalSearchParams();
   const [activeTabFilter, setActiveTabFilter] = useState<CommunityMemberTabFilter>(
@@ -255,9 +257,13 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
           destructiveButtonIndex: isOwner ? 2 : undefined,
           cancelButtonIndex: 0,
         },
-        (buttonIndex) => {
+        async (buttonIndex) => {
           if (buttonIndex === 1) {
-            Share.share({ message: `"${post.text}" - ${reference}` });
+            if (shareImageGeneratorRef.current) {
+              await shareImageGeneratorRef.current.captureAndShare(post, 'highlight');
+            } else {
+              Share.share({ message: `"${post.text}" - ${reference}` });
+            }
           } else if (buttonIndex === 2 && isOwner) {
             Alert.alert('Delete Highlight', 'Are you sure you want to delete this highlight post?', [
               { text: 'Cancel', style: 'cancel' },
@@ -269,7 +275,13 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
     } else {
       const alertButtons: any[] = [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Share', onPress: () => Share.share({ message: `"${post.text}" - ${reference}` }) },
+        { text: 'Share', onPress: async () => {
+          if (shareImageGeneratorRef.current) {
+            await shareImageGeneratorRef.current.captureAndShare(post, 'highlight');
+          } else {
+            Share.share({ message: `"${post.text}" - ${reference}` });
+          }
+        }},
       ];
       if (isOwner) {
         alertButtons.push({
@@ -302,9 +314,13 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
     const options = ['Cancel', 'Share Note'];
     if (isOwner) options.push('Delete Note');
 
-    const handleAction = (buttonIndex: number) => {
+    const handleAction = async (buttonIndex: number) => {
       if (buttonIndex === 1) {
-        Share.share({ message: `${reference}\n\n${note.content || ''}` });
+        if (shareImageGeneratorRef.current) {
+          await shareImageGeneratorRef.current.captureAndShare(note);
+        } else {
+          Share.share({ message: `${reference}\n\n${note.content || ''}` });
+        }
       } else if (buttonIndex === 2 && isOwner) {
         Alert.alert('Delete Note', 'Are you sure you want to delete this note?', [
           { text: 'Cancel', style: 'cancel' },
@@ -713,6 +729,7 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
 
   return (
     <View style={membersStyles.wrap}>
+      <ShareImageGenerator ref={shareImageGeneratorRef} />
       {(todayBirthdays.length > 0 || upcomingBirthdays.length > 0) && (
         <View style={[membersStyles.birthdaySnapshotOuter, { boxShadow: '0px 8px 24px rgba(182, 109, 255, 0.28)', marginBottom: 10, borderRadius: 24 }]}>
           <View style={{ borderRadius: 24, overflow: 'hidden' }}>

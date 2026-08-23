@@ -16,6 +16,7 @@ import { getHumanReadableBookName } from '@/utils/scriptureReferenceParser';
 import { bibleNoteRepository } from '@/features/bibleNotes/data/bibleNote.repository';
 import { sermonRepository } from '@/features/sermons/data/sermon.repository';
 import type { Prayer } from '@/features/prayer/domain/prayer.types';
+import { ShareImageGenerator, ShareImageGeneratorRef } from '@/components/Share/ShareImageGenerator';
 
 type ActivityTabKey = 'all' | 'highlights' | 'notes' | 'prayers' | 'plans';
 
@@ -55,6 +56,7 @@ export function ProfileActivityTabs({
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<ActivityTabKey>('all');
   const [visibleCount, setVisibleCount] = useState<number>(PAGE_SIZE);
+  const shareImageGeneratorRef = React.useRef<ShareImageGeneratorRef>(null);
 
   const userProfile = useAuthStore((s) => s.userProfile);
   const currentUser = useAuthStore((s) => s.currentUser);
@@ -93,12 +95,16 @@ export function ProfileActivityTabs({
 
   const handleShareHighlight = useCallback(async (item: UserHighlightItem) => {
     try {
-      const cleanText = item.text ? item.text.replace(/{{note:[0-9]+}}/g, '').trim() : '';
-      const verseRefLabel = item.verseRangeLabel || `${item.verseNumber}`;
-      const msg = cleanText
-        ? `"${cleanText}" — ${getHumanReadableBookName(item.bookName)} ${item.chapter}:${verseRefLabel}`
-        : `${getHumanReadableBookName(item.bookName)} ${item.chapter}:${verseRefLabel}`;
-      await Share.share({ message: msg });
+      if (shareImageGeneratorRef.current) {
+        await shareImageGeneratorRef.current.captureAndShare(item, 'highlight');
+      } else {
+        const cleanText = item.text ? item.text.replace(/{{note:[0-9]+}}/g, '').trim() : '';
+        const verseRefLabel = item.verseRangeLabel || `${item.verseNumber}`;
+        const msg = cleanText
+          ? `"${cleanText}" — ${getHumanReadableBookName(item.bookName)} ${item.chapter}:${verseRefLabel}`
+          : `${getHumanReadableBookName(item.bookName)} ${item.chapter}:${verseRefLabel}`;
+        await Share.share({ message: msg });
+      }
     } catch (e) {
       console.error('Failed to share highlight:', e);
     }
@@ -408,9 +414,13 @@ export function ProfileActivityTabs({
 
     const options = ['Cancel', 'Share Note', 'Delete Note'];
 
-    const handleAction = (buttonIndex: number) => {
+    const handleAction = async (buttonIndex: number) => {
       if (buttonIndex === 1) {
-        Share.share({ message: `${reference}\n\n${note.content || ''}` });
+        if (shareImageGeneratorRef.current) {
+          await shareImageGeneratorRef.current.captureAndShare(note);
+        } else {
+          Share.share({ message: `${reference}\n\n${note.content || ''}` });
+        }
       } else if (buttonIndex === 2) {
         Alert.alert('Delete Note', 'Are you sure you want to delete this note?', [
           { text: 'Cancel', style: 'cancel' },
@@ -826,6 +836,7 @@ export function ProfileActivityTabs({
 
   return (
     <View style={styles.container}>
+      <ShareImageGenerator ref={shareImageGeneratorRef} />
       <Text style={styles.sectionTitle}>My Activity</Text>
 
       {/* Instant Tab Bar Selector */}
