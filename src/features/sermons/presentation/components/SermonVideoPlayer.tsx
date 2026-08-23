@@ -244,15 +244,17 @@ export function SermonVideoPlayer({
 
   if (!videoSource) {
     return (
-      <View style={styles.container}>
-        <Image
-          source={sermon.thumbnailUrl ? { uri: sermon.thumbnailUrl } : undefined}
-          style={StyleSheet.absoluteFill}
-          resizeMode="cover"
-        cachePolicy="memory-disk" transition={200} />
-        <View style={styles.overlay}>
-          <ActivityIndicator size="large" color={GOLD} />
-        </View>
+      <View style={[styles.container, isSmall && { backgroundColor: 'transparent' }]}>
+        <Animated.View style={[StyleSheet.absoluteFill, { zIndex: 2 }, animatedVideoViewStyle]}>
+          <Image
+            source={sermon.thumbnailUrl ? { uri: sermon.thumbnailUrl } : undefined}
+            style={StyleSheet.absoluteFill}
+            resizeMode="cover"
+          cachePolicy="memory-disk" transition={200} />
+          <View style={styles.overlay}>
+            <ActivityIndicator size="large" color={GOLD} />
+          </View>
+        </Animated.View>
       </View>
     );
   }

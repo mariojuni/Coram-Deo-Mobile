@@ -81,12 +81,12 @@ export function GlobalVideoPlayer() {
   }, [activeSermonId]);
 
   useEffect(() => {
-    setIsProgressLoaded(false);
     if (currentUser && activeSermonId) {
+      setIsProgressLoaded(false);
       loadProgress(currentUser.uid, activeSermonId).finally(() => {
         setIsProgressLoaded(true);
       });
-    } else if (!currentUser) {
+    } else {
       setIsProgressLoaded(true);
     }
   }, [currentUser, activeSermonId]);
@@ -151,6 +151,7 @@ export function GlobalVideoPlayer() {
         if (event.translationY > 150 || event.velocityY > 500) {
           runOnJS(minimize)();
         } else {
+          translateY.value = withSpring(0, { damping: 24, stiffness: 220, mass: 0.9 });
           runOnJS(expand)();
         }
       } else if (playerMode === 'minimized') {
@@ -160,6 +161,8 @@ export function GlobalVideoPlayer() {
           // Swipe down to dismiss
           runOnJS(closeVideo)();
         } else {
+          const targetY = tabBarVisible ? MAX_TRANSLATE_Y : MAX_TRANSLATE_Y + HIDDEN_OFFSET;
+          translateY.value = withSpring(targetY, { damping: 24, stiffness: 220, mass: 0.9 });
           runOnJS(minimize)();
         }
       }
