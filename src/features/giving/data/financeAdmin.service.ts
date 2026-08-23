@@ -12,11 +12,12 @@ import {
   serverTimestamp,
   updateDoc
 } from 'firebase/firestore';
-import { GivingRecord, GivingExpense, CampaignStatus } from '../domain/giving.types';
+import { GivingRecord, GivingExpense, CampaignStatus, ExpenseCategoryModel } from '../domain/giving.types';
 
 const GIVING_COLLECTION = 'givingRecords';
 const EXPENSE_COLLECTION = 'givingExpenses';
 const CAMPAIGN_COLLECTION = 'givingCampaigns';
+const EXPENSE_CATEGORIES_COLLECTION = 'expenseCategories';
 
 export async function createManualGivingRecord(
   churchId: string, 
@@ -233,6 +234,16 @@ export async function getRecentExpenses(churchId: string, maxCount: number = 20)
   );
   const snap = await getDocs(q);
   return snap.docs.map(d => ({ ...d.data(), id: d.id } as GivingExpense));
+}
+
+export async function getActiveExpenseCategories(churchId: string): Promise<ExpenseCategoryModel[]> {
+  const q = query(
+    collection(getActiveDb(), EXPENSE_CATEGORIES_COLLECTION),
+    where('churchId', '==', churchId),
+    where('status', '==', 'active')
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ ...d.data(), id: d.id } as ExpenseCategoryModel)).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export async function getMonthlyFinanceSummary(churchId: string, startOfMonthIso?: string): Promise<{ 

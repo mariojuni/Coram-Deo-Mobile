@@ -12,14 +12,14 @@ import { ModernDropdown, DropdownOption } from '../../components/ui/ModernDropdo
 import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 import { SoftCard } from '@/components/ui/SoftCard';
 import { useAuthStore } from '../../store/useAuthStore';
-import { getRecentExpenses, createExpense } from '../../features/giving/data/financeAdmin.service';
+import { getRecentExpenses, createExpense, getActiveExpenseCategories } from '../../features/giving/data/financeAdmin.service';
 import { uploadProofOfPayment, generateGivingRecordId } from '../../features/giving/data/giving.repository';
 import { GivingExpense, ExpenseCategory } from '../../features/giving/domain/giving.types';
 import * as ImagePicker from 'expo-image-picker';
 import { useGiving } from '../../features/giving/presentation/hooks/useGiving';
 import { useMemo } from 'react';
 
-const CATEGORY_OPTIONS: DropdownOption<ExpenseCategory>[] = [
+const FALLBACK_CATEGORIES: DropdownOption<string>[] = [
   { label: 'Utilities', value: 'utilities' },
   { label: 'Ministry Supplies', value: 'ministry_supplies' },
   { label: 'Events & Programs', value: 'events_programs' },
@@ -45,6 +45,7 @@ export default function ExpenseTrackerScreen() {
   }, [funds]);
   
   const [expenses, setExpenses] = useState<GivingExpense[]>([]);
+  const [categories, setCategories] = useState<DropdownOption<string>[]>([]);
   const [loading, setLoading] = useState(true);
   
   const [addModalVisible, setAddModalVisible] = useState(false);
@@ -57,7 +58,7 @@ export default function ExpenseTrackerScreen() {
     amount: '',
     date: new Date(),
     vendorName: '',
-    category: 'utilities' as ExpenseCategory,
+    category: 'utilities' as string,
     description: '',
     fundId: '',
   });
@@ -70,11 +71,27 @@ export default function ExpenseTrackerScreen() {
     if (!userProfile?.churchId) return;
     setLoading(true);
     try {
-      const data = await getRecentExpenses(userProfile.churchId);
-      setExpenses(data);
+      const [expensesData, categoriesData] = await Promise.all([
+        getRecentExpenses(userProfile.churchId),
+        getActiveExpenseCategories(userProfile.churchId)
+      ]);
+      setExpenses(expensesData);
+      
+      const mappedCats = categoriesData.map(c => ({
+        label: c.name,
+        value: c.name
+      }));
+      setCategories(mappedCats);
+
+      setForm(prev => {
+        if (mappedCats.length > 0 && prev.category === 'utilities') {
+           return { ...prev, category: mappedCats[0].value };
+        }
+        return prev;
+      });
     } catch (error) {
       console.error(error);
-      Alert.alert('Error', 'Failed to fetch expenses.');
+      Alert.alert('Error', 'Failed to fetch data.');
     } finally {
       setLoading(false);
     }
@@ -134,7 +151,7 @@ export default function ExpenseTrackerScreen() {
         amount: '', 
         date: new Date(), 
         vendorName: '', 
-        category: 'utilities', 
+        category: categories.length > 0 ? categories[0].value : 'utilities', 
         description: '',
         fundId: ''
       });
@@ -165,7 +182,7 @@ export default function ExpenseTrackerScreen() {
         </View>
         <View style={styles.badgeRow}>
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>{CATEGORY_OPTIONS.find(c => c.value === item.category)?.label || item.category}</Text>
+            <Text style={styles.badgeText}>{categories.find(c => c.value === item.category)?.label || FALLBACK_CATEGORIES.find(c => c.value === item.category)?.label || item.category}</Text>
           </View>
           {item.visibility === 'public_summary' && (
             <View style={[styles.badge, { backgroundColor: '#E0F2FE' }]}>
@@ -304,9 +321,9 @@ export default function ExpenseTrackerScreen() {
               <View style={[styles.inputGroup, { zIndex: 900 }]}>
                 <ModernDropdown
                   label="Category *"
-                  options={CATEGORY_OPTIONS}
+                  options={categories.length > 0 ? categories : FALLBACK_CATEGORIES}
                   value={form.category}
-                  onSelect={(val) => setForm({ ...form, category: (val as ExpenseCategory) || 'utilities' })}
+                  onSelect={(val) => setForm({ ...form, category: val || (categories.length > 0 ? categories[0].value : 'utilities') })}
                   disableDarkMode
                 />
               </View>

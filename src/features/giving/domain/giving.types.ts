@@ -3,8 +3,15 @@ export type VisibilityType = 'public' | 'members_only' | 'admin_only';
 export type CampaignType = 'building_project' | 'ministry_fundraising' | 'missions' | 'event' | 'special_project';
 export type CampaignStatus = 'draft' | 'active' | 'completed' | 'archived';
 export type RecordStatus = 'pending' | 'approved' | 'completed' | 'rejected' | 'cancelled';
-export type ExpenseCategory = 'utilities' | 'ministry_supplies' | 'events_programs' | 'salaries_stipends' | 'facility_maintenance' | 'missions_outreach' | 'other';
+export type ExpenseCategory = 'utilities' | 'ministry_supplies' | 'events_programs' | 'salaries_stipends' | 'facility_maintenance' | 'missions_outreach' | 'other' | string;
 export type PaymentMethodType = 'gcash' | 'maya' | 'bank_transfer' | 'cash' | 'check' | 'other';
+
+export interface ExpenseCategoryModel {
+  id: string;
+  name: string;
+  status: 'active' | 'archived';
+  churchId: string;
+}
 
 export interface GivingFund {
   id: string;
