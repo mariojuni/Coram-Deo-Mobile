@@ -4,10 +4,11 @@ import {
     type BiblePreferences,
     type BibleVersion,
 } from '@/features/bible/presentation/hooks/useBibleTopNav';
+import * as ScreenOrientation from 'expo-screen-orientation';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import React, { useEffect, useState, useRef } from 'react';
-import { Animated, ActivityIndicator, StyleSheet, View } from 'react-native';
+import { Animated, ActivityIndicator, StyleSheet, View, Dimensions } from 'react-native';
 import BibleReader from '../../components/Bible/BibleReader';
 import BooksModal from '../../components/Bible/BooksModal';
 import TopNavBar from '../../components/Navigation/TopNavBar';
@@ -38,13 +39,32 @@ export default function BibleScreen() {
   const userProfile = useAuthStore((state) => state.userProfile);
   const setTranslation = useBibleVersionStore((state) => state.setTranslation);
   const globalTranslation = useBibleVersionStore((state) => state.activeTranslation);
+  const secondaryTranslation = useBibleVersionStore((state) => state.secondaryTranslation);
+  const setSecondaryTranslation = useBibleVersionStore((state) => state.setSecondaryTranslation);
   const setSyncToastMessage = useUIStore((state) => state.setSyncToastMessage);
   const [preferences, setPreferences] = useState<BiblePreferencesWithHighlights | null>(cachedPreferences);
   const [savedVersions, setSavedVersions] = useState<BibleVersion[]>(cachedSavedVersions);
   const [books, setBooks] = useState<BibleBook[]>(cachedBooks);
   const [isBooksModalOpen, setIsBooksModalOpen] = useState(false);
+  
+  const [isLandscape, setIsLandscape] = useState(false);
+  const [isSplitMode, setIsSplitMode] = useState(false);
+
   const router = useRouter();
   const scrollY = useRef(new Animated.Value(0)).current;
+
+  // Global orientation handled in _layout.tsx based on route segments
+
+  // Detect orientation changes
+  useEffect(() => {
+    const updateOrientation = () => {
+      const { width, height } = Dimensions.get('window');
+      setIsLandscape(width > height);
+    };
+    updateOrientation();
+    const subscription = Dimensions.addEventListener('change', updateOrientation);
+    return () => subscription.remove();
+  }, []);
 
   // Instantly sync active translation from global store
   useEffect(() => {
@@ -93,6 +113,16 @@ export default function BibleScreen() {
     loadBooks();
   }, [preferences?.activeTranslation]);
 
+  const setTabBarVisible = useUIStore((state) => state.setTabBarVisible);
+
+  useEffect(() => {
+    if (isLandscape) {
+      setTabBarVisible(false);
+    } else {
+      setTabBarVisible(true);
+    }
+  }, [isLandscape, setTabBarVisible]);
+
   // Sync highlights from Firebase is removed, now handled inside BibleReader using bibleVerseHighlights collection
 
   const handleUpdatePreferences = async (updates: Partial<BiblePreferencesWithHighlights>) => {
@@ -121,6 +151,11 @@ export default function BibleScreen() {
     );
   }
 
+  // Find the label for the secondary version
+  const effectiveSecondaryTranslation = secondaryTranslation || safePreferences.activeTranslation;
+  const secondaryVersionObj = savedVersions.find((v) => String(v.id) === String(effectiveSecondaryTranslation));
+  const secondaryRightText = secondaryVersionObj ? secondaryVersionObj.abbreviation : 'SELECT';
+
   return (
     <View style={styles.container}>
       <BibleReader
@@ -128,8 +163,11 @@ export default function BibleScreen() {
         updatePreferences={handleUpdatePreferences}
         books={books}
         scrollToVerse={(preferences as any)?.scrollToVerse}
-        controlsTabBar
+        controlsTabBar={!isLandscape} // don't let it toggle tab bar if we forced it hidden in landscape
         scrollY={scrollY}
+        isLandscape={isLandscape}
+        isSplitMode={isSplitMode && isLandscape}
+        secondaryTranslation={effectiveSecondaryTranslation}
       />
 
       <TopNavBar
@@ -138,6 +176,16 @@ export default function BibleScreen() {
         rightText={rightText}
         onRightPress={() => router.push('/version-manager')}
         scrollY={scrollY}
+        showSplitIcon={isLandscape}
+        isSplitMode={isSplitMode && isLandscape}
+        onSplitPress={() => setIsSplitMode(!isSplitMode)}
+        secondaryRightText={secondaryRightText}
+        onSecondaryRightPress={() => {
+          // Open a modal to select secondary translation. For now we can reuse VersionManager but it only sets primary.
+          // Wait, VersionManager is a screen that sets the global activeTranslation. We might need a way to set secondary.
+          // I will just push to a new parameter for secondary.
+          router.push({ pathname: '/version-manager', params: { isSecondary: 'true' } });
+        }}
       />
 
       <BooksModal

@@ -1,19 +1,24 @@
 
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { BounceCard } from '@/components/ui/BounceCard';
 import { Plus, X, RefreshCw } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { ActionSheetIOS, Alert, Platform, ScrollView, Text, TouchableOpacity, View, StyleSheet } from 'react-native';
+import * as ScreenOrientation from 'expo-screen-orientation';
+import React, { useEffect, useState, useCallback } from 'react';
 import { removeVersion, checkForVersionUpdates } from '@/features/bible/data/bible.repository';
 import { useVersionContext } from '@/features/bible/presentation/context/VersionManagerContext';
 import { styles } from '@/features/bible/presentation/version-manager/styles';
 import { useBibleVersionStore } from '@/store/useBibleVersionStore';
 import { SoftCard } from '@/components/ui/SoftCard';
-import { useEffect, useState } from 'react';
 
 export default function MyVersionsScreen() {
   const router = useRouter();
+  const { isSecondary } = useLocalSearchParams<{ isSecondary?: string }>();
+  const isSettingSecondary = isSecondary === 'true';
+
   const { savedVersions, activeTranslation, handleSelectVersion, publishers, refreshSavedVersions } = useVersionContext();
+  const secondaryTranslation = useBibleVersionStore((state) => state.secondaryTranslation);
   const [updateStatus, setUpdateStatus] = useState<Record<string, { hasUpdate: boolean; remoteVersion: number }>>({});
 
   useEffect(() => {
@@ -69,7 +74,7 @@ export default function MyVersionsScreen() {
               <Plus size={26} color="#1a1a1a" />
             </TouchableOpacity>
           </View>
-          <Text style={[styles.modalTitle, { marginHorizontal: 12, fontSize: 16 }]}>My Versions</Text>
+          <Text style={[styles.modalTitle, { marginHorizontal: 12, fontSize: 16 }]}>{isSettingSecondary ? 'Select Secondary Version' : 'My Versions'}</Text>
           <View style={{ minWidth: 40, alignItems: 'flex-end' }}>
             <BounceCard 
               bounceScale={0.85} 
@@ -96,7 +101,9 @@ export default function MyVersionsScreen() {
             <Text style={styles.emptyText}>No versions saved yet. Click + to find translations.</Text>
           ) : (
             savedVersions.map((version: any) => {
-              const isActive = String(version.id) === String(activeTranslation);
+              const isActive = isSettingSecondary 
+                ? String(version.id) === String(secondaryTranslation)
+                : String(version.id) === String(activeTranslation);
               const abbr = String(version.local_abbreviation || version.abbreviation || version.id || '').replace(/(\d{2,})$/, '\n$1');
               const updateInfo = updateStatus[String(version.id)];
               const hasUpdate = updateInfo?.hasUpdate === true;
@@ -105,8 +112,12 @@ export default function MyVersionsScreen() {
                 <TouchableOpacity
                   key={version.id}
                   onPress={() => {
-                    useBibleVersionStore.getState().setTranslation(version.id);
-                    handleSelectVersion(version.id);
+                    if (isSettingSecondary) {
+                      useBibleVersionStore.getState().setSecondaryTranslation(version.id);
+                    } else {
+                      useBibleVersionStore.getState().setTranslation(version.id);
+                      handleSelectVersion(version.id);
+                    }
                     router.back();
                   }}
                   onLongPress={() => handleOptions(version)}

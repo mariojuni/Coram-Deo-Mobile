@@ -71,7 +71,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     name: isProd ? "CoramDeo" : "CoramDeo-DEV",
     slug: "CoramDeoApp",
     version: "1.0.0",
-    orientation: "portrait",
+    orientation: "default",
     icon: "./assets/images/icon.png",
     scheme: "coramdeoapp",
     userInterfaceStyle: "light",

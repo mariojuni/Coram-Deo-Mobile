@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useColorScheme, View, Text, StyleSheet, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
+import * as ScreenOrientation from 'expo-screen-orientation';
 import { AnimatedSplashScreen } from '@/features/splash/AnimatedSplashScreen';
 import { VersionProvider } from '@/features/bible/presentation/context/VersionManagerContext';
 import { AudioProvider } from '../features/sermons/presentation/context/AudioContext';
@@ -52,6 +53,17 @@ export default function RootLayout() {
       setHasSeenWalkthrough(value === 'true');
     });
   }, []);
+
+  useEffect(() => {
+    const allowedLandscapeRoutes = ['bible', 'version-manager', 'bible-notes'];
+    const isLandscapeAllowed = segments.some(segment => allowedLandscapeRoutes.includes(segment));
+
+    if (isLandscapeAllowed) {
+      ScreenOrientation.unlockAsync().catch(() => {});
+    } else {
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+    }
+  }, [segments]);
 
   useEffect(() => {
     const initEnvAndAuth = async () => {

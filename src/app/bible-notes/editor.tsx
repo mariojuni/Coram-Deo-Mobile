@@ -105,7 +105,7 @@ export default function BibleNoteEditorScreen() {
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
         
-        <View style={styles.headerContent}>
+        <View style={[styles.headerContent, { paddingLeft: Math.max(insets.left, 20), paddingRight: Math.max(insets.right, 20) }]}>
           <BounceCard bounceScale={0.85} style={styles.headerCircleBtn} onPress={handleClose} hitSlop={12}>
             <X size={20} color="#1a1a1a" strokeWidth={2.5} />
           </BounceCard>
@@ -129,7 +129,14 @@ export default function BibleNoteEditorScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView 
           style={styles.scroll} 
-          contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 70 }]}
+          contentContainerStyle={[
+            styles.scrollContent, 
+            { 
+              paddingTop: Math.max(insets.top, 20) + 80,
+              paddingLeft: Math.max(insets.left, 16),
+              paddingRight: Math.max(insets.right, 16)
+            }
+          ]}
           showsVerticalScrollIndicator={false}
           keyboardDismissMode="interactive"
         >

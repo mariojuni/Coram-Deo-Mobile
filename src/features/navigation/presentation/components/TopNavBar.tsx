@@ -11,11 +11,29 @@ export interface TopNavBarProps {
   onRightPress: () => void;
   rightText: string;
   scrollY?: Animated.Value;
+  showSplitIcon?: boolean;
+  isSplitMode?: boolean;
+  onSplitPress?: () => void;
+  secondaryRightText?: string;
+  onSecondaryRightPress?: () => void;
 }
+
+import { Columns } from 'lucide-react-native';
 
 const COLLAPSE_RANGE = 70;
 
-export function TopNavBar({ leftText, onLeftPress, rightText, onRightPress, scrollY }: TopNavBarProps) {
+export function TopNavBar({ 
+  leftText, 
+  onLeftPress, 
+  rightText, 
+  onRightPress, 
+  scrollY,
+  showSplitIcon,
+  isSplitMode,
+  onSplitPress,
+  secondaryRightText,
+  onSecondaryRightPress
+}: TopNavBarProps) {
   const insets = useSafeAreaInsets();
 
   const pillScale = scrollY ? scrollY.interpolate({
@@ -59,16 +77,42 @@ export function TopNavBar({ leftText, onLeftPress, rightText, onRightPress, scro
           ]} 
           pointerEvents="box-none"
         >
+          {isSplitMode && (
+            <>
+              <DebouncedTouchable style={styles.versionBtn} onPress={onRightPress}>
+                <Text style={styles.versionText}>{rightText}</Text>
+              </DebouncedTouchable>
+              <View style={styles.divider} />
+            </>
+          )}
+
           <DebouncedTouchable style={styles.bookBtn} onPress={onLeftPress}>
             <Text style={styles.bookText}>{leftText}</Text>
           </DebouncedTouchable>
 
           <View style={styles.divider} />
 
-          <DebouncedTouchable style={styles.versionBtn} onPress={onRightPress}>
-            <Text style={styles.versionText}>{rightText}</Text>
-          </DebouncedTouchable>
+          {isSplitMode ? (
+            !!(secondaryRightText && onSecondaryRightPress) && (
+              <DebouncedTouchable style={styles.versionBtn} onPress={onSecondaryRightPress}>
+                <Text style={styles.versionText}>{secondaryRightText}</Text>
+              </DebouncedTouchable>
+            )
+          ) : (
+            <DebouncedTouchable style={styles.versionBtn} onPress={onRightPress}>
+              <Text style={styles.versionText}>{rightText}</Text>
+            </DebouncedTouchable>
+          )}
         </Animated.View>
+        
+        {/* Right side icons */}
+        {!!showSplitIcon ? (
+          <View style={[styles.rightActions, { right: Math.max(insets.right, 16) }]}>
+            <DebouncedTouchable style={[styles.splitBtn, isSplitMode && styles.splitBtnActive]} onPress={onSplitPress}>
+              <Columns size={20} color={isSplitMode ? "#FFFFFF" : "#4B5563"} />
+            </DebouncedTouchable>
+          </View>
+        ) : null}
       </View>
     </Animated.View>
   );
@@ -134,4 +178,20 @@ const styles = StyleSheet.create({
     color: '#FF6596',
     textTransform: 'uppercase',
   },
+  splitBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+  },
+  splitBtnActive: {
+    backgroundColor: '#FF6596',
+  },
+  rightActions: {
+    position: 'absolute',
+    right: 16,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  }
 });

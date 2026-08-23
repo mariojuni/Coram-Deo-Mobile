@@ -25,6 +25,9 @@ interface BibleReaderProps {
   controlsTabBar?: boolean;
   /** Optional animated value for scroll position */
   scrollY?: Animated.Value;
+  isLandscape?: boolean;
+  isSplitMode?: boolean;
+  secondaryTranslation?: string | number | null;
 }
 
 interface VerseCrossReference {
@@ -78,7 +81,7 @@ const SUPERSCRIPT_MAP: Record<string, string> = {
 const toSuperscript = (num: string) =>
   num.split('').map(d => SUPERSCRIPT_MAP[d] ?? d).join('');
 
-export default function BibleReader({ preferences, updatePreferences, books, hideChapterNav = false, scrollToVerse, controlsTabBar = false, scrollY }: BibleReaderProps) {
+export default function BibleReader({ preferences, updatePreferences, books, hideChapterNav = false, scrollToVerse, controlsTabBar = false, scrollY, isLandscape, isSplitMode, secondaryTranslation }: BibleReaderProps) {
   const { playerMode } = useGlobalVideoStore();
   const scrollRef = useRef<ScrollView>(null);
   const contentHeightRef = useRef<number>(0);
@@ -104,6 +107,17 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
     }).start();
   }, [tabBarVisible, controlsTabBar]);
   
+  const primaryReader = useBibleReader(preferences, books, updatePreferences);
+  const selectedVerseSet = useMemo(() => new Set(primaryReader.selectedVerses), [primaryReader.selectedVerses]);
+
+  const secondaryPreferences = useMemo(() => ({
+    ...preferences,
+    activeTranslation: secondaryTranslation || preferences.activeTranslation
+  }), [preferences, secondaryTranslation]);
+  
+  const secondaryReader = useBibleReader(secondaryPreferences, books, () => {}, { skipFetch: !isSplitMode || !secondaryTranslation });
+
+  // Use primary reader data for main logic
   const {
     chapterData,
     highlightColors,
@@ -118,8 +132,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
     toggleVerse,
     clearSelection,
     chapterHighlights,
-  } = useBibleReader(preferences, books, updatePreferences);
-  const selectedVerseSet = useMemo(() => new Set(selectedVerses), [selectedVerses]);
+  } = primaryReader;
 
   const activeColors = useMemo(() => {
     const colors = new Set<string>();
@@ -153,7 +166,9 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
         const y = e.nativeEvent.contentOffset.y;
         const delta = y - lastScrollY.current;
         if (Math.abs(delta) > 6) {
-          setTabBarVisible(delta < 0 || y < 60);
+          if (!isLandscape) {
+            setTabBarVisible(delta < 0 || y < 60);
+          }
         }
         lastScrollY.current = y;
       },
@@ -256,7 +271,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
   const highlightTranslateY = useRef(new Animated.Value(200)).current;
   const lastSelectedVersesCount = useRef(0);
   const windowHeight = Dimensions.get('window').height;
-  const highlightModalHeight = windowHeight * 0.15;
+  const highlightModalHeight = Math.max(130, windowHeight * 0.15);
 
   useEffect(() => {
     if (selectedVerses.length > 0) {
@@ -267,11 +282,15 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
           bounciness: 0,
         }).start();
       }
-      setTabBarVisible(false);
+      if (!isLandscape) {
+        setTabBarVisible(false);
+      }
       setHideCompactPlayer(true);
     } else {
       highlightTranslateY.setValue(200);
-      setTabBarVisible(true);
+      if (!isLandscape) {
+        setTabBarVisible(true);
+      }
       setHideCompactPlayer(false);
     }
     lastSelectedVersesCount.current = selectedVerses.length;
@@ -357,6 +376,100 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
     console.log("First verse raw data:", JSON.stringify(chapterData[0], null, 2));
   }
 
+  // Render a column for a given reader
+  const renderColumn = (reader: ReturnType<typeof useBibleReader>, isSecondary = false) => {
+    return (
+      <Text
+        style={[styles.chapterContent, isSecondary && { paddingLeft: 12 }]}
+        onLayout={isSecondary ? undefined : (e) => {
+          contentHeightRef.current = e.nativeEvent.layout.height;
+        }}
+      >
+        {reader.chapterData.flatMap((verse: Verse) => {
+          const isSelected = selectedVerseSet.has(verse.verseNumber);
+          const highlightColorValue = verseBackgroundColor(verse.verseNumber);
+          const hasHighlight = highlightColorValue !== 'transparent';
+          const sanitizedContent = sanitizeVerseText(verse.content);
+
+          const renderVerseContent = (verse: Verse, text: string, hasHighlight: boolean, highlightColorValue: string, isSelected: boolean) => {
+            const cleanText = text.replace(/\{\{note:\d+\}\}/g, '');
+            const hasNotes = !isSecondary && ((verse.crossReferences && verse.crossReferences.length > 0) || (verse.notes && verse.notes.length > 0));
+            
+            return (
+              <Text
+                key={verse.id}
+                suppressHighlighting
+                style={[
+                  isSelected && styles.verseSelected,
+                ]}
+              >
+                <Text 
+                  suppressHighlighting 
+                  onPress={() => toggleVerse(verse.verseNumber)}
+                  style={hasHighlight ? { backgroundColor: highlightColorValue } : undefined}
+                >
+                  {cleanText}
+                </Text>
+                {hasNotes && (
+                  <Text
+                    suppressHighlighting
+                    onPress={() => setActiveVerse(verse)}
+                    style={[{ fontSize: 12 }, hasHighlight ? { backgroundColor: highlightColorValue } : undefined]}
+                  >
+                    {' '}
+                    <Image
+                      source={{ uri: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAABpklEQVR4nNSXMU/CQBTHX4+mg5ujibth1DgZP0ahYVNY9AvIyuSki4suaOJCCp39BMbJSOJC3E0cjavQw/8Rrjm0pa13pfpb+qB39+s9HndXRiXBqCTs71/0+/0tXPYty9rknFukAWNsCl4R3tfr9Rf13sLAvu+3ITwl85ngeIC253lnP8RBEGxjhk9UIMjAjuu6QxFHqQ7DcBezncV4Om80GgWdToeTBujPqtWqi3F96cBlJo5SipsbMjYhnYu5GCvOEYkxS6Z2IEOoY6kOO61jr9fbs23bSbo/mUw+G43GA+VkqRhVfoT0XOJJE9tUKhXR7hgVe0U5+DsLiIqYBVL9vPJUC34zqBFxWnHFkSUL2sUVR5aC+7/FFYd2qgWlFZcuYqOQMeqFr0Qsdyf5GUX6lkk8GAwO0fgc4ToZANX+mCrG36EJaZfMwJHmE3kISBTPZxpJ0ekCp5N3yol65qrVagtnrlgxGl8r0iY63ZBhlv3GU0gPIL2lAkgUQ9oqSipQl8wPGSDVrSLSqxLNeDwedx3HWYN0iKXyjgpG601Bh9J2py8AAAD//9JiXhkAAAAGSURdVAMAgwvIsxSQIioAAAAASUVORK5CYII=' }}
+                      style={{ width: 14, height: 14, tintColor: '#aaa', marginTop: 2 }}
+                    />
+                  </Text>
+                )}
+                {' '}
+              </Text>
+            );
+          };
+
+          const isFirstVerse = reader.chapterData.indexOf(verse) === 0;
+
+          const nodes = [
+            <Text
+              key={`${verse.id}-n`}
+              style={[
+                styles.verseLabel,
+                hasHighlight && { backgroundColor: highlightColorValue },
+                isSelected && styles.verseSelected,
+              ]}
+            >
+              {toSuperscript(verse.verseNumber)}{'\u2060'}
+            </Text>,
+            renderVerseContent(verse, sanitizedContent, hasHighlight, highlightColorValue, isSelected),
+          ];
+
+          if (verse.heading || verse.subheading) {
+            nodes.unshift(
+              <Text key={`${verse.id}-heading-container`}>
+                {isFirstVerse ? '' : '\n\n'}
+                {verse.heading && (
+                  <Text style={styles.verseHeading}>
+                    {verse.heading.replace(/#/g, '')}
+                  </Text>
+                )}
+                {verse.heading && verse.subheading && <Text>{'\n'}</Text>}
+                {verse.subheading && (
+                  <Text style={styles.verseSubheading}>
+                    {verse.subheading.replace(/#/g, '')}
+                  </Text>
+                )}
+                {'\n'}
+              </Text>
+            );
+          }
+          return nodes;
+        })}
+      </Text>
+    );
+  };
+
+
   return (
     <View style={styles.container}>
       <Animated.View
@@ -366,116 +479,49 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
         <Animated.ScrollView
           ref={scrollRef as any}
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent, 
+            { 
+              paddingLeft: Math.max(insets.left, isSplitMode ? 16 : 24),
+              paddingRight: Math.max(insets.right, isSplitMode ? 16 : 24),
+            }
+          ]}
           showsVerticalScrollIndicator={false}
           onScroll={handleScroll}
           scrollEventThrottle={16}
         >
-          {/* Strict 2-level nesting — verse number and content are DIRECT children of
-              the paragraph <Text> (level-2 siblings). backgroundColor never goes deeper
-              than level-2, so the iOS barcode bug cannot occur in any state (highlighted,
-              selected, or both). The Word Joiner (U+2060) at the end of the verse number
-              string signals the layout engine not to break the line between the number
-              and the first word of the verse, preventing orphaned verse numbers. */}
-          <Text
-            style={styles.chapterContent}
-            onLayout={(e) => {
-              contentHeightRef.current = e.nativeEvent.layout.height;
-            }}
-          >
-            {chapterData.flatMap((verse: Verse) => {
-              const isSelected = selectedVerseSet.has(verse.verseNumber);
-              const highlightColorValue = verseBackgroundColor(verse.verseNumber);
-              const hasHighlight = highlightColorValue !== 'transparent';
-              const sanitizedContent = sanitizeVerseText(verse.content);
-
-              const renderVerseContent = (verse: Verse, text: string, hasHighlight: boolean, highlightColorValue: string, isSelected: boolean) => {
-                const cleanText = text.replace(/\{\{note:\d+\}\}/g, '');
-                const hasNotes = (verse.crossReferences && verse.crossReferences.length > 0) || (verse.notes && verse.notes.length > 0);
-                
-                return (
-                  <Text
-                    key={verse.id}
-                    suppressHighlighting
-                    style={[
-                      isSelected && styles.verseSelected,
-                    ]}
-                  >
-                    <Text 
-                      suppressHighlighting 
-                      onPress={() => toggleVerse(verse.verseNumber)}
-                      style={hasHighlight ? { backgroundColor: highlightColorValue } : undefined}
-                    >
-                      {cleanText}
-                    </Text>
-                    {hasNotes && (
-                      <Text
-                        suppressHighlighting
-                        onPress={() => setActiveVerse(verse)}
-                        style={[{ fontSize: 12 }, hasHighlight ? { backgroundColor: highlightColorValue } : undefined]}
-                      >
-                        {' '}
-                        <Image
-                          source={{ uri: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAABpklEQVR4nNSXMU/CQBTHX4+mg5ujibth1DgZP0ahYVNY9AvIyuSki4suaOJCCp39BMbJSOJC3E0cjavQw/8Rrjm0pa13pfpb+qB39+s9HndXRiXBqCTs71/0+/0tXPYty9rknFukAWNsCl4R3tfr9Rf13sLAvu+3ITwl85ngeIC253lnP8RBEGxjhk9UIMjAjuu6QxFHqQ7DcBezncV4Om80GgWdToeTBujPqtWqi3F96cBlJo5SipsbMjYhnYu5GCvOEYkxS6Z2IEOoY6kOO61jr9fbs23bSbo/mUw+G43GA+VkqRhVfoT0XOJJE9tUKhXR7hgVe0U5+DsLiIqYBVL9vPJUC34zqBFxWnHFkSUL2sUVR5aC+7/FFYd2qgWlFZcuYqOQMeqFr0Qsdyf5GUX6lkk8GAwO0fgc4ToZANX+mCrG36EJaZfMwJHmE3kISBTPZxpJ0ekCp5N3yol65qrVagtnrlgxGl8r0iY63ZBhlv3GU0gPIL2lAkgUQ9oqSipQl8wPGSDVrSLSqxLNeDwedx3HWYN0iKXyjgpG601Bh9J2py8AAAD//9JiXhkAAAAGSURdVAMAgwvIsxSQIioAAAAASUVORK5CYII=' }}
-                          style={{ width: 14, height: 14, tintColor: '#aaa', marginTop: 2 }}
-                        />
-                      </Text>
-                    )}
-                    {' '}
-                  </Text>
-                );
-              };
-
-              const isFirstVerse = chapterData.indexOf(verse) === 0;
-
-              const nodes = [
-                // Level-2a — verse number. Word Joiner at the end locks it to the
-                // first word of the content so the line cannot break between them.
-                <Text
-                  key={`${verse.id}-n`}
-                  style={[
-                    styles.verseLabel,
-                    hasHighlight && { backgroundColor: highlightColorValue },
-                    isSelected && styles.verseSelected,
-                  ]}
-                >
-                  {toSuperscript(verse.verseNumber)}{'\u2060'}
-                </Text>,
-                // Level-2b — verse content. Leaf node, backgroundColor safe here.
-                renderVerseContent(verse, sanitizedContent, hasHighlight, highlightColorValue, isSelected),
-              ];
-
-              if (verse.heading || verse.subheading) {
-                console.log(`Rendering heading/subheading for verse ${verse.verseNumber}`);
-                nodes.unshift(
-                  <Text key={`${verse.id}-heading-container`}>
-                    {isFirstVerse ? '' : '\n\n'}
-                    {verse.heading && (
-                      <Text style={styles.verseHeading}>
-                        {verse.heading.replace(/#/g, '')}
-                      </Text>
-                    )}
-                    {verse.heading && verse.subheading && <Text>{'\n'}</Text>}
-                    {verse.subheading && (
-                      <Text style={styles.verseSubheading}>
-                        {verse.subheading.replace(/#/g, '')}
-                      </Text>
-                    )}
-                    {'\n'}
-                  </Text>
-                );
-              }
-
-              return nodes;
-            })}
-          </Text>
+          {isSplitMode ? (
+            <View style={{ flexDirection: 'row' }}>
+              <View style={{ flex: 1, paddingRight: 12 }}>
+                {renderColumn(primaryReader, false)}
+              </View>
+              <View style={{ width: 1, backgroundColor: '#e1e4e8', marginTop: 12, marginBottom: 12 }} />
+              <View style={{ flex: 1 }}>
+                {secondaryReader.loading ? (
+                  <ActivityIndicator style={{ marginTop: 20 }} />
+                ) : (
+                  renderColumn(secondaryReader, true)
+                )}
+              </View>
+            </View>
+          ) : (
+            renderColumn(primaryReader, false)
+          )}
         </Animated.ScrollView>
       </Animated.View>
       
       {/* Navigation Arrows overlay */}
       {selectedVerses.length === 0 && !hideChapterNav && (
         <Animated.View
-            style={[styles.navOverlay, { bottom: playerMode === 'minimized' ? 205 : 110 }, controlsTabBar ? { transform: [{ translateY: playerMode === 'minimized' ? Animated.multiply(navTranslateY, 85 / 120) : navTranslateY }] } : undefined]}
+            style={[
+              styles.navOverlay, 
+              { 
+                bottom: playerMode === 'minimized' ? 205 : (isLandscape ? Math.max(insets.bottom, 20) + 10 : 110),
+                left: Math.max(insets.left, 24),
+                right: Math.max(insets.right, 24),
+              }, 
+              controlsTabBar ? { transform: [{ translateY: playerMode === 'minimized' ? Animated.multiply(navTranslateY, 85 / 120) : navTranslateY }] } : undefined
+            ]}
             pointerEvents="box-none"
           >
           <TouchableOpacity style={styles.navBtn} onPress={onPrevChapter}>
@@ -496,6 +542,9 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
             { 
               height: highlightModalHeight,
               bottom: -5, 
+              left: Math.max(insets.left, 0),
+              right: Math.max(insets.right, 0),
+              width: 'auto', // Override 100% width
               transform: [{ translateY: highlightTranslateY }] 
             }
           ]}
@@ -506,7 +555,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
           
           <View style={styles.highlightDragHandle} />
           
-          <View style={styles.highlightModalContent}>
+          <View style={[styles.highlightModalContent, { paddingBottom: Math.max(insets.bottom, 16) }]}>
             <View style={styles.actionsContainer}>
               {/* Copy Card */}
               <TouchableOpacity style={styles.actionButton} onPress={handleCopy}>

@@ -1,14 +1,19 @@
 
 
 import { Stack, useRouter } from 'expo-router';
-import { Dimensions, View, Animated, TouchableWithoutFeedback, StyleSheet } from 'react-native';
-import { useEffect, useMemo } from 'react';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+import { View, Animated, TouchableWithoutFeedback, StyleSheet, useWindowDimensions, PanResponder } from 'react-native';
+import { useEffect, useMemo, useRef } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function VersionManagerLayout() {
   const router = useRouter();
-  const slideAnim = useMemo(() => new Animated.Value(SCREEN_HEIGHT), []);
+  const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  
+  // Use a ref to store the current window height so the animation doesn't jump on rotate
+  const startHeight = useRef(windowHeight).current;
+  
+  const slideAnim = useMemo(() => new Animated.Value(startHeight), [startHeight]);
   const fadeAnim = useMemo(() => new Animated.Value(0), []);
 
   useEffect(() => {
@@ -29,7 +34,7 @@ export default function VersionManagerLayout() {
   const handleClose = () => {
     Animated.parallel([
       Animated.timing(slideAnim, {
-        toValue: SCREEN_HEIGHT,
+        toValue: windowHeight,
         duration: 200,
         useNativeDriver: true,
       }),
@@ -39,9 +44,31 @@ export default function VersionManagerLayout() {
         useNativeDriver: true,
       }),
     ]).start(() => {
-      router.replace('/(tabs)/bible');
+      router.back();
     });
   };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, g) => g.dy > 0,
+      onPanResponderMove: (_, g) => {
+        if (g.dy > 0) {
+          slideAnim.setValue(g.dy);
+        }
+      },
+      onPanResponderRelease: (_, g) => {
+        if (g.dy > windowHeight * 0.25 || g.vy > 1.5) {
+          handleClose();
+        } else {
+          Animated.spring(slideAnim, {
+            toValue: 0,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
 
   return (
     <View style={{ flex: 1, justifyContent: 'flex-end' }}>
@@ -49,7 +76,7 @@ export default function VersionManagerLayout() {
         <Animated.View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.5)', opacity: fadeAnim }} />
       </TouchableWithoutFeedback>
 
-      <Animated.View style={{ backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, height: SCREEN_HEIGHT * 0.9, overflow: 'hidden', transform: [{ translateY: slideAnim }] }}>
+      <Animated.View style={{ backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, height: windowHeight * 0.9, overflow: 'hidden', marginLeft: insets.left, marginRight: insets.right, transform: [{ translateY: slideAnim }] }}>
         <Stack
           screenOptions={{
             headerShown: false,
@@ -61,8 +88,10 @@ export default function VersionManagerLayout() {
           <Stack.Screen name="language" />
           <Stack.Screen name="detail" />
         </Stack>
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, alignItems: 'center', zIndex: 1000 }} pointerEvents="none">
-          <View style={styles.dragHandle} />
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000 }} {...panResponder.panHandlers}>
+          <View style={styles.dragHandleContainer}>
+            <View style={styles.dragHandle} />
+          </View>
         </View>
       </Animated.View>
     </View>
@@ -70,12 +99,15 @@ export default function VersionManagerLayout() {
 }
 
 const styles = StyleSheet.create({
+  dragHandleContainer: { 
+    paddingVertical: 12,
+    alignItems: 'center',
+    width: '100%',
+  },
   dragHandle: {
     width: 40,
     height: 5,
     backgroundColor: '#e1e4e8',
     borderRadius: 10,
-    marginTop: 12,
-    marginBottom: 4,
   },
 });

@@ -9,6 +9,7 @@ interface VotdData {
 
 interface BibleVersionState {
   activeTranslation: string | number;
+  secondaryTranslation: string | number | null;
   isLoaded: boolean;
   votdCache: Record<string, VotdData>;
   votdLoading: boolean;
@@ -16,12 +17,15 @@ interface BibleVersionState {
   loadTranslation: () => Promise<void>;
   /** Persist + broadcast a new translation choice */
   setTranslation: (id: string | number) => Promise<void>;
+  /** Persist local-only secondary translation choice */
+  setSecondaryTranslation: (id: string | number | null) => Promise<void>;
   /** Load the Verse of the Day */
   loadVotd: (translationId: string) => Promise<void>;
 }
 
 export const useBibleVersionStore = create<BibleVersionState>((set, get) => ({
   activeTranslation: '',
+  secondaryTranslation: null,
   isLoaded: false,
   votdCache: {},
   votdLoading: false,
@@ -30,7 +34,13 @@ export const useBibleVersionStore = create<BibleVersionState>((set, get) => ({
     if (get().isLoaded) return;
     try {
       const prefs = (await getUserPreferences()) as any;
-      set({ activeTranslation: prefs?.activeTranslation ?? '', isLoaded: true });
+      let secondary = null;
+      try {
+        const { default: AsyncStorage } = await import('@react-native-async-storage/async-storage');
+        const storedSecondary = await AsyncStorage.getItem('secondaryTranslation');
+        if (storedSecondary) secondary = storedSecondary;
+      } catch (e) {}
+      set({ activeTranslation: prefs?.activeTranslation ?? '', secondaryTranslation: secondary, isLoaded: true });
     } catch {
       set({ isLoaded: true });
     }
@@ -43,6 +53,20 @@ export const useBibleVersionStore = create<BibleVersionState>((set, get) => ({
       await saveUserPreferences({ ...(prefs ?? {}), activeTranslation: id });
     } catch {
       // non-fatal — in-memory state is already updated
+    }
+  },
+
+  setSecondaryTranslation: async (id) => {
+    set({ secondaryTranslation: id });
+    try {
+      const { default: AsyncStorage } = await import('@react-native-async-storage/async-storage');
+      if (id === null) {
+        await AsyncStorage.removeItem('secondaryTranslation');
+      } else {
+        await AsyncStorage.setItem('secondaryTranslation', String(id));
+      }
+    } catch {
+      // non-fatal
     }
   },
 

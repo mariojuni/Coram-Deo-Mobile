@@ -46,7 +46,8 @@ type Book = {
 export function useBibleReader(
   preferences: Preferences,
   books: Book[],
-  updatePreferences: (updates: Partial<Preferences>) => void
+  updatePreferences: (updates: Partial<Preferences>) => void,
+  options?: { skipFetch?: boolean }
 ) {
   const { activeTranslation, activeBook, activeChapter } = preferences;
   const [chapterData, setChapterData] = useState<ChapterData[]>([]);
@@ -78,6 +79,11 @@ export function useBibleReader(
     let isMounted = true;
     
     const loadChapter = async (showLoadingSpinner = true) => {
+      if (options?.skipFetch) {
+        if (isMounted) setLoading(false);
+        return;
+      }
+
       const timer = showLoadingSpinner ? setTimeout(() => {
         if (isMounted) setLoading(true);
       }, 150) : null;
@@ -114,7 +120,7 @@ export function useBibleReader(
       isMounted = false;
       subscription.remove();
     };
-  }, [activeTranslation, activeBook, activeChapter]);
+  }, [activeTranslation, activeBook, activeChapter, options?.skipFetch]);
 
   // Subscribe to user highlights for the passage
   useEffect(() => {

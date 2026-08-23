@@ -5,7 +5,7 @@ import { Animated, Dimensions, Keyboard, KeyboardAvoidingView, Modal, Platform, 
 
 
 
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
 export const ModalDragContext = React.createContext<Record<string, any>>({});
@@ -37,6 +37,7 @@ interface AppModalProps {
 
 export default function AppModal({ isOpen, onClose, title, children, containerStyle, headerLeft, headerRight, headerTitleAlign = 'center', hideHeader = false, hideDragHandle = false, heightRatio = 0.5, dynamicHeight = false, avoidKeyboard = true }: AppModalProps) {
   const slideAnim = useMemo(() => new Animated.Value(600), []);
+  const insets = useSafeAreaInsets();
 
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
@@ -102,30 +103,28 @@ export default function AppModal({ isOpen, onClose, title, children, containerSt
     };
   }, [avoidKeyboard]);
 
+  const sheetBg = StyleSheet.flatten(containerStyle)?.backgroundColor;
+
   useEffect(() => {
     if (isOpen) {
-      Animated.timing(slideAnim, {
+      slideAnim.setValue(windowHeight);
+      Animated.spring(slideAnim, {
         toValue: 0,
-        duration: 250,
         useNativeDriver: true,
+        bounciness: 0,
+        speed: 14,
       }).start();
-    } else {
-      slideAnim.setValue(600); // reset when closed
     }
-  }, [isOpen, slideAnim]);
-
-
-  const flatContainerStyle = containerStyle ? StyleSheet.flatten(containerStyle) : undefined;
-  const sheetBg = flatContainerStyle?.backgroundColor;
+  }, [isOpen, slideAnim, windowHeight]);
 
   return (
-    <Modal visible={isOpen} animationType="none" transparent={true} onRequestClose={onClose}>
+    <Modal visible={isOpen} animationType="none" transparent={true} onRequestClose={onClose} supportedOrientations={['portrait', 'landscape', 'landscape-left', 'landscape-right']}>
       <View style={styles.overlay}>
         <TouchableWithoutFeedback onPress={onClose}>
           <View style={styles.backdrop} />
         </TouchableWithoutFeedback>
 
-        <Animated.View style={[styles.sheet, sheetBg ? { backgroundColor: sheetBg } : null, dynamicHeight ? { flex: undefined } : { height: maxSheetHeight }, { transform: [{ translateY: slideAnim }], maxHeight: maxSheetHeight, marginBottom: avoidKeyboard ? keyboardHeight : 0 }]}>
+        <Animated.View style={[styles.sheet, sheetBg ? { backgroundColor: sheetBg } : null, dynamicHeight ? { flex: undefined } : { height: maxSheetHeight }, { transform: [{ translateY: slideAnim }], maxHeight: maxSheetHeight, marginBottom: avoidKeyboard ? keyboardHeight : 0, marginLeft: insets.left, marginRight: insets.right }]}>
           {!hideDragHandle && (<View {...panResponder.panHandlers} style={styles.dragHandleContainer}><View style={styles.dragHandle} /></View>)}
 
           {/* Header */}
@@ -175,7 +174,6 @@ const styles = StyleSheet.create({
   },
   sheet: {
     flex: 1,
-    width: '100%',
     backgroundColor: '#fff',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
