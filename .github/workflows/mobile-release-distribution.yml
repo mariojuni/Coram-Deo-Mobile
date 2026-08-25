@@ -77,9 +77,12 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          NODE_OPTIONS: "--max-old-space-size=2048"
         run: |
           EXPO_PUBLIC_APP_ENV=production npx expo prebuild --platform android --clean
-          echo "org.gradle.jvmargs=-Xmx3072m -XX:MaxMetaspaceSize=1024m" >> android/gradle.properties
+          echo "org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -Dkotlin.daemon.jvm.options=-Xmx512m" >> android/gradle.properties
+          echo "org.gradle.daemon=false" >> android/gradle.properties
+          echo "org.gradle.workers.max=1" >> android/gradle.properties
           bundle exec fastlane android production
           
       - name: Upload Build Reports on Failure
@@ -150,7 +153,8 @@ jobs:
             exit 1
           fi
           echo "MATCH_PASSWORD length: ${#MATCH_PASSWORD}"
-          EXPO_PUBLIC_APP_ENV=production npx expo prebuild --platform ios --clean
+          export EXPO_PUBLIC_APP_ENV=production
+          npx expo prebuild --platform ios --clean
           CLEAN_URL=$(echo "${{ secrets.MATCH_GIT_URL }}" | tr -d "'\"\r\n ")
           export MATCH_GIT_URL="$CLEAN_URL"
           RAW_AUTH="${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}"
