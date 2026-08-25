@@ -85,6 +85,9 @@ jobs:
           echo "org.gradle.workers.max=1" >> android/gradle.properties
           
           cd android
+          echo "Debug: Running mirror-kotlin-inline-modules manually to catch hidden stderr..."
+          node --no-warnings --eval "require('expo/bin/autolinking')" expo-modules-autolinking mirror-kotlin-inline-modules --kotlin-files-mirror-directory $(pwd)/src/main/java/inline/modules/ --inline-modules-list-directory $(pwd)/build/inline/modules/ --watched-directories-serialized "[]" || true
+          
           ./gradlew bundleRelease -Pandroid.injected.signing.store.file=../fastlane/upload-key.keystore -Pandroid.injected.signing.store.password=${ANDROID_KEYSTORE_PASSWORD} -Pandroid.injected.signing.key.alias=${ANDROID_KEY_ALIAS} -Pandroid.injected.signing.key.password=${ANDROID_KEY_PASSWORD} --stacktrace --console=plain > build_log.txt 2>&1 || { tail -n 250 build_log.txt; echo "❌ GRADLE BUILD FAILED. Check the lines above for the exact Caused by: error."; exit 1; }
           cd ..
           
