@@ -79,7 +79,8 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           NODE_OPTIONS: "--max-old-space-size=2048"
         run: |
-          EXPO_PUBLIC_APP_ENV=production npx expo prebuild --platform android --clean
+          export EXPO_PUBLIC_APP_ENV=production
+          npx expo prebuild --platform android --clean
           echo "org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -Dkotlin.daemon.jvm.options=-Xmx512m" >> android/gradle.properties
           echo "org.gradle.daemon=false" >> android/gradle.properties
           echo "org.gradle.workers.max=1" >> android/gradle.properties
