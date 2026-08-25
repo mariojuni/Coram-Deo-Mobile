@@ -14,22 +14,12 @@ export const createReactNativeCustomProvider = (rnfbAppCheckInstance: any): Cust
       try {
         const tokenResult = await rnfbAppCheckInstance.getToken(false);
         
-        if (process.env.EXPO_PUBLIC_APP_ENV === 'production') {
-          Alert.alert(
-            'App Check Success', 
-            `Token: ${tokenResult.token.substring(0, 10)}...`
-          );
-        }
-
         return {
           token: tokenResult.token,
           expireTimeMillis: Date.now() + 3600000, // Roughly 1 hour, RNFB handles refresh automatically
         };
       } catch (error: any) {
         console.error('Failed to get App Check token from React Native Firebase', error);
-        if (process.env.EXPO_PUBLIC_APP_ENV === 'production') {
-          Alert.alert('App Check Token Failed', String(error?.message || error));
-        }
         // Add an artificial delay to prevent immediate infinite loops if the JS SDK retries instantly
         await new Promise(resolve => setTimeout(resolve, 10000));
         throw error;

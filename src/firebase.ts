@@ -19,10 +19,6 @@ export let currentActiveFirebaseEnv: AppEnvironment = getInitialSelectedEnvironm
 
 const initialConfig = getFirebaseConfigForEnv(currentActiveFirebaseEnv);
 let activeApp = initializeApp(initialConfig);
-import { Alert } from 'react-native';
-if (Platform.OS !== 'web') {
-  Alert.alert('App Env Info', `APP_ENV is: ${process.env.EXPO_PUBLIC_APP_ENV}`);
-}
 initAppCheck(activeApp);
 
 let activeAuth = Platform.OS === 'web' 
