@@ -1,0 +1,5 @@
+json_key_file("fastlane/play-service-account.json")
+package_name("com.coramdeo.app.prod")
+
+apple_id("mariojuni777@gmail.com")
+team_id("267GZU5SHN")

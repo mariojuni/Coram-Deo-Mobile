@@ -13,8 +13,8 @@ platform :android do
 
   desc "Build and upload production to Google Play"
   lane :production_upload do
-
     upload_to_play_store(
+      package_name: "com.coramdeo.app.prod",
       track: "internal",
       aab: "android/app/build/outputs/bundle/release/app-release.aab",
       json_key: "fastlane/play-service-account.json",
