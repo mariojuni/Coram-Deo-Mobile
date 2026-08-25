@@ -1,20 +1,9 @@
 platform :android do
   desc "Build and upload staging to Firebase App Distribution"
-  lane :staging do
-    gradle(
-      project_dir: "android",
-      task: "assemble",
-      build_type: "Release",
-      properties: {
-        "android.injected.signing.store.file" => File.expand_path("staging-upload-key.keystore", __dir__),
-        "android.injected.signing.store.password" => ENV["ANDROID_KEYSTORE_PASSWORD"],
-        "android.injected.signing.key.alias" => ENV["ANDROID_KEY_ALIAS"],
-        "android.injected.signing.key.password" => ENV["ANDROID_KEY_PASSWORD"]
-      }
-    )
-
+  lane :staging_upload do
     android_firebase_opts = {
       app: ENV["FIREBASE_ANDROID_APP_ID_STAGING"],
+      apk: "android/app/build/outputs/apk/release/app-release.apk",
       service_credentials_file: "fastlane/service-account.json",
       release_notes: "Built from GitHub Actions (Commit: #{ENV['GITHUB_SHA']})"
     }
@@ -23,20 +12,7 @@ platform :android do
   end
 
   desc "Build and upload production to Google Play"
-  lane :production do
-    gradle(
-      project_dir: "android",
-      task: "bundle",
-      build_type: "Release",
-      flags: "--stacktrace --console=plain",
-      print_command_output: true,
-      properties: {
-        "android.injected.signing.store.file" => File.expand_path("upload-key.keystore", __dir__),
-        "android.injected.signing.store.password" => ENV["ANDROID_KEYSTORE_PASSWORD"],
-        "android.injected.signing.key.alias" => ENV["ANDROID_KEY_ALIAS"],
-        "android.injected.signing.key.password" => ENV["ANDROID_KEY_PASSWORD"]
-      }
-    )
+  lane :production_upload do
 
     upload_to_play_store(
       track: "internal",

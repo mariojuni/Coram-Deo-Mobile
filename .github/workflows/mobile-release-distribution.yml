@@ -72,19 +72,23 @@ jobs:
           mkdir -p credentials/production
           echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > credentials/production/google-services.json
 
-      - name: Run Fastlane Android
+      - name: Run Build and Fastlane Android
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           NODE_OPTIONS: "--max-old-space-size=2048"
         run: |
-          export EXPO_PUBLIC_APP_ENV=production
-          npx expo prebuild --platform android --clean
+          EXPO_PUBLIC_APP_ENV=production npx expo prebuild --platform android --clean
           echo "org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -Dkotlin.daemon.jvm.options=-Xmx512m" >> android/gradle.properties
           echo "org.gradle.daemon=false" >> android/gradle.properties
           echo "org.gradle.workers.max=1" >> android/gradle.properties
-          bundle exec fastlane android production
+          
+          cd android
+          ./gradlew bundleRelease -Pandroid.injected.signing.store.file=../fastlane/upload-key.keystore -Pandroid.injected.signing.store.password=${ANDROID_KEYSTORE_PASSWORD} -Pandroid.injected.signing.key.alias=${ANDROID_KEY_ALIAS} -Pandroid.injected.signing.key.password=${ANDROID_KEY_PASSWORD} --stacktrace --console=plain
+          cd ..
+          
+          bundle exec fastlane android production_upload
           
       - name: Upload Build Reports on Failure
         if: failure()
