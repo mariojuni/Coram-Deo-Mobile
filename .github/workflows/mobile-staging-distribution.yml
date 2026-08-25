@@ -85,9 +85,9 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           FIREBASE_TESTER_GROUPS: "coram-deo-tester"
-          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g"
         run: |
           EXPO_PUBLIC_APP_ENV=development npx expo prebuild --platform android --clean
+          echo "org.gradle.jvmargs=-Xmx3072m -XX:MaxMetaspaceSize=1024m" >> android/gradle.properties
           bundle exec fastlane android staging
           
       - name: Cleanup Keystore and Service Account
