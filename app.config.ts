@@ -73,6 +73,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   const appName = isProd ? "Coram Deo" : "CoramDeo - DEV";
   const bundleIdentifier = isProd ? "com.coramdeo.app.prod" : "com.coramdeo.app.staging";
 
+  const buildNumber = process.env.GITHUB_RUN_NUMBER ? parseInt(process.env.GITHUB_RUN_NUMBER, 10) : 1;
+
   const baseConfig: ExpoConfig = {
     ...config,
     name: isProd ? "CoramDeo" : "CoramDeo-DEV",
@@ -84,6 +86,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     userInterfaceStyle: "light",
     backgroundColor: "#FAFAFA",
     ios: {
+      buildNumber: String(buildNumber),
       appleTeamId: "267GZU5SHN",
       icon: "./assets/expo.icon",
       bundleIdentifier,
@@ -115,6 +118,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       }
     },
     android: {
+      versionCode: buildNumber,
       adaptiveIcon: {
         backgroundColor: "#E6F4FE",
         foregroundImage: "./assets/images/logo.png",
