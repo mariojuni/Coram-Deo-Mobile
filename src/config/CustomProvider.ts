@@ -14,6 +14,13 @@ export const createReactNativeCustomProvider = (rnfbAppCheckInstance: any): Cust
       try {
         const tokenResult = await rnfbAppCheckInstance.getToken(false);
         
+        if (process.env.EXPO_PUBLIC_APP_ENV === 'production') {
+          Alert.alert(
+            'App Check Success', 
+            `Token: ${tokenResult.token.substring(0, 10)}...`
+          );
+        }
+
         return {
           token: tokenResult.token,
           expireTimeMillis: Date.now() + 3600000, // Roughly 1 hour, RNFB handles refresh automatically
