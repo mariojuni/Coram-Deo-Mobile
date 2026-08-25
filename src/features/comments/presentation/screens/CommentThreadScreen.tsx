@@ -3,11 +3,11 @@ import {
   View, Text, StyleSheet, FlatList, TextInput, 
   TouchableOpacity, KeyboardAvoidingView, Platform, 
   ActivityIndicator, Alert, Keyboard, ActionSheetIOS,
-  Dimensions, ScrollView
+  Dimensions, ScrollView, Share
 } from 'react-native';
 
 import { Stack as ExpoStack, useLocalSearchParams as useExpoSearchParams, useRouter as useExpoRouter, useFocusEffect } from 'expo-router';
-import { ArrowLeft, X, Send, User, CheckCircle2, MessageCircle, Heart, HeartHandshake, ChevronLeft, MoreVertical, BookOpen } from 'lucide-react-native';
+import { ArrowLeft, X, Send, User, CheckCircle2, MessageCircle, Heart, HeartHandshake, ChevronLeft, Forward, MoreVertical, BookOpen, Trash2 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,6 +23,7 @@ import { prayerRepository } from '@/features/prayer/data/prayer.repository';
 import { useUIStore } from '@/store/useUIStore';
 import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
 import { getHumanReadableBookName } from '@/utils/scriptureReferenceParser';
+import { ShareImageGenerator, ShareImageGeneratorRef } from '@/components/Share/ShareImageGenerator';
 
 import { getActiveDb } from '@/firebase';
 import { doc, getDoc, onSnapshot, DocumentSnapshot, DocumentData } from 'firebase/firestore';
@@ -40,6 +41,7 @@ export function CommentThreadScreen() {
   
   const [parentData, setParentData] = useState<any>(null);
   const [loadingParent, setLoadingParent] = useState(true);
+  const shareImageGeneratorRef = useRef<ShareImageGeneratorRef>(null);
 
   const { 
     comments, 
@@ -305,65 +307,99 @@ export function CommentThreadScreen() {
       const isLiked = parentData.likedBy?.includes(currentUser?.uid || '');
       const isAnswered = parentData.answered || parentData.status === 'answered';
       const canManage = parentData.userId === currentUser?.uid || canModeratePrayerRequests(userProfile);
+      const prayerText = `${parentData.title ? parentData.title + ' \u2014 ' : ''}${parentData.request || parentData.requestText || parentData.content || ''}`;
 
       return (
         <View style={styles.flatParentContainer}>
-          <Text style={styles.flatPrayerText}>
-            {parentData.title ? <Text style={{ fontWeight: '700', color: '#111827' }}>{parentData.title} — </Text> : null}
-            {parentData.request || parentData.requestText || parentData.content}
-          </Text>
+          <TouchableOpacity
+            activeOpacity={canManage ? 0.7 : 1}
+            onPress={() => { if (canManage && parentData) openPrayerModal(parentData); }}
+          >
+            <Text style={styles.flatPrayerText}>
+              {parentData.title ? <Text style={{ fontWeight: '700', color: '#111827' }}>{parentData.title} — </Text> : null}
+              {parentData.request || parentData.requestText || parentData.content}
+            </Text>
+          </TouchableOpacity>
 
           <View
             style={{
               flexDirection: 'row',
               alignItems: 'center',
-              justifyContent: 'flex-start',
+              justifyContent: 'space-between',
               marginTop: 16,
-              gap: 16,
             }}
           >
-            <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} onPress={handlePray} activeOpacity={0.7}>
-              <Heart
-                size={18}
-                color={isLiked ? '#FF759E' : '#6B7280'}
-                fill={isLiked ? '#FF759E' : 'transparent'}
-              />
-              <Text style={{ fontSize: 13, fontWeight: '600', color: isLiked ? '#FF759E' : '#6B7280' }}>
-                {Math.max(0, parentData.likes || 0)}
-              </Text>
-            </TouchableOpacity>
-
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <MessageCircle size={18} color="#6B7280" />
-              <Text style={{ fontSize: 13, fontWeight: '600', color: '#6B7280' }}>
-                {parentData.commentCount || comments.length || 0}
-              </Text>
-            </View>
-
-            {canManage ? (
-              <TouchableOpacity
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
-                onPress={handleAnswered}
-                activeOpacity={0.7}
-              >
-                <CheckCircle2 size={18} color={isAnswered ? '#10B981' : '#9CA3AF'} />
-                <Text style={{ fontSize: 12, fontWeight: '600', color: isAnswered ? '#10B981' : '#6B7280' }}>
-                  {isAnswered ? 'Answered' : 'Mark Answered'}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+              <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} onPress={handlePray} activeOpacity={0.7}>
+                <Heart
+                  size={18}
+                  color={isLiked ? '#FF759E' : '#6B7280'}
+                  fill={isLiked ? '#FF759E' : 'transparent'}
+                />
+                <Text style={{ fontSize: 13, fontWeight: '600', color: isLiked ? '#FF759E' : '#6B7280' }}>
+                  {Math.max(0, parentData.likes || 0)}
                 </Text>
               </TouchableOpacity>
-            ) : (
-              isAnswered && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <CheckCircle2 size={18} color="#10B981" />
-                  <Text style={{ fontSize: 12, fontWeight: '600', color: '#10B981' }}>Answered</Text>
-                </View>
-              )
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <MessageCircle size={18} color="#6B7280" />
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#6B7280' }}>
+                  {parentData.commentCount || comments.length || 0}
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                onPress={async () => {
+                  if (shareImageGeneratorRef.current) {
+                    await shareImageGeneratorRef.current.captureAndShare(parentData, 'prayer');
+                  } else {
+                    Share.share({ message: prayerText });
+                  }
+                }}
+                activeOpacity={0.7}
+              >
+                <Forward size={18} color="#6B7280" />
+              </TouchableOpacity>
+
+              {canManage ? (
+                <TouchableOpacity
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                  onPress={handleAnswered}
+                  activeOpacity={0.7}
+                >
+                  <CheckCircle2 size={18} color={isAnswered ? '#10B981' : '#9CA3AF'} />
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: isAnswered ? '#10B981' : '#6B7280' }}>
+                    {isAnswered ? 'Answered' : 'Mark Answered'}
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                isAnswered && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <CheckCircle2 size={18} color="#10B981" />
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: '#10B981' }}>Answered</Text>
+                  </View>
+                )
+              )}
+            </View>
+
+            {canManage && (
+              <TouchableOpacity
+                style={{ padding: 4 }}
+                onPress={handleDeletePrayer}
+                activeOpacity={0.7}
+                hitSlop={8}
+              >
+                <Trash2 size={18} color="#F87171" />
+              </TouchableOpacity>
             )}
           </View>
         </View>
       );
     } else if (targetType === 'church_highlight') {
       const isLiked = parentData.likedBy?.includes(currentUser?.uid || '');
+      const isOwner = parentData.userId === currentUser?.uid;
+      const reference = `${getHumanReadableBookName(parentData.bookName)} ${parentData.chapter}:${parentData.verseRangeLabel || parentData.verseNumber}`;
       return (
         <View style={styles.flatParentContainer}>
           <Text style={[styles.flatPrayerText, { fontStyle: 'italic', color: '#4B5563', lineHeight: 24 }]}>
@@ -371,7 +407,7 @@ export function CommentThreadScreen() {
           </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 }}>
             <Text style={{ fontSize: 15, fontWeight: '700', color: '#111827' }}>
-              {getHumanReadableBookName(parentData.bookName)} {parentData.chapter}:{parentData.verseRangeLabel || parentData.verseNumber}
+              {reference}
             </Text>
             
             <TouchableOpacity
@@ -401,7 +437,7 @@ export function CommentThreadScreen() {
             </TouchableOpacity>
           </View>
           
-          <View style={styles.flatPrayerBottomRow}>
+          <View style={[styles.flatPrayerBottomRow, { justifyContent: 'space-between' }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
               <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} onPress={handlePray} activeOpacity={0.7}>
                 <Heart size={20} color={isLiked ? '#FF759E' : '#6B7280'} fill={isLiked ? '#FF759E' : 'transparent'} />
@@ -415,7 +451,48 @@ export function CommentThreadScreen() {
                   {parentData.commentCount || 0}
                 </Text>
               </View>
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                onPress={async () => {
+                  if (shareImageGeneratorRef.current) {
+                    await shareImageGeneratorRef.current.captureAndShare(parentData, 'highlight');
+                  } else {
+                    Share.share({ message: `"${parentData.text}" - ${reference}` });
+                  }
+                }}
+                activeOpacity={0.7}
+              >
+                <Forward size={20} color="#6B7280" />
+              </TouchableOpacity>
             </View>
+
+            {isOwner && (
+              <TouchableOpacity
+                style={{ padding: 4 }}
+                onPress={() =>
+                  Alert.alert('Delete Highlight', 'Are you sure you want to delete this highlight post?', [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Delete',
+                      style: 'destructive',
+                      onPress: async () => {
+                        try {
+                          const { bibleHighlightRepository } = await import('@/features/bibleHighlights/data/bibleHighlight.repository');
+                          await bibleHighlightRepository.deleteHighlight(targetId);
+                          router.back();
+                        } catch (e) {
+                          Alert.alert('Error', 'Failed to delete highlight.');
+                        }
+                      }
+                    },
+                  ])
+                }
+                activeOpacity={0.7}
+                hitSlop={8}
+              >
+                <Trash2 size={20} color="#F87171" />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       );
@@ -511,28 +588,72 @@ export function CommentThreadScreen() {
             style={{
               flexDirection: 'row',
               alignItems: 'center',
-              justifyContent: 'flex-start',
+              justifyContent: 'space-between',
               marginTop: 16,
               gap: 16,
             }}
           >
-            <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} onPress={handlePray} activeOpacity={0.7}>
-              <Heart
-                size={18}
-                color={isLiked ? '#FF759E' : '#6B7280'}
-                fill={isLiked ? '#FF759E' : 'transparent'}
-              />
-              <Text style={{ fontSize: 13, fontWeight: '600', color: isLiked ? '#FF759E' : '#6B7280' }}>
-                {Math.max(0, parentData.likes || 0)}
-              </Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+              <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} onPress={handlePray} activeOpacity={0.7}>
+                <Heart
+                  size={18}
+                  color={isLiked ? '#FF759E' : '#6B7280'}
+                  fill={isLiked ? '#FF759E' : 'transparent'}
+                />
+                <Text style={{ fontSize: 13, fontWeight: '600', color: isLiked ? '#FF759E' : '#6B7280' }}>
+                  {Math.max(0, parentData.likes || 0)}
+                </Text>
+              </TouchableOpacity>
 
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <MessageCircle size={18} color="#6B7280" />
-              <Text style={{ fontSize: 13, fontWeight: '600', color: '#6B7280' }}>
-                {parentData.commentCount || comments.length || 0}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <MessageCircle size={18} color="#6B7280" />
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#6B7280' }}>
+                  {parentData.commentCount || comments.length || 0}
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                onPress={async () => {
+                  if (shareImageGeneratorRef.current) {
+                    await shareImageGeneratorRef.current.captureAndShare(parentData);
+                  } else {
+                    Share.share({ message: parentData.content || '' });
+                  }
+                }}
+                activeOpacity={0.7}
+              >
+                <Forward size={18} color="#6B7280" />
+              </TouchableOpacity>
             </View>
+
+            {parentData.userId === currentUser?.uid && (
+              <TouchableOpacity
+                style={{ padding: 4 }}
+                onPress={() =>
+                  Alert.alert('Delete Note', 'Are you sure you want to delete this note?', [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Delete',
+                      style: 'destructive',
+                      onPress: async () => {
+                        try {
+                          const { bibleNoteRepository } = await import('@/features/bibleNotes/data/bibleNote.repository');
+                          await bibleNoteRepository.deleteNote(targetId);
+                          router.back();
+                        } catch (e) {
+                          Alert.alert('Error', 'Failed to delete note.');
+                        }
+                      }
+                    },
+                  ])
+                }
+                activeOpacity={0.7}
+                hitSlop={8}
+              >
+                <Trash2 size={18} color="#F87171" />
+              </TouchableOpacity>
+            )}
           </View>
         </TouchableOpacity>
       );
@@ -560,6 +681,7 @@ export function CommentThreadScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
     >
+      <ShareImageGenerator ref={shareImageGeneratorRef} />
       
       <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
         <TouchableOpacity style={styles.headerCircle} onPress={() => router.back()} hitSlop={8}>
@@ -592,13 +714,8 @@ export function CommentThreadScreen() {
           <Text style={styles.headerTitle}>Comments</Text>
         )}
         
-        {targetType === 'prayer_request' && parentData && (parentData.userId === currentUser?.uid || canModeratePrayerRequests(userProfile)) ? (
-          <TouchableOpacity style={styles.headerCircle} onPress={handleHeaderMenu} hitSlop={8}>
-            <MoreVertical size={24} color="#1a1a1a" />
-          </TouchableOpacity>
-        ) : (
-          <View style={{ width: 40 }} />
-        )}
+        <View style={{ width: 40 }} />
+      
       </View>
 
       <FlatList

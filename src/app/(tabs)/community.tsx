@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   ChevronRight,
   Clock,
+  Forward,
   Heart,
   HeartHandshake,
   HelpCircle,
@@ -111,7 +112,7 @@ function getTabIndexFromParam(tabParam: string | string[] | undefined): TabIndex
 
 // ─── Placeholder sub-screen components ───────────────────────────────────────
 
-export function PrayerCardItem({ req, currentUser, handlePray, handleAnswered, openPrayerModal, deletePrayer }: { req: Prayer, currentUser: any, handlePray: (id: string) => void, handleAnswered: (id: string, currentValue: boolean) => void, openPrayerModal: (prayer: Prayer) => void, deletePrayer: (id: string) => void }) {
+export function PrayerCardItem({ req, currentUser, handlePray, handleAnswered, openPrayerModal, deletePrayer, onShare }: { req: Prayer, currentUser: any, handlePray: (id: string) => void, handleAnswered: (id: string, currentValue: boolean) => void, openPrayerModal: (prayer: Prayer) => void, deletePrayer: (id: string) => void, onShare?: (prayer: Prayer) => void }) {
   const router = useRouter();
   const userProfile = useAuthStore((state) => state.userProfile);
   const isLiked = currentUser ? (req.likedBy || []).includes(currentUser.uid) : false;
@@ -233,62 +234,20 @@ export function PrayerCardItem({ req, currentUser, handlePray, handleAnswered, o
               }
             />
 
-            {(isOwner || canModeratePrayerRequests(userProfile)) && (
-              <TouchableOpacity
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
-                onPress={() => handleAnswered(req.id, req.answered || req.status === 'answered')}
-                activeOpacity={0.7}
-              >
-                <CheckCircle2
-                  size={18}
-                  color={(req.answered || req.status === 'answered') ? '#10B981' : '#9CA3AF'}
-                />
-                <Text
-                  style={{
-                    fontSize: 12,
-                    fontWeight: '600',
-                    color: (req.answered || req.status === 'answered') ? '#10B981' : '#6B7280',
-                  }}
-                >
-                  {(req.answered || req.status === 'answered') ? 'Answered' : 'Mark Answered'}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {(isOwner || canModeratePrayerRequests(userProfile)) && (
             <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
               onPress={() => {
-                if (Platform.OS === 'ios') {
-                  ActionSheetIOS.showActionSheetWithOptions(
-                    {
-                      options: ['Cancel', 'Edit', 'Delete'],
-                      destructiveButtonIndex: 2,
-                      cancelButtonIndex: 0,
-                    },
-                    (buttonIndex) => {
-                      if (buttonIndex === 1) {
-                        openPrayerModal(req);
-                      } else if (buttonIndex === 2) {
-                        deletePrayer(req.id);
-                      }
-                    }
-                  );
+                if (onShare) {
+                  onShare(req);
                 } else {
-                  Alert.alert('Manage Prayer Request', 'Choose an action', [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Edit', onPress: () => openPrayerModal(req) },
-                    { text: 'Delete', style: 'destructive', onPress: () => deletePrayer(req.id) },
-                  ]);
+                  Share.share({ message: `${req.title ? req.title + ' — ' : ''}${req.request || req.content || ''}` });
                 }
               }}
-              style={{ padding: 4 }}
               activeOpacity={0.7}
-              hitSlop={8}
             >
-              <MoreVertical size={18} color="#9CA3AF" />
+              <Forward size={18} color="#6B7280" />
             </TouchableOpacity>
-          )}
+          </View>
         </View>
       </SoftCard>
     </BounceCard>

@@ -94,17 +94,17 @@ jobs:
           NODE_OPTIONS: "--max-old-space-size=4096"
         run: |
           EXPO_PUBLIC_APP_ENV=production npx expo prebuild --platform android --clean
-          echo "org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -Dkotlin.daemon.jvm.options=-Xmx512m" >> android/gradle.properties
+          echo "org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dkotlin.daemon.jvm.options=-Xmx1024m" >> android/gradle.properties
           echo "org.gradle.daemon=false" >> android/gradle.properties
-          echo "org.gradle.workers.max=1" >> android/gradle.properties
+          echo "org.gradle.workers.max=2" >> android/gradle.properties
           echo "expo.inlineModules.watchedDirectories=[]" >> android/gradle.properties
           
           cd android
           ./gradlew bundleRelease -Pandroid.injected.signing.store.file=../fastlane/upload-key.keystore -Pandroid.injected.signing.store.password=${ANDROID_KEYSTORE_PASSWORD} -Pandroid.injected.signing.key.alias=${ANDROID_KEY_ALIAS} -Pandroid.injected.signing.key.password=${ANDROID_KEY_PASSWORD} --stacktrace --console=plain > build_log.txt 2>&1 || {
-            echo "=== ROOT CAUSE (Caused by) ==="
-            grep -n "Caused by:\|FAILED\|What went wrong\|error:\|Error:" build_log.txt | head -60
-            echo "=== LAST 100 LINES ==="
-            tail -n 100 build_log.txt
+            echo "=== ROOT CAUSE (What went wrong) ==="
+            awk '/\* What went wrong:/,0' build_log.txt | head -n 120
+            echo "=== TAIL OF BUILD LOG ==="
+            tail -n 60 build_log.txt
             echo "❌ GRADLE BUILD FAILED."
             exit 1
           }

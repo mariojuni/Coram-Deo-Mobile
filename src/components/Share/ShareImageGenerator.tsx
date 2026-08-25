@@ -7,21 +7,22 @@ import { Image } from 'expo-image';
 import type { FeedNoteItem } from '@/store/useFeedStore';
 import type { DashboardNoteItem, UserHighlightItem } from '@/features/profile/presentation/hooks/useProfileDashboardData';
 import type { BibleHighlight } from '@/features/bibleHighlights/domain/bibleHighlight.types';
+import type { Prayer } from '@/features/prayer/domain/prayer.types';
 
-type ShareItem = FeedNoteItem | DashboardNoteItem | BibleHighlight | UserHighlightItem;
+type ShareItem = FeedNoteItem | DashboardNoteItem | BibleHighlight | UserHighlightItem | Prayer;
 
 export interface ShareImageGeneratorRef {
-  captureAndShare: (item: ShareItem, type?: 'note' | 'highlight') => Promise<void>;
+  captureAndShare: (item: ShareItem, type?: 'note' | 'highlight' | 'prayer') => Promise<void>;
 }
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
 export const ShareImageGenerator = forwardRef<ShareImageGeneratorRef>((props, ref) => {
-  const [currentItem, setCurrentItem] = useState<{ item: ShareItem; type: 'note' | 'highlight' } | null>(null);
+  const [currentItem, setCurrentItem] = useState<{ item: ShareItem; type: 'note' | 'highlight' | 'prayer' } | null>(null);
   const viewShotRef = useRef<any>(null);
 
   useImperativeHandle(ref, () => ({
-    captureAndShare: async (item: ShareItem, type: 'note' | 'highlight' = 'note') => {
+    captureAndShare: async (item: ShareItem, type: 'note' | 'highlight' | 'prayer' = 'note') => {
       setCurrentItem({ item, type });
       
       // Wait for React to render the new state
@@ -33,7 +34,7 @@ export const ShareImageGenerator = forwardRef<ShareImageGeneratorRef>((props, re
           
           if (await Sharing.isAvailableAsync()) {
             await Sharing.shareAsync(uri, {
-              dialogTitle: 'Share Note',
+              dialogTitle: type === 'prayer' ? 'Share Prayer' : type === 'highlight' ? 'Share Highlight' : 'Share Note',
               mimeType: 'image/jpeg',
             });
           }
@@ -57,6 +58,10 @@ export const ShareImageGenerator = forwardRef<ShareImageGeneratorRef>((props, re
   let textSnapshot = '';
   let noteContent = '';
 
+  let prayerTitle = '';
+  let prayerText = '';
+  let isAnswered = false;
+
   if (type === 'note') {
     const note = item as (FeedNoteItem | DashboardNoteItem);
     const isSermon = note._type === 'sermon';
@@ -79,6 +84,11 @@ export const ShareImageGenerator = forwardRef<ShareImageGeneratorRef>((props, re
     textSnapshot = highlight.text || '';
     // A highlight doesn't have custom note content
     noteContent = '';
+  } else if (type === 'prayer') {
+    const prayer = item as Prayer | any;
+    prayerTitle = prayer.title || '';
+    prayerText = prayer.request || prayer.requestText || prayer.content || '';
+    isAnswered = !!(prayer.answered || prayer.status === 'answered');
   }
 
   // The hidden container positioned way off-screen
@@ -115,6 +125,31 @@ export const ShareImageGenerator = forwardRef<ShareImageGeneratorRef>((props, re
                 <Text style={styles.noteContentText}>
                   {noteContent}
                 </Text>
+              </View>
+            )}
+
+            {/* Prayer Content */}
+            {type === 'prayer' && (
+              <View>
+                {isAnswered && (
+                  <View style={{ alignSelf: 'flex-start', backgroundColor: '#ECFDF3', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, marginBottom: 10 }}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#10B981', textTransform: 'uppercase' }}>
+                      Answered
+                    </Text>
+                  </View>
+                )}
+
+                {!!prayerTitle && (
+                  <Text style={{ fontSize: 17, fontWeight: '800', color: '#111827', marginBottom: 8, lineHeight: 24 }}>
+                    {prayerTitle}
+                  </Text>
+                )}
+
+                <View style={styles.noteContentBlock}>
+                  <Text style={styles.noteContentText}>
+                    {prayerText}
+                  </Text>
+                </View>
               </View>
             )}
           </View>

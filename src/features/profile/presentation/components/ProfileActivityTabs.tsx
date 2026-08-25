@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert, Share, Image, Platform, ActionSheetIOS } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Bookmark, BookOpen, Calendar, ChevronRight, Share as ShareIcon, Trash2, ChevronDown, User, MoreHorizontal, Heart, MessageCircle, MoreVertical } from 'lucide-react-native';
+import { Bookmark, BookOpen, Calendar, ChevronRight, Share as ShareIcon, Trash2, ChevronDown, User, MoreHorizontal, Heart, MessageCircle, MoreVertical, Forward } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SoftCard } from '@/components/ui/SoftCard';
 import { BounceCard } from '@/components/ui/BounceCard';
@@ -340,17 +340,16 @@ export function ProfileActivityTabs({
                         {(item as any).commentCount || 0}
                       </Text>
                     </TouchableOpacity>
-                  </View>
 
-                  <TouchableOpacity
-                    accessibilityRole="button"
-                    onPress={() => handleOptionsPress(item)}
-                    style={{ padding: 4 }}
-                    activeOpacity={0.7}
-                    hitSlop={8}
-                  >
-                    <MoreVertical size={18} color="#9CA3AF" />
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      accessibilityRole="button"
+                      onPress={() => handleShareHighlight(item)}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                      activeOpacity={0.7}
+                    >
+                      <Forward size={18} color="#6B7280" />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </SoftCard>
             </BounceCard>
@@ -620,10 +619,21 @@ export function ProfileActivityTabs({
                     {(note as any).commentCount || 0}
                   </Text>
                 </TouchableOpacity>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                  onPress={async () => {
+                    if (shareImageGeneratorRef.current) {
+                      await shareImageGeneratorRef.current.captureAndShare(note);
+                    } else {
+                      Share.share({ message: `${reference}\n\n${note.content || ''}` });
+                    }
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Forward size={18} color="#6B7280" />
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity accessibilityRole="button" style={{ padding: 4 }} onPress={() => handleNoteOptionsPress(note)}>
-                <MoreVertical size={18} color="#9CA3AF" />
-              </TouchableOpacity>
             </View>
           </SoftCard>
         </BounceCard>
@@ -755,10 +765,21 @@ export function ProfileActivityTabs({
                     {prayer.commentCount || 0}
                   </Text>
                 </TouchableOpacity>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                  onPress={async () => {
+                    if (shareImageGeneratorRef.current) {
+                      await shareImageGeneratorRef.current.captureAndShare(prayer, 'prayer');
+                    } else {
+                      Share.share({ message: `${prayer.title ? prayer.title + ' — ' : ''}${prayer.request || prayer.content || ''}` });
+                    }
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Forward size={18} color="#6B7280" />
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity accessibilityRole="button" style={{ padding: 4 }} onPress={() => {}}>
-                <MoreVertical size={18} color="#9CA3AF" />
-              </TouchableOpacity>
             </View>
           </SoftCard>
         </BounceCard>

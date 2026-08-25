@@ -19,13 +19,15 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useSermonStore } from '@/store/useSermonStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useNotificationStore } from '@/store/useNotificationStore';
+import { PrayerCardItem } from './community';
+import { ShareImageGenerator, ShareImageGeneratorRef } from '@/components/Share/ShareImageGenerator';
 import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Bell, CalendarDays, CheckCircle2, ChevronRight, Clock, Heart, HeartHandshake, HelpCircle, MapPin, MoreVertical, User, XCircle } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActionSheetIOS, Alert, Animated, Dimensions, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActionSheetIOS, Alert, Animated, Dimensions, Platform, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function isThisWeek(dateString: string) {
@@ -97,6 +99,7 @@ export default function HomeScreen() {
   const { prayers, loading: prayersLoading, togglePrayerLike, deletePrayer } = usePrayerFeed();
   const openPrayerModal = useUIStore((state) => state.openPrayerModal);
   const prayerCount = prayers.length;
+  const shareImageGeneratorRef = useRef<ShareImageGeneratorRef>(null);
 
   // Recent sermons
   const sermons = useSermonStore((s) => s.sermons);
@@ -241,6 +244,7 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
+      <ShareImageGenerator ref={shareImageGeneratorRef} />
       {/* ─── Animated Header ──────────────────────────────────────── */}
       <Animated.View
         style={[styles.header, { paddingTop: Math.max(insets.top, 24) }]}
@@ -563,187 +567,24 @@ export default function HomeScreen() {
 
           {prayers.length > 0 ? (
             <>
-              {prayers.slice(0, 3).map((prayer) => {
-                const isLiked = prayer.likedBy?.includes(currentUserId);
-                const isOwner = prayer.userId === currentUserId;
-
-                return (
-                  <BounceCard
-                    key={prayer.id}
-                    style={{ marginBottom: 12 }}
-                    onPress={() =>
-                      router.push({
-                        pathname: '/comment-thread',
-                        params: { targetType: 'prayer_request', targetId: prayer.id },
-                      })
+              {prayers.slice(0, 3).map((prayer) => (
+                <PrayerCardItem
+                  key={prayer.id}
+                  req={prayer}
+                  currentUser={currentUser}
+                  handlePray={handlePray}
+                  handleAnswered={handleAnswered}
+                  openPrayerModal={openPrayerModal}
+                  deletePrayer={deletePrayer}
+                  onShare={(p) => {
+                    if (shareImageGeneratorRef.current) {
+                      shareImageGeneratorRef.current.captureAndShare(p, 'prayer');
+                    } else {
+                      Share.share({ message: `${p.title ? p.title + ' — ' : ''}${p.request || p.content || ''}` });
                     }
-                    activeOpacity={0.85}
-                  >
-                    <SoftCard innerStyle={{ padding: 16 }}>
-                      {/* Header Row: Avatar, Name & Meta */}
-                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-                        <View
-                          style={{
-                            width: 36,
-                            height: 36,
-                            borderRadius: 18,
-                            backgroundColor: '#E5E7EB',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            marginRight: 10,
-                            overflow: 'hidden',
-                          }}
-                        >
-                          {prayer.userPhotoUrl ? (
-                            <Image source={{ uri: prayer.userPhotoUrl }} style={{ width: 36, height: 36 }} />
-                          ) : (
-                            <User size={20} color="#9CA3AF" />
-                          )}
-                        </View>
-                        <View style={{ flex: 1, justifyContent: 'center' }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-                            <Text style={{ fontSize: 14, fontWeight: '700', color: '#111827' }} numberOfLines={1}>
-                              {isOwner ? 'You' : prayer.name}
-                            </Text>
-                            {(prayer.answered || prayer.status === 'answered') && (
-                              <View
-                                style={{
-                                  flexDirection: 'row',
-                                  alignItems: 'center',
-                                  backgroundColor: '#ECFDF3',
-                                  paddingHorizontal: 6,
-                                  paddingVertical: 2,
-                                  borderRadius: 10,
-                                  gap: 4,
-                                }}
-                              >
-                                <CheckCircle2 size={10} color="#10B981" />
-                                <Text style={{ fontSize: 10, fontWeight: '700', color: '#10B981', textTransform: 'uppercase' }}>
-                                  Answered
-                                </Text>
-                              </View>
-                            )}
-                          </View>
-                          <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '500', marginTop: 2 }}>
-                            {formatPrayerTimeAgo(prayer.createdAt)}
-                          </Text>
-                        </View>
-                      </View>
-
-                      {/* Content Body */}
-                      <Text
-                        style={{
-                          fontSize: 14,
-                          color: '#4B5563',
-                          lineHeight: 20,
-                          marginBottom: 12,
-                        }}
-                      >
-                        {prayer.title ? <Text style={{ fontWeight: '700', color: '#111827' }}>{prayer.title} — </Text> : null}
-                        {prayer.request || prayer.content}
-                      </Text>
-
-                      {/* Social Action Footer: Answered Toggle, Comment, Like & Options Menu */}
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          borderTopWidth: 1,
-                          borderTopColor: '#F3F4F6',
-                          paddingTop: 10,
-                        }}
-                      >
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-                          <DebouncedTouchable
-                            style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
-                            activeOpacity={0.7}
-                            onPress={() => handlePray(prayer.id)}
-                          >
-                            <Heart
-                              size={18}
-                              color={isLiked ? '#FF759E' : '#6B7280'}
-                              fill={isLiked ? '#FF759E' : 'transparent'}
-                            />
-                            <Text style={{ fontSize: 13, fontWeight: '600', color: isLiked ? '#FF759E' : '#6B7280' }}>
-                              {Math.max(0, prayer.likes || 0)}
-                            </Text>
-                          </DebouncedTouchable>
-
-                          <CommentButton
-                            count={prayer.commentCount || 0}
-                            variant="icon-only"
-                            size={18}
-                            color="#9CA3AF"
-                            onPress={() =>
-                              router.push({
-                                pathname: '/comment-thread',
-                                params: { targetType: 'prayer_request', targetId: prayer.id },
-                              })
-                            }
-                          />
-
-                          {(isOwner || canModeratePrayerRequests(userProfile)) && (
-                            <DebouncedTouchable
-                              style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
-                              onPress={() => handleAnswered(prayer.id, prayer.answered || prayer.status === 'answered')}
-                              activeOpacity={0.7}
-                            >
-                              <CheckCircle2
-                                size={18}
-                                color={(prayer.answered || prayer.status === 'answered') ? '#10B981' : '#9CA3AF'}
-                              />
-                              <Text
-                                style={{
-                                  fontSize: 12,
-                                  fontWeight: '600',
-                                  color: (prayer.answered || prayer.status === 'answered') ? '#10B981' : '#6B7280',
-                                }}
-                              >
-                                {(prayer.answered || prayer.status === 'answered') ? 'Answered' : 'Mark Answered'}
-                              </Text>
-                            </DebouncedTouchable>
-                          )}
-                        </View>
-
-                        {(isOwner || canModeratePrayerRequests(userProfile)) && (
-                          <DebouncedTouchable
-                            onPress={() => {
-                              if (Platform.OS === 'ios') {
-                                ActionSheetIOS.showActionSheetWithOptions(
-                                  {
-                                    options: ['Cancel', 'Edit', 'Delete'],
-                                    destructiveButtonIndex: 2,
-                                    cancelButtonIndex: 0,
-                                  },
-                                  (buttonIndex) => {
-                                    if (buttonIndex === 1) {
-                                      openPrayerModal(prayer);
-                                    } else if (buttonIndex === 2) {
-                                      deletePrayer(prayer.id);
-                                    }
-                                  }
-                                );
-                              } else {
-                                Alert.alert('Manage Prayer Request', 'Choose an action', [
-                                  { text: 'Cancel', style: 'cancel' },
-                                  { text: 'Edit', onPress: () => openPrayerModal(prayer) },
-                                  { text: 'Delete', style: 'destructive', onPress: () => deletePrayer(prayer.id) },
-                                ]);
-                              }
-                            }}
-                            style={{ padding: 4 }}
-                            activeOpacity={0.7}
-                            hitSlop={8}
-                          >
-                            <MoreVertical size={18} color="#9CA3AF" />
-                          </DebouncedTouchable>
-                        )}
-                      </View>
-                    </SoftCard>
-                  </BounceCard>
-                );
-              })}
+                  }}
+                />
+              ))}
 
               <DebouncedTouchable
                 style={[styles.seeAllEventsBtn, { marginTop: 0 }]}

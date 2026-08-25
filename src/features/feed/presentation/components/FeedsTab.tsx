@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   ChevronRight,
   Clock,
+  Forward,
   Heart,
   HeartHandshake,
   HelpCircle,
@@ -487,7 +488,7 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
             </Text>
           )}
 
-          {/* Social Action Footer: Like, Comment and Options Menu */}
+          {/* Social Action Footer: Like, Comment, Share and Delete */}
           <View
             style={{
               flexDirection: 'row',
@@ -533,16 +534,22 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
                   {post.commentCount || 0}
                 </Text>
               </TouchableOpacity>
-            </View>
 
-            <TouchableOpacity accessibilityRole="button"
-              onPress={() => handleOptionsPress(post)}
-              style={{ padding: 4 }}
-              activeOpacity={0.7}
-              hitSlop={8}
-            >
-              <MoreVertical size={18} color="#9CA3AF" />
-            </TouchableOpacity>
+              <TouchableOpacity
+                accessibilityRole="button"
+                onPress={async () => {
+                  if (shareImageGeneratorRef.current) {
+                    await shareImageGeneratorRef.current.captureAndShare(post, 'highlight');
+                  } else {
+                    Share.share({ message: `"${post.text}" - ${reference}` });
+                  }
+                }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                activeOpacity={0.7}
+              >
+                <Forward size={18} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
           </View>
         </SoftCard>
       </BounceCard>
@@ -558,6 +565,13 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
       handleAnswered={handleAnswered}
       openPrayerModal={openPrayerModal}
       deletePrayer={deletePrayer}
+      onShare={(p) => {
+        if (shareImageGeneratorRef.current) {
+          shareImageGeneratorRef.current.captureAndShare(p, 'prayer');
+        } else {
+          Share.share({ message: `${p.title ? p.title + ' — ' : ''}${p.request || p.content || ''}` });
+        }
+      }}
     />
   );
 
@@ -710,10 +724,21 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
                   {(note as any).commentCount || 0}
                 </Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                accessibilityRole="button"
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                onPress={async () => {
+                  if (shareImageGeneratorRef.current) {
+                    await shareImageGeneratorRef.current.captureAndShare(note);
+                  } else {
+                    Share.share({ message: `${note.content || ''}` });
+                  }
+                }}
+                activeOpacity={0.7}
+              >
+                <Forward size={18} color="#6B7280" />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity accessibilityRole="button" style={{ padding: 4 }} onPress={() => handleNoteOptionsPress(note)}>
-              <MoreVertical size={18} color="#9CA3AF" />
-            </TouchableOpacity>
           </View>
         </SoftCard>
       </BounceCard>
