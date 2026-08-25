@@ -66,7 +66,7 @@ export const initAppCheck = (firebaseApp: FirebaseApp) => {
 
         // The native RNFB app is always [DEFAULT], loaded from GoogleService-Info.plist.
         // In the Production scheme that plist IS the prod plist, so bridging is safe.
-        const rnfbApp = rnfirebase.app();
+        const rnfbApp = typeof rnfirebase.app === 'function' ? rnfirebase.app() : rnfirebase.getApp();
 
         const provider = new ReactNativeFirebaseAppCheckProvider();
 
