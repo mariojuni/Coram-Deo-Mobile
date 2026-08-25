@@ -1,11 +1,6 @@
 name: Distribute Production App
 
 on:
-  push:
-    branches:
-      - release
-    tags:
-      - "v*"
   workflow_dispatch:
     inputs:
       platform:
@@ -34,7 +29,7 @@ concurrency:
 
 jobs:
   android-production:
-    if: github.event_name == 'push' || github.event.inputs.platform == 'both' || github.event.inputs.platform == 'android'
+    if: github.event.inputs.platform == 'both' || github.event.inputs.platform == 'android'
     name: Build and Upload Android Production
     runs-on: ubuntu-latest
     environment: production
@@ -145,16 +140,6 @@ jobs:
           path: android/build/reports/
           retention-days: 3
 
-      - name: Create and Push Release Tag
-        if: success() && github.event_name == 'push'
-        run: |
-          PACKAGE_VER=$(node -p "require('./package.json').version")
-          TAG_NAME="v${PACKAGE_VER}"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "$TAG_NAME" -m "Production release tag $TAG_NAME (Build #${{ github.run_number }})" || true
-          git push origin "$TAG_NAME" || echo "Tag $TAG_NAME already pushed."
-
       - name: Cleanup Keystore and Service Account
         if: always()
         run: |
@@ -162,7 +147,7 @@ jobs:
           rm -f fastlane/play-service-account.json
 
   ios-production:
-    if: github.event_name == 'push' || github.event.inputs.platform == 'both' || github.event.inputs.platform == 'ios'
+    if: github.event.inputs.platform == 'both' || github.event.inputs.platform == 'ios'
     name: Build and Upload iOS Production
     runs-on: macos-latest
     environment: production
