@@ -101,7 +101,11 @@ export const initAppCheck = (firebaseApp: FirebaseApp) => {
         });
         console.log(`Firebase App Check initialized (Mobile/CustomProvider Bridged) for ${firebaseApp.name}`);
       }
-    } catch (e) {
+    } catch (e: any) {
+      if (process.env.EXPO_PUBLIC_APP_ENV === 'production') {
+        const { Alert } = require('react-native');
+        Alert.alert('App Check Init Error', String(e?.message || e));
+      }
       console.warn('Failed to initialize App Check on Mobile', e);
     }
   }
