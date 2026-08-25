@@ -76,7 +76,21 @@ jobs:
           GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.ANDROID_GOOGLE_SERVICES_JSON_STAGING }}
         run: |
           mkdir -p credentials/staging
-          echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > credentials/staging/google-services.json
+          # Try base64 decode first; if invalid JSON fall back to treating secret as raw JSON
+          printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > credentials/staging/google-services.json 2>/dev/null || true
+          # Validate JSON; if invalid, assume secret is already raw JSON
+          if ! python3 -c "import json,sys; json.load(open('credentials/staging/google-services.json'))" 2>/dev/null; then
+            echo "Base64 decode produced invalid JSON. Treating secret as raw JSON..."
+            printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" > credentials/staging/google-services.json
+          fi
+          # Final validation
+          if python3 -c "import json,sys; json.load(open('credentials/staging/google-services.json'))"; then
+            echo "✅ google-services.json is valid JSON"
+          else
+            echo "❌ google-services.json is INVALID JSON — check the ANDROID_GOOGLE_SERVICES_JSON_STAGING secret!"
+            head -c 200 credentials/staging/google-services.json
+            exit 1
+          fi
 
       - name: Run Build and Fastlane Android
         env:
