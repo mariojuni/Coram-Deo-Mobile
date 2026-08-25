@@ -79,7 +79,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ...config,
     name: isProd ? "CoramDeo" : "CoramDeo-DEV",
     slug: "CoramDeoApp",
-    version: "1.0.0",
+    version: require('./package.json').version || "1.0.0",
     orientation: "default",
     icon: "./assets/images/icon.png",
     scheme: "coramdeoapp",

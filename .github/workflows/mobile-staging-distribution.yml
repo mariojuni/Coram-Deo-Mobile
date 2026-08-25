@@ -45,6 +45,18 @@ jobs:
       - name: Install Node dependencies
         run: npm ci --legacy-peer-deps
 
+      - name: Bump Version & Create Tag
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.version_bump != 'none'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          BUMP_TYPE="${{ github.event.inputs.version_bump || 'patch' }}"
+          NEW_VERSION=$(npm version $BUMP_TYPE --no-git-tag-version)
+          TAG_NAME="v${NEW_VERSION#v}"
+          git commit -am "chore(release): bump version to $NEW_VERSION [skip ci]" || true
+          git tag -a "$TAG_NAME" -m "Staging Release $TAG_NAME (Build #${{ github.run_number }})" || true
+          git push origin HEAD:${{ github.ref_name }} --tags || true
+
       - name: Setup Java
         uses: actions/setup-java@v3
         with:
