@@ -14,7 +14,14 @@ const withAndroidSigningFix = (config: ExpoConfig) => {
         const releaseSigningBlock = `        release {
             if (project.hasProperty('android.injected.signing.store.file')) {
                 def storeFilePath = project.property('android.injected.signing.store.file')
-                storeFile file(storeFilePath)
+                def sf = file(storeFilePath)
+                if (!sf.exists()) {
+                    sf = rootProject.file(storeFilePath)
+                }
+                if (!sf.exists()) {
+                    sf = file("../" + storeFilePath)
+                }
+                storeFile sf
                 storePassword project.property('android.injected.signing.store.password')
                 keyAlias project.property('android.injected.signing.key.alias')
                 keyPassword project.property('android.injected.signing.key.password')

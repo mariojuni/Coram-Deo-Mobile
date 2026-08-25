@@ -107,8 +107,9 @@ jobs:
           echo "org.gradle.workers.max=2" >> android/gradle.properties
           echo "expo.inlineModules.watchedDirectories=[]" >> android/gradle.properties
           
+          KEYSTORE_PATH="${GITHUB_WORKSPACE:-$PWD}/fastlane/staging-upload-key.keystore"
           cd android
-          ./gradlew assembleRelease -Pandroid.injected.signing.store.file=../fastlane/staging-upload-key.keystore -Pandroid.injected.signing.store.password=${ANDROID_KEYSTORE_PASSWORD} -Pandroid.injected.signing.key.alias=${ANDROID_KEY_ALIAS} -Pandroid.injected.signing.key.password=${ANDROID_KEY_PASSWORD} --stacktrace --console=plain > build_log.txt 2>&1 || {
+          ./gradlew assembleRelease -Pandroid.injected.signing.store.file="$KEYSTORE_PATH" -Pandroid.injected.signing.store.password=${ANDROID_KEYSTORE_PASSWORD} -Pandroid.injected.signing.key.alias=${ANDROID_KEY_ALIAS} -Pandroid.injected.signing.key.password=${ANDROID_KEY_PASSWORD} --stacktrace --console=plain > build_log.txt 2>&1 || {
             echo "=== ROOT CAUSE (What went wrong) ==="
             awk '/\* What went wrong:/,0' build_log.txt | head -n 120
             echo "=== TAIL OF BUILD LOG ==="
