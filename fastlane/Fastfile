@@ -28,7 +28,8 @@ platform :android do
       project_dir: "android",
       task: "bundle",
       build_type: "Release",
-      flags: "--stacktrace",
+      flags: "--stacktrace --console=plain",
+      print_command_output: true,
       properties: {
         "android.injected.signing.store.file" => File.expand_path("upload-key.keystore", __dir__),
         "android.injected.signing.store.password" => ENV["ANDROID_KEYSTORE_PASSWORD"],
