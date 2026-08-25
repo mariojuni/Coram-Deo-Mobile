@@ -94,7 +94,14 @@ jobs:
           echo "expo.inlineModules.watchedDirectories=[]" >> android/gradle.properties
           
           cd android
-          ./gradlew assembleRelease -Pandroid.injected.signing.store.file=../fastlane/staging-upload-key.keystore -Pandroid.injected.signing.store.password=${ANDROID_KEYSTORE_PASSWORD} -Pandroid.injected.signing.key.alias=${ANDROID_KEY_ALIAS} -Pandroid.injected.signing.key.password=${ANDROID_KEY_PASSWORD} --stacktrace --console=plain > build_log.txt 2>&1 || { tail -n 250 build_log.txt; echo "❌ GRADLE BUILD FAILED. Check the lines above for the exact Caused by: error."; exit 1; }
+          ./gradlew assembleRelease -Pandroid.injected.signing.store.file=../fastlane/staging-upload-key.keystore -Pandroid.injected.signing.store.password=${ANDROID_KEYSTORE_PASSWORD} -Pandroid.injected.signing.key.alias=${ANDROID_KEY_ALIAS} -Pandroid.injected.signing.key.password=${ANDROID_KEY_PASSWORD} --stacktrace --console=plain > build_log.txt 2>&1 || {
+            echo "=== ROOT CAUSE (Caused by) ==="
+            grep -n "Caused by:\|FAILED\|What went wrong\|error:\|Error:" build_log.txt | head -60
+            echo "=== LAST 100 LINES ==="
+            tail -n 100 build_log.txt
+            echo "❌ GRADLE BUILD FAILED."
+            exit 1
+          }
           cd ..
           
           bundle exec fastlane android staging_upload
