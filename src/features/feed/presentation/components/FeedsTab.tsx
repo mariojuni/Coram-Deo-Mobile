@@ -1,5 +1,6 @@
 import { SubScreenProps, PrayerCardItem, membersStyles, placeholder } from '../../../../app/(tabs)/community';
 import { canModeratePrayerRequests } from '@/permissions/mobilePermissions';
+import { formatName } from '@/utils/stringUtils';
 import { BlurView } from 'expo-blur';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -449,7 +450,7 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
               <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
                 <Text style={{ fontSize: 14, color: '#111827', lineHeight: 20 }}>
                   <Text style={{ fontWeight: '700', color: '#111827' }}>
-                    {isOwner ? 'You' : post.userName}
+                    {isOwner ? 'You' : formatName(post.userName || '')}
                   </Text>
                   <Text style={{ color: '#4B5563', fontWeight: '400' }}> highlighted </Text>
                   <Text style={{ fontWeight: '800', color: '#111827' }}>{reference}</Text>
@@ -636,7 +637,7 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
             <View style={{ flex: 1, justifyContent: 'center' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
                 <Text style={{ fontSize: 14, color: '#111827', lineHeight: 20 }}>
-                  <Text style={{ fontWeight: '700', color: '#111827' }}>{isOwner ? 'You' : (note.userName || 'A member')}</Text>
+                  <Text style={{ fontWeight: '700', color: '#111827' }}>{isOwner ? 'You' : formatName(note.userName || 'A member')}</Text>
                   <Text style={{ color: '#4B5563', fontWeight: '400' }}> added a note on </Text>
                   <Text style={{ fontWeight: '800', color: '#111827' }}>{reference || (isSermon ? 'a Sermon' : 'a Bible passage')}</Text>
                 </Text>
