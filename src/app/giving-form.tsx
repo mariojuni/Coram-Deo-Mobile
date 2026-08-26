@@ -23,8 +23,11 @@ import {
   QrCode,
   X,
   Info,
+  User,
+  Users,
 } from "lucide-react-native";
 import { useAuthStore } from "../store/useAuthStore";
+import { useMemberStore } from "../store/useMemberStore";
 import { useGiving } from "../features/giving/presentation/hooks/useGiving";
 import {
   submitGivingRecord,
@@ -41,11 +44,20 @@ import {
 } from "../components/ui/SoftCard";
 import { AccessibleTextInput } from "../components/a11y/AccessibleTextInput";
 import { AccessibleButton } from "../components/a11y/AccessibleButton";
+import { PrimaryGradientButton } from "../components/ui/PrimaryGradientButton";
 
 export default function GivingFormScreen() {
   const { campaignId, fundType, fundId } = useLocalSearchParams();
   const router = useRouter();
   const { userProfile, currentUser } = useAuthStore();
+  const { members, households } = useMemberStore();
+  const currentMember = members.find((m) => m.id === userProfile?.memberId);
+  const foundHousehold = households?.find((h) => 
+    (userProfile?.memberId && h.memberIds?.includes(userProfile.memberId)) || 
+    (currentUser?.uid && h.memberIds?.includes(currentUser.uid))
+  );
+  const resolvedHouseholdId = userProfile?.householdId || currentMember?.householdId || foundHousehold?.id;
+  
   const {
     funds = [],
     donationAccounts: rawAccounts,
@@ -61,6 +73,9 @@ export default function GivingFormScreen() {
   const [isPreselectedFund, setIsPreselectedFund] =
     useState(initialPreselected);
 
+  const [giverType, setGiverType] = useState<"individual" | "household">(
+    resolvedHouseholdId ? "household" : "individual"
+  );
   const [selectedAccountId, setSelectedAccountId] = useState("");
   const [hasSentDonation, setHasSentDonation] = useState(false);
   const [showQRForAccount, setShowQRForAccount] = useState<any>(null);
@@ -136,7 +151,6 @@ export default function GivingFormScreen() {
 
   const copyToClipboard = async (text: string, label: string) => {
     await Clipboard.setStringAsync(text);
-    // Ideally use a toast/snackbar here as per instructions, using an Alert for simplicity as requested 'existing toast system' might not be available
     Alert.alert("Copied", `${label} copied to clipboard.`);
   };
 
@@ -192,6 +206,11 @@ export default function GivingFormScreen() {
         {
           churchId,
           userId,
+          householdId:
+            giverType === "household" && resolvedHouseholdId
+              ? resolvedHouseholdId
+              : undefined,
+          giverEntityType: giverType,
           fundId: selectedFundId,
           campaignId: (campaignId as string) || undefined,
           amount: Number(amount),
@@ -377,6 +396,61 @@ export default function GivingFormScreen() {
             />
           </View>
         </View>
+
+        {resolvedHouseholdId ? (
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Give As</Text>
+            <View style={styles.giverTypeContainer}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={[
+                  styles.giverTypeBtn,
+                  giverType === "household" && styles.giverTypeBtnActive,
+                ]}
+                onPress={() => setGiverType("household")}
+                accessibilityLabel="Give as Household"
+              >
+
+                <Users
+                  size={18}
+                  color={giverType === "household" ? "#FFF" : "#6B7280"}
+                />
+                <Text
+                  style={[
+                    styles.giverTypeBtnText,
+                    giverType === "household" && styles.giverTypeBtnTextActive,
+                  ]}
+                >
+                  Household
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={[
+                  styles.giverTypeBtn,
+                  giverType === "individual" && styles.giverTypeBtnActive,
+                ]}
+                onPress={() => setGiverType("individual")}
+                accessibilityLabel="Give as Individual"
+              >
+
+                <User
+                  size={18}
+                  color={giverType === "individual" ? "#FFF" : "#6B7280"}
+                />
+                <Text
+                  style={[
+                    styles.giverTypeBtnText,
+                    giverType === "individual" && styles.giverTypeBtnTextActive,
+                  ]}
+                >
+                  Individual
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : null}
 
         <View style={styles.formGroup}>
           <Text style={styles.label}>Giving To</Text>
@@ -647,36 +721,12 @@ export default function GivingFormScreen() {
             pointerEvents="none"
           />
 
-          <AccessibleButton
-            activeOpacity={0.8}
-            style={[
-              styles.submitBtnWrap,
-              (isSubmitting || isCampaignInactive) && styles.submitBtnDisabled,
-            ]}
+          <PrimaryGradientButton
+            title={isCampaignInactive ? "Campaign Ended" : "Submit Giving"}
             onPress={handleSubmit}
-            disabled={isSubmitting || isCampaignInactive}
+            disabled={isCampaignInactive}
             loading={isSubmitting}
-            accessibilityLabel={
-              isCampaignInactive ? "Campaign Ended" : "Submit Giving"
-            }
-          >
-            <LinearGradient
-              colors={
-                isCampaignInactive
-                  ? ["#D1D5DB", "#9CA3AF"]
-                  : ["#FF6596", "#C084FC"]
-              }
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.submitBtnGradient}
-            >
-              {!isSubmitting && (
-                <Text style={styles.submitBtnText}>
-                  {isCampaignInactive ? "Campaign Ended" : "Submit Giving"}
-                </Text>
-              )}
-            </LinearGradient>
-          </AccessibleButton>
+          />
         </View>
       )}
 
@@ -827,6 +877,40 @@ const styles = StyleSheet.create({
     color: "#1a1a1a",
     height: "100%",
     paddingVertical: 0,
+  },
+  giverTypeContainer: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  giverTypeBtn: {
+    ...getSoftShadowStyle(24),
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  giverTypeBtnActive: {
+    backgroundColor: "#FF759E",
+    borderColor: "transparent",
+    shadowColor: "#FF759E",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 4,
+    boxShadow: "0px 4px 14px rgba(255, 117, 158, 0.25)",
+  },
+  giverTypeBtnText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#4B5563",
+  },
+  giverTypeBtnTextActive: {
+    color: "#FFF",
+    fontWeight: "700",
   },
   preselectedFundBox: {
     flexDirection: "row",
@@ -1082,7 +1166,7 @@ const styles = StyleSheet.create({
   },
   submitBtnGradient: {
     width: "100%",
-    height: 56,
+    paddingVertical: 16,
     alignItems: "center",
     justifyContent: "center",
   },

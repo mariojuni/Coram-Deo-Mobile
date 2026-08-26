@@ -1,4 +1,5 @@
 import type { BiblePlanDay } from '@/features/biblePlan/domain/biblePlan.types';
+import { PrimaryGradientButton } from '@/components/ui/PrimaryGradientButton';
 import { BounceCard } from '@/components/ui/BounceCard';
 import PlanUpdateModal from '@/features/biblePlan/presentation/components/PlanUpdateModal';
 import { useBiblePlanDetail } from '@/features/biblePlan/presentation/hooks/useBiblePlanDetail';
@@ -552,30 +553,16 @@ export default function BiblePlanDetailScreen() {
                   <Text style={styles.ctaDoneText}>Plan Completed 🎉</Text>
                 </View>
               ) : isStarted ? (
-                <Pressable onPress={handleContinue} style={styles.ctaBtn}>
-                  <LinearGradient
-                    colors={['#FF6596', '#C084FC']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.ctaGradient}
-                  >
-                    <Text style={styles.ctaText}>Continue Reading</Text>
-                  </LinearGradient>
-                </Pressable>
+                <PrimaryGradientButton
+                  title="Continue Reading"
+                  onPress={handleContinue}
+                />
               ) : (
-                <Pressable onPress={handleStart} disabled={starting} style={styles.ctaBtn}>
-                  <LinearGradient
-                    colors={['#FF6596', '#C084FC']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.ctaGradient}
-                  >
-                    {starting
-                      ? <ActivityIndicator color="#fff" />
-                      : <Text style={styles.ctaText}>Start Reading</Text>
-                    }
-                  </LinearGradient>
-                </Pressable>
+                <PrimaryGradientButton
+                  title="Start Reading"
+                  onPress={handleStart}
+                  loading={starting}
+                />
               )}
               </View>
             </View>

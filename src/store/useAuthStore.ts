@@ -30,6 +30,7 @@ import { useFeedStore } from './useFeedStore';
 export const clearAllStoreListeners = () => {
   useMemberStore.getState().initializeMembersListener(null);
   useMemberStore.getState().initializeServicesListener(null);
+  useMemberStore.getState().initializeHouseholdsListener(null);
   useScheduleStore.getState().clearSchedulesListener();
   useBiblePlanStore.getState().clearAllListeners();
   useSermonStore.getState().unsubscribeSermons();

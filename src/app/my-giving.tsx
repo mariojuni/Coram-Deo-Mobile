@@ -111,7 +111,30 @@ export default function MyGivingScreen() {
             myRecords.map((record: GivingRecord) => (
               <View key={record.id} style={styles.recordCard}>
                 <View style={styles.recordHeader}>
-                  <Text style={styles.dateText}>{formatDate(record.submittedAt)}</Text>
+                  <View style={styles.dateAndEntityRow}>
+                    <Text style={styles.dateText}>{formatDate(record.submittedAt)}</Text>
+                    {record.giverEntityType && (
+                      <View
+                        style={[
+                          styles.entityPill,
+                          record.giverEntityType === "household"
+                            ? styles.householdPill
+                            : styles.individualPill,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.entityPillText,
+                            record.giverEntityType === "household"
+                              ? styles.householdPillText
+                              : styles.individualPillText,
+                          ]}
+                        >
+                          {record.giverEntityType === "household" ? "Household" : "Individual"}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                   {renderStatus(record.status)}
                 </View>
                 
@@ -219,11 +242,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
+  dateAndEntityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   dateText: {
     fontSize: 13,
     color: '#6B7280',
     fontWeight: '600',
     letterSpacing: 0.5,
+  },
+  entityPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  householdPill: {
+    backgroundColor: '#EEF2FF',
+  },
+  individualPill: {
+    backgroundColor: '#F3F4F6',
+  },
+  entityPillText: {
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  householdPillText: {
+    color: '#4F46E5',
+  },
+  individualPillText: {
+    color: '#4B5563',
   },
   statusPill: {
     flexDirection: 'row',

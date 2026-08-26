@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Image, TouchableOpacity, Animated } from 'react
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
 import { useGiving } from '@/features/giving/presentation/hooks/useGiving';
+import { PrimaryGradientButton } from '@/components/ui/PrimaryGradientButton';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -242,20 +243,10 @@ export default function GivingCampaignDetailScreen() {
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.65)', borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)' }]} pointerEvents="none" />
         
-        <TouchableOpacity 
-          style={styles.giveBtnContainer}
-          activeOpacity={0.8}
+        <PrimaryGradientButton
+          title="Give to this Project"
           onPress={withDebounce(() => router.push({ pathname: '/giving-form', params: { campaignId: campaign.id, fundId: campaign.fundId } }))}
-        >
-          <LinearGradient
-            colors={['#FF6596', '#C084FC']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.giveBtn}
-          >
-            <Text style={styles.giveBtnText}>Give to this Project</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+        />
       </View>
     </View>
   );

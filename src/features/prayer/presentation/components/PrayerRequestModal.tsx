@@ -13,6 +13,7 @@ import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 import { BlurView } from 'expo-blur';
 import { X } from 'lucide-react-native';
 import { useModalKeyboard } from '@/hooks/useModalKeyboard';
+import { PrimaryGradientButton } from '../../../../components/ui/PrimaryGradientButton';
 
 interface PrayerRequestModalProps {
   isOpen: boolean;
@@ -274,25 +275,11 @@ export default function PrayerRequestModal({ isOpen, onClose, initialData }: Pra
           </View>
 
           <View style={styles.actionRow}>
-            <TouchableOpacity 
-              style={[styles.submitBtnContainer, isSubmitting && { opacity: 0.7 }]} 
-              activeOpacity={0.8} 
+            <PrimaryGradientButton
+              title={initialData ? "Edit Prayer Request" : "Submit Prayer Request"}
               onPress={handleSubmit}
-              disabled={isSubmitting}
-            >
-              <LinearGradient
-                colors={['#FF6596', '#C084FC']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.submitBtn}
-              >
-                {isSubmitting ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={styles.submitBtnText}>Submit Prayer Request</Text>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
+              loading={isSubmitting}
+            />
           </View>
 
         </ScrollView>

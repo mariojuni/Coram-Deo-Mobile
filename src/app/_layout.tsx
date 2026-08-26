@@ -42,6 +42,7 @@ export default function RootLayout() {
   const initializeAuthListener = useAuthStore((state) => state.initializeAuthListener);
   const initializeMembersListener = useMemberStore((state) => state.initializeMembersListener);
   const initializeServicesListener = useMemberStore((state) => state.initializeServicesListener);
+  const initializeHouseholdsListener = useMemberStore((state) => state.initializeHouseholdsListener);
   const initializeNotificationListener = useNotificationStore((state) => state.initializeListener);
   const loadTranslation = useBibleVersionStore((state) => state.loadTranslation);
   const segments = useSegments();
@@ -89,6 +90,7 @@ export default function RootLayout() {
     if (initialized) {
       initializeMembersListener(userProfile?.churchId);
       initializeServicesListener(userProfile?.churchId);
+      initializeHouseholdsListener(userProfile?.churchId);
       
       if (currentUser?.uid) {
         PushTokenService.registerDeviceToken(currentUser.uid);
@@ -98,7 +100,7 @@ export default function RootLayout() {
         };
       }
     }
-  }, [initialized, userProfile?.churchId, currentUser?.uid, initializeMembersListener, initializeServicesListener, initializeNotificationListener]);
+  }, [initialized, userProfile?.churchId, currentUser?.uid, initializeMembersListener, initializeServicesListener, initializeHouseholdsListener, initializeNotificationListener]);
 
   // Foreground notification handler
   useEffect(() => {
