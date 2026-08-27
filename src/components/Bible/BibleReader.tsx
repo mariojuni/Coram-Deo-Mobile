@@ -393,7 +393,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
 
           const renderVerseContent = (verse: Verse, text: string, hasHighlight: boolean, highlightColorValue: string, isSelected: boolean) => {
             const cleanText = text.replace(/\{\{note:\d+\}\}/g, '');
-            const hasNotes = !isSecondary && ((verse.crossReferences && verse.crossReferences.length > 0) || (verse.notes && verse.notes.length > 0));
+            const hasNotes = ((verse.crossReferences && verse.crossReferences.length > 0) || (verse.notes && verse.notes.length > 0));
             
             return (
               <Text

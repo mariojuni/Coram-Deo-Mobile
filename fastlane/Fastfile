@@ -15,7 +15,7 @@ platform :android do
   lane :production_upload do
     upload_to_play_store(
       package_name: "com.coramdeo.app.prod",
-      track: "internal",
+      track: "closed",
       aab: "android/app/build/outputs/bundle/release/app-release.aab",
       json_key: "fastlane/play-service-account.json",
       skip_upload_metadata: true,
