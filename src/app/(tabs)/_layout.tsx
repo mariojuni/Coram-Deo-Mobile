@@ -2,18 +2,18 @@ import { BlurView } from 'expo-blur';
 import { Tabs, usePathname, useRouter } from 'expo-router';
 import { Book, CheckCircle, Handshake, Home, Users, XCircle } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, ActivityIndicator, Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, Animated, Platform, StyleSheet, Text, TouchableOpacity, View, PanResponder } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useShallow } from 'zustand/react/shallow';
 import FabMenu from '../../components/Navigation/FabMenu';
 import BibleFilledIcon from '../../components/Navigation/Icons/BibleFilledIcon';
 import BibleStrokeIcon from '../../components/Navigation/Icons/BibleStrokeIcon';
-import ServeFilledIcon from '../../components/Navigation/Icons/ServeFilledIcon';
-import ServeStrokeIcon from '../../components/Navigation/Icons/ServeStrokeIcon';
 import CommunityFilledIcon from '../../components/Navigation/Icons/CommunityFilledIcon';
 import CommunityStrokeIcon from '../../components/Navigation/Icons/CommunityStrokeIcon';
 import HomeFilledIcon from '../../components/Navigation/Icons/HomeFilledIcon';
 import HomeStrokeIcon from '../../components/Navigation/Icons/HomeStrokeIcon';
+import ServeFilledIcon from '../../components/Navigation/Icons/ServeFilledIcon';
+import ServeStrokeIcon from '../../components/Navigation/Icons/ServeStrokeIcon';
 import { ContinueWatchingCard } from '../../features/sermons/presentation/components/ContinueWatchingCard';
 import { GlobalVideoPlayer } from '../../features/sermons/presentation/components/GlobalVideoPlayer';
 import { useAudio } from '../../features/sermons/presentation/context/AudioContext';
@@ -78,7 +78,7 @@ const AnimatedTabItem = ({ isFocused, route, options, onPress, IconComponent, sh
       accessibilityHint={`Navigates to the ${label} screen`}
       testID={options.tabBarTestID}
       onPress={onPress}
-      style={styles.navItem}
+      style={[styles.navItem, { zIndex: 2, elevation: 2 }]}
       onLayout={onLayout ? (e) => onLayout(route.key, e.nativeEvent.layout) : undefined}
     >
       <Animated.View style={{ transform: [{ scale }] }}>
@@ -131,20 +131,135 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
   const activeTabWidth = useRef(new Animated.Value(0)).current;
   const activeTabHeight = useRef(new Animated.Value(0)).current;
 
+  const isDragging = useRef(false);
+  const dragStartX = useRef(0);
+  const stateRef = useRef(state);
+  const tabLayoutsRef = useRef(tabLayouts);
+  const navigationRef = useRef(navigation);
+
   useEffect(() => {
+    stateRef.current = state;
+    tabLayoutsRef.current = tabLayouts;
+    navigationRef.current = navigation;
+  }, [state, tabLayouts, navigation]);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: (evt) => {
+        isDragging.current = true;
+        activeTabX.stopAnimation();
+        activeTabY.stopAnimation();
+        // Use pageX - 24 (container's left offset) to avoid child coordinate issues
+        const touchX = evt.nativeEvent.pageX - 24;
+        dragStartX.current = touchX;
+        activeTabX.setValue(touchX - 32);
+      },
+      onPanResponderMove: (evt, gestureState) => {
+        let newX = dragStartX.current + gestureState.dx - 32;
+        
+        const layouts = tabLayoutsRef.current;
+        const keys = Object.keys(layouts);
+        if (keys.length > 0) {
+          let minX = Infinity;
+          let maxX = -Infinity;
+          keys.forEach(key => {
+            if (layouts[key].x < minX) minX = layouts[key].x;
+            if (layouts[key].x > maxX) maxX = layouts[key].x;
+          });
+          
+          if (newX < minX) newX = minX;
+          if (newX > maxX) newX = maxX;
+        }
+        
+        activeTabX.setValue(newX);
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        isDragging.current = false;
+        const finalX = dragStartX.current + gestureState.dx;
+        
+        let nearestTabKey: string | null = null;
+        let minDistance = Infinity;
+        
+        const layouts = tabLayoutsRef.current;
+        Object.keys(layouts).forEach(key => {
+          const layout = layouts[key];
+          const tabCenterX = layout.x + layout.width / 2;
+          const distance = Math.abs(finalX - tabCenterX);
+          if (distance < minDistance) {
+            minDistance = distance;
+            nearestTabKey = key;
+          }
+        });
+        
+        const currentState = stateRef.current;
+        const currentNavigation = navigationRef.current;
+
+        if (nearestTabKey && currentState) {
+          const route = currentState.routes.find((r: any) => r.key === nearestTabKey);
+          if (route) {
+            const isFocused = currentState.routes[currentState.index].key === nearestTabKey;
+            
+            if (route.name === 'serve') {
+              useMinistryStore.getState().markAssignmentsViewed();
+            }
+            const event = currentNavigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
+
+            if (!isFocused && !event.defaultPrevented) {
+              currentNavigation.navigate(route.name);
+            } else if (isFocused) {
+               const layout = layouts[nearestTabKey];
+               if (layout) {
+                 Animated.spring(activeTabX, {
+                   toValue: layout.x,
+                   useNativeDriver: false,
+                   friction: 9,
+                   tension: 65,
+                 }).start();
+               }
+            }
+          }
+        }
+      },
+      onPanResponderTerminate: () => {
+         isDragging.current = false;
+         const currentState = stateRef.current;
+         const layouts = tabLayoutsRef.current;
+         if (currentState && currentState.routes[currentState.index]) {
+             const layout = layouts[currentState.routes[currentState.index].key];
+             if (layout) {
+                 Animated.spring(activeTabX, {
+                     toValue: layout.x,
+                     useNativeDriver: false,
+                     friction: 9,
+                     tension: 65,
+                 }).start();
+             }
+         }
+      }
+    })
+  ).current;
+
+  useEffect(() => {
+    if (isDragging.current) return;
     const currentRoute = state.routes[state.index];
     if (!currentRoute) return;
     const layout = tabLayouts[currentRoute.key];
     if (layout) {
       Animated.spring(activeTabX, {
         toValue: layout.x,
-        useNativeDriver: true,
+        useNativeDriver: false,
         friction: 9,
         tension: 65,
       }).start();
       Animated.spring(activeTabY, {
         toValue: layout.y,
-        useNativeDriver: true,
+        useNativeDriver: false,
         friction: 9,
         tension: 65,
       }).start();
@@ -167,10 +282,10 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
       ]}
       pointerEvents="box-none"
     >
-      <View style={styles.navContainer}>
+      <View style={styles.navContainer} {...panResponder.panHandlers}>
         {/* Standard frosted background for both platforms */}
         <BlurView intensity={80} tint="light" style={[StyleSheet.absoluteFill, { borderRadius: 40, overflow: 'hidden' }]} />
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)', borderRadius: 40 }]} pointerEvents="none" />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.8)', borderRadius: 40 }]} pointerEvents="none" />
 
         {/* Sliding Highlight Background */}
         <Animated.View
@@ -184,9 +299,10 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
               { translateX: activeTabX },
               { translateY: activeTabY },
             ],
-            backgroundColor: 'rgba(255, 255, 255, 0.5)',
+            backgroundColor: 'rgba(255, 101, 150, 0.04)',
             borderRadius: 30, // completely rounded pill
             opacity: Object.keys(tabLayouts).length > 0 ? 1 : 0,
+            zIndex: 1,
           }}
           pointerEvents="none"
         />
@@ -415,7 +531,7 @@ const styles = StyleSheet.create({
     backgroundColor: Platform.OS === 'android' ? '#FFFFFF' : 'transparent',
     borderColor: 'rgba(255,255,255,0.5)',
     borderWidth: 0,
-    boxShadow: '0px 4px 12px rgba(164, 164, 164, 0.04)',
+    boxShadow: '0px 20px 60px rgba(0, 0, 0, 0.06)',
   },
   navItem: {
     padding: 2,
