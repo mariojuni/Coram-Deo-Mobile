@@ -7,7 +7,7 @@ import DebouncedTouchable from '@/components/DebouncedTouchable';
 
 export interface TopNavBarProps {
   leftText: string;
-  onLeftPress: () => void;
+  onLeftPress?: () => void;
   onRightPress: () => void;
   rightText: string;
   scrollY?: Animated.Value;
@@ -16,9 +16,13 @@ export interface TopNavBarProps {
   onSplitPress?: () => void;
   secondaryRightText?: string;
   onSecondaryRightPress?: () => void;
+  showActivityIcon?: boolean;
+  onActivityPress?: () => void;
+  onBackPress?: () => void;
 }
 
-import { Columns } from 'lucide-react-native';
+import { Columns, Activity, ChevronLeft } from 'lucide-react-native';
+import { BounceCard } from '@/components/ui/BounceCard';
 
 const COLLAPSE_RANGE = 70;
 
@@ -32,7 +36,10 @@ export function TopNavBar({
   isSplitMode,
   onSplitPress,
   secondaryRightText,
-  onSecondaryRightPress
+  onSecondaryRightPress,
+  showActivityIcon,
+  onActivityPress,
+  onBackPress
 }: TopNavBarProps) {
   const insets = useSafeAreaInsets();
 
@@ -70,6 +77,15 @@ export function TopNavBar({
       </Animated.View>
 
       <View style={styles.content} pointerEvents="box-none">
+        {/* Left side back button */}
+        {!!onBackPress && (
+          <View style={[styles.leftActions, { left: Math.max(insets.left, 20) }]}>
+            <BounceCard bounceScale={0.85} style={styles.backCircle} onPress={onBackPress} hitSlop={8}>
+              <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
+            </BounceCard>
+          </View>
+        )}
+
         <Animated.View 
           style={[
             styles.pillContainer, 
@@ -85,7 +101,7 @@ export function TopNavBar({
 
               <View style={styles.divider} />
 
-              <DebouncedTouchable style={styles.bookBtn} onPress={onLeftPress}>
+              <DebouncedTouchable style={styles.bookBtn} onPress={onLeftPress} disabled={!onLeftPress}>
                 <Text style={styles.bookText}>{leftText}</Text>
               </DebouncedTouchable>
 
@@ -100,7 +116,7 @@ export function TopNavBar({
             </View>
           ) : (
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <DebouncedTouchable style={styles.bookBtn} onPress={onLeftPress}>
+              <DebouncedTouchable style={styles.bookBtn} onPress={onLeftPress} disabled={!onLeftPress}>
                 <Text style={styles.bookText}>{leftText}</Text>
               </DebouncedTouchable>
 
@@ -114,13 +130,18 @@ export function TopNavBar({
         </Animated.View>
         
         {/* Right side icons */}
-        {!!showSplitIcon ? (
-          <View style={[styles.rightActions, { right: Math.max(insets.right, 16) }]}>
+        <View style={[styles.rightActions, { right: Math.max(insets.right, 20) }]}>
+          {!!showActivityIcon && (
+            <DebouncedTouchable style={styles.actionBtn} onPress={onActivityPress}>
+              <Activity size={22} color="#4B5563" />
+            </DebouncedTouchable>
+          )}
+          {!!showSplitIcon && (
             <DebouncedTouchable style={[styles.splitBtn, isSplitMode && styles.splitBtnActive]} onPress={onSplitPress}>
               <Columns size={20} color={isSplitMode ? "#FFFFFF" : "#4B5563"} />
             </DebouncedTouchable>
-          </View>
-        ) : null}
+          )}
+        </View>
       </View>
     </Animated.View>
   );
@@ -196,10 +217,29 @@ const styles = StyleSheet.create({
   },
   rightActions: {
     position: 'absolute',
-    right: 16,
+    right: 20,
     top: 0,
-    bottom: 0,
-    justifyContent: 'center',
+    bottom: 12,
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+  },
+  actionBtn: {
+    padding: 8,
+  },
+  leftActions: {
+    position: 'absolute',
+    left: 20,
+    top: 0,
+    bottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backCircle: {
+    ...getTopBarButtonShadowStyle(20),
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   }
 });

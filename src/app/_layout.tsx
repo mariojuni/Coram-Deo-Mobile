@@ -56,7 +56,7 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    const allowedLandscapeRoutes = ['bible', 'version-manager', 'bible-notes'];
+    const allowedLandscapeRoutes = ['bible', 'version-manager', 'bible-notes', '[dayId]'];
     const isLandscapeAllowed = segments.some(segment => allowedLandscapeRoutes.includes(segment));
 
     if (isLandscapeAllowed) {

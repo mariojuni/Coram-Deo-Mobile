@@ -1,9 +1,10 @@
 import { bibleDataService, BIBLE_DOWNLOAD_COMPLETED_EVENT } from '@/features/bible/data/BibleDataService';
 import * as Clipboard from 'expo-clipboard';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DeviceEventEmitter } from 'react-native';
 import { useAuthStore } from '@/store/useAuthStore';
 import { bibleHighlightRepository } from '@/features/bibleHighlights/data/bibleHighlight.repository';
+import { bibleActivityRepository } from '@/features/myJourney/data/myJourney.repository';
 import type { BibleHighlight } from '@/features/bibleHighlights/domain/bibleHighlight.types';
 
 const highlightColors = {
@@ -135,6 +136,36 @@ export function useBibleReader(
     );
     return () => unsubscribe();
   }, [currentUser?.uid, passageId]);
+
+  // Meaningful Read Tracker
+  const readTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const markAsRead = useCallback(() => {
+    if (!currentUser?.uid || !passageId) return;
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const dateStr = `${yyyy}-${mm}-${dd}`;
+    bibleActivityRepository.logChapterRead(currentUser.uid, passageId, dateStr);
+  }, [currentUser?.uid, passageId]);
+
+  useEffect(() => {
+    if (readTimerRef.current) {
+      clearTimeout(readTimerRef.current);
+    }
+    
+    if (passageId && !loading) {
+      readTimerRef.current = setTimeout(() => {
+        markAsRead();
+      }, 15000); // 15 seconds
+    }
+
+    return () => {
+      if (readTimerRef.current) {
+        clearTimeout(readTimerRef.current);
+      }
+    };
+  }, [passageId, loading, markAsRead]);
 
   const toggleVerse = useCallback((verseNumber: string) => {
     setSelectedVerses((previous) =>
@@ -276,6 +307,7 @@ export function useBibleReader(
     };
 
     setSelectedVerses([]);
+    markAsRead(); // Creating a note counts as a meaningful read
     return scripture;
   }, [activeTranslation, activeBook, activeChapter, books, chapterDataByVerseNumber, selectedVerses]);
 
@@ -349,6 +381,8 @@ export function useBibleReader(
           visibility: effectiveChurchId ? 'church' : 'private',
           status: 'active'
         }).catch((err) => console.warn('[useBibleReader] Failed to publish highlight:', err));
+        
+        markAsRead(); // Highlighting counts as a meaningful read
       }
 
       setSelectedVerses([]);
@@ -405,6 +439,9 @@ export function useBibleReader(
   }, [activeBook, activeChapter, books, getEffectiveChapters, updatePreferences]);
 
   const handleNextChapter = useCallback(() => {
+    // If the user navigates to the next chapter manually, count the current one as read
+    markAsRead();
+
     const bookIndex = books.findIndex((book) => book.id === activeBook);
     if (bookIndex === -1) return;
     const currentBook = books[bookIndex];
@@ -426,7 +463,7 @@ export function useBibleReader(
         });
       }
     }
-  }, [activeBook, activeChapter, books, getEffectiveChapters, updatePreferences]);
+  }, [activeBook, activeChapter, books, getEffectiveChapters, updatePreferences, markAsRead]);
 
   const verseBackgroundColor = useCallback(
     (verseNumber: string) => {

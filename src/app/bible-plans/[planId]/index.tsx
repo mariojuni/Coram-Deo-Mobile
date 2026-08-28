@@ -16,10 +16,12 @@ import {
     ActivityIndicator,
     Alert,
     FlatList,
+    Platform,
     Pressable,
     ScrollView,
     StyleSheet,
     Text,
+    TouchableOpacity,
     View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';

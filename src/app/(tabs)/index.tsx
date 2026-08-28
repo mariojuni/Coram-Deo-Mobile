@@ -9,6 +9,7 @@ import { CommentButton } from '@/features/comments/presentation/components/Comme
 import { CampaignCard } from '@/features/giving/presentation/components/CampaignCard';
 import { useGiving } from '@/features/giving/presentation/hooks/useGiving';
 import { BiblePlanProgressCard } from '@/features/home/presentation/components/BiblePlanProgressCard';
+import MyJourneyCard from '@/features/home/presentation/components/MyJourneyCard';
 import { MinistryDutyCard } from '@/features/home/presentation/components/MinistryDutyCard';
 import { VerseOfTheDayCard } from '@/features/home/presentation/components/VerseOfTheDayCard';
 import { useHomeScreenData } from '@/features/home/presentation/hooks/useHomeScreenData';
@@ -364,6 +365,9 @@ export default function HomeScreen() {
         <BounceCard>
           <VerseOfTheDayCard />
         </BounceCard>
+
+        {/* ─── Bible Activity (Phase 4) ────────────────────────────────────── */}
+        <MyJourneyCard />
 
         {/* ─── Bible Plan Progress ───────────────────────────────────────────── */}
         <BiblePlanProgressCard />

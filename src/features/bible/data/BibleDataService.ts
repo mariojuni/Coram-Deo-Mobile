@@ -206,9 +206,9 @@ export class BibleDataService implements BibleRepository {
           console.log('[BibleDataService] [STEP 3] Full versionDetails:', JSON.stringify(versionDetails));
         } catch (err: any) {
           detailsError = err;
-          console.error('[BibleDataService] [STEP 3] getVersionDetails FAILED ❌');
-          console.error('[BibleDataService] [STEP 3] Error message:', err?.message);
-          console.error('[BibleDataService] [STEP 3] Error code:', err?.code);
+          console.warn('[BibleDataService] [STEP 3] getVersionDetails FAILED ❌');
+          console.warn('[BibleDataService] [STEP 3] Error message:', err?.message);
+          console.warn('[BibleDataService] [STEP 3] Error code:', err?.code);
         }
 
         const downloadUrl = versionDetails?.sourceStoragePath ?? null;
@@ -294,7 +294,7 @@ export class BibleDataService implements BibleRepository {
           console.warn('[BibleDataService] [STEP 5] ⚠️ Skipping Cloud Storage (no sourceStoragePath). Reason:', detailsError ? `getVersionDetails threw: ${detailsError.message}` : 'field is null/undefined in Firestore doc');
         }
       } catch (e: any) {
-        console.error('[BibleDataService] ❌ EXCEPTION in Cloud Storage block:', e?.message, '| code:', e?.code);
+        console.warn('[BibleDataService] ❌ EXCEPTION in Cloud Storage block:', e?.message, '| code:', e?.code);
         console.warn('[BibleDataService] Falling back to Firestore chapter-by-chapter...');
       }
 

@@ -20,11 +20,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import {
     ActivityIndicator,
     Alert,
     Animated,
+    Dimensions,
+    Platform,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -161,24 +163,40 @@ export default function BiblePlanDayScreen() {
   const [savedVersions, setSavedVersions] = useState<BibleVersion[]>([]);
   const [books, setBooks] = useState<BibleBook[]>([]);
   const [isBooksModalOpen, setIsBooksModalOpen] = useState(false);
+  const [isLandscape, setIsLandscape] = useState(false);
+  const [isSplitMode, setIsSplitMode] = useState(false);
 
   // Global translation source of truth — always follows the Bible reader tab
   const globalTranslation = useBibleVersionStore((s) => s.activeTranslation);
   const setGlobalTranslation = useBibleVersionStore((s) => s.setTranslation);
+  const secondaryTranslation = useBibleVersionStore((s) => s.secondaryTranslation);
+
+  // Detect orientation changes
+  useEffect(() => {
+    const updateOrientation = () => {
+      const { width, height } = Dimensions.get('window');
+      setIsLandscape(width > height);
+    };
+    updateOrientation();
+    const subscription = Dimensions.addEventListener('change', updateOrientation);
+    return () => subscription.remove();
+  }, []);
 
   // Load preferences + versions on focus, but override translation from global store
-  useFocusEffect(() => {
-    const init = async () => {
-      const prefs = (await getUserPreferences()) as BiblePreferencesWithHighlights;
-      const versions = (await getSavedVersions()) as BibleVersion[];
-      const currentGlobalTranslation = useBibleVersionStore.getState().activeTranslation;
-      setSavedVersions(versions);
-      // Use global store translation if available, otherwise fall back to stored pref
-      const translation = currentGlobalTranslation || prefs?.activeTranslation;
-      setPreferences({ ...prefs, activeTranslation: translation });
-    };
-    init();
-  });
+  useFocusEffect(
+    useCallback(() => {
+      const init = async () => {
+        const prefs = (await getUserPreferences()) as BiblePreferencesWithHighlights;
+        const versions = (await getSavedVersions()) as BibleVersion[];
+        const currentGlobalTranslation = useBibleVersionStore.getState().activeTranslation;
+        setSavedVersions(versions);
+        // Use global store translation if available, otherwise fall back to stored pref
+        const translation = currentGlobalTranslation || prefs?.activeTranslation;
+        setPreferences({ ...prefs, activeTranslation: translation });
+      };
+      init();
+    }, [])
+  );
 
   // When global translation changes while screen is active, sync into local preferences
   useEffect(() => {
@@ -301,6 +319,11 @@ export default function BiblePlanDayScreen() {
     );
   }
 
+  // Find the label for the secondary version
+  const effectiveSecondaryTranslation = secondaryTranslation || preferences.activeTranslation;
+  const secondaryVersionObj = savedVersions.find((v) => String(v.id) === String(effectiveSecondaryTranslation));
+  const secondaryRightText = secondaryVersionObj ? secondaryVersionObj.abbreviation : 'SELECT';
+
   return (
     <View style={styles.root}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -313,30 +336,38 @@ export default function BiblePlanDayScreen() {
         hideChapterNav
         scrollToVerse={currentPassage?.scrollToVerse}
         scrollY={scrollY}
+        isLandscape={isLandscape}
+        isSplitMode={isSplitMode && isLandscape}
+        secondaryTranslation={effectiveSecondaryTranslation}
       />
 
       {/* ─── Top nav bar (existing — book/chapter + version pill) */}
       <TopNavBar
         leftText={leftText}
-        onLeftPress={() => setIsBooksModalOpen(true)}
         rightText={rightText}
         onRightPress={() => router.push('/version-manager' as any)}
         scrollY={scrollY}
+        showSplitIcon={isLandscape}
+        isSplitMode={isSplitMode && isLandscape}
+        onSplitPress={() => setIsSplitMode(!isSplitMode)}
+        secondaryRightText={secondaryRightText}
+        onSecondaryRightPress={() => {
+          router.push({ pathname: '/version-manager', params: { isSecondary: 'true' } } as any);
+        }}
+        onBackPress={() => router.back()}
       />
 
-      {/* ─── Back button overlaid top-left */}
-      <View style={[styles.backBtn, { top: Math.max(insets.top, 24) }]} pointerEvents="box-none">
-        <BounceCard bounceScale={0.85}
-          style={styles.backCircle}
-          onPress={() => router.back()}
-          hitSlop={8}
-        >
-          <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
-        </BounceCard>
-      </View>
+
 
       {/* ─── Bottom plan context bar */}
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+      <View style={[
+        styles.bottomBar, 
+        { 
+          paddingBottom: Math.max(insets.bottom, 16),
+          paddingLeft: Math.max(insets.left, 20),
+          paddingRight: Math.max(insets.right, 20),
+        }
+      ]}>
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.65)', borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)' }]} pointerEvents="none" />
         
@@ -431,20 +462,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FAFAFA',
-  },
-
-  // ─── Back button (absolute, top-left)
-  backBtn: {
-    position: 'absolute',
-    left: 20,
-    zIndex: 200,
-  },
-  backCircle: {
-    ...getTopBarButtonShadowStyle(20),
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 
   // ─── Bottom plan context bar
