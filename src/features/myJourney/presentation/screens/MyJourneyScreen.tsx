@@ -67,19 +67,8 @@ export default function MyJourneyScreen() {
           <View style={styles.cardSpacing}>
             <ShimmerSkeleton width="100%" height={160} borderRadius={24} />
           </View>
-          <View style={styles.gridContainer}>
-            <View style={styles.gridItem}>
-              <ShimmerSkeleton width="100%" height={140} borderRadius={24} />
-            </View>
-            <View style={styles.gridItem}>
-              <ShimmerSkeleton width="100%" height={140} borderRadius={24} />
-            </View>
-            <View style={styles.gridItem}>
-              <ShimmerSkeleton width="100%" height={140} borderRadius={24} />
-            </View>
-            <View style={styles.gridItem}>
-              <ShimmerSkeleton width="100%" height={140} borderRadius={24} />
-            </View>
+          <View style={styles.cardSpacing}>
+            <ShimmerSkeleton width="100%" height={340} borderRadius={24} />
           </View>
         </View>
       ) : (
@@ -146,64 +135,75 @@ export default function MyJourneyScreen() {
         </View>
       </SoftCard>
 
-      {/* Stats Grid - Ultra modern typography */}
-      <View style={styles.gridContainer}>
-        <BounceCard style={styles.gridItem}>
-          <SoftCard innerStyle={styles.gridItemInner}>
-            <View style={styles.gridIconRow}>
-              <View style={[styles.iconWrap, { backgroundColor: 'rgba(255, 101, 150, 0.08)' }]}>
-                <BookOpen size={18} color="#FF6596" />
-              </View>
-            </View>
-            <View>
-              <Text style={styles.statNumber}>{metrics.chaptersReadCount}</Text>
-              <Text style={styles.statLabel}>CHAPTERS</Text>
-            </View>
-          </SoftCard>
-        </BounceCard>
+      {/* Detailed Stats */}
+      <SoftCard style={styles.cardSpacing} innerStyle={styles.statsCardInner}>
+        <View style={styles.statsCardHeader}>
+          <Text style={styles.sectionOverline}>ACTIVITY</Text>
+          <Text style={styles.statsCardTitle}>Overview</Text>
+        </View>
         
-        <BounceCard style={styles.gridItem}>
-          <SoftCard innerStyle={styles.gridItemInner}>
-            <View style={styles.gridIconRow}>
-              <View style={[styles.iconWrap, { backgroundColor: 'rgba(182, 109, 255, 0.08)' }]}>
-                <Edit3 size={18} color="#B66DFF" />
-              </View>
+        {/* Chapters */}
+        <View style={styles.statRow}>
+          <View style={styles.statRowLeft}>
+            <View style={[styles.statIconWrap, { backgroundColor: 'rgba(255, 101, 150, 0.1)' }]}>
+              <BookOpen size={20} color="#FF6596" />
             </View>
             <View>
-              <Text style={styles.statNumber}>{metrics.notesCreatedCount}</Text>
-              <Text style={styles.statLabel}>NOTES</Text>
+              <Text style={styles.statRowTitle}>Chapters Read</Text>
+              <Text style={styles.statRowDesc}>Total chapters completed</Text>
             </View>
-          </SoftCard>
-        </BounceCard>
+          </View>
+          <Text style={styles.statRowValue}>{metrics.chaptersReadCount}</Text>
+        </View>
+
+        <View style={styles.statDivider} />
         
-        <BounceCard style={styles.gridItem}>
-          <SoftCard innerStyle={styles.gridItemInner}>
-            <View style={styles.gridIconRow}>
-              <View style={[styles.iconWrap, { backgroundColor: 'rgba(245, 158, 11, 0.08)' }]}>
-                <Highlighter size={18} color="#F59E0B" />
-              </View>
+        {/* Plan Days */}
+        <View style={styles.statRow}>
+          <View style={styles.statRowLeft}>
+            <View style={[styles.statIconWrap, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+              <Map size={20} color="#3B82F6" />
             </View>
             <View>
-              <Text style={styles.statNumber}>{metrics.highlightsCreatedCount}</Text>
-              <Text style={styles.statLabel}>HIGHLIGHTS</Text>
+              <Text style={styles.statRowTitle}>Plan Days</Text>
+              <Text style={styles.statRowDesc}>Reading plan consistency</Text>
             </View>
-          </SoftCard>
-        </BounceCard>
+          </View>
+          <Text style={styles.statRowValue}>{metrics.planDaysCompletedCount}</Text>
+        </View>
+
+        <View style={styles.statDivider} />
         
-        <BounceCard style={styles.gridItem}>
-          <SoftCard innerStyle={styles.gridItemInner}>
-            <View style={styles.gridIconRow}>
-              <View style={[styles.iconWrap, { backgroundColor: 'rgba(59, 130, 246, 0.08)' }]}>
-                <Map size={18} color="#3B82F6" />
-              </View>
+        {/* Highlights */}
+        <View style={styles.statRow}>
+          <View style={styles.statRowLeft}>
+            <View style={[styles.statIconWrap, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
+              <Highlighter size={20} color="#F59E0B" />
             </View>
             <View>
-              <Text style={styles.statNumber}>{metrics.planDaysCompletedCount}</Text>
-              <Text style={styles.statLabel}>PLAN DAYS</Text>
+              <Text style={styles.statRowTitle}>Highlights</Text>
+              <Text style={styles.statRowDesc}>Verses you've saved</Text>
             </View>
-          </SoftCard>
-        </BounceCard>
-      </View>
+          </View>
+          <Text style={styles.statRowValue}>{metrics.highlightsCreatedCount}</Text>
+        </View>
+
+        <View style={styles.statDivider} />
+
+        {/* Notes */}
+        <View style={styles.statRow}>
+          <View style={styles.statRowLeft}>
+            <View style={[styles.statIconWrap, { backgroundColor: 'rgba(182, 109, 255, 0.1)' }]}>
+              <Edit3 size={20} color="#B66DFF" />
+            </View>
+            <View>
+              <Text style={styles.statRowTitle}>Notes</Text>
+              <Text style={styles.statRowDesc}>Personal reflections added</Text>
+            </View>
+          </View>
+          <Text style={styles.statRowValue}>{metrics.notesCreatedCount}</Text>
+        </View>
+      </SoftCard>
       
       <View style={{ height: 40 }} />
       </Animated.ScrollView>
@@ -352,45 +352,55 @@ const styles = StyleSheet.create({
   dayTextInactive: {
     color: '#9CA3AF',
   },
-  gridContainer: {
+  statsCardInner: {
+    padding: 24,
+  },
+  statsCardHeader: {
+    marginBottom: 20,
+  },
+  statsCardTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  statRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
     justifyContent: 'space-between',
+    paddingVertical: 12,
   },
-  gridItem: {
-    width: '48%',
-    marginBottom: 16,
-  },
-  gridItemInner: {
-    padding: 20,
-    minHeight: 140,
-    flexDirection: 'column',
-    justifyContent: 'space-between',
-  },
-  gridIconRow: {
+  statRowLeft: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    width: '100%',
+    alignItems: 'center',
+    gap: 16,
   },
-  iconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+  statIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  statNumber: {
-    fontSize: 36,
-    fontWeight: '300', // Thin, elegant typography
+  statRowTitle: {
+    fontSize: 16,
+    fontWeight: '600',
     color: '#111827',
-    marginBottom: 4,
-    letterSpacing: -1,
+    marginBottom: 2,
   },
-  statLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#9CA3AF',
-    letterSpacing: 1.5, // Wide tracking
+  statRowDesc: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  statRowValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  statDivider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginLeft: 60, // Align with text
   },
   continueCardInner: {
     flexDirection: 'row',

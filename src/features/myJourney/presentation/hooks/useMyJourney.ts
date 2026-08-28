@@ -3,9 +3,14 @@ import { useAuthStore } from '../../../../store/useAuthStore';
 import { bibleActivityService } from '../../data/MyJourneyService';
 import type { WeeklyBibleActivityMetrics } from '../../domain/myJourney.types';
 
+let cachedMetrics: WeeklyBibleActivityMetrics | null = null;
+
 export function useMyJourney() {
-  const [metrics, setMetrics] = useState<WeeklyBibleActivityMetrics>(bibleActivityService.getEmptyMetrics());
-  const [loading, setLoading] = useState(true);
+  const [metrics, setMetrics] = useState<WeeklyBibleActivityMetrics>(
+    cachedMetrics || bibleActivityService.getEmptyMetrics()
+  );
+  // If we have cached data, don't show initial loading state to prevent flicker
+  const [loading, setLoading] = useState(!cachedMetrics);
 
   const currentUser = useAuthStore((s) => s.currentUser);
   const userProfile = useAuthStore((s) => s.userProfile);
@@ -16,7 +21,10 @@ export function useMyJourney() {
       return;
     }
 
-    setLoading(true);
+    // Only show loading if we don't have cached metrics
+    if (!cachedMetrics) {
+      setLoading(true);
+    }
 
     try {
       // Get the current date and calculate Monday-Sunday of the current week
@@ -50,6 +58,7 @@ export function useMyJourney() {
         endDateStr
       );
 
+      cachedMetrics = weeklyMetrics;
       setMetrics(weeklyMetrics);
     } catch (e) {
       console.error('Failed to load weekly bible activity:', e);
