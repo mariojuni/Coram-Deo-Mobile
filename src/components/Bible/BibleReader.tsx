@@ -156,23 +156,37 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
     };
   }, [controlsTabBar, setTabBarVisible, setHideCompactPlayer]);
 
-  const handleScroll = Animated.event(
-    [{ nativeEvent: { contentOffset: { y: scrollY || new Animated.Value(0) } } }],
-    {
-      useNativeDriver: false,
-      listener: (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-        if (!controlsTabBar) return;
-        if (selectedVerses.length > 0) return; // Keep tab bar hidden if highlight modal is open
-        const y = e.nativeEvent.contentOffset.y;
-        const delta = y - lastScrollY.current;
-        if (Math.abs(delta) > 6) {
-          if (!isLandscape) {
-            setTabBarVisible(delta < 0 || y < 60);
-          }
+  // Keep context fresh for the stable scroll listener
+  const scrollContext = useRef({ controlsTabBar, selectedVersesLength: selectedVerses.length, isLandscape });
+  useEffect(() => {
+    scrollContext.current = { controlsTabBar, selectedVersesLength: selectedVerses.length, isLandscape };
+  }, [controlsTabBar, selectedVerses.length, isLandscape]);
+
+  // Ensure Animated.Value is created only once if scrollY is missing
+  const internalScrollY = useRef(scrollY || new Animated.Value(0)).current;
+
+  const handleScroll = useMemo(
+    () =>
+      Animated.event(
+        [{ nativeEvent: { contentOffset: { y: internalScrollY } } }],
+        {
+          useNativeDriver: false,
+          listener: (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+            const { controlsTabBar: doControl, selectedVersesLength, isLandscape: isLand } = scrollContext.current;
+            if (!doControl) return;
+            if (selectedVersesLength > 0) return; // Keep tab bar hidden if highlight modal is open
+            const y = e.nativeEvent.contentOffset.y;
+            const delta = y - lastScrollY.current;
+            if (Math.abs(delta) > 6) {
+              if (!isLand) {
+                setTabBarVisible(delta < 0 || y < 60);
+              }
+            }
+            lastScrollY.current = y;
+          },
         }
-        lastScrollY.current = y;
-      },
-    }
+      ),
+    [internalScrollY, setTabBarVisible]
   );
 
   // Scroll to target verse after chapter finishes loading based on character ratio & container height

@@ -1,25 +1,42 @@
 import { BlurView } from 'expo-blur';
-import { Tabs } from 'expo-router';
-import { Book, Handshake, Home, Users, CheckCircle, XCircle } from 'lucide-react-native';
-import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
-import { Animated, Platform, StyleSheet, TouchableOpacity, View, Text, ActivityIndicator, AccessibilityInfo } from 'react-native';
+import { Tabs, usePathname, useRouter } from 'expo-router';
+import { Book, CheckCircle, Handshake, Home, Users, XCircle } from 'lucide-react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AccessibilityInfo, ActivityIndicator, Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useShallow } from 'zustand/react/shallow';
 import FabMenu from '../../components/Navigation/FabMenu';
-import { useAuthStore } from '../../store/useAuthStore';
-import { useUIStore } from '../../store/useUIStore';
-import { canAccessAdminPortal, canViewStaffScreen } from '../../permissions/mobilePermissions';
-import { useMinistryStore } from '../../store/useMinistryStore';
-import { useSermonStore } from '../../store/useSermonStore';
-import { useSermonPlaybackStore } from '../../store/useSermonPlaybackStore';
+import BibleFilledIcon from '../../components/Navigation/Icons/BibleFilledIcon';
+import BibleStrokeIcon from '../../components/Navigation/Icons/BibleStrokeIcon';
+import ServeFilledIcon from '../../components/Navigation/Icons/ServeFilledIcon';
+import ServeStrokeIcon from '../../components/Navigation/Icons/ServeStrokeIcon';
+import CommunityFilledIcon from '../../components/Navigation/Icons/CommunityFilledIcon';
+import CommunityStrokeIcon from '../../components/Navigation/Icons/CommunityStrokeIcon';
+import HomeFilledIcon from '../../components/Navigation/Icons/HomeFilledIcon';
+import HomeStrokeIcon from '../../components/Navigation/Icons/HomeStrokeIcon';
 import { ContinueWatchingCard } from '../../features/sermons/presentation/components/ContinueWatchingCard';
 import { GlobalVideoPlayer } from '../../features/sermons/presentation/components/GlobalVideoPlayer';
-import { useRouter, usePathname } from 'expo-router';
 import { useAudio } from '../../features/sermons/presentation/context/AudioContext';
-import { useShallow } from 'zustand/react/shallow';
+import { canViewStaffScreen } from '../../permissions/mobilePermissions';
+import { useAuthStore } from '../../store/useAuthStore';
+import { useMinistryStore } from '../../store/useMinistryStore';
+import { useSermonPlaybackStore } from '../../store/useSermonPlaybackStore';
+import { useSermonStore } from '../../store/useSermonStore';
+import { useUIStore } from '../../store/useUIStore';
 
-const AnimatedTabItem = ({ isFocused, route, options, onPress, IconComponent, showBadge }: any) => {
-  const scale = useRef(new Animated.Value(isFocused ? 1.15 : 1)).current;
-  const translateY = useRef(new Animated.Value(isFocused ? -4 : 0)).current;
+const AnimatedTabItem = ({ isFocused, route, options, onPress, IconComponent, showBadge, onLayout }: any) => {
+  const [isVisuallyFocused, setIsVisuallyFocused] = useState(isFocused);
+
+  useEffect(() => {
+    if (isFocused) {
+      const timer = setTimeout(() => setIsVisuallyFocused(true), 200); // Wait for native spring animation
+      return () => clearTimeout(timer);
+    } else {
+      setIsVisuallyFocused(false);
+    }
+  }, [isFocused]);
+
+  const scale = useRef(new Animated.Value(isVisuallyFocused ? 1.15 : 1)).current;
 
   const [reduceMotion, setReduceMotion] = useState(false);
 
@@ -34,26 +51,23 @@ const AnimatedTabItem = ({ isFocused, route, options, onPress, IconComponent, sh
   useEffect(() => {
     if (reduceMotion) {
       scale.setValue(isFocused ? 1.15 : 1);
-      translateY.setValue(isFocused ? -4 : 0);
       return;
     }
     Animated.parallel([
       Animated.spring(scale, {
-        toValue: isFocused ? 1.15 : 1,
-        useNativeDriver: true,
-        friction: 5,
-        tension: 100,
-      }),
-      Animated.spring(translateY, {
-        toValue: isFocused ? -4 : 0,
+        toValue: isVisuallyFocused ? 1.15 : 1,
         useNativeDriver: true,
         friction: 5,
         tension: 100,
       })
     ]).start();
-  }, [isFocused, reduceMotion]);
+  }, [isVisuallyFocused, reduceMotion]);
 
-  const color = isFocused ? '#FF6596' : '#D2D4E1';
+  const isHome = route.name === 'index';
+  const isBible = route.name === 'bible';
+  const isCommunity = route.name === 'community';
+  const isServe = route.name === 'serve';
+  const color = isVisuallyFocused ? '#FF6596' : '#D2D4E1';
   const label = options.tabBarAccessibilityLabel || options.title || route.name;
 
   return (
@@ -65,9 +79,36 @@ const AnimatedTabItem = ({ isFocused, route, options, onPress, IconComponent, sh
       testID={options.tabBarTestID}
       onPress={onPress}
       style={styles.navItem}
+      onLayout={onLayout ? (e) => onLayout(route.key, e.nativeEvent.layout) : undefined}
     >
-      <Animated.View style={{ transform: [{ scale }, { translateY }] }}>
-        <IconComponent size={24} color={color} />
+      <Animated.View style={{ transform: [{ scale }] }}>
+        {isHome ? (
+          isVisuallyFocused ? (
+            <HomeFilledIcon color={color} width={28} height={28} />
+          ) : (
+            <HomeStrokeIcon color={color} width={28} height={28} />
+          )
+        ) : isBible ? (
+          isVisuallyFocused ? (
+            <BibleFilledIcon color={color} width={28} height={28} />
+          ) : (
+            <BibleStrokeIcon color={color} width={28} height={28} />
+          )
+        ) : isCommunity ? (
+          isVisuallyFocused ? (
+            <CommunityFilledIcon color={color} width={28} height={28} />
+          ) : (
+            <CommunityStrokeIcon color={color} width={28} height={28} />
+          )
+        ) : isServe ? (
+          isVisuallyFocused ? (
+            <ServeFilledIcon color={color} width={28} height={28} />
+          ) : (
+            <ServeStrokeIcon color={color} width={28} height={28} />
+          )
+        ) : (
+          <IconComponent size={24} color={color} />
+        )}
       </Animated.View>
     </TouchableOpacity>
   );
@@ -77,12 +118,38 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
   const tabBarVisible = useUIStore((s) => s.tabBarVisible);
   const hasNewAssignment = useMinistryStore((s) => s.hasNewAssignment);
   const memberAssignments = useMinistryStore((s) => s.memberAssignments);
-  
+
   const hasAwaitingAssignment = memberAssignments.some(
     (a) => (a.status || '').toLowerCase() === 'pending'
   );
 
   const slideAnim = useRef(new Animated.Value(0)).current;
+
+  const [tabLayouts, setTabLayouts] = useState<{ [key: string]: { x: number, width: number, height: number, y: number } }>({});
+  const activeTabX = useRef(new Animated.Value(0)).current;
+  const activeTabY = useRef(new Animated.Value(0)).current;
+  const activeTabWidth = useRef(new Animated.Value(0)).current;
+  const activeTabHeight = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const currentRoute = state.routes[state.index];
+    if (!currentRoute) return;
+    const layout = tabLayouts[currentRoute.key];
+    if (layout) {
+      Animated.spring(activeTabX, {
+        toValue: layout.x,
+        useNativeDriver: true,
+        friction: 9,
+        tension: 65,
+      }).start();
+      Animated.spring(activeTabY, {
+        toValue: layout.y,
+        useNativeDriver: true,
+        friction: 9,
+        tension: 65,
+      }).start();
+    }
+  }, [state.index, tabLayouts, state.routes]);
 
   useEffect(() => {
     Animated.timing(slideAnim, {
@@ -104,57 +171,79 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
         {/* Standard frosted background for both platforms */}
         <BlurView intensity={80} tint="light" style={[StyleSheet.absoluteFill, { borderRadius: 40, overflow: 'hidden' }]} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)', borderRadius: 40 }]} pointerEvents="none" />
-          
-          {state.routes.map((route: any, index: number) => {
-            const { options } = descriptors[route.key];
-            const isFocused = state.index === index;
-            
-            if (options.href === null) {
-              return null;
+
+        {/* Sliding Highlight Background */}
+        <Animated.View
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            width: 64,
+            height: 52,
+            transform: [
+              { translateX: activeTabX },
+              { translateY: activeTabY },
+            ],
+            backgroundColor: 'rgba(255, 255, 255, 0.5)',
+            borderRadius: 30, // completely rounded pill
+            opacity: Object.keys(tabLayouts).length > 0 ? 1 : 0,
+          }}
+          pointerEvents="none"
+        />
+
+        {state.routes.map((route: any, index: number) => {
+          const { options } = descriptors[route.key];
+          const isFocused = state.index === index;
+
+          if (options.href === null) {
+            return null;
+          }
+
+          const onPress = () => {
+            if (route.name === 'serve') {
+              useMinistryStore.getState().markAssignmentsViewed();
             }
+            const event = navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
 
-            const onPress = () => {
-              if (route.name === 'serve') {
-                useMinistryStore.getState().markAssignmentsViewed();
-              }
-              const event = navigation.emit({
-                type: 'tabPress',
-                target: route.key,
-                canPreventDefault: true,
-              });
-
-              if (!isFocused && !event.defaultPrevented) {
-                navigation.navigate(route.name);
-              }
-            };
-
-            const iconByRoute = {
-              index: Home,
-              bible: Book,
-              community: Users,
-              serve: Handshake,
-            } as const;
-            const IconComponent = iconByRoute[route.name as keyof typeof iconByRoute];
-
-            if (!IconComponent) {
-              return null;
+            if (!isFocused && !event.defaultPrevented) {
+              navigation.navigate(route.name);
             }
+          };
 
-            return (
-              <AnimatedTabItem
-                key={route.key}
-                isFocused={isFocused}
-                route={route}
-                options={options}
-                onPress={onPress}
-                IconComponent={IconComponent}
-                showBadge={route.name === 'serve' && hasNewAssignment && hasAwaitingAssignment}
-              />
-            );
-          })}
-        </View>
-        <FabMenu isStaff={isStaff} />
-      </Animated.View>
+          const iconByRoute = {
+            index: Home,
+            bible: Book,
+            community: Users,
+            serve: Handshake,
+          } as const;
+          const IconComponent = iconByRoute[route.name as keyof typeof iconByRoute];
+
+          if (!IconComponent) {
+            return null;
+          }
+
+          return (
+            <AnimatedTabItem
+              key={route.key}
+              isFocused={isFocused}
+              route={route}
+              options={options}
+              onPress={onPress}
+              IconComponent={IconComponent}
+              showBadge={route.name === 'serve' && hasNewAssignment && hasAwaitingAssignment}
+              onLayout={(key: string, layout: any) => {
+                setTabLayouts(prev => ({ ...prev, [key]: layout }));
+              }}
+            />
+          );
+        })}
+      </View>
+      <FabMenu isStaff={isStaff} />
+    </Animated.View>
   );
 }
 
@@ -174,7 +263,7 @@ export default function TabLayout() {
     const ids = new Set<string>();
     if (currentUser?.uid) ids.add(currentUser.uid);
     if (userProfile?.memberId) ids.add(userProfile.memberId);
-    
+
     if (!churchId || ids.size === 0) return;
 
     const unsub = initializeMemberAssignmentsListener(churchId, Array.from(ids));
@@ -183,7 +272,7 @@ export default function TabLayout() {
 
   const syncToastMessage = useUIStore((s) => s.syncToastMessage);
   const syncToastType = useUIStore((s) => s.syncToastType);
-  
+
   // Get active ministries for the user to check staff/tool permissions
   const ministries = useMinistryStore((state) => state.ministries);
   const userMinistries = useMemo(() => {
@@ -191,25 +280,25 @@ export default function TabLayout() {
       (m) => m.members?.some((mem) => mem.memberId === userProfile?.memberId)
     );
   }, [ministries, userProfile?.memberId]);
-  
+
   // Check if they have access to the Staff tab
   const isStaff = canViewStaffScreen(userProfile, userMinistries);
-  
+
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
   const sermons = useSermonStore((state) => state.sermons);
   const currentSermon = useSermonStore((state) => state.currentSermon);
   const relatedSermons = useSermonStore((state) => state.relatedSermons);
-  const inProgressList = useSermonPlaybackStore(useShallow((state) => 
+  const inProgressList = useSermonPlaybackStore(useShallow((state) =>
     state.getInProgressSermons().filter((p) => !p.completed).slice(0, 3)
   ));
-  
+
   const audio = useAudio();
 
   const inProgressWithSermons = inProgressList
     .map((p) => {
-      const sermon = sermons.find((s) => s.id === p.sermonId) 
+      const sermon = sermons.find((s) => s.id === p.sermonId)
         ?? relatedSermons.find((s) => s.id === p.sermonId)
         ?? (currentSermon?.id === p.sermonId ? currentSermon : null);
       return { progress: p, sermon };
@@ -218,7 +307,7 @@ export default function TabLayout() {
 
   const pathname = usePathname();
   const showMiniPlayer = pathname.startsWith('/community') || pathname.startsWith('/sermons');
-  
+
   const topSermon = inProgressWithSermons.length > 0 ? inProgressWithSermons[0] : null;
   const isCurrentAudioPlaying = topSermon?.progress.mediaType === 'audio' && (audio.player?.playing ?? false);
 
@@ -228,8 +317,8 @@ export default function TabLayout() {
 
   return (
     <View style={{ flex: 1 }}>
-      <Tabs 
-        screenOptions={{ 
+      <Tabs
+        screenOptions={{
           headerShown: false,
           freezeOnBlur: false,
         }}
@@ -259,7 +348,7 @@ export default function TabLayout() {
               if (audio.player?.playing) {
                 audio.pauseAudio();
               } else {
-                router.navigate({ pathname: '/audio-player', params: { id: topSermon.progress.sermonId } });
+                router.navigate({ pathname: '/audio-player' as any, params: { id: topSermon.progress.sermonId } });
               }
             } : undefined}
             onDismiss={() => {
@@ -267,9 +356,9 @@ export default function TabLayout() {
             }}
             onPress={() => {
               if (topSermon.progress.mediaType === 'video') {
-                router.navigate({ pathname: '/sermon-watch', params: { id: topSermon.progress.sermonId } });
+                router.navigate({ pathname: '/sermon-watch' as any, params: { id: topSermon.progress.sermonId } });
               } else {
-                router.navigate({ pathname: '/audio-player', params: { id: topSermon.progress.sermonId } });
+                router.navigate({ pathname: '/audio-player' as any, params: { id: topSermon.progress.sermonId } });
               }
             }}
           />
@@ -278,7 +367,7 @@ export default function TabLayout() {
       {/* ── Global Sync Toast ── */}
       {!!syncToastMessage && (
         <View style={[
-          styles.floatingToast, 
+          styles.floatingToast,
           { bottom: Math.max(insets.bottom, 16) + 64 },
           syncToastType === 'error' && { backgroundColor: '#FEE2E2', borderColor: 'rgba(220,38,38,0.5)' }
         ]}>
@@ -319,19 +408,19 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
+    paddingHorizontal: 2,
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 8,
+    paddingVertical: 4,
     borderRadius: 40,
     backgroundColor: Platform.OS === 'android' ? '#FFFFFF' : 'transparent',
     borderColor: 'rgba(255,255,255,0.5)',
-    borderWidth: 1,
+    borderWidth: 0,
     boxShadow: '0px 4px 12px rgba(164, 164, 164, 0.04)',
   },
   navItem: {
     padding: 2,
-    minWidth: 44,
-    minHeight: 44,
+    minWidth: 64,
+    minHeight: 52,
     justifyContent: 'center',
     alignItems: 'center',
   },

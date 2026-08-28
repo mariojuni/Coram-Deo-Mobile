@@ -147,7 +147,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     width: 52,
-    marginLeft: 12
   },
   overlay: {
     position: 'absolute',
@@ -161,7 +160,7 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     backgroundColor: 'transparent',
     zIndex: 10,
-    boxShadow: '0px 8px 15px rgba(255, 101, 150, 0.4)',
+    boxShadow: '0px 4px 10px rgba(255, 101, 150, 0.2)',
   },
   fab: {
     width: 52,

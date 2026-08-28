@@ -50,6 +50,7 @@ import { EventDetailsModal } from '../../components/Events/EventDetailsModal';
 import { CommunitySongDetailModal } from '../../components/Worship/CommunitySongDetailModal';
 import { BounceCard } from '../../components/ui/BounceCard';
 import { SoftCard, getSoftShadowStyle } from '../../components/ui/SoftCard';
+import CommunityStrokeIcon from '@/components/Navigation/Icons/CommunityStrokeIcon';
 
 import { CommentButton } from '../../features/comments/presentation/components/CommentButton';
 import type { Member } from '../../features/member/domain/member.types';
@@ -1117,7 +1118,7 @@ export default function CommunityScreen() {
                     end={{ x: 1, y: 1 }}
                     style={styles.headerIconGradient}
                   >
-                    <Users size={16} color="#fff" strokeWidth={2} />
+                    <CommunityStrokeIcon width={20} height={20} color="#fff" />
                   </LinearGradient>
                 </View>
                 <View>

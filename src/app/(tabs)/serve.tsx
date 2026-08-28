@@ -10,7 +10,8 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Handshake, UserX } from 'lucide-react-native';
+import { UserX } from 'lucide-react-native';
+import ServeStrokeIcon from '@/components/Navigation/Icons/ServeStrokeIcon';
 import { useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
@@ -183,7 +184,7 @@ export default function ServeScreen() {
                 end={{ x: 1, y: 1 }}
                 style={styles.headerIconGradient}
               >
-                <Handshake size={16} color="#fff" strokeWidth={2} />
+                <ServeStrokeIcon width={20} height={20} color="#fff" />
               </LinearGradient>
             </View>
             <View>
