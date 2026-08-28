@@ -11,6 +11,7 @@ import { AlertCircle, ChevronLeft, CalendarDays, CheckCircle2, Clock, HandHeart,
 import { useState, useRef } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { PrimaryGradientButton } from '@/components/ui/PrimaryGradientButton';
 
 export default function ServeMinistryDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -402,20 +403,12 @@ export default function ServeMinistryDetailScreen() {
             )}
 
             {showApplyAction && (
-              <TouchableOpacity
-                onPress={() => router.push({ pathname: '/ministry-application', params: { ministryId: id } } as any)}
-                activeOpacity={0.85}
-                style={{ flex: 1 }}
-              >
-                <LinearGradient
-                  colors={['#FF6596', '#B66DFF']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.applyBtn}
-                >
-                  <Text style={styles.applyBtnText}>Apply to Join</Text>
-                </LinearGradient>
-              </TouchableOpacity>
+              <View style={{ flex: 1 }}>
+                <PrimaryGradientButton
+                  title="Apply to Join"
+                  onPress={() => router.push({ pathname: '/ministry-application', params: { ministryId: id } } as any)}
+                />
+              </View>
             )}
           </View>
         </View>

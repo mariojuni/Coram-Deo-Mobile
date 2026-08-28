@@ -6,6 +6,7 @@ import { Church, BookOpen, Users, Key } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import WalkthroughSlide from '../components/WalkthroughSlide';
 import { AuthGeometricHeader } from '../components/ui/AuthGeometricHeader';
+import { PrimaryGradientButton } from '../components/ui/PrimaryGradientButton';
 
 const SLIDES = [
   {
@@ -115,32 +116,23 @@ export default function WalkthroughScreen() {
           <View style={styles.actionContainer}>
             {isLastSlide ? (
               <View style={styles.authButtonsContainer}>
-                <TouchableOpacity onPress={() => handleComplete('/(auth)/register')} activeOpacity={0.8}>
-                  <LinearGradient
-                    colors={['#FF6596', '#C084FC']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={[styles.gradientButton, { marginBottom: 16 }]}
-                  >
-                    <Text style={styles.gradientButtonText}>Create Account</Text>
-                  </LinearGradient>
-                </TouchableOpacity>
+                <PrimaryGradientButton
+                  title="Create Account"
+                  onPress={() => handleComplete('/(auth)/register')}
+                  style={{ marginBottom: 16 }}
+                  textStyle={{ fontSize: 18 }}
+                />
                 
                 <TouchableOpacity onPress={() => handleComplete('/(auth)/login')} activeOpacity={0.8} style={styles.outlineButton}>
                   <Text style={styles.outlineButtonText}>Log In</Text>
                 </TouchableOpacity>
               </View>
             ) : (
-              <TouchableOpacity onPress={handleNext} activeOpacity={0.8}>
-                <LinearGradient
-                  colors={['#FF6596', '#C084FC']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.gradientButton}
-                >
-                  <Text style={styles.gradientButtonText}>Next</Text>
-                </LinearGradient>
-              </TouchableOpacity>
+              <PrimaryGradientButton
+                title="Next"
+                onPress={handleNext}
+                textStyle={{ fontSize: 18 }}
+              />
             )}
           </View>
         </View>

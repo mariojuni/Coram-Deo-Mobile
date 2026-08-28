@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../../store/useAuthStore';
+import { PrimaryGradientButton } from '../../components/ui/PrimaryGradientButton';
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
@@ -136,28 +137,12 @@ export default function ForgotPasswordScreen() {
                   </View>
                 </View>
 
-                <TouchableOpacity
+                <PrimaryGradientButton
+                  title="Send Reset Link"
                   onPress={handleSendResetLink}
-                  disabled={isLoading}
-                  activeOpacity={0.8}
+                  loading={isLoading}
                   style={{ marginTop: 16 }}
-                  accessibilityLabel="Send password reset link"
-                  accessibilityRole="button"
-                  accessibilityState={{ disabled: isLoading }}
-                >
-                  <LinearGradient
-                    colors={['#FF6596', '#B66DFF']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.primaryButton}
-                  >
-                    {isLoading ? (
-                      <ActivityIndicator color="#fff" />
-                    ) : (
-                      <Text style={styles.primaryButtonText}>Send Reset Link</Text>
-                    )}
-                  </LinearGradient>
-                </TouchableOpacity>
+                />
               </View>
             )}
           </ScrollView>

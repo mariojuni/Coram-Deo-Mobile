@@ -9,6 +9,7 @@ import CustomDatePicker from '@/components/CustomDatePicker';
 import AppModal from '@/components/ui/AppModal';
 import { useAuthStore } from '../../store/useAuthStore';
 import { authRepository } from '../../features/auth/data/auth.repository';
+import { PrimaryGradientButton } from '../../components/ui/PrimaryGradientButton';
 
 function formatDateToMDYYYY(date: Date): string {
   const month = date.getMonth() + 1;
@@ -445,18 +446,12 @@ export default function RegisterScreen() {
 
             <View style={styles.buttonContainer}>
               <View style={{ flex: 1 }}>
-                <TouchableOpacity onPress={step === 3 ? handleRegister : handleNext} disabled={isLoading} activeOpacity={0.8}>
-                  <LinearGradient colors={['#FF6596', '#B66DFF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.primaryButton}>
-                    {isLoading ? (
-                      <ActivityIndicator color="#fff" />
-                    ) : (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-                        <Text style={styles.primaryButtonText}>{step === 3 ? 'Register' : 'Next Step'}</Text>
-                        {step !== 3 && <ArrowRight size={20} color="#fff" style={{ marginLeft: 8 }} />}
-                      </View>
-                    )}
-                  </LinearGradient>
-                </TouchableOpacity>
+                <PrimaryGradientButton
+                  title={step === 3 ? 'Register' : 'Next Step'}
+                  onPress={step === 3 ? handleRegister : handleNext}
+                  loading={isLoading}
+                  iconRight={step !== 3 ? <ArrowRight size={20} color="#fff" /> : undefined}
+                />
               </View>
             </View>
 

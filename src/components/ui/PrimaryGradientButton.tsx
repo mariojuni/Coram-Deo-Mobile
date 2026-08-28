@@ -1,8 +1,7 @@
 import React from 'react';
-import { StyleSheet, Text, ViewStyle, TextStyle } from 'react-native';
+import { StyleSheet, Text, View, ViewStyle, TextStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AccessibleButton } from '../a11y/AccessibleButton';
-import { getSoftShadowStyle } from './SoftCard';
 
 interface PrimaryGradientButtonProps {
   title: string;
@@ -15,6 +14,7 @@ interface PrimaryGradientButtonProps {
   style?: ViewStyle | ViewStyle[];
   textStyle?: TextStyle | TextStyle[];
   accessibilityLabel?: string;
+  iconRight?: React.ReactNode;
 }
 
 export const PrimaryGradientButton: React.FC<PrimaryGradientButtonProps> = ({
@@ -22,19 +22,26 @@ export const PrimaryGradientButton: React.FC<PrimaryGradientButtonProps> = ({
   onPress,
   disabled = false,
   loading = false,
-  colors = ["#FF6596", "#C084FC"],
+  colors = ["#FF6596", "#B66DFF"],
   disabledColors = ["#D1D5DB", "#9CA3AF"],
-  shadowColor,
+  shadowColor = "#FF6596",
   style,
   textStyle,
   accessibilityLabel,
+  iconRight,
 }) => {
   return (
     <AccessibleButton
       activeOpacity={0.8}
       style={[
         styles.wrap,
-        !disabled && getSoftShadowStyle(24),
+        !disabled && {
+          shadowColor: shadowColor,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.15,
+          shadowRadius: 8,
+          elevation: 3,
+        },
         disabled && styles.disabled,
         style,
       ]}
@@ -50,9 +57,12 @@ export const PrimaryGradientButton: React.FC<PrimaryGradientButtonProps> = ({
         style={styles.gradient}
       >
         {!loading && (
-          <Text style={[styles.text, textStyle]}>
-            {title}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={[styles.text, textStyle]}>
+              {title}
+            </Text>
+            {iconRight && <View style={{ marginLeft: 8 }}>{iconRight}</View>}
+          </View>
         )}
       </LinearGradient>
     </AccessibleButton>
@@ -62,22 +72,23 @@ export const PrimaryGradientButton: React.FC<PrimaryGradientButtonProps> = ({
 const styles = StyleSheet.create({
   wrap: {
     width: "100%",
-    borderRadius: 32,
+    borderRadius: 20,
   },
   disabled: {
     opacity: 0.6,
   },
   gradient: {
     width: "100%",
-    paddingVertical: 16,
-    borderRadius: 32,
+    flexDirection: "row",
+    paddingVertical: 18,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
   },
   text: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "800",
-    letterSpacing: 0.3,
+    fontWeight: "700",
+    letterSpacing: -0.2,
   },
 });

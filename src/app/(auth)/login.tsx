@@ -25,6 +25,7 @@ import {
   setSavedEnvironment,
 } from '../../config/environments';
 import { currentActiveFirebaseEnv, reinitFirebaseForEnv } from '../../firebase';
+import { PrimaryGradientButton } from '../../components/ui/PrimaryGradientButton';
 
 export default function LoginScreen() {
   const [identifier, setIdentifier] = useState('');
@@ -180,15 +181,12 @@ export default function LoginScreen() {
                 </TouchableOpacity>
               </View>
 
-              <TouchableOpacity onPress={handleLogin} disabled={isLoading} activeOpacity={0.8} style={{ marginTop: 8 }} accessibilityRole="button">
-                <LinearGradient colors={['#FF6596', '#B66DFF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.primaryButton}>
-                  {isLoading ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <Text style={styles.primaryButtonText}>Sign In</Text>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
+              <PrimaryGradientButton
+                title="Sign In"
+                onPress={handleLogin}
+                loading={isLoading}
+                style={{ marginTop: 8 }}
+              />
 
               <View style={styles.dividerContainer}>
                 <View style={styles.dividerLine} />
