@@ -78,6 +78,7 @@ const AnimatedTabItem = ({ isFocused, route, options, onPress, IconComponent, sh
       accessibilityHint={`Navigates to the ${label} screen`}
       testID={options.tabBarTestID}
       onPress={onPress}
+
       style={[styles.navItem, { zIndex: 2, elevation: 2 }]}
       onLayout={onLayout ? (e) => onLayout(route.key, e.nativeEvent.layout) : undefined}
     >
@@ -130,6 +131,7 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
   const activeTabY = useRef(new Animated.Value(0)).current;
   const activeTabWidth = useRef(new Animated.Value(0)).current;
   const activeTabHeight = useRef(new Animated.Value(0)).current;
+  const containerScale = useRef(new Animated.Value(1)).current;
 
   const isDragging = useRef(false);
   const dragStartX = useRef(0);
@@ -151,6 +153,14 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
         isDragging.current = true;
         activeTabX.stopAnimation();
         activeTabY.stopAnimation();
+        
+        Animated.spring(containerScale, {
+          toValue: 0.97,
+          useNativeDriver: true,
+          friction: 7,
+          tension: 120,
+        }).start();
+        
         // Use pageX - 24 (container's left offset) to avoid child coordinate issues
         const touchX = evt.nativeEvent.pageX - 24;
         dragStartX.current = touchX;
@@ -177,6 +187,14 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
       },
       onPanResponderRelease: (evt, gestureState) => {
         isDragging.current = false;
+        
+        Animated.spring(containerScale, {
+          toValue: 1,
+          useNativeDriver: true,
+          friction: 4,
+          tension: 100,
+        }).start();
+
         const finalX = dragStartX.current + gestureState.dx;
         
         let nearestTabKey: string | null = null;
@@ -228,6 +246,14 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
       },
       onPanResponderTerminate: () => {
          isDragging.current = false;
+         
+         Animated.spring(containerScale, {
+           toValue: 1,
+           useNativeDriver: true,
+           friction: 4,
+           tension: 100,
+         }).start();
+
          const currentState = stateRef.current;
          const layouts = tabLayoutsRef.current;
          if (currentState && currentState.routes[currentState.index]) {
@@ -282,7 +308,7 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
       ]}
       pointerEvents="box-none"
     >
-      <View style={styles.navContainer} {...panResponder.panHandlers}>
+      <Animated.View style={[styles.navContainer, { transform: [{ scale: containerScale }] }]} {...panResponder.panHandlers}>
         {/* Standard frosted background for both platforms */}
         <BlurView intensity={80} tint="light" style={[StyleSheet.absoluteFill, { borderRadius: 40, overflow: 'hidden' }]} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.8)', borderRadius: 40 }]} pointerEvents="none" />
@@ -357,7 +383,7 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
             />
           );
         })}
-      </View>
+      </Animated.View>
       <FabMenu isStaff={isStaff} />
     </Animated.View>
   );
