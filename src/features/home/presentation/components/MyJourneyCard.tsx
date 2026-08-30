@@ -5,15 +5,35 @@ import { useMyJourney } from '../../../myJourney/presentation/hooks/useMyJourney
 import { BounceCard } from '@/components/ui/BounceCard';
 import { SoftCard } from '@/components/ui/SoftCard';
 import { Activity, ChevronRight } from 'lucide-react-native';
-
-const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
+const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 export default function MyJourneyCard() {
   const router = useRouter();
   const { metrics, loading } = useMyJourney();
 
   if (loading) {
-    return null; // hide entirely while loading to prevent jank
+    return (
+      <View style={styles.wrapper}>
+        <SoftCard innerStyle={styles.cardInner}>
+          <View style={styles.leftContent}>
+            <ShimmerSkeleton width={32} height={32} borderRadius={8} />
+            <View>
+              <ShimmerSkeleton width={80} height={14} borderRadius={4} style={{ marginBottom: 4 }} />
+              <ShimmerSkeleton width={40} height={10} borderRadius={4} />
+            </View>
+          </View>
+          <View style={styles.rightContent}>
+            <View style={styles.daysContainer}>
+              {DAYS.map((_, i) => (
+                <ShimmerSkeleton key={i} width={20} height={20} borderRadius={10} />
+              ))}
+            </View>
+            <ChevronRight size={16} color="#F3F4F6" strokeWidth={2.5} />
+          </View>
+        </SoftCard>
+      </View>
+    );
   }
 
   // If absolutely no activity, don't show the card to new users.

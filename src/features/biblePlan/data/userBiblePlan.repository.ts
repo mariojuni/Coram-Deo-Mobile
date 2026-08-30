@@ -11,6 +11,7 @@ import {
 } from 'firebase/firestore';
 import { getActiveDb } from '../../../firebase';
 import type { StartPlanPayload, UserBiblePlan, UserBiblePlanStatus } from '../domain/biblePlan.types';
+import { myJourneyMilestoneEvaluator } from '@/features/myJourney/data/MyJourneyMilestoneEvaluator';
 
 // ─── Collection path helper ────────────────────────────────────────────────────
 const userBiblePlansCol = (churchId: string) =>
@@ -165,9 +166,20 @@ export const userBiblePlanRepository = {
     const isCompleted = completedDaysCount >= totalDays;
     const now = new Date().toISOString();
 
+    let completedPlanData: { userId: string; biblePlanId: string; title: string } | null = null;
+
     await runTransaction(getActiveDb(), async (transaction) => {
       const snap = await transaction.get(planRef);
       if (!snap.exists()) throw new Error('UserBiblePlan not found');
+      
+      if (isCompleted && snap.data().status !== 'completed') {
+        completedPlanData = {
+          userId: snap.data().userId,
+          biblePlanId: snap.data().biblePlanId,
+          title: snap.data().title
+        };
+      }
+
       transaction.update(planRef, {
         currentDayNumber: nextDayNumber,
         completedDaysCount,
@@ -178,5 +190,13 @@ export const userBiblePlanRepository = {
         updatedAt: now,
       });
     });
+
+    if (completedPlanData) {
+      myJourneyMilestoneEvaluator.evaluateReadingPlanCompleted(
+        (completedPlanData as any).userId,
+        (completedPlanData as any).biblePlanId,
+        (completedPlanData as any).title || 'Reading Plan'
+      ).catch(console.warn);
+    }
   },
 };

@@ -5,7 +5,7 @@ import PlanUpdateModal from '@/features/biblePlan/presentation/components/PlanUp
 import { useBiblePlanDetail } from '@/features/biblePlan/presentation/hooks/useBiblePlanDetail';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useBiblePlanStore } from '@/store/useBiblePlanStore';
-import { getSoftShadowStyle, getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
+import { SoftCard, getSoftShadowStyle, getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
@@ -471,74 +471,77 @@ export default function BiblePlanDetailScreen() {
                 />
               )}
 
-              {/* ─── Day heading + missed badge ────────────────────────────── */}
-              {selectedDay && (
-                <View style={styles.dayHeadRow}>
-                  <View>
-                    <Text style={styles.dayHeadText}>
-                      Day {selectedDay.dayNumber}{totalDays > 0 ? ` of ${totalDays}` : ''}
-                    </Text>
-                    {/* Show selected day's date if available */}
-                    {selectedDayMeta.date && (
-                      <Text style={styles.dayHeadDate}>
-                        {selectedDayMeta.date.toLocaleDateString('en-US', {
-                          weekday: 'long', month: 'long', day: 'numeric',
-                        })}
+              {/* ─── Passages Card ──────────────────────────────────────────── */}
+              <SoftCard style={styles.cardSpacing} innerStyle={styles.passagesCardInner}>
+                {/* ─── Day heading + missed badge ────────────────────────────── */}
+                {selectedDay && (
+                  <View style={styles.dayHeadRow}>
+                    <View>
+                      <Text style={styles.sectionOverline}>
+                        DAY {selectedDay.dayNumber}{totalDays > 0 ? ` OF ${totalDays}` : ''}
                       </Text>
-                    )}
-                  </View>
-
-                  {/* Right side badges */}
-                  <View style={styles.dayHeadBadges}>
-                    {selectedDayCompleted && (
-                      <View style={styles.doneBadge}>
-                        <CheckCircle2 size={11} color="#22C55E" />
-                        <Text style={styles.doneBadgeText}>Done</Text>
-                      </View>
-                    )}
-                    {missedCount > 0 && (
-                      <View style={styles.missedBadge}>
-                        <Text style={styles.missedBadgeText}>
-                          {missedCount} Missed {missedCount === 1 ? 'Day' : 'Days'}
+                      {selectedDayMeta.date && (
+                        <Text style={styles.dayHeadDate}>
+                          {selectedDayMeta.date.toLocaleDateString('en-US', {
+                            weekday: 'long', month: 'long', day: 'numeric',
+                          })}
                         </Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-              )}
+                      )}
+                    </View>
 
-              {/* ─── Passage rows ──────────────────────────────────────────── */}
-              {selectedDayPassages.length > 0 ? (
-                selectedDayPassages.map((passage, idx) => (
-                  <Pressable
-                    key={`${selectedDayNumber}-${idx}`}
-                    style={[
-                      styles.passageRow,
-                      idx < selectedDayPassages.length - 1 && styles.passageRowDivider,
-                    ]}
-                    onPress={handlePassagePress}
-                  >
-                    {selectedDayCompleted ? (
-                      <CheckCircle2 size={22} color="#22C55E" strokeWidth={2} />
-                    ) : (
-                      <View style={styles.passageCircle} />
-                    )}
-                    <Text style={[styles.passageText, selectedDayCompleted && styles.passageTextDone]}>
-                      {passage}
-                    </Text>
-                    <ChevronRight size={16} color="#C8C8C8" />
-                  </Pressable>
-                ))
-              ) : (
-                <Text style={styles.noReadings}>No readings for this day.</Text>
-              )}
+                    {/* Right side badges */}
+                    <View style={styles.dayHeadBadges}>
+                      {selectedDayCompleted && (
+                        <View style={styles.doneBadge}>
+                          <CheckCircle2 size={11} color="#22C55E" />
+                          <Text style={styles.doneBadgeText}>Done</Text>
+                        </View>
+                      )}
+                      {missedCount > 0 && (
+                        <View style={styles.missedBadge}>
+                          <Text style={styles.missedBadgeText}>
+                            {missedCount} Missed {missedCount === 1 ? 'Day' : 'Days'}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                )}
+
+                <View style={styles.passagesList}>
+                  {selectedDayPassages.length > 0 ? (
+                    selectedDayPassages.map((passage, idx) => (
+                      <Pressable
+                        key={`${selectedDayNumber}-${idx}`}
+                        style={[
+                          styles.passageRow,
+                          idx < selectedDayPassages.length - 1 && styles.passageRowDivider,
+                        ]}
+                        onPress={handlePassagePress}
+                      >
+                        {selectedDayCompleted ? (
+                          <CheckCircle2 size={22} color="#22C55E" strokeWidth={2} />
+                        ) : (
+                          <View style={styles.passageCircle} />
+                        )}
+                        <Text style={[styles.passageText, selectedDayCompleted && styles.passageTextDone]}>
+                          {passage}
+                        </Text>
+                        <ChevronRight size={16} color="#C8C8C8" />
+                      </Pressable>
+                    ))
+                  ) : (
+                    <Text style={styles.noReadings}>No readings for this day.</Text>
+                  )}
+                </View>
+              </SoftCard>
 
               {/* ─── About plan ────────────────────────────────────────────── */}
               {plan.description ? (
-                <View style={styles.aboutSection}>
+                <SoftCard style={styles.cardSpacing} innerStyle={styles.aboutCardInner}>
                   <Text style={styles.aboutLabel}>ABOUT THIS PLAN</Text>
                   <Text style={styles.aboutText}>{plan.description}</Text>
-                </View>
+                </SoftCard>
               ) : null}
 
             </ScrollView>
@@ -587,8 +590,9 @@ export default function BiblePlanDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#FFFFFF' },
+  root: { flex: 1, backgroundColor: '#FAFAFA' },
   loader: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  cardSpacing: { marginHorizontal: 20, marginBottom: 20 },
 
   // ─── Header
   headerContainer: {
@@ -628,9 +632,10 @@ const styles = StyleSheet.create({
   heroCard: {
     marginHorizontal: 20,
     marginBottom: 20,
-    borderRadius: 20,
+    borderRadius: 24,
     overflow: 'hidden',
-    boxShadow: '0px 4px 12px rgba(255, 101, 150, 0.1)',
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
   },
   heroGradient: {
     height: 175,
@@ -754,25 +759,29 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
-  // ─── Day heading
+  // ─── Passages Card
+  passagesCardInner: {
+    padding: 0,
+  },
   dayHeadRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 4,
-    marginBottom: 14,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 16,
   },
-  dayHeadText: {
-    fontSize: 22,
+  sectionOverline: {
+    fontSize: 10,
     fontWeight: '800',
-    color: '#1a1a1a',
+    color: '#FF6596',
+    letterSpacing: 1.5,
+    marginBottom: 4,
   },
   dayHeadDate: {
-    fontSize: 12,
-    color: '#AAAAAA',
-    fontWeight: '500',
-    marginTop: 2,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#111827',
   },
   dayHeadBadges: {
     flexDirection: 'row',
@@ -805,18 +814,20 @@ const styles = StyleSheet.create({
   },
   missedBadgeText: { fontSize: 11, fontWeight: '700', color: '#D97706' },
 
-  // ─── Passage rows
+  passagesList: {
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
   passageRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 18,
     gap: 16,
-    backgroundColor: '#FFFFFF',
   },
   passageRowDivider: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#EBEBEB',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
   passageCircle: {
     width: 26,
@@ -841,12 +852,8 @@ const styles = StyleSheet.create({
   },
 
   // ─── About
-  aboutSection: {
-    marginHorizontal: 20,
-    marginTop: 28,
-    paddingTop: 20,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#EBEBEB',
+  aboutCardInner: {
+    padding: 24,
   },
   aboutLabel: {
     fontSize: 10,

@@ -9,29 +9,7 @@ export default function MyJourneyRoute() {
 
   return (
     <>
-      <Stack.Screen
-        options={{
-          headerShown: false,
-          title: 'My Journey',
-          headerTitleStyle: {
-            fontWeight: '600',
-            fontSize: 17,
-            color: '#111827',
-          },
-          headerStyle: {
-            backgroundColor: '#ffffff',
-          },
-          headerShadowVisible: false,
-          headerLeft: () => (
-            <TouchableOpacity 
-              onPress={() => router.back()}
-              style={{ marginLeft: Platform.OS === 'ios' ? -8 : 8, padding: 8 }}
-            >
-              <ChevronLeft size={28} color="#374151" />
-            </TouchableOpacity>
-          ),
-        }}
-      />
+      <Stack.Screen options={{ headerShown: false }} />
       <MyJourneyScreen />
     </>
   );

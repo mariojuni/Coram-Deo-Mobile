@@ -21,6 +21,7 @@ import {
 } from 'firebase/firestore';
 import type { BibleHighlight } from '../domain/bibleHighlight.types';
 import { commentRepository } from '@/features/comments/data/comment.repository';
+import { myJourneyMilestoneEvaluator } from '@/features/myJourney/data/MyJourneyMilestoneEvaluator';
 
 const COLLECTION_NAME = 'bibleVerseHighlights';
 
@@ -48,6 +49,10 @@ export const bibleHighlightRepository = {
     Object.keys(newHighlight).forEach(key => newHighlight[key] === undefined && delete newHighlight[key]);
 
     await setDoc(newHighlightRef, newHighlight);
+    
+    // Evaluate milestone (runs asynchronously)
+    myJourneyMilestoneEvaluator.evaluateFirstHighlight(highlight.userId).catch(console.warn);
+    
     return newHighlight as any as BibleHighlight;
   },
 

@@ -20,6 +20,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import type { BibleNote } from '../domain/bibleNote.types';
+import { myJourneyMilestoneEvaluator } from '@/features/myJourney/data/MyJourneyMilestoneEvaluator';
 
 const COLLECTION_NAME = 'bibleNotes';
 
@@ -47,6 +48,10 @@ export const bibleNoteRepository = {
     Object.keys(newNote).forEach(key => newNote[key] === undefined && delete newNote[key]);
 
     await setDoc(newNoteRef, newNote);
+    
+    // Evaluate milestone (runs asynchronously)
+    myJourneyMilestoneEvaluator.evaluateFirstBibleNote(note.userId).catch(console.warn);
+    
     return newNote as any as BibleNote;
   },
 
@@ -63,7 +68,7 @@ export const bibleNoteRepository = {
       finalUpdates.moderationStatus = 'published';
     }
 
-    Object.keys(finalUpdates).forEach(key => finalUpdates[key] === undefined && delete finalUpdates[key]);
+    Object.keys(finalUpdates).forEach(key => (finalUpdates as any)[key] === undefined && delete (finalUpdates as any)[key]);
 
     await updateDoc(noteRef, finalUpdates);
   },

@@ -15,3 +15,17 @@ export interface WeeklyBibleActivityMetrics {
   planDaysCompletedCount: number;
   activityByDay: boolean[]; // 7 elements (Mon-Sun), true if activity occurred
 }
+
+export interface MonthlyBibleActivityMetrics {
+  readingDaysCount: number;
+  chaptersReadCount: number;
+  notesCreatedCount: number;
+  highlightsCreatedCount: number;
+  planDaysCompletedCount: number;
+  activityDates: string[]; // YYYY-MM-DD of active dates
+  mostEngagedBook?: {
+    bookId: string; // e.g., "PHP"
+    bookName: string; // e.g., "Philippians"
+    chapterCount: number;
+  };
+}

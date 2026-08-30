@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { View, Text, StyleSheet, Animated, ActivityIndicator, TouchableOpacity, Platform, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Platform, Pressable, ScrollView, Animated } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,23 +7,48 @@ import { useMyJourney } from '../hooks/useMyJourney';
 import { useBibleVersionStore } from '../../../../store/useBibleVersionStore';
 import { SoftCard, getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 import { BounceCard } from '@/components/ui/BounceCard';
-import { BookOpen, Edit3, Highlighter, Map, ChevronRight, Play, ChevronLeft } from 'lucide-react-native';
+import { BookOpen, Edit3, Highlighter, Map, ChevronRight, Play, ChevronLeft, Activity, Calendar, Award, Bookmark, TrendingUp } from 'lucide-react-native';
 import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
+import { LinearGradient } from 'expo-linear-gradient';
+import { MonthView } from '../components/MonthView';
+import { MilestonesView } from '../components/MilestonesView';
 
-const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 export default function MyJourneyScreen() {
-  const { metrics, loading } = useMyJourney();
+  const { 
+    metrics, 
+    loading, 
+    monthlyMetrics, 
+    prevMonthlyMetrics, 
+    currentMonthDate, 
+    loadingMonth, 
+    goToPreviousMonth, 
+    goToNextMonth 
+  } = useMyJourney();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const scrollY = useRef(new Animated.Value(0)).current;
+  const [activeTab, setActiveTab] = React.useState<'week' | 'month' | 'milestones'>('week');
+  const [tabWidth, setTabWidth] = React.useState(0);
+  const tabSlideAnim = useRef(new Animated.Value(0)).current;
+
+  // Animate tab slide when activeTab changes
+  React.useEffect(() => {
+    let toValue = 0;
+    if (activeTab === 'month') toValue = 1;
+    if (activeTab === 'milestones') toValue = 2;
+    
+    Animated.spring(tabSlideAnim, {
+      toValue,
+      useNativeDriver: true,
+      friction: 9,
+      tension: 65,
+    }).start();
+  }, [activeTab, tabSlideAnim]);
 
   const handleContinueReading = () => {
     router.replace('/(tabs)/bible');
   };
-
-
-
   return (
     <View style={styles.root}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -37,18 +62,9 @@ export default function MyJourneyScreen() {
             <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
           </BounceCard>
           
-          <Animated.Text 
-            style={[styles.headerTitle, {
-              opacity: scrollY.interpolate({
-                inputRange: [0, 40, 80],
-                outputRange: [0, 0, 1],
-                extrapolate: 'clamp'
-              })
-            }]}
-            numberOfLines={1}
-          >
+          <Text style={styles.headerTitle} numberOfLines={1}>
             My Journey
-          </Animated.Text>
+          </Text>
 
           {/* Invisible placeholder for right-alignment balance */}
           <View style={{ width: 40, height: 40 }} />
@@ -57,35 +73,103 @@ export default function MyJourneyScreen() {
 
       {loading ? (
         <View style={{ padding: 16, paddingTop: Math.max(insets.top, 24) + 60, flex: 1 }}>
-          <View style={styles.screenHeader}>
-            <ShimmerSkeleton width={180} height={34} borderRadius={8} style={{ marginBottom: 8 }} />
-            <ShimmerSkeleton width={240} height={18} borderRadius={8} />
+          {/* Hero Card Shimmer */}
+          <View style={styles.cardSpacing}>
+            <ShimmerSkeleton width="100%" height={175} borderRadius={24} />
           </View>
+          {/* Tabs Shimmer */}
+          <View style={{ marginBottom: 24 }}>
+            <ShimmerSkeleton width="100%" height={48} borderRadius={16} />
+          </View>
+          {/* Continue Card Shimmer */}
           <View style={styles.cardSpacing}>
             <ShimmerSkeleton width="100%" height={92} borderRadius={24} />
           </View>
+          {/* Content Shimmer */}
           <View style={styles.cardSpacing}>
-            <ShimmerSkeleton width="100%" height={160} borderRadius={24} />
-          </View>
-          <View style={styles.cardSpacing}>
-            <ShimmerSkeleton width="100%" height={340} borderRadius={24} />
+            <ShimmerSkeleton width="100%" height={200} borderRadius={24} />
           </View>
         </View>
       ) : (
-        <Animated.ScrollView 
+        <ScrollView 
           style={styles.container} 
-          contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 24) + 60 }]}
-          onScroll={Animated.event(
-            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-            { useNativeDriver: true }
-          )}
-          scrollEventThrottle={16}
+          contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 24) + 60, paddingBottom: 40 }]}
+          showsVerticalScrollIndicator={false}
         >
         
-        {/* Hero Header */}
-        <View style={styles.screenHeader}>
-          <Text style={styles.screenTitle}>My Journey</Text>
-        <Text style={styles.screenSubtitle}>Reflect on your time in the Word</Text>
+        {/* ─── Hero card ─────────────────────────────────────────────── */}
+        <View style={styles.heroCard}>
+          <LinearGradient
+            colors={['#FFE8F0', '#F5E8FF', '#E8EEFF']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.heroGradient}
+          >
+            <TrendingUp size={26} color="#E091B4" strokeWidth={1.5} style={styles.heroIcon} />
+            <Text
+              style={styles.heroFaded}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.45}
+            >
+              MY JOURNEY
+            </Text>
+            <Text style={styles.heroSubtitle}>Reflect on your time in the Word</Text>
+            <View style={styles.heroLine} />
+          </LinearGradient>
+        </View>
+
+      {/* Modern Segmented Tabs */}
+      <View style={styles.tabsContainerOuter}>
+        <View 
+          style={styles.tabsContainerInner}
+          onLayout={(e) => setTabWidth(e.nativeEvent.layout.width / 3)}
+        >
+          {/* Animated Background Indicator */}
+          {tabWidth > 0 && (
+            <Animated.View 
+              style={[
+                styles.tabIndicator,
+                {
+                  width: tabWidth,
+                  transform: [{
+                    translateX: tabSlideAnim.interpolate({
+                      inputRange: [0, 1, 2],
+                      outputRange: [0, tabWidth, tabWidth * 2]
+                    })
+                  }]
+                }
+              ]} 
+            />
+          )}
+          
+          <TouchableOpacity 
+            style={styles.tab} 
+            onPress={() => setActiveTab('week')}
+            activeOpacity={0.7}
+          >
+            <Activity size={15} color={activeTab === 'week' ? '#FF6596' : '#8B95A5'} style={styles.tabIcon} />
+            <Text style={[styles.tabText, activeTab === 'week' && styles.tabTextActive]}>This Week</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.tab} 
+            onPress={() => setActiveTab('month')}
+            activeOpacity={0.7}
+          >
+            <Calendar size={15} color={activeTab === 'month' ? '#FF6596' : '#8B95A5'} style={styles.tabIcon} />
+            <Text style={[styles.tabText, activeTab === 'month' && styles.tabTextActive]}>Month</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.tab} 
+            onPress={() => setActiveTab('milestones')}
+            activeOpacity={0.7}
+          >
+            <Award size={15} color={activeTab === 'milestones' ? '#FF6596' : '#8B95A5'} style={styles.tabIcon} />
+            <Text style={[styles.tabText, activeTab === 'milestones' && styles.tabTextActive]}>Milestones</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Continue Reading - Moved to top for high utility */}
@@ -100,6 +184,9 @@ export default function MyJourneyScreen() {
           </View>
         </SoftCard>
       </BounceCard>
+
+      {activeTab === 'week' && (
+        <View>
 
       {/* 7-Day Indicator */}
       <SoftCard style={styles.cardSpacing} innerStyle={styles.sectionInner}>
@@ -204,9 +291,25 @@ export default function MyJourneyScreen() {
           <Text style={styles.statRowValue}>{metrics.notesCreatedCount}</Text>
         </View>
       </SoftCard>
+      </View>
+      )}
+
+      {activeTab === 'month' && (
+        <MonthView 
+          metrics={monthlyMetrics}
+          prevMetrics={prevMonthlyMetrics}
+          currentMonthDate={currentMonthDate}
+          loading={loadingMonth}
+          onPrevMonth={goToPreviousMonth}
+          onNextMonth={goToNextMonth}
+        />
+      )}
+
+      {activeTab === 'milestones' && (
+        <MilestonesView />
+      )}
       
-      <View style={{ height: 40 }} />
-      </Animated.ScrollView>
+      </ScrollView>
       )}
     </View>
   );
@@ -258,20 +361,82 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingTop: 8,
   },
-  screenHeader: {
+  heroCard: {
     marginBottom: 24,
-    paddingHorizontal: 4,
+    borderRadius: 24,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
   },
-  screenTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#111827',
-    marginBottom: 4,
+  heroGradient: {
+    height: 175,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  screenSubtitle: {
-    fontSize: 15,
-    color: '#6B7280',
+  heroIcon: { marginBottom: 14 },
+  heroFaded: {
+    fontSize: 26,
+    fontWeight: '900',
+    letterSpacing: 5,
+    color: 'rgba(190, 110, 150, 0.45)',
+    textAlign: 'center',
+    paddingHorizontal: 24,
+  },
+  heroSubtitle: {
+    fontSize: 13,
+    color: 'rgba(190, 110, 150, 0.65)',
     fontWeight: '500',
+    marginTop: 4,
+  },
+  heroLine: {
+    width: 32,
+    height: 2,
+    backgroundColor: 'rgba(255, 101, 150, 0.4)',
+    borderRadius: 1,
+    marginTop: 14,
+  },
+  tabsContainerOuter: {
+    backgroundColor: '#F5F6FA',
+    borderRadius: 16,
+    padding: 4,
+    marginBottom: 24,
+  },
+  tabsContainerInner: {
+    flexDirection: 'row',
+    position: 'relative',
+    borderRadius: 12,
+  },
+  tabIndicator: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1, // ensure text is above indicator
+  },
+  tabIcon: {
+    marginRight: 6,
+  },
+  tabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#8B95A5',
+  },
+  tabTextActive: {
+    color: '#FF6596',
+    fontWeight: '700',
   },
   cardSpacing: {
     marginBottom: 16,
