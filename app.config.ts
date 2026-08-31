@@ -1,5 +1,5 @@
 import { ExpoConfig, ConfigContext } from 'expo/config';
-import { withDangerousMod } from 'expo/config-plugins';
+import { withDangerousMod, withAndroidManifest } from 'expo/config-plugins';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -66,6 +66,36 @@ const withFirebaseSPMDisable = (config: ExpoConfig) => {
       return config;
     },
   ]);
+};
+
+const withRemoveOrientationRestriction = (config: ExpoConfig) => {
+  return withAndroidManifest(config, async (config) => {
+    const androidManifest = config.modResults;
+    const application = androidManifest.manifest.application?.[0];
+    if (application && application.activity) {
+      const activityName = 'com.google.mlkit.vision.codescanner.internal.GmsBarcodeScanningDelegateActivity';
+      const existingActivity = application.activity.find(
+        (a: any) => a.$['android:name'] === activityName
+      );
+      if (existingActivity) {
+        delete existingActivity.$['android:screenOrientation'];
+        existingActivity.$['tools:node'] = 'merge';
+      } else {
+        application.activity.push({
+          $: {
+            'android:name': activityName,
+            'tools:node': 'merge',
+            'android:screenOrientation': 'unspecified',
+          }
+        });
+      }
+      
+      if (!androidManifest.manifest.$['xmlns:tools']) {
+        androidManifest.manifest.$['xmlns:tools'] = 'http://schemas.android.com/tools';
+      }
+    }
+    return config;
+  });
 };
 
 export default ({ config }: ConfigContext): ExpoConfig => {
@@ -193,5 +223,5 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     owner: "maryow"
   };
 
-  return withAndroidSigningFix(withFirebaseSPMDisable(baseConfig));
+  return withRemoveOrientationRestriction(withAndroidSigningFix(withFirebaseSPMDisable(baseConfig)));
 };
