@@ -498,7 +498,7 @@ export default function TabLayout() {
             }}
             onPress={() => {
               if (topSermon.progress.mediaType === 'video') {
-                router.navigate({ pathname: '/sermon-watch' as any, params: { id: topSermon.progress.sermonId } });
+                router.navigate({ pathname: '/sermon-detail' as any, params: { id: topSermon.progress.sermonId } });
               } else {
                 router.navigate({ pathname: '/audio-player' as any, params: { id: topSermon.progress.sermonId } });
               }

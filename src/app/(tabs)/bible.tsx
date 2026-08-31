@@ -18,6 +18,7 @@ import { useBibleVersionStore } from '../../store/useBibleVersionStore';
 import { useUIStore } from '../../store/useUIStore';
 import { fetchBibleIndex, getSavedVersions, getUserPreferences, saveUserPreferences } from '../../utils/bibleApi';
 import { bibleDataService } from '@/features/bible/data/BibleDataService';
+import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
 
 type BiblePreferencesWithHighlights = BiblePreferences;
 
@@ -147,8 +148,21 @@ export default function BibleScreen() {
 
   if (!preferences) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#FF6596" />
+      <View style={[styles.container, { paddingHorizontal: 24, paddingTop: 130 }]}>
+        <ShimmerSkeleton width="55%" height={22} borderRadius={6} style={{ marginBottom: 16 }} />
+        
+        <ShimmerSkeleton width="100%" height={18} borderRadius={4} style={{ marginBottom: 12 }} />
+        <ShimmerSkeleton width="96%" height={18} borderRadius={4} style={{ marginBottom: 12 }} />
+        <ShimmerSkeleton width="90%" height={18} borderRadius={4} style={{ marginBottom: 12 }} />
+        <ShimmerSkeleton width="98%" height={18} borderRadius={4} style={{ marginBottom: 12 }} />
+        <ShimmerSkeleton width="85%" height={18} borderRadius={4} style={{ marginBottom: 24 }} />
+        
+        <ShimmerSkeleton width="45%" height={22} borderRadius={6} style={{ marginBottom: 16 }} />
+
+        <ShimmerSkeleton width="100%" height={18} borderRadius={4} style={{ marginBottom: 12 }} />
+        <ShimmerSkeleton width="92%" height={18} borderRadius={4} style={{ marginBottom: 12 }} />
+        <ShimmerSkeleton width="97%" height={18} borderRadius={4} style={{ marginBottom: 12 }} />
+        <ShimmerSkeleton width="75%" height={18} borderRadius={4} style={{ marginBottom: 12 }} />
       </View>
     );
   }

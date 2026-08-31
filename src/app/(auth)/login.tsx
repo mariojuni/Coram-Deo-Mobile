@@ -31,7 +31,8 @@ export default function LoginScreen() {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isEmailLoading, setIsEmailLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [isEnvModalOpen, setIsEnvModalOpen] = useState(false);
 
@@ -79,19 +80,19 @@ export default function LoginScreen() {
     }
     
     setErrorMsg('');
-    setIsLoading(true);
+    setIsEmailLoading(true);
     try {
       await login(identifier, password);
     } catch (error: any) {
       setErrorMsg(error.message);
     } finally {
-      setIsLoading(false);
+      setIsEmailLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
     setErrorMsg('');
-    setIsLoading(true);
+    setIsGoogleLoading(true);
     try {
       await loginWithGoogle();
     } catch (error: any) {
@@ -100,7 +101,7 @@ export default function LoginScreen() {
         setErrorMsg(error.message);
       }
     } finally {
-      setIsLoading(false);
+      setIsGoogleLoading(false);
     }
   };
 
@@ -184,7 +185,8 @@ export default function LoginScreen() {
               <PrimaryGradientButton
                 title="Sign In"
                 onPress={handleLogin}
-                loading={isLoading}
+                loading={isEmailLoading}
+                disabled={isGoogleLoading}
                 style={{ marginTop: 8 }}
               />
 
@@ -195,8 +197,12 @@ export default function LoginScreen() {
               </View>
 
               <View style={styles.socialButtonsRow}>
-                <TouchableOpacity style={styles.socialIconBtn} onPress={handleGoogleLogin} disabled={isLoading} activeOpacity={0.8} accessibilityRole="button">
-                  <Image source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png' }} style={styles.socialIcon} contentFit="contain" />
+                <TouchableOpacity style={styles.socialIconBtn} onPress={handleGoogleLogin} disabled={isEmailLoading || isGoogleLoading} activeOpacity={0.8} accessibilityRole="button">
+                  {isGoogleLoading ? (
+                    <ActivityIndicator size="small" color="#666" />
+                  ) : (
+                    <Image source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png' }} style={styles.socialIcon} contentFit="contain" />
+                  )}
                 </TouchableOpacity>
               </View>
 

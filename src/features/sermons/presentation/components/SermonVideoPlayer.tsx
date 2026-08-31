@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Dimensions, Platform } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useEventListener } from 'expo';
 import { useFocusEffect } from 'expo-router';
@@ -15,6 +15,7 @@ import {
   X
 } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
+import { CustomBlurView } from '@/components/ui/CustomBlurView';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -276,67 +277,68 @@ export function SermonVideoPlayer({
       >
         {/* Minimized Card Overlay (Fades in dynamically during drag) */}
         <Animated.View style={[styles.miniCardOverlay, animatedCardOverlayStyle]} pointerEvents={isMinimized && !isHidden ? 'auto' : 'none'}>
-          <BlurView intensity={80} tint="light" style={[StyleSheet.absoluteFill, { zIndex: 0 }]} />
+          <CustomBlurView intensity={80} tint="light" style={[StyleSheet.absoluteFill, { zIndex: 0 }]} fallbackBackgroundColor="#FAFAFA" />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)', zIndex: 0 }]} pointerEvents="none" />
+          
           <View style={[styles.miniCardContent, { zIndex: 1 }]} pointerEvents="box-none">
-              <View style={styles.miniThumbWrap} pointerEvents="box-none">
-                {/* The VideoView itself acts as the thumbnail now, so no static image needed here */}
-                <View style={styles.miniIconOverlay}>
-                  {playerState === 'playing' ? (
-                    <Pause size={14} color="#fff" fill="#fff" />
-                  ) : (
-                    <Play size={14} color="#fff" fill="#fff" />
-                  )}
-                </View>
-              </View>
-
-              <View style={styles.miniInfo}>
-                <Text style={styles.miniTitle} numberOfLines={1}>
-                  {sermon.title}
-                </Text>
-                <Text style={styles.miniMeta} numberOfLines={1}>
-                  {sermon.preacherName}
-                </Text>
-              </View>
-
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <TouchableOpacity
-                  onPress={(e) => { e.stopPropagation(); handlePlayPause(); }}
-                  style={styles.miniActionBtn}
-                  hitSlop={{top:10, bottom:10, left:10, right:10}}
-                >
-                  {playerState === 'playing' ? (
-                    <Pause size={20} color={NAVY} fill={NAVY} />
-                  ) : (
-                    <Play size={20} color={NAVY} fill={NAVY} />
-                  )}
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={(e) => { 
-                    e.stopPropagation(); 
-                    if (player.playing) {
-                      player.pause();
-                    }
-                    onProgress?.(Math.floor(player.currentTime), Math.floor(player.duration ?? 0));
-                    onClose?.(); 
-                  }}
-                  style={styles.miniActionBtn}
-                  hitSlop={{top:10, bottom:10, left:10, right:10}}
-                >
-                  <X size={20} color="#9CA3AF" />
-                </TouchableOpacity>
+            {/* Thumbnail */}
+            <View style={styles.miniThumbWrap} pointerEvents="box-none">
+              <View style={styles.miniIconOverlay}>
+                {playerState === 'playing' ? (
+                  <Pause size={14} color="#fff" fill="#fff" />
+                ) : (
+                  <Play size={14} color="#fff" fill="#fff" />
+                )}
               </View>
             </View>
-            
-            <View style={[styles.miniProgressBarWrap, { zIndex: 1 }]}>
-              <View
-                style={[
-                  styles.miniProgressBarFill,
-                  { width: `${Math.min(progress * 100, 100)}%` },
-                ]}
-              />
+
+            <View style={styles.miniInfo}>
+              <Text style={styles.miniTitle} numberOfLines={1}>
+                {sermon.title}
+              </Text>
+              <Text style={styles.miniMeta} numberOfLines={1}>
+                {sermon.preacherName}
+              </Text>
             </View>
+
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <TouchableOpacity
+                onPress={(e) => { e.stopPropagation(); handlePlayPause(); }}
+                style={styles.miniActionBtn}
+                hitSlop={{top:10, bottom:10, left:10, right:10}}
+              >
+                {playerState === 'playing' ? (
+                  <Pause size={20} color={NAVY} fill={NAVY} />
+                ) : (
+                  <Play size={20} color={NAVY} fill={NAVY} />
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={(e) => { 
+                  e.stopPropagation(); 
+                  if (player.playing) {
+                    player.pause();
+                  }
+                  onProgress?.(Math.floor(player.currentTime), Math.floor(player.duration ?? 0));
+                  onClose?.(); 
+                }}
+                style={styles.miniActionBtn}
+                hitSlop={{top:10, bottom:10, left:10, right:10}}
+              >
+                <X size={20} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
+          </View>
+          
+          <View style={[styles.miniProgressBarWrap, { zIndex: 1 }]}>
+            <View
+              style={[
+                styles.miniProgressBarFill,
+                { width: `${Math.min(progress * 100, 100)}%` },
+              ]}
+            />
+          </View>
         </Animated.View>
 
         {/* Animated Video Container (Morphs to thumbnail) AND holds controls */}
@@ -348,6 +350,7 @@ export function SermonVideoPlayer({
             contentFit="cover"
             allowsVideoFrameAnalysis={false}
             nativeControls={isFullscreen}
+            surfaceType="textureView" // Required on Android so that BlurView can capture and blur the video surface
             onFullscreenEnter={() => setIsFullscreen(true)}
             onFullscreenExit={() => setIsFullscreen(false)}
           />

@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, ViewStyle, TextStyle } from 'react-native';
+import { StyleSheet, Text, View, ViewStyle, TextStyle, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AccessibleButton } from '../a11y/AccessibleButton';
 
@@ -47,8 +47,8 @@ export const PrimaryGradientButton: React.FC<PrimaryGradientButtonProps> = ({
       ]}
       onPress={onPress}
       disabled={disabled || loading}
-      loading={loading}
       accessibilityLabel={accessibilityLabel || title}
+      accessibilityState={{ busy: loading }}
     >
       <LinearGradient
         colors={disabled ? disabledColors : colors}
@@ -56,7 +56,9 @@ export const PrimaryGradientButton: React.FC<PrimaryGradientButtonProps> = ({
         end={{ x: 1, y: 0 }}
         style={styles.gradient}
       >
-        {!loading && (
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
             <Text style={[styles.text, textStyle]}>
               {title}

@@ -217,7 +217,6 @@ export default function RootLayout() {
               <Stack.Screen name="create-setlist" options={{ presentation: 'transparentModal', animation: 'none', headerShown: false }} />
               <Stack.Screen name="assign-ministries" options={{ presentation: 'transparentModal', animation: 'none', headerShown: false }} />
               <Stack.Screen name="audio-player" options={{ presentation: 'modal', headerShown: false }} />
-              <Stack.Screen name="sermon-watch" options={{ headerShown: false }} />
               <Stack.Screen name="sermon-detail" options={{ headerShown: false }} />
               <Stack.Screen name="serve-assignment-detail" options={{ headerShown: false }} />
               <Stack.Screen name="serve-ministry-detail" options={{ headerShown: false }} />

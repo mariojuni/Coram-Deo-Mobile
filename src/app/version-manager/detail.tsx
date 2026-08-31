@@ -31,6 +31,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useVersionContext } from "@/features/bible/presentation/context/VersionManagerContext";
 import { doc, getDoc } from "firebase/firestore";
 import { getActiveDb } from "@/firebase";
+import { styles } from "@/features/bible/presentation/version-manager/styles";
 
 export default function VersionDetailScreen() {
   const router = useRouter();
@@ -145,27 +146,15 @@ export default function VersionDetailScreen() {
   const languageName = displayBible.language?.name || displayBible.language?.name_local || "English";
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#FAFAFA" }} edges={["top", "bottom"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#FAFAFA" }} edges={["bottom"]}>
       {/* Top Navigation */}
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12 }}>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingTop: 21, paddingBottom: 16 }}>
         <BounceCard
           bounceScale={0.85}
           onPress={() => router.back()}
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            backgroundColor: "#fff",
-            justifyContent: "center",
-            alignItems: "center",
-            shadowColor: "#000",
-            shadowOpacity: 0.05,
-            shadowRadius: 10,
-            shadowOffset: { width: 0, height: 2 },
-            elevation: 2,
-          }}
+          style={styles.headerCircle}
         >
-          <ChevronLeft size={24} color="#1a1a1a" />
+          <ChevronLeft size={24} color="#111827" strokeWidth={2} />
         </BounceCard>
       </View>
 
