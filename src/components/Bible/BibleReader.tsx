@@ -4,7 +4,9 @@ import { useBibleNoteStore } from '@/features/bibleNotes/presentation/hooks/useB
 import { useGlobalVideoStore } from '@/store/useGlobalVideoStore';
 import { getHumanReadableBookName } from '@/utils/scriptureReferenceParser';
 import { router } from 'expo-router';
-import { ChevronLeft, ChevronRight, Copy, X, MessageSquareText, Info } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Copy, X, MessageSquareText, Info, Minus, Plus } from 'lucide-react-native';
+import { BibleNoteIcon } from '@/components/ui/icons/BibleNoteIcon';
+import FontTypefaceIcon from '@/components/Navigation/Icons/FontTypefaceIcon';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getSoftShadowStyle, getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 import { ActivityIndicator, Animated, Dimensions, NativeScrollEvent, NativeSyntheticEvent, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform, Image } from 'react-native';
@@ -28,6 +30,8 @@ interface BibleReaderProps {
   isLandscape?: boolean;
   isSplitMode?: boolean;
   secondaryTranslation?: string | number | null;
+  isFontModalOpen?: boolean;
+  onCloseFontModal?: () => void;
 }
 
 interface VerseCrossReference {
@@ -81,7 +85,7 @@ const SUPERSCRIPT_MAP: Record<string, string> = {
 const toSuperscript = (num: string) =>
   num.split('').map(d => SUPERSCRIPT_MAP[d] ?? d).join('');
 
-export default function BibleReader({ preferences, updatePreferences, books, hideChapterNav = false, scrollToVerse, controlsTabBar = false, scrollY, isLandscape, isSplitMode, secondaryTranslation }: BibleReaderProps) {
+export default function BibleReader({ preferences, updatePreferences, books, hideChapterNav = false, scrollToVerse, controlsTabBar = false, scrollY, isLandscape, isSplitMode, secondaryTranslation, isFontModalOpen, onCloseFontModal }: BibleReaderProps) {
   const { playerMode } = useGlobalVideoStore();
   const scrollRef = useRef<ScrollView>(null);
   const contentHeightRef = useRef<number>(0);
@@ -93,6 +97,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
   
   const [activeVerse, setActiveVerse] = useState<Verse | null>(null);
   const { activeBook, activeChapter } = preferences;
+  const fontSize = preferences?.fontSize || 18;
   const activeBookObj = books.find(b => b.id === activeBook);
 
   // Animate nav arrows translateY: 0 (tab bar visible) ↔ 90 (tab bar hidden)
@@ -157,10 +162,10 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
   }, [controlsTabBar, setTabBarVisible, setHideCompactPlayer]);
 
   // Keep context fresh for the stable scroll listener
-  const scrollContext = useRef({ controlsTabBar, selectedVersesLength: selectedVerses.length, isLandscape });
+  const scrollContext = useRef({ controlsTabBar, selectedVersesLength: selectedVerses.length, isLandscape, isFontModalOpen });
   useEffect(() => {
-    scrollContext.current = { controlsTabBar, selectedVersesLength: selectedVerses.length, isLandscape };
-  }, [controlsTabBar, selectedVerses.length, isLandscape]);
+    scrollContext.current = { controlsTabBar, selectedVersesLength: selectedVerses.length, isLandscape, isFontModalOpen };
+  }, [controlsTabBar, selectedVerses.length, isLandscape, isFontModalOpen]);
 
   // Ensure Animated.Value is created only once if scrollY is missing
   const internalScrollY = useRef(scrollY || new Animated.Value(0)).current;
@@ -172,9 +177,9 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
         {
           useNativeDriver: false,
           listener: (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-            const { controlsTabBar: doControl, selectedVersesLength, isLandscape: isLand } = scrollContext.current;
+            const { controlsTabBar: doControl, selectedVersesLength, isLandscape: isLand, isFontModalOpen: fontOpen } = scrollContext.current;
             if (!doControl) return;
-            if (selectedVersesLength > 0) return; // Keep tab bar hidden if highlight modal is open
+            if (selectedVersesLength > 0 || fontOpen) return; // Keep tab bar hidden if highlight or font modal is open
             const y = e.nativeEvent.contentOffset.y;
             const delta = y - lastScrollY.current;
             if (Math.abs(delta) > 6) {
@@ -346,6 +351,66 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
     })
   ).current;
 
+  // ── Font menu swipe-to-dismiss ──────────────────────────────────────
+  const fontTranslateY = useRef(new Animated.Value(200)).current;
+
+  useEffect(() => {
+    if (isFontModalOpen) {
+      Animated.spring(fontTranslateY, {
+        toValue: 0,
+        useNativeDriver: true,
+        bounciness: 0,
+      }).start();
+      if (!isLandscape) {
+        setTabBarVisible(false);
+      }
+      setHideCompactPlayer(true);
+    } else {
+      Animated.timing(fontTranslateY, {
+        toValue: 200,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+      
+      if (selectedVerses.length === 0) {
+        if (!isLandscape) {
+          setTabBarVisible(true);
+        }
+        setHideCompactPlayer(false);
+      }
+    }
+  }, [isFontModalOpen, fontTranslateY, setTabBarVisible, setHideCompactPlayer, selectedVerses.length, isLandscape]);
+
+  const fontPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dy) > 5,
+      onPanResponderMove: (_, g) => {
+        if (g.dy > 0) {
+          fontTranslateY.setValue(g.dy);
+        }
+      },
+      onPanResponderRelease: (_, g) => {
+        if (g.dy > 50 || g.vy > 0.5) {
+          if (onCloseFontModal) onCloseFontModal();
+        } else {
+          Animated.spring(fontTranslateY, {
+            toValue: 0,
+            useNativeDriver: true,
+            bounciness: 0,
+          }).start();
+        }
+      },
+      onPanResponderTerminate: () => {
+        Animated.spring(fontTranslateY, {
+          toValue: 0,
+          useNativeDriver: true,
+          bounciness: 0,
+        }).start();
+      },
+    })
+  ).current;
+
   const renderVerseTextWithLetters = (text: string | undefined, crossReferences: VerseCrossReference[] | undefined) => {
     if (!text) return null;
     const parts = sanitizeVerseText(text).split(/(\{\{note:\d+\}\})/g);
@@ -394,7 +459,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
   const renderColumn = (reader: ReturnType<typeof useBibleReader>, isSecondary = false) => {
     return (
       <Text
-        style={[styles.chapterContent, isSecondary && { paddingLeft: 12 }]}
+        style={[styles.chapterContent, isSecondary && { paddingLeft: 12 }, { fontSize: fontSize, lineHeight: fontSize * 1.6 }]}
         onLayout={isSecondary ? undefined : (e) => {
           contentHeightRef.current = e.nativeEvent.layout.height;
         }}
@@ -419,7 +484,10 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
               >
                 <Text 
                   suppressHighlighting 
-                  onPress={() => toggleVerse(verse.verseNumber)}
+                  onPress={() => {
+                    toggleVerse(verse.verseNumber);
+                    if (isFontModalOpen && onCloseFontModal) onCloseFontModal();
+                  }}
                   style={hasHighlight ? { backgroundColor: highlightColorValue } : undefined}
                 >
                   {cleanText}
@@ -428,13 +496,10 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
                   <Text
                     suppressHighlighting
                     onPress={() => setActiveVerse(verse)}
-                    style={[{ fontSize: 12 }, hasHighlight ? { backgroundColor: highlightColorValue } : undefined]}
+                    style={[{ fontSize: Math.max(12, fontSize - 6) }, hasHighlight ? { backgroundColor: highlightColorValue } : undefined]}
                   >
                     {' '}
-                    <Image
-                      source={{ uri: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAABpklEQVR4nNSXMU/CQBTHX4+mg5ujibth1DgZP0ahYVNY9AvIyuSki4suaOJCCp39BMbJSOJC3E0cjavQw/8Rrjm0pa13pfpb+qB39+s9HndXRiXBqCTs71/0+/0tXPYty9rknFukAWNsCl4R3tfr9Rf13sLAvu+3ITwl85ngeIC253lnP8RBEGxjhk9UIMjAjuu6QxFHqQ7DcBezncV4Om80GgWdToeTBujPqtWqi3F96cBlJo5SipsbMjYhnYu5GCvOEYkxS6Z2IEOoY6kOO61jr9fbs23bSbo/mUw+G43GA+VkqRhVfoT0XOJJE9tUKhXR7hgVe0U5+DsLiIqYBVL9vPJUC34zqBFxWnHFkSUL2sUVR5aC+7/FFYd2qgWlFZcuYqOQMeqFr0Qsdyf5GUX6lkk8GAwO0fgc4ToZANX+mCrG36EJaZfMwJHmE3kISBTPZxpJ0ekCp5N3yol65qrVagtnrlgxGl8r0iY63ZBhlv3GU0gPIL2lAkgUQ9oqSipQl8wPGSDVrSLSqxLNeDwedx3HWYN0iKXyjgpG601Bh9J2py8AAAD//9JiXhkAAAAGSURdVAMAgwvIsxSQIioAAAAASUVORK5CYII=' }}
-                      style={{ width: 14, height: 14, tintColor: '#aaa', marginTop: 2 }}
-                    />
+                    <BibleNoteIcon size={Math.max(14, fontSize - 4)} color="#aaa" style={{ marginBottom: Math.max(4, fontSize * 0.2) }} />
                   </Text>
                 )}
                 {' '}
@@ -451,6 +516,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
                 styles.verseLabel,
                 hasHighlight && { backgroundColor: highlightColorValue },
                 isSelected && styles.verseSelected,
+                { fontSize: Math.max(10, fontSize - 4) }
               ]}
             >
               {toSuperscript(verse.verseNumber)}{'\u2060'}
@@ -463,13 +529,13 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
               <Text key={`${verse.id}-heading-container`}>
                 {isFirstVerse ? '' : '\n\n'}
                 {verse.heading && (
-                  <Text style={styles.verseHeading}>
+                  <Text style={[styles.verseHeading, { fontSize: fontSize + 2 }]}>
                     {verse.heading.replace(/#/g, '')}
                   </Text>
                 )}
                 {verse.heading && verse.subheading && <Text>{'\n'}</Text>}
                 {verse.subheading && (
-                  <Text style={styles.verseSubheading}>
+                  <Text style={[styles.verseSubheading, { fontSize: Math.max(12, fontSize - 2) }]}>
                     {verse.subheading.replace(/#/g, '')}
                   </Text>
                 )}
@@ -503,6 +569,9 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
           showsVerticalScrollIndicator={false}
           onScroll={handleScroll}
           scrollEventThrottle={16}
+          onTouchStart={() => {
+            if (isFontModalOpen && onCloseFontModal) onCloseFontModal();
+          }}
         >
           {isSplitMode ? (
             <View style={{ flexDirection: 'row' }}>
@@ -585,7 +654,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
                   router.push('/bible-notes/editor');
                 }
               }}>
-                <MessageSquareText size={20} color="#4B5563" />
+                <BibleNoteIcon size={20} color="#4B5563" />
                 <Text style={styles.actionButtonText}>Note</Text>
               </TouchableOpacity>
             </View>
@@ -615,6 +684,51 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
           </View>
         </Animated.View>
       )}
+
+      {/* Font Settings Toolbar (Inline Modal) */}
+      <Animated.View 
+        style={[
+          styles.highlightModal, 
+          { 
+            height: Math.max(120, Dimensions.get('window').height * 0.15),
+            bottom: -5, 
+            left: Math.max(insets.left, 0),
+            right: Math.max(insets.right, 0),
+            width: 'auto',
+            transform: [{ translateY: fontTranslateY }] 
+          }
+        ]}
+        {...fontPanResponder.panHandlers}
+      >
+        <BlurView intensity={80} tint="light" style={[StyleSheet.absoluteFill, { borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden' }]} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)', borderTopLeftRadius: 24, borderTopRightRadius: 24 }]} pointerEvents="none" />
+        
+        <View style={styles.highlightDragHandle} />
+        
+        <View style={[styles.highlightModalContent, { paddingBottom: Math.max(insets.bottom, 16), justifyContent: 'space-evenly', paddingTop: 16 }]}>
+          <TouchableOpacity 
+            style={styles.actionButton} 
+            onPress={() => updatePreferences({ fontSize: Math.max(12, fontSize - 2) })}
+          >
+            <Minus size={24} color="#4B5563" />
+            <Text style={styles.actionButtonText}>Smaller</Text>
+          </TouchableOpacity>
+          
+          <View style={{ alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 }}>
+            <FontTypefaceIcon size={28} color="#FF6596" />
+            <Text style={[styles.actionButtonText, { color: '#FF6596' }]}>{fontSize}pt</Text>
+          </View>
+          
+          <TouchableOpacity 
+            style={styles.actionButton} 
+            onPress={() => updatePreferences({ fontSize: Math.min(36, fontSize + 2) })}
+          >
+            <Plus size={24} color="#4B5563" />
+            <Text style={styles.actionButtonText}>Larger</Text>
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
+
       {/* Cross-Reference / Notes Bottom Sheet */}
       <AppModal
         isOpen={activeVerse !== null}

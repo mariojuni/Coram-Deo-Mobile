@@ -29,6 +29,7 @@ const DEFAULT_PREFERENCES: BiblePreferencesWithHighlights = {
   activeBook: 'GEN',
   activeChapter: '1',
   activeTranslation: '2692',
+  fontSize: 18,
 };
 
 let cachedPreferences: BiblePreferencesWithHighlights | null = null;
@@ -46,6 +47,7 @@ export default function BibleScreen() {
   const [savedVersions, setSavedVersions] = useState<BibleVersion[]>(cachedSavedVersions);
   const [books, setBooks] = useState<BibleBook[]>(cachedBooks);
   const [isBooksModalOpen, setIsBooksModalOpen] = useState(false);
+  const [isFontModalOpen, setIsFontModalOpen] = useState(false);
   
   const [isLandscape, setIsLandscape] = useState(false);
   const [isSplitMode, setIsSplitMode] = useState(false);
@@ -168,6 +170,8 @@ export default function BibleScreen() {
         isLandscape={isLandscape}
         isSplitMode={isSplitMode && isLandscape}
         secondaryTranslation={effectiveSecondaryTranslation}
+        isFontModalOpen={isFontModalOpen}
+        onCloseFontModal={() => setIsFontModalOpen(false)}
       />
 
       <TopNavBar
@@ -177,6 +181,8 @@ export default function BibleScreen() {
         onRightPress={() => router.push('/version-manager')}
         scrollY={scrollY}
         showSplitIcon={isLandscape}
+        showFontIcon={true}
+        onFontPress={() => setIsFontModalOpen(!isFontModalOpen)}
         isSplitMode={isSplitMode && isLandscape}
         onSplitPress={() => setIsSplitMode(!isSplitMode)}
         secondaryRightText={secondaryRightText}

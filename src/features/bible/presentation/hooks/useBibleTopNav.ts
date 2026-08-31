@@ -17,6 +17,7 @@ export type BiblePreferences = {
   activeBook: string;
   activeChapter: string;
   activeTranslation: string | number;
+  fontSize?: number;
 };
 
 export function useBibleTopNav(

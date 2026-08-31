@@ -19,10 +19,13 @@ export interface TopNavBarProps {
   showActivityIcon?: boolean;
   onActivityPress?: () => void;
   onBackPress?: () => void;
+  showFontIcon?: boolean;
+  onFontPress?: () => void;
 }
 
 import { Columns, Activity, ChevronLeft } from 'lucide-react-native';
 import { BounceCard } from '@/components/ui/BounceCard';
+import InfoMenuIcon from '@/components/Navigation/Icons/InfoMenuIcon';
 
 const COLLAPSE_RANGE = 70;
 
@@ -39,7 +42,9 @@ export function TopNavBar({
   onSecondaryRightPress,
   showActivityIcon,
   onActivityPress,
-  onBackPress
+  onBackPress,
+  showFontIcon,
+  onFontPress
 }: TopNavBarProps) {
   const insets = useSafeAreaInsets();
 
@@ -134,6 +139,11 @@ export function TopNavBar({
           {!!showActivityIcon && (
             <DebouncedTouchable style={styles.actionBtn} onPress={onActivityPress}>
               <Activity size={22} color="#4B5563" />
+            </DebouncedTouchable>
+          )}
+          {!!showFontIcon && (
+            <DebouncedTouchable style={styles.actionBtn} onPress={onFontPress}>
+              <InfoMenuIcon size={24} color="#4B5563" />
             </DebouncedTouchable>
           )}
           {!!showSplitIcon && (
