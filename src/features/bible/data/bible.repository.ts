@@ -313,7 +313,7 @@ export const saveVersion = async (version: any) => {
     // Always persist contentVersion so we can detect updates later
     const versionWithMeta = {
       ...version,
-      _localContentVersion: version.contentVersion ?? null,
+      _localContentVersion: version._localContentVersion ?? version.contentVersion ?? 1,
       _downloadedAt: Date.now(),
     };
     const newSaved = [...saved, versionWithMeta];
@@ -336,12 +336,12 @@ export const checkForVersionUpdates = async (): Promise<Record<string, { hasUpda
     saved.map(async (v: any) => {
       // Only check Firestore-sourced versions (they have a numeric translationId stored as string)
       const id = String(v.id);
-      const localVersion: number = v._localContentVersion ?? 0;
+      const localVersion: number = Number(v._localContentVersion ?? 1);
       try {
         const docRef = doc(getActiveDb(), 'bibleVersions', id);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-          const remoteVersion: number = docSnap.data().contentVersion ?? 1;
+          const remoteVersion: number = Number(docSnap.data().contentVersion ?? 1);
           result[id] = {
             hasUpdate: remoteVersion > localVersion,
             remoteVersion,
