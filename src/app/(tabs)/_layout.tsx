@@ -1,9 +1,10 @@
-import { BlurView } from 'expo-blur';
+import { BlurView, BlurTargetView } from 'expo-blur';
 import { Tabs, usePathname, useRouter } from 'expo-router';
 import { Book, CheckCircle, Handshake, Home, Users, XCircle } from 'lucide-react-native';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, ActivityIndicator, Animated, Platform, StyleSheet, Text, TouchableOpacity, View, PanResponder } from 'react-native';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { AccessibilityInfo, ActivityIndicator, Animated, Platform, StyleSheet, Text, Pressable, View, PanResponder } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { create } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import FabMenu from '../../components/Navigation/FabMenu';
 import BibleFilledIcon from '../../components/Navigation/Icons/BibleFilledIcon';
@@ -23,20 +24,28 @@ import { useMinistryStore } from '../../store/useMinistryStore';
 import { useSermonPlaybackStore } from '../../store/useSermonPlaybackStore';
 import { useSermonStore } from '../../store/useSermonStore';
 import { useUIStore } from '../../store/useUIStore';
+import { CustomBlurView } from '../../components/ui/CustomBlurView';
+
+const useTabBarStore = create<{ props: any; setProps: (p: any) => void }>((set) => ({
+  props: null,
+  setProps: (props) => set({ props }),
+}));
+
+function TabBarPortal(props: any) {
+  useLayoutEffect(() => {
+    useTabBarStore.getState().setProps(props);
+  }, [props]);
+  return null;
+}
+
+function ActualTabBar({ blurTarget }: { blurTarget?: any }) {
+  const props = useTabBarStore((s) => s.props);
+  if (!props) return null;
+  return <CustomTabBar {...props} blurTarget={blurTarget} />;
+}
 
 const AnimatedTabItem = ({ isFocused, route, options, onPress, IconComponent, showBadge, onLayout }: any) => {
-  const [isVisuallyFocused, setIsVisuallyFocused] = useState(isFocused);
-
-  useEffect(() => {
-    if (isFocused) {
-      const timer = setTimeout(() => setIsVisuallyFocused(true), 200); // Wait for native spring animation
-      return () => clearTimeout(timer);
-    } else {
-      setIsVisuallyFocused(false);
-    }
-  }, [isFocused]);
-
-  const scale = useRef(new Animated.Value(isVisuallyFocused ? 1.15 : 1)).current;
+  const scale = useRef(new Animated.Value(isFocused ? 1.15 : 1)).current;
 
   const [reduceMotion, setReduceMotion] = useState(false);
 
@@ -55,54 +64,76 @@ const AnimatedTabItem = ({ isFocused, route, options, onPress, IconComponent, sh
     }
     Animated.parallel([
       Animated.spring(scale, {
-        toValue: isVisuallyFocused ? 1.15 : 1,
-        useNativeDriver: true,
+        toValue: isFocused ? 1.15 : 1,
+        useNativeDriver: false,
         friction: 5,
         tension: 100,
       })
     ]).start();
-  }, [isVisuallyFocused, reduceMotion]);
+  }, [isFocused, reduceMotion]);
 
   const isHome = route.name === 'index';
   const isBible = route.name === 'bible';
   const isCommunity = route.name === 'community';
   const isServe = route.name === 'serve';
-  const color = isVisuallyFocused ? '#FF6596' : '#D2D4E1';
+  const color = isFocused ? '#FF6596' : '#D2D4E1';
   const label = options.tabBarAccessibilityLabel || options.title || route.name;
 
+  const pressScale = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(pressScale, {
+      toValue: 0.9,
+      useNativeDriver: false,
+      friction: 7,
+      tension: 120,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(pressScale, {
+      toValue: 1,
+      useNativeDriver: false,
+      friction: 4,
+      tension: 100,
+    }).start();
+  };
+
   return (
-    <TouchableOpacity
+    <Pressable
       accessibilityRole="button"
       accessibilityState={isFocused ? { selected: true } : {}}
       accessibilityLabel={label}
       accessibilityHint={`Navigates to the ${label} screen`}
       testID={options.tabBarTestID}
       onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
 
       style={[styles.navItem, { zIndex: 2, elevation: 2 }]}
       onLayout={onLayout ? (e) => onLayout(route.key, e.nativeEvent.layout) : undefined}
     >
-      <Animated.View style={{ transform: [{ scale }] }}>
+      <Animated.View style={{ transform: [{ scale }, { scale: pressScale }] }}>
         {isHome ? (
-          isVisuallyFocused ? (
+          isFocused ? (
             <HomeFilledIcon color={color} width={28} height={28} />
           ) : (
             <HomeStrokeIcon color={color} width={28} height={28} />
           )
         ) : isBible ? (
-          isVisuallyFocused ? (
+          isFocused ? (
             <BibleFilledIcon color={color} width={28} height={28} />
           ) : (
             <BibleStrokeIcon color={color} width={28} height={28} />
           )
         ) : isCommunity ? (
-          isVisuallyFocused ? (
+          isFocused ? (
             <CommunityFilledIcon color={color} width={28} height={28} />
           ) : (
             <CommunityStrokeIcon color={color} width={28} height={28} />
           )
         ) : isServe ? (
-          isVisuallyFocused ? (
+          isFocused ? (
             <ServeFilledIcon color={color} width={28} height={28} />
           ) : (
             <ServeStrokeIcon color={color} width={28} height={28} />
@@ -111,10 +142,10 @@ const AnimatedTabItem = ({ isFocused, route, options, onPress, IconComponent, sh
           <IconComponent size={24} color={color} />
         )}
       </Animated.View>
-    </TouchableOpacity>
+    </Pressable>
   );
 };
-function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
+function CustomTabBar({ state, descriptors, navigation, isStaff, blurTarget }: any) {
   const insets = useSafeAreaInsets();
   const tabBarVisible = useUIStore((s) => s.tabBarVisible);
   const hasNewAssignment = useMinistryStore((s) => s.hasNewAssignment);
@@ -156,7 +187,7 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
         
         Animated.spring(containerScale, {
           toValue: 0.97,
-          useNativeDriver: true,
+          useNativeDriver: false,
           friction: 7,
           tension: 120,
         }).start();
@@ -190,7 +221,7 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
         
         Animated.spring(containerScale, {
           toValue: 1,
-          useNativeDriver: true,
+          useNativeDriver: false,
           friction: 4,
           tension: 100,
         }).start();
@@ -249,7 +280,7 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
          
          Animated.spring(containerScale, {
            toValue: 1,
-           useNativeDriver: true,
+           useNativeDriver: false,
            friction: 4,
            tension: 100,
          }).start();
@@ -310,7 +341,7 @@ function CustomTabBar({ state, descriptors, navigation, isStaff }: any) {
     >
       <Animated.View style={[styles.navContainer, { transform: [{ scale: containerScale }] }]} {...panResponder.panHandlers}>
         {/* Standard frosted background for both platforms */}
-        <BlurView intensity={80} tint="light" style={[StyleSheet.absoluteFill, { borderRadius: 40, overflow: 'hidden' }]} />
+        <CustomBlurView intensity={80} tint="light" blurTarget={blurTarget} style={[StyleSheet.absoluteFill, { borderRadius: 40, overflow: 'hidden' }]} fallbackBackgroundColor="#FAFAFA" />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.8)', borderRadius: 40 }]} pointerEvents="none" />
 
         {/* Sliding Highlight Background */}
@@ -428,6 +459,7 @@ export default function TabLayout() {
 
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const globalBlurTargetRef = useRef<View>(null);
 
   const sermons = useSermonStore((state) => state.sermons);
   const currentSermon = useSermonStore((state) => state.currentSermon);
@@ -454,18 +486,19 @@ export default function TabLayout() {
   const isCurrentAudioPlaying = topSermon?.progress.mediaType === 'audio' && (audio.player?.playing ?? false);
 
   const renderTabBar = useCallback((props: any) => {
-    return <CustomTabBar {...props} isStaff={isStaff} />;
+    return <TabBarPortal {...props} isStaff={isStaff} blurTarget={globalBlurTargetRef} />;
   }, [isStaff]);
 
   return (
     <View style={{ flex: 1 }}>
-      <Tabs
-        screenOptions={{
-          headerShown: false,
-          freezeOnBlur: false,
-        }}
-        tabBar={renderTabBar}
-      >
+      <BlurTargetView ref={globalBlurTargetRef} style={{ flex: 1 }}>
+        <Tabs
+          screenOptions={{
+            headerShown: false,
+            freezeOnBlur: false,
+          }}
+            tabBar={renderTabBar}
+          >
         <Tabs.Screen name="index" options={{ title: 'Home' }} />
         <Tabs.Screen name="bible" options={{ title: 'Bible' }} />
         <Tabs.Screen name="prayer" options={{ title: 'Prayer', href: null }} />
@@ -524,10 +557,13 @@ export default function TabLayout() {
             styles.floatingToastText,
             syncToastType === 'error' && { color: '#991B1B' }
           ]}>{syncToastMessage}</Text>
-        </View>
-      )}
+          </View>
+        )}
 
-      <GlobalVideoPlayer />
+        </BlurTargetView>
+      
+      <ActualTabBar blurTarget={globalBlurTargetRef} />
+      <GlobalVideoPlayer blurTarget={globalBlurTargetRef} />
     </View>
   );
 }

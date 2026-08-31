@@ -42,6 +42,8 @@ interface SermonVideoPlayerProps {
   isHidden?: boolean;
   translateY?: SharedValue<number>;
   maxTranslateY?: number;
+  blurTarget?: any;
+  isDragging?: boolean;
 }
 
 type PlayerState = 'idle' | 'loading' | 'paused' | 'playing' | 'error' | 'completed';
@@ -61,6 +63,8 @@ export function SermonVideoPlayer({
   onExpand,
   translateY,
   maxTranslateY,
+  blurTarget,
+  isDragging,
 }: SermonVideoPlayerProps) {
   const insets = useSafeAreaInsets();
   const videoViewRef = useRef<VideoView>(null);
@@ -243,6 +247,8 @@ export function SermonVideoPlayer({
     return { opacity };
   });
 
+  const isSmall = isMinimized || isHidden || isDragging;
+
   if (!videoSource) {
     return (
       <View style={[styles.container, isSmall && { backgroundColor: 'transparent' }]}>
@@ -260,7 +266,6 @@ export function SermonVideoPlayer({
     );
   }
 
-  const isSmall = isMinimized || isHidden;
 
   return (
     <View style={[styles.container, isSmall && { backgroundColor: 'transparent' }]}>
@@ -277,7 +282,7 @@ export function SermonVideoPlayer({
       >
         {/* Minimized Card Overlay (Fades in dynamically during drag) */}
         <Animated.View style={[styles.miniCardOverlay, animatedCardOverlayStyle]} pointerEvents={isMinimized && !isHidden ? 'auto' : 'none'}>
-          <CustomBlurView intensity={80} tint="light" style={[StyleSheet.absoluteFill, { zIndex: 0 }]} fallbackBackgroundColor="#FAFAFA" />
+          <CustomBlurView intensity={80} tint="light" blurTarget={blurTarget} style={[StyleSheet.absoluteFill, { zIndex: 0 }]} fallbackBackgroundColor="#FAFAFA" />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)', zIndex: 0 }]} pointerEvents="none" />
           
           <View style={[styles.miniCardContent, { zIndex: 1 }]} pointerEvents="box-none">

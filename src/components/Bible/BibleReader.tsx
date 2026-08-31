@@ -602,15 +602,15 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
       
       {/* Navigation Arrows overlay */}
       {selectedVerses.length === 0 && !hideChapterNav && (
-        <Animated.View
+          <Animated.View
             style={[
               styles.navOverlay, 
               { 
-                bottom: playerMode === 'minimized' ? 205 : (isLandscape ? Math.max(insets.bottom, 20) + 10 : 110),
+                bottom: playerMode === 'minimized' ? Math.max(insets.bottom, 16) + 156 : (isLandscape ? Math.max(insets.bottom, 20) + 10 : 110),
                 left: Math.max(insets.left, 24),
                 right: Math.max(insets.right, 24),
               }, 
-              controlsTabBar ? { transform: [{ translateY: playerMode === 'minimized' ? Animated.multiply(navTranslateY, 85 / 120) : navTranslateY }] } : undefined
+              controlsTabBar ? { transform: [{ translateY: playerMode === 'minimized' ? Animated.multiply(navTranslateY, 0.5) : navTranslateY }] } : undefined
             ]}
             pointerEvents="box-none"
           >
@@ -640,8 +640,8 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
           ]}
           {...highlightPanResponder.panHandlers}
         >
-          <BlurView intensity={80} tint="light" style={[StyleSheet.absoluteFill, { borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden' }]} />
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)', borderTopLeftRadius: 24, borderTopRightRadius: 24 }]} pointerEvents="none" />
+          <BlurView intensity={80} tint="light" style={[StyleSheet.absoluteFill, { borderRadius: 24 }]} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)', borderRadius: 24 }]} pointerEvents="none" />
           
           <View style={styles.highlightDragHandle} />
           
@@ -873,8 +873,7 @@ const styles = StyleSheet.create({  container: { flex: 1, backgroundColor: '#faf
     alignSelf: 'center',
     zIndex: 10,
     width: '100%',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderRadius: 24,
     backgroundColor: Platform.OS === 'android' ? '#FFFFFF' : 'transparent',
     borderColor: 'rgba(255,255,255,0.5)',
     borderTopWidth: 1,

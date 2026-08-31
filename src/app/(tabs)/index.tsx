@@ -23,7 +23,7 @@ import { useUIStore } from '@/store/useUIStore';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { PrayerCardItem } from './community';
 import { ShareImageGenerator, ShareImageGeneratorRef } from '@/components/Share/ShareImageGenerator';
-import { BlurView } from 'expo-blur';
+import { CustomBlurView } from '../../components/ui/CustomBlurView';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -253,7 +253,7 @@ export default function HomeScreen() {
         style={[styles.header, { paddingTop: Math.max(insets.top, 24) }]}
         pointerEvents="box-none"
       >
-        <BlurView
+        <CustomBlurView
           intensity={90}
           tint="light"
           style={StyleSheet.absoluteFill}

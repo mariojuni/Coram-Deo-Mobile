@@ -36,10 +36,11 @@ const NAVY = '#1A1A1A';
 const GOLD = '#FF6596';
 const BEIGE = '#FAFAFA';
 
-export function GlobalVideoPlayer() {
+export function GlobalVideoPlayer({ blurTarget }: { blurTarget?: any }) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { playerMode, closeVideo, minimize, expand, activeSermonId, originRect } = useGlobalVideoStore();
+  const [isDragging, setIsDragging] = useState(false);
   const { sermons } = useSermonStore();
 
   const currentUser = useAuthStore((s) => s.currentUser);
@@ -69,9 +70,8 @@ export function GlobalVideoPlayer() {
   const openingProgress = useSharedValue(1);
   const tabBarVisible = useUIStore((s) => s.tabBarVisible);
   const hideCompactPlayer = useUIStore((s) => s.hideCompactPlayer);
-  
-  const MAX_TRANSLATE_Y = SCREEN_HEIGHT - MINI_PLAYER_HEIGHT - Math.max(insets.bottom, 16) - 90; // Above tab bar
-  const HIDDEN_OFFSET = 85; // Distance to slide down to stick to bottom safe area
+  const MAX_TRANSLATE_Y = SCREEN_HEIGHT - MINI_PLAYER_HEIGHT - Math.max(insets.bottom, 16) - 76; // Exactly 16px gap above 60px tab bar
+  const HIDDEN_OFFSET = 60; // Drops by 60px, leaving exactly 16px gap from bottom safe area
 
   useEffect(() => {
     if (activeSermonId) {
@@ -138,12 +138,16 @@ export function GlobalVideoPlayer() {
   }, [playerMode, originRect, tabBarVisible]);
 
   const panGesture = Gesture.Pan()
+    .onStart(() => {
+      runOnJS(setIsDragging)(true);
+    })
     .onUpdate((event) => {
       if (playerMode === 'expanded') {
         translateY.value = Math.max(0, event.translationY);
       } else if (playerMode === 'minimized') {
         const targetY = tabBarVisible ? MAX_TRANSLATE_Y : MAX_TRANSLATE_Y + HIDDEN_OFFSET;
-        translateY.value = Math.min(SCREEN_HEIGHT, Math.max(0, targetY + event.translationY));
+        // Only allow dragging UP to expand (negative translationY)
+        translateY.value = Math.min(targetY, Math.max(0, targetY + event.translationY));
       }
     })
     .onEnd((event) => {
@@ -157,21 +161,23 @@ export function GlobalVideoPlayer() {
       } else if (playerMode === 'minimized') {
         if (event.translationY < -50 || event.velocityY < -500) {
           runOnJS(expand)();
-        } else if (event.translationY > 50 || event.velocityY > 500) {
-          // Swipe down to dismiss
-          runOnJS(closeVideo)();
         } else {
           const targetY = tabBarVisible ? MAX_TRANSLATE_Y : MAX_TRANSLATE_Y + HIDDEN_OFFSET;
           translateY.value = withSpring(targetY, { damping: 24, stiffness: 220, mass: 0.9 });
           runOnJS(minimize)();
         }
       }
+    })
+    .onFinalize(() => {
+      runOnJS(setIsDragging)(false);
     });
 
   const animatedContainerStyle = useAnimatedStyle(() => {
     const isExpanded = translateY.value < MAX_TRANSLATE_Y - 50;
+    // Move completely off-screen on Android to prevent hardware rendering artifacts
+    const effectiveTranslateY = hideCompactPlayer ? SCREEN_HEIGHT * 2 : translateY.value;
     return {
-      transform: [{ translateY: translateY.value }],
+      transform: [{ translateY: effectiveTranslateY }],
       opacity: (playerMode === 'hidden' && translateY.value >= SCREEN_HEIGHT) || hideCompactPlayer ? 0 : 1,
       pointerEvents: hideCompactPlayer ? 'none' : 'box-none',
       zIndex: isExpanded ? 9999 : 100,
@@ -367,6 +373,8 @@ export function GlobalVideoPlayer() {
                   onExpand={() => expand()}
                   translateY={translateY}
                   maxTranslateY={MAX_TRANSLATE_Y}
+                  blurTarget={isDragging ? undefined : blurTarget}
+                  isDragging={isDragging}
                 />
               )}
             </Animated.View>
@@ -403,7 +411,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 12,
-    elevation: 10,
   },
   videoHeaderInner: {
     overflow: 'hidden',

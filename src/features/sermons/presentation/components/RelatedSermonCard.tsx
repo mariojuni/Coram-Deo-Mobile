@@ -4,6 +4,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Play, Headphones, Clock } from 'lucide-react-native';
 import type { Sermon } from '../../domain/sermon.types';
 import * as Haptics from 'expo-haptics';
+import { SoftCard } from '@/components/ui/SoftCard';
 
 interface RelatedSermonCardProps {
   sermon: Sermon;
@@ -39,8 +40,9 @@ export function RelatedSermonCard({ sermon, onPress }: RelatedSermonCardProps) {
   };
 
   return (
-    <TouchableOpacity style={styles.card} onPress={handlePress} activeOpacity={0.85}>
-      {/* Thumbnail */}
+    <TouchableOpacity onPress={handlePress} activeOpacity={0.85} style={styles.cardWrapper}>
+      <SoftCard style={styles.softCard} innerStyle={styles.cardInner}>
+        {/* Thumbnail */}
       <View ref={imageRef} style={styles.thumbContainer}>
         {sermon.thumbnailUrl ? (
           <Image source={{ uri: sermon.thumbnailUrl }} style={styles.thumb} resizeMode="cover" cachePolicy="memory-disk" transition={200} />
@@ -83,22 +85,22 @@ export function RelatedSermonCard({ sermon, onPress }: RelatedSermonCardProps) {
           <Text style={styles.dateText}>{formatDate(sermon.sermonDate)}</Text>
         </View>
       </View>
+      </SoftCard>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
+  cardWrapper: {
+    marginBottom: 12,
+  },
+  softCard: {
+    borderRadius: 16,
+  },
+  cardInner: {
     flexDirection: 'row',
     backgroundColor: '#fff',
-    borderRadius: 14,
-    overflow: 'hidden',
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    borderRadius: 15,
   },
   thumbContainer: {
     width: 112,
