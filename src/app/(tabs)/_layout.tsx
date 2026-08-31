@@ -44,7 +44,7 @@ function ActualTabBar({ blurTarget }: { blurTarget?: any }) {
   return <CustomTabBar {...props} blurTarget={blurTarget} />;
 }
 
-const AnimatedTabItem = ({ isFocused, route, options, onPress, IconComponent, showBadge, onLayout }: any) => {
+const AnimatedTabItem = ({ isFocused, route, options, onPress, onPressIn, onPressOut, IconComponent, showBadge, onLayout }: any) => {
   const scale = useRef(new Animated.Value(isFocused ? 1.15 : 1)).current;
 
   const [reduceMotion, setReduceMotion] = useState(false);
@@ -79,26 +79,6 @@ const AnimatedTabItem = ({ isFocused, route, options, onPress, IconComponent, sh
   const color = isFocused ? '#FF6596' : '#D2D4E1';
   const label = options.tabBarAccessibilityLabel || options.title || route.name;
 
-  const pressScale = useRef(new Animated.Value(1)).current;
-
-  const handlePressIn = () => {
-    Animated.spring(pressScale, {
-      toValue: 0.9,
-      useNativeDriver: false,
-      friction: 7,
-      tension: 120,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    Animated.spring(pressScale, {
-      toValue: 1,
-      useNativeDriver: false,
-      friction: 4,
-      tension: 100,
-    }).start();
-  };
-
   return (
     <Pressable
       accessibilityRole="button"
@@ -107,13 +87,13 @@ const AnimatedTabItem = ({ isFocused, route, options, onPress, IconComponent, sh
       accessibilityHint={`Navigates to the ${label} screen`}
       testID={options.tabBarTestID}
       onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
 
       style={[styles.navItem, { zIndex: 2, elevation: 2 }]}
       onLayout={onLayout ? (e) => onLayout(route.key, e.nativeEvent.layout) : undefined}
     >
-      <Animated.View style={{ transform: [{ scale }, { scale: pressScale }] }}>
+      <Animated.View style={{ transform: [{ scale }] }}>
         {isHome ? (
           isFocused ? (
             <HomeFilledIcon color={color} width={28} height={28} />
@@ -372,6 +352,26 @@ function CustomTabBar({ state, descriptors, navigation, isStaff, blurTarget }: a
             return null;
           }
 
+          const handleItemPressIn = () => {
+            if (isDragging.current) return;
+            Animated.spring(containerScale, {
+              toValue: 0.97,
+              useNativeDriver: false,
+              friction: 7,
+              tension: 120,
+            }).start();
+          };
+
+          const handleItemPressOut = () => {
+            if (isDragging.current) return;
+            Animated.spring(containerScale, {
+              toValue: 1,
+              useNativeDriver: false,
+              friction: 4,
+              tension: 100,
+            }).start();
+          };
+
           const onPress = () => {
             if (route.name === 'serve') {
               useMinistryStore.getState().markAssignmentsViewed();
@@ -406,6 +406,8 @@ function CustomTabBar({ state, descriptors, navigation, isStaff, blurTarget }: a
               route={route}
               options={options}
               onPress={onPress}
+              onPressIn={handleItemPressIn}
+              onPressOut={handleItemPressOut}
               IconComponent={IconComponent}
               showBadge={route.name === 'serve' && hasNewAssignment && hasAwaitingAssignment}
               onLayout={(key: string, layout: any) => {
