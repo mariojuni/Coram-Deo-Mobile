@@ -5,6 +5,8 @@ import type { WeeklyBibleActivityMetrics, MonthlyBibleActivityMetrics } from '..
 
 let cachedWeeklyMetrics: WeeklyBibleActivityMetrics | null = null;
 let cachedWeeklyUserId: string | null = null;
+let weeklyFetchPromise: Promise<WeeklyBibleActivityMetrics> | null = null;
+
 const cachedMonthlyMetrics: Record<string, MonthlyBibleActivityMetrics> = {}; // key: YYYY-MM
 let cachedMonthlyUserId: string | null = null;
 
@@ -54,38 +56,44 @@ export function useMyJourney() {
       setLoading(true);
     }
 
+    if (!weeklyFetchPromise) {
+      weeklyFetchPromise = (async () => {
+        const now = new Date();
+        const dayOfWeek = now.getDay();
+        const distanceToSunday = -dayOfWeek;
+        
+        const sunday = new Date(now);
+        sunday.setDate(now.getDate() + distanceToSunday);
+        
+        const saturday = new Date(sunday);
+        saturday.setDate(sunday.getDate() + 6);
+
+        const yyyyStart = sunday.getFullYear();
+        const mmStart = String(sunday.getMonth() + 1).padStart(2, '0');
+        const ddStart = String(sunday.getDate()).padStart(2, '0');
+        const startDateStr = `${yyyyStart}-${mmStart}-${ddStart}`;
+
+        const yyyyEnd = saturday.getFullYear();
+        const mmEnd = String(saturday.getMonth() + 1).padStart(2, '0');
+        const ddEnd = String(saturday.getDate()).padStart(2, '0');
+        const endDateStr = `${yyyyEnd}-${mmEnd}-${ddEnd}`;
+
+        return await bibleActivityService.getWeeklyActivity(
+          currentUser.uid,
+          getEffectiveChurchId(),
+          startDateStr,
+          endDateStr
+        );
+      })();
+    }
+
     try {
-      const now = new Date();
-      const dayOfWeek = now.getDay();
-      const distanceToSunday = -dayOfWeek;
-      
-      const sunday = new Date(now);
-      sunday.setDate(now.getDate() + distanceToSunday);
-      
-      const saturday = new Date(sunday);
-      saturday.setDate(sunday.getDate() + 6);
-
-      const yyyyStart = sunday.getFullYear();
-      const mmStart = String(sunday.getMonth() + 1).padStart(2, '0');
-      const ddStart = String(sunday.getDate()).padStart(2, '0');
-      const startDateStr = `${yyyyStart}-${mmStart}-${ddStart}`;
-
-      const yyyyEnd = saturday.getFullYear();
-      const mmEnd = String(saturday.getMonth() + 1).padStart(2, '0');
-      const ddEnd = String(saturday.getDate()).padStart(2, '0');
-      const endDateStr = `${yyyyEnd}-${mmEnd}-${ddEnd}`;
-
-      const weekly = await bibleActivityService.getWeeklyActivity(
-        currentUser.uid,
-        getEffectiveChurchId(),
-        startDateStr,
-        endDateStr
-      );
-
+      const weekly = await weeklyFetchPromise;
       cachedWeeklyMetrics = weekly;
       setWeeklyMetrics(weekly);
     } catch (e) {
       console.error('Failed to load weekly bible activity:', e);
+      weeklyFetchPromise = null;
     } finally {
       setLoading(false);
     }

@@ -13,6 +13,7 @@ import MyJourneyCard from '@/features/home/presentation/components/MyJourneyCard
 import { MinistryDutyCard } from '@/features/home/presentation/components/MinistryDutyCard';
 import { VerseOfTheDayCard } from '@/features/home/presentation/components/VerseOfTheDayCard';
 import { useHomeScreenData } from '@/features/home/presentation/hooks/useHomeScreenData';
+import { useMyJourney } from '@/features/myJourney/presentation/hooks/useMyJourney';
 import { usePrayerFeed } from '@/features/prayer/presentation/hooks/usePrayerFeed';
 import type { Schedule } from '@/features/schedule/domain/schedule.types';
 import { canModeratePrayerRequests } from '@/permissions/mobilePermissions';
@@ -116,6 +117,7 @@ export default function HomeScreen() {
   }, [userProfile?.churchId]);
 
   const { campaigns } = useGiving();
+  const { loading: myJourneyLoading } = useMyJourney();
 
   const unreadCount = useNotificationStore((s) => s.unreadCount);
 
@@ -236,7 +238,7 @@ export default function HomeScreen() {
 
   // Loading state handling
   const authLoading = useAuthStore((s) => s.loading);
-  const homeLoading = authLoading || prayersLoading || sermonsLoading;
+  const homeLoading = authLoading || prayersLoading || sermonsLoading || myJourneyLoading;
   if (homeLoading) {
     return (
       <HomeScreenSkeleton />
