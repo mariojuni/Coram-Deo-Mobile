@@ -30,7 +30,8 @@ import { CircularProgress } from './CircularProgress';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+import { useWindowDimensions } from 'react-native';
+
 const MINI_PLAYER_HEIGHT = 64;
 const NAVY = '#1A1A1A';
 const GOLD = '#FF6596';
@@ -39,6 +40,7 @@ const BEIGE = '#FAFAFA';
 export function GlobalVideoPlayer({ blurTarget }: { blurTarget?: any }) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = useWindowDimensions();
   const { playerMode, closeVideo, minimize, expand, activeSermonId, originRect } = useGlobalVideoStore();
   const [isDragging, setIsDragging] = useState(false);
   const { sermons } = useSermonStore();
@@ -70,7 +72,7 @@ export function GlobalVideoPlayer({ blurTarget }: { blurTarget?: any }) {
   const openingProgress = useSharedValue(1);
   const tabBarVisible = useUIStore((s) => s.tabBarVisible);
   const hideCompactPlayer = useUIStore((s) => s.hideCompactPlayer);
-  const MAX_TRANSLATE_Y = SCREEN_HEIGHT - MINI_PLAYER_HEIGHT - Math.max(insets.bottom, 16) - 76; // Exactly 16px gap above 60px tab bar
+  const MAX_TRANSLATE_Y = SCREEN_HEIGHT - Math.max(insets.bottom, 16) - 136; // 60px tab bar + 4px gap + 72px player height
   const HIDDEN_OFFSET = 60; // Drops by 60px, leaving exactly 16px gap from bottom safe area
 
   useEffect(() => {
@@ -135,7 +137,7 @@ export function GlobalVideoPlayer({ blurTarget }: { blurTarget?: any }) {
       openingProgress.value = 1;
       translateY.value = withSpring(SCREEN_HEIGHT, { damping: 24, stiffness: 220, mass: 0.9 });
     }
-  }, [playerMode, originRect, tabBarVisible]);
+  }, [playerMode, originRect, tabBarVisible, MAX_TRANSLATE_Y, SCREEN_HEIGHT]);
 
   const panGesture = Gesture.Pan()
     .onStart(() => {

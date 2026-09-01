@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Dimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Platform, useWindowDimensions } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useEventListener } from 'expo';
 import { useFocusEffect } from 'expo-router';
@@ -28,8 +28,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Sermon } from '../../domain/sermon.types';
 import type { SermonPlaybackProgress } from '../../domain/sermon.types';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
+// SCREEN_WIDTH is now dynamic inside the component
 interface SermonVideoPlayerProps {
   sermon: Sermon;
   savedProgress?: SermonPlaybackProgress | null;
@@ -67,6 +66,7 @@ export function SermonVideoPlayer({
   isDragging,
 }: SermonVideoPlayerProps) {
   const insets = useSafeAreaInsets();
+  const { width: SCREEN_WIDTH } = useWindowDimensions();
   const videoViewRef = useRef<VideoView>(null);
   const [playerState, setPlayerState] = useState<PlayerState>('loading');
   const [showControls, setShowControls] = useState(false);
