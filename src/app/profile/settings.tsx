@@ -100,13 +100,6 @@ export default function AccountSettingsScreen() {
               subtitle="Name, phone number, bio, and avatar"
               onPress={() => router.push('/profile/edit-profile')}
             />
-            <View style={styles.divider} />
-            <ModernSettingRow
-              icon={<Activity size={18} color="#8B5CF6" />}
-              label="My Check-in QR Pass"
-              subtitle="Scan for attendance check-ins"
-              onPress={() => router.push('/my-qr')}
-            />
           </View>
         </View>
 
