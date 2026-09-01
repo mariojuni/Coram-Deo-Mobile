@@ -111,7 +111,7 @@ export default function FabMenu({ isStaff }: FabMenuProps) {
             style={styles.subItemRow} 
             onPress={() => handlePress(item.route)}
             activeOpacity={0.8}
-            bounceScale={0.85}
+            bounceScale={0.9}
           >
             <View style={styles.subItem}>
               <item.icon size={20} color="#FF6596" />

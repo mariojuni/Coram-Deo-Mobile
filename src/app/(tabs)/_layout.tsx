@@ -1,20 +1,16 @@
 import { BlurView, BlurTargetView } from 'expo-blur';
 import { Tabs, usePathname, useRouter } from 'expo-router';
 import { Book, CheckCircle, Handshake, Home, Users, XCircle } from 'lucide-react-native';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, ActivityIndicator, Animated, Platform, StyleSheet, Text, Pressable, View, PanResponder } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, Platform, StyleSheet, Text, Pressable, View, PanResponder } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { create } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import FabMenu from '../../components/Navigation/FabMenu';
-import BibleFilledIcon from '../../components/Navigation/Icons/BibleFilledIcon';
-import BibleStrokeIcon from '../../components/Navigation/Icons/BibleStrokeIcon';
-import CommunityFilledIcon from '../../components/Navigation/Icons/CommunityFilledIcon';
-import CommunityStrokeIcon from '../../components/Navigation/Icons/CommunityStrokeIcon';
-import HomeFilledIcon from '../../components/Navigation/Icons/HomeFilledIcon';
-import HomeStrokeIcon from '../../components/Navigation/Icons/HomeStrokeIcon';
-import ServeFilledIcon from '../../components/Navigation/Icons/ServeFilledIcon';
-import ServeStrokeIcon from '../../components/Navigation/Icons/ServeStrokeIcon';
+import HomeIcon from '../../components/Navigation/Icons/HomeIcon';
+import BibleIcon from '../../components/Navigation/Icons/BibleIcon';
+import CommunityIcon from '../../components/Navigation/Icons/CommunityIcon';
+import ServeIcon from '../../components/Navigation/Icons/ServeIcon';
 import { ContinueWatchingCard } from '../../features/sermons/presentation/components/ContinueWatchingCard';
 import { GlobalVideoPlayer } from '../../features/sermons/presentation/components/GlobalVideoPlayer';
 import { useAudio } from '../../features/sermons/presentation/context/AudioContext';
@@ -32,9 +28,9 @@ const useTabBarStore = create<{ props: any; setProps: (p: any) => void }>((set) 
 }));
 
 function TabBarPortal(props: any) {
-  useLayoutEffect(() => {
+  useEffect(() => {
     useTabBarStore.getState().setProps(props);
-  }, [props]);
+  });
   return null;
 }
 
@@ -44,39 +40,83 @@ function ActualTabBar({ blurTarget }: { blurTarget?: any }) {
   return <CustomTabBar {...props} blurTarget={blurTarget} />;
 }
 
+// Stable icon pair component — both variants always mounted, opacity crossfades on native UI thread.
+// This eliminates the SVG re-render flash/blur when switching tabs.
+const TabIconPair = React.memo(({ name, activeColor, inactiveColor, filledOpacity, strokeOpacity, IconComponent }: {
+  name: string;
+  activeColor: string;
+  inactiveColor: string;
+  filledOpacity: Animated.Value;
+  strokeOpacity: Animated.Value;
+  IconComponent?: any;
+}) => {
+  const ICON_SIZE = 26;
+  if (name === 'index') return (
+    <View style={{ width: ICON_SIZE, height: ICON_SIZE }}>
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: filledOpacity }]}>
+        <HomeIcon filled color={activeColor} width={ICON_SIZE} height={ICON_SIZE} />
+      </Animated.View>
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: strokeOpacity }]}>
+        <HomeIcon filled={false} color={inactiveColor} width={ICON_SIZE} height={ICON_SIZE} />
+      </Animated.View>
+    </View>
+  );
+  if (name === 'bible') return (
+    <View style={{ width: ICON_SIZE, height: ICON_SIZE }}>
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: filledOpacity }]}>
+        <BibleIcon filled color={activeColor} width={ICON_SIZE} height={ICON_SIZE} />
+      </Animated.View>
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: strokeOpacity }]}>
+        <BibleIcon filled={false} color={inactiveColor} width={ICON_SIZE} height={ICON_SIZE} />
+      </Animated.View>
+    </View>
+  );
+  if (name === 'community') return (
+    <View style={{ width: ICON_SIZE, height: ICON_SIZE }}>
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: filledOpacity }]}>
+        <CommunityIcon filled color={activeColor} width={ICON_SIZE} height={ICON_SIZE} />
+      </Animated.View>
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: strokeOpacity }]}>
+        <CommunityIcon filled={false} color={inactiveColor} width={ICON_SIZE} height={ICON_SIZE} />
+      </Animated.View>
+    </View>
+  );
+  if (name === 'serve') return (
+    <View style={{ width: ICON_SIZE, height: ICON_SIZE }}>
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: filledOpacity }]}>
+        <ServeIcon filled color={activeColor} width={ICON_SIZE} height={ICON_SIZE} />
+      </Animated.View>
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: strokeOpacity }]}>
+        <ServeIcon filled={false} color={inactiveColor} width={ICON_SIZE} height={ICON_SIZE} />
+      </Animated.View>
+    </View>
+  );
+  return IconComponent ? <IconComponent size={24} color={inactiveColor} /> : null;
+});
+
+const ACTIVE_COLOR = '#FF6596';
+const INACTIVE_COLOR = '#D2D4E1';
+
 const AnimatedTabItem = ({ isFocused, route, options, onPress, onPressIn, onPressOut, IconComponent, showBadge, onLayout }: any) => {
-  const scale = useRef(new Animated.Value(isFocused ? 1.15 : 1)).current;
-
-  const [reduceMotion, setReduceMotion] = useState(false);
-
-  useEffect(() => {
-    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
-    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
-    return () => {
-      subscription.remove();
-    };
-  }, []);
+  // Only opacity animations — no scale on SVG wrappers to avoid iOS bitmap rasterization blur
+  const filledOpacity = useRef(new Animated.Value(isFocused ? 1 : 0)).current;
+  const strokeOpacity = useRef(new Animated.Value(isFocused ? 0 : 1)).current;
 
   useEffect(() => {
-    if (reduceMotion) {
-      scale.setValue(isFocused ? 1.15 : 1);
-      return;
-    }
     Animated.parallel([
-      Animated.spring(scale, {
-        toValue: isFocused ? 1.15 : 1,
-        useNativeDriver: false,
-        friction: 5,
-        tension: 100,
-      })
+      Animated.timing(filledOpacity, {
+        toValue: isFocused ? 1 : 0,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(strokeOpacity, {
+        toValue: isFocused ? 0 : 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
     ]).start();
-  }, [isFocused, reduceMotion]);
+  }, [isFocused]);
 
-  const isHome = route.name === 'index';
-  const isBible = route.name === 'bible';
-  const isCommunity = route.name === 'community';
-  const isServe = route.name === 'serve';
-  const color = isFocused ? '#FF6596' : '#D2D4E1';
   const label = options.tabBarAccessibilityLabel || options.title || route.name;
 
   return (
@@ -89,56 +129,24 @@ const AnimatedTabItem = ({ isFocused, route, options, onPress, onPressIn, onPres
       onPress={onPress}
       onPressIn={onPressIn}
       onPressOut={onPressOut}
-
       style={[styles.navItem, { zIndex: 2, elevation: 2 }]}
       onLayout={onLayout ? (e) => onLayout(route.key, e.nativeEvent.layout) : undefined}
     >
-      <Animated.View style={{ transform: [{ scale }], width: 28, height: 28, justifyContent: 'center', alignItems: 'center' }}>
-        {isHome ? (
-          <>
-            <View style={[StyleSheet.absoluteFill, { opacity: isFocused ? 1 : 0 }]} pointerEvents="none">
-              <HomeFilledIcon color={color} width={28} height={28} />
-            </View>
-            <View style={[StyleSheet.absoluteFill, { opacity: isFocused ? 0 : 1 }]} pointerEvents="none">
-              <HomeStrokeIcon color={color} width={28} height={28} />
-            </View>
-          </>
-        ) : isBible ? (
-          <>
-            <View style={[StyleSheet.absoluteFill, { opacity: isFocused ? 1 : 0 }]} pointerEvents="none">
-              <BibleFilledIcon color={color} width={28} height={28} />
-            </View>
-            <View style={[StyleSheet.absoluteFill, { opacity: isFocused ? 0 : 1 }]} pointerEvents="none">
-              <BibleStrokeIcon color={color} width={28} height={28} />
-            </View>
-          </>
-        ) : isCommunity ? (
-          <>
-            <View style={[StyleSheet.absoluteFill, { opacity: isFocused ? 1 : 0 }]} pointerEvents="none">
-              <CommunityFilledIcon color={color} width={28} height={28} />
-            </View>
-            <View style={[StyleSheet.absoluteFill, { opacity: isFocused ? 0 : 1 }]} pointerEvents="none">
-              <CommunityStrokeIcon color={color} width={28} height={28} />
-            </View>
-          </>
-        ) : isServe ? (
-          <>
-            <View style={[StyleSheet.absoluteFill, { opacity: isFocused ? 1 : 0 }]} pointerEvents="none">
-              <ServeFilledIcon color={color} width={28} height={28} />
-            </View>
-            <View style={[StyleSheet.absoluteFill, { opacity: isFocused ? 0 : 1 }]} pointerEvents="none">
-              <ServeStrokeIcon color={color} width={28} height={28} />
-            </View>
-          </>
-        ) : (
-          <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center' }]} pointerEvents="none">
-            <IconComponent size={24} color={color} />
-          </View>
-        )}
-      </Animated.View>
+      {/* Plain View — no scale transform so SVGs render at native resolution always */}
+      <View style={{ width: 28, height: 28, justifyContent: 'center', alignItems: 'center' }}>
+        <TabIconPair
+          name={route.name}
+          activeColor={ACTIVE_COLOR}
+          inactiveColor={INACTIVE_COLOR}
+          filledOpacity={filledOpacity}
+          strokeOpacity={strokeOpacity}
+          IconComponent={IconComponent}
+        />
+      </View>
     </Pressable>
   );
 };
+
 function CustomTabBar({ state, descriptors, navigation, isStaff, blurTarget }: any) {
   const insets = useSafeAreaInsets();
   const tabBarVisible = useUIStore((s) => s.tabBarVisible);
@@ -511,7 +519,7 @@ export default function TabLayout() {
         <Tabs
           screenOptions={{
             headerShown: false,
-            freezeOnBlur: false,
+            freezeOnBlur: true,
           }}
             tabBar={renderTabBar}
           >

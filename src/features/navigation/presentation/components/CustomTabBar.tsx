@@ -1,10 +1,12 @@
 import FabMenu from '@/components/Navigation/FabMenu';
 import { getTabIcon } from '@/features/navigation/presentation/tabNavigation';
 import { BlurView } from 'expo-blur';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getSoftShadowStyle } from '@/components/ui/SoftCard';
 import { BounceCard } from '@/components/ui/BounceCard';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming, interpolateColor, withSpring } from 'react-native-reanimated';
+import { useEffect } from 'react';
 
 type TabRoute = {
   key: string;
@@ -37,6 +39,52 @@ type CustomTabBarProps = {
   };
 };
 
+// Extracted component to manage Reanimated UI threading for focus state
+const AnimatedTabItem = ({ 
+  route, 
+  isFocused, 
+  options, 
+  onPress 
+}: { 
+  route: TabRoute; 
+  isFocused: boolean; 
+  options: TabBarOptions; 
+  onPress: () => void 
+}) => {
+  const progress = useSharedValue(isFocused ? 1 : 0);
+
+  useEffect(() => {
+    progress.value = withSpring(isFocused ? 1 : 0, {
+      damping: 20,
+      stiffness: 200,
+      mass: 0.5,
+    });
+  }, [isFocused]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: progress.value * -3 }], // Move up 3 pixels smoothly on focus
+  }));
+
+  const IconComponent = getTabIcon(route.name);
+  const color = isFocused ? '#FF6596' : '#D2D4E1';
+
+  return (
+    <BounceCard
+      accessibilityRole="button"
+      accessibilityState={isFocused ? { selected: true } : {}}
+      accessibilityLabel={options.tabBarAccessibilityLabel}
+      testID={options.tabBarTestID}
+      onPress={onPress}
+      style={styles.navItem}
+      bounceScale={0.9}
+    >
+      <Animated.View style={animatedStyle}>
+        <IconComponent size={24} color={color} />
+      </Animated.View>
+    </BounceCard>
+  );
+};
+
 export function CustomTabBar({ tabBarProps, isStaff }: CustomTabBarProps) {
   const insets = useSafeAreaInsets();
   const { state, descriptors } = tabBarProps;
@@ -48,7 +96,9 @@ export function CustomTabBar({ tabBarProps, isStaff }: CustomTabBarProps) {
   return (
     <View style={[styles.navArea, { bottom: Math.max(insets.bottom, 16) }]} pointerEvents="box-none">
       <View style={styles.navContainer}>
-        <BlurView intensity={80} tint="light" style={[StyleSheet.absoluteFill, { borderRadius: 40, overflow: 'hidden' }]} />
+        {Platform.OS === 'ios' && (
+          <BlurView intensity={80} tint="light" style={[StyleSheet.absoluteFill, { borderRadius: 40, overflow: 'hidden' }]} />
+        )}
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)', borderRadius: 40 }]} pointerEvents="none" />
 
         {state.routes.map((route, index) => {
@@ -67,26 +117,21 @@ export function CustomTabBar({ tabBarProps, isStaff }: CustomTabBarProps) {
             });
 
             if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name);
+              // Defer navigation slightly so the BounceCard animation can start smoothly
+              requestAnimationFrame(() => {
+                navigation.navigate(route.name);
+              });
             }
           };
 
-          const color = isFocused ? '#FF6596' : '#D2D4E1';
-          const IconComponent = getTabIcon(route.name);
-
           return (
-            <BounceCard
+            <AnimatedTabItem
               key={route.key}
-              accessibilityRole="button"
-              accessibilityState={isFocused ? { selected: true } : {}}
-              accessibilityLabel={options.tabBarAccessibilityLabel}
-              testID={options.tabBarTestID}
+              route={route}
+              isFocused={isFocused}
+              options={options}
               onPress={onPress}
-              style={[styles.navItem, isFocused && styles.navItemActive]}
-              bounceScale={0.85}
-            >
-              <IconComponent size={24} color={color} />
-            </BounceCard>
+            />
           );
         })}
       </View>
@@ -117,8 +162,5 @@ const styles = StyleSheet.create({
   },
   navItem: {
     padding: 4,
-  },
-  navItemActive: {
-    transform: [{ translateY: -2 }],
   },
 });
