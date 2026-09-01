@@ -78,7 +78,6 @@ export function SermonVideoPlayer({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [playerError, setPlayerError] = useState<string | null>(null);
   const controlsTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const player = useVideoPlayer(videoSource ? { uri: videoSource } : null, (p) => {
     p.loop = false;
     p.play(); // Auto-play like YouTube

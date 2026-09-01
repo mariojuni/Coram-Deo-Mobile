@@ -19,6 +19,7 @@ import { useGlobalVideoStore } from '@/store/useGlobalVideoStore';
 import { useSermonStore } from '@/store/useSermonStore';
 import { useSermonPlaybackStore } from '@/store/useSermonPlaybackStore';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useAudio } from '../context/AudioContext';
 import { SermonVideoPlayer } from './SermonVideoPlayer';
 import { getLocalSermonMediaUri } from '../../services/sermonDownloadService';
 import { sermonRepository } from '../../data/sermon.repository';
@@ -59,6 +60,7 @@ export function GlobalVideoPlayer({ blurTarget }: { blurTarget?: any }) {
   } = useSermonStore();
 
   const { loadProgress, updateProgress, getProgress, unhideSermon } = useSermonPlaybackStore();
+  const { pauseAudio, player: audioPlayer } = useAudio();
 
   const [videoSource, setVideoSource] = useState<string | null>(null);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
@@ -77,6 +79,14 @@ export function GlobalVideoPlayer({ blurTarget }: { blurTarget?: any }) {
 
   useEffect(() => {
     if (activeSermonId) {
+      // Stop any background audio when a video is opened
+      try {
+        if (audioPlayer?.playing) {
+          pauseAudio();
+        }
+      } catch (e) {
+        // Ignore
+      }
       fetchSermonById(activeSermonId);
       unhideSermon(activeSermonId);
     }
