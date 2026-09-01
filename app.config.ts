@@ -78,13 +78,15 @@ const withRemoveOrientationRestriction = (config: ExpoConfig) => {
         (a: any) => a.$['android:name'] === activityName
       );
       if (existingActivity) {
-        delete existingActivity.$['android:screenOrientation'];
+        existingActivity.$['android:screenOrientation'] = 'unspecified';
         existingActivity.$['tools:node'] = 'merge';
+        existingActivity.$['tools:replace'] = 'android:screenOrientation';
       } else {
         application.activity.push({
           $: {
             'android:name': activityName,
             'tools:node': 'merge',
+            'tools:replace': 'android:screenOrientation',
             'android:screenOrientation': 'unspecified',
           }
         });
