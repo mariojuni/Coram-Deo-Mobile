@@ -93,33 +93,47 @@ const AnimatedTabItem = ({ isFocused, route, options, onPress, onPressIn, onPres
       style={[styles.navItem, { zIndex: 2, elevation: 2 }]}
       onLayout={onLayout ? (e) => onLayout(route.key, e.nativeEvent.layout) : undefined}
     >
-      <Animated.View style={{ transform: [{ scale }] }}>
+      <Animated.View style={{ transform: [{ scale }], width: 28, height: 28, justifyContent: 'center', alignItems: 'center' }}>
         {isHome ? (
-          isFocused ? (
-            <HomeFilledIcon color={color} width={28} height={28} />
-          ) : (
-            <HomeStrokeIcon color={color} width={28} height={28} />
-          )
+          <>
+            <View style={[StyleSheet.absoluteFill, { opacity: isFocused ? 1 : 0 }]} pointerEvents="none">
+              <HomeFilledIcon color={color} width={28} height={28} />
+            </View>
+            <View style={[StyleSheet.absoluteFill, { opacity: isFocused ? 0 : 1 }]} pointerEvents="none">
+              <HomeStrokeIcon color={color} width={28} height={28} />
+            </View>
+          </>
         ) : isBible ? (
-          isFocused ? (
-            <BibleFilledIcon color={color} width={28} height={28} />
-          ) : (
-            <BibleStrokeIcon color={color} width={28} height={28} />
-          )
+          <>
+            <View style={[StyleSheet.absoluteFill, { opacity: isFocused ? 1 : 0 }]} pointerEvents="none">
+              <BibleFilledIcon color={color} width={28} height={28} />
+            </View>
+            <View style={[StyleSheet.absoluteFill, { opacity: isFocused ? 0 : 1 }]} pointerEvents="none">
+              <BibleStrokeIcon color={color} width={28} height={28} />
+            </View>
+          </>
         ) : isCommunity ? (
-          isFocused ? (
-            <CommunityFilledIcon color={color} width={28} height={28} />
-          ) : (
-            <CommunityStrokeIcon color={color} width={28} height={28} />
-          )
+          <>
+            <View style={[StyleSheet.absoluteFill, { opacity: isFocused ? 1 : 0 }]} pointerEvents="none">
+              <CommunityFilledIcon color={color} width={28} height={28} />
+            </View>
+            <View style={[StyleSheet.absoluteFill, { opacity: isFocused ? 0 : 1 }]} pointerEvents="none">
+              <CommunityStrokeIcon color={color} width={28} height={28} />
+            </View>
+          </>
         ) : isServe ? (
-          isFocused ? (
-            <ServeFilledIcon color={color} width={28} height={28} />
-          ) : (
-            <ServeStrokeIcon color={color} width={28} height={28} />
-          )
+          <>
+            <View style={[StyleSheet.absoluteFill, { opacity: isFocused ? 1 : 0 }]} pointerEvents="none">
+              <ServeFilledIcon color={color} width={28} height={28} />
+            </View>
+            <View style={[StyleSheet.absoluteFill, { opacity: isFocused ? 0 : 1 }]} pointerEvents="none">
+              <ServeStrokeIcon color={color} width={28} height={28} />
+            </View>
+          </>
         ) : (
-          <IconComponent size={24} color={color} />
+          <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center' }]} pointerEvents="none">
+            <IconComponent size={24} color={color} />
+          </View>
         )}
       </Animated.View>
     </Pressable>

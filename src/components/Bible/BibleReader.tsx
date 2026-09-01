@@ -630,8 +630,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
           style={[
             styles.highlightModal, 
             { 
-              height: highlightModalHeight,
-              bottom: -5, 
+              bottom: 0, 
               left: Math.max(insets.left, 0),
               right: Math.max(insets.right, 0),
               width: 'auto', // Override 100% width
@@ -640,8 +639,8 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
           ]}
           {...highlightPanResponder.panHandlers}
         >
-          <BlurView intensity={80} tint="light" style={[StyleSheet.absoluteFill, { borderRadius: 24 }]} />
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)', borderRadius: 24 }]} pointerEvents="none" />
+          <BlurView intensity={80} tint="light" style={[StyleSheet.absoluteFill, { borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden' }]} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)', borderTopLeftRadius: 24, borderTopRightRadius: 24 }]} pointerEvents="none" />
           
           <View style={styles.highlightDragHandle} />
           
@@ -697,8 +696,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
         style={[
           styles.highlightModal, 
           { 
-            height: Math.max(120, Dimensions.get('window').height * 0.15),
-            bottom: -5, 
+            bottom: 0, 
             left: Math.max(insets.left, 0),
             right: Math.max(insets.right, 0),
             width: 'auto',
@@ -873,7 +871,10 @@ const styles = StyleSheet.create({  container: { flex: 1, backgroundColor: '#faf
     alignSelf: 'center',
     zIndex: 10,
     width: '100%',
-    borderRadius: 24,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
     backgroundColor: Platform.OS === 'android' ? '#FFFFFF' : 'transparent',
     borderColor: 'rgba(255,255,255,0.5)',
     borderTopWidth: 1,
