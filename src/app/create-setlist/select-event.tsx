@@ -118,21 +118,35 @@ export default function SelectEventScreen() {
                     activeOpacity={0.7}
                   >
                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                      <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: isSelected ? '#FF6596' : '#FFF5F8', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
-                        <CalendarDays size={18} color={isSelected ? '#FFF' : '#FF6596'} />
-                      </View>
+                      {ev.date ? (
+                        <View style={{ alignItems: 'center', justifyContent: 'center', minWidth: 44 }}>
+                          <Text style={{ fontSize: 11, fontWeight: '800', color: '#FF6596', marginBottom: 0, letterSpacing: 0.5 }}>
+                            {new Date(ev.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
+                          </Text>
+                          <Text style={{ fontSize: 26, fontWeight: '900', color: '#111827', lineHeight: 30, letterSpacing: -0.5 }}>
+                            {new Date(ev.date + 'T00:00:00').getDate()}
+                          </Text>
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: '#9CA3AF', marginTop: 0, letterSpacing: 0.5 }}>
+                            {new Date(ev.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}
+                          </Text>
+                        </View>
+                      ) : (
+                        <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: isSelected ? '#FF6596' : '#FFF5F8', alignItems: 'center', justifyContent: 'center' }}>
+                          <CalendarDays size={20} color={isSelected ? '#FFF' : '#FF6596'} />
+                        </View>
+                      )}
+                      
+                      <View style={{ width: 1, height: 44, backgroundColor: '#F0F0F5', marginHorizontal: 14 }} />
+
                       <View style={{ flex: 1, paddingRight: 12, justifyContent: 'center' }}>
-                        <Text style={{ fontSize: 15, fontWeight: '800', color: isSelected ? '#FF6596' : '#111827', marginBottom: 3 }} numberOfLines={1}>
+                        <Text style={{ fontSize: 16, fontWeight: '800', color: isSelected ? '#FF6596' : '#111827', marginBottom: 4 }} numberOfLines={1}>
                           {ev.title}
                         </Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                          <Text style={{ fontSize: 13, color: isSelected ? '#FF6596' : '#6B7280', fontWeight: '600' }}>
-                            {ev.date ? new Date(ev.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : ''}
-                          </Text>
                           {ev.time ? (
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                              <Clock size={12} color={isSelected ? '#FF6596' : '#6B7280'} style={{ marginRight: 4 }} />
-                              <Text style={{ fontSize: 13, color: isSelected ? '#FF6596' : '#6B7280', fontWeight: '500' }}>
+                              <Clock size={14} color={isSelected ? '#FF6596' : '#6B7280'} style={{ marginRight: 6 }} />
+                              <Text style={{ fontSize: 13, color: isSelected ? '#FF6596' : '#6B7280', fontWeight: '600' }}>
                                 {ev.time}
                               </Text>
                             </View>

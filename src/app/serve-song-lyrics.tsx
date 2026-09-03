@@ -4,7 +4,7 @@ import { Song, WorshipSetlistItem } from '@/features/worship/domain/worship.type
 import { transposeText, transposeChord, getStepsBetweenKeys } from '@/utils/chordTransposition';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Music, Minus, Plus, ChevronLeft } from 'lucide-react-native';
+import { ArrowLeft, Music, Minus, Plus, ChevronLeft, PlayCircle } from 'lucide-react-native';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useWorshipStore } from '@/store/useWorshipStore';
 import { useEffect, useState, useRef } from 'react';
@@ -17,6 +17,7 @@ import {
   View,
   Platform,
   Dimensions,
+  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getSoftShadowStyle, getTopBarButtonShadowStyle, SoftCard } from '@/components/ui/SoftCard';
@@ -133,6 +134,15 @@ export default function ServeSongLyricsScreen() {
     ? transposeChord(song.defaultKey, transposeSteps - capo, preferFlats)
     : 'Unknown';
 
+  const getYoutubeUrl = () => {
+    if (song.mediaReferences?.youtubeUrl) return song.mediaReferences.youtubeUrl;
+    if (song.mediaReferences?.youtubeVideoId) return `https://www.youtube.com/watch?v=${song.mediaReferences.youtubeVideoId}`;
+    if (song.youtubeVideoId) return `https://www.youtube.com/watch?v=${song.youtubeVideoId}`;
+    return null;
+  };
+  
+  const youtubeUrl = getYoutubeUrl();
+
   const handleSaveArrangement = async () => {
     if (!setlistItemId) {
       alert('Cannot save arrangement without a setlist context.');
@@ -248,6 +258,16 @@ export default function ServeSongLyricsScreen() {
               {song.defaultKey && <Text style={styles.metaText}>Key: {currentTransposedKey}</Text>}
               {song.tempoBpm && <Text style={styles.metaText}>{song.tempoBpm} BPM</Text>}
               {song.artist && <Text style={styles.metaText}>{song.artist}</Text>}
+              {youtubeUrl && (
+                <TouchableOpacity 
+                  style={{ backgroundColor: '#FEE2E2', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, gap: 4 }}
+                  onPress={() => Linking.openURL(youtubeUrl)}
+                  activeOpacity={0.8}
+                >
+                  <PlayCircle size={14} color="#DC2626" />
+                  <Text style={{ color: '#DC2626', fontSize: 13, fontWeight: '700' }}>Listen</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </Animated.View>
           

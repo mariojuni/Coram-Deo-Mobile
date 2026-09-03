@@ -23,6 +23,7 @@ type ScheduleCardItem = {
   schedule: Schedule;
   team: TeamMemberCard[];
   weekday: string;
+  weekdayShort: string;
 };
 
 export default function ScheduleTab({ 
@@ -63,7 +64,8 @@ export default function ScheduleTab({
     return {
       month: d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
       day: d.getDate(),
-      weekday: d.toLocaleDateString('en-US', { weekday: 'long' })
+      weekday: d.toLocaleDateString('en-US', { weekday: 'long' }),
+      weekdayShort: d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
     };
   };
 
@@ -98,6 +100,7 @@ export default function ScheduleTab({
           schedule,
           team,
           weekday,
+          weekdayShort: formatDate(schedule.date).weekdayShort,
         };
       }),
     [memberById, schedules, assignments]
@@ -120,6 +123,7 @@ export default function ScheduleTab({
             <View style={styles.dateBlock}>
               <Text style={styles.dateMonth}>{item.month}</Text>
               <Text style={styles.dateDay}>{item.day}</Text>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: '#9CA3AF', marginTop: 2, letterSpacing: 0.5 }}>{item.weekdayShort}</Text>
             </View>
 
             <View style={styles.detailsBlock}>
@@ -168,8 +172,6 @@ export default function ScheduleTab({
               </View>
 
               <View style={[styles.roleRow, item.team.length === 0 && styles.roleRowWithoutTeam]}>
-                <Text style={styles.weekdayText}>{item.weekday}</Text>
-                <Text style={styles.dotSeparator}>•</Text>
                 <View style={styles.timeRow}>
                   <Clock size={12} color="#888" style={styles.timeIcon} />
                   <Text style={styles.infoText}>

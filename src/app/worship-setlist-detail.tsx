@@ -333,15 +333,6 @@ export default function WorshipSetlistDetailScreen() {
             <Music size={40} color="#9CA3AF" />
             <Text style={styles.emptyStateTitle}>No songs added yet</Text>
             <Text style={styles.emptyStateText}>No songs in this setlist yet.</Text>
-            {canManage && (
-              <TouchableOpacity
-                style={[styles.actionBtn, styles.actionBtnPrimary, { marginTop: 14, alignSelf: 'center' }]}
-                onPress={() => setAddSongModalVisible(true)}
-              >
-                <Plus size={16} color="#FFF" />
-                <Text style={[styles.actionBtnText, styles.actionBtnTextPrimary]}>Add Song</Text>
-              </TouchableOpacity>
-            )}
           </View>
         ) : (
           items.map((item, index) => {

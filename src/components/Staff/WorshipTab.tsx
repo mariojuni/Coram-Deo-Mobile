@@ -23,8 +23,8 @@ import AppModal, { ModalDragArea } from '@/components/ui/AppModal';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useMinistryStore } from '../../store/useMinistryStore';
 import { useScheduleStore } from '../../store/useScheduleStore';
-import { worshipSetlistService } from '../../features/worship/services/worshipSetlistService';
-import { canViewMobileWorshipSetlists, canCreateMobileWorshipSetlists } from '../../permissions/mobileWorshipPermissions';
+import { useWorshipStore } from '../../store/useWorshipStore';
+import { canViewMobileWorshipSetlists, canCreateMobileWorshipSetlists, canViewMobileWorshipSetlist } from '../../permissions/mobileWorshipPermissions';
 import { SoftCard, getTopBarButtonShadowStyle, getSoftShadowStyle } from '@/components/ui/SoftCard';
 import type { WorshipSetlist } from '../../features/worship/domain/worship.types';
 
@@ -38,39 +38,35 @@ export default function WorshipTab() {
     m.members?.some((mem) => mem.memberId === userProfile?.memberId)
   ), [ministries, userProfile?.memberId]);
 
-  const [setlists, setSetlists] = useState<WorshipSetlist[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [tabFilter, setTabFilter] = useState<'upcoming' | 'this_month' | 'past'>('upcoming');
-
-
   const hasAccess = canViewMobileWorshipSetlists(userProfile, userMinistries);
   const canCreate = canCreateMobileWorshipSetlists(userProfile, userMinistries);
 
-  const fetchSetlists = useCallback(async () => {
-    if (!userProfile?.churchId || !hasAccess) {
-      setLoading(false);
-      setRefreshing(false);
-      return;
-    }
-    try {
-      const data = await worshipSetlistService.getUpcomingWorshipSetlistsForUser(userProfile, userMinistries);
-      setSetlists(data);
-    } catch (err: any) {
-      if (err?.code === 'permission-denied' || (err instanceof Error && err.message.includes('Missing or insufficient permissions'))) {
-        console.log('Permission denied loading setlists (likely logged out)');
-      } else {
-        console.error('Error loading worship setlists:', err);
-      }
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [userProfile, hasAccess, userMinistries]);
+  const rawSetlists = useWorshipStore((state) => state.setlists);
+  const setlistsLoading = useWorshipStore((state) => state.setlistsLoading);
+  const initializeSetlistsListener = useWorshipStore((state) => state.initializeSetlistsListener);
+
+  const [refreshing, setRefreshing] = useState(false);
+  const [tabFilter, setTabFilter] = useState<'upcoming' | 'this_month' | 'past'>('upcoming');
+
+  const setlists = useMemo(() => {
+    if (!userProfile?.churchId || !hasAccess) return [];
+    const allowed = rawSetlists.filter((setlist) =>
+      canViewMobileWorshipSetlist(userProfile, setlist, userMinistries)
+    );
+    return allowed.sort((a, b) => {
+      const dateA = a.serviceDate ? new Date(a.serviceDate).getTime() : 0;
+      const dateB = b.serviceDate ? new Date(b.serviceDate).getTime() : 0;
+      return dateB - dateA;
+    });
+  }, [rawSetlists, userProfile, hasAccess, userMinistries]);
+
+  const loading = setlistsLoading;
 
   useEffect(() => {
-    fetchSetlists();
-  }, [fetchSetlists]);
+    if (!userProfile?.churchId || !hasAccess) return;
+    const unsubscribe = initializeSetlistsListener(userProfile.churchId);
+    return () => unsubscribe();
+  }, [userProfile?.churchId, hasAccess, initializeSetlistsListener]);
 
   const openCreateModal = () => {
     router.push('/create-setlist' as any);
@@ -86,7 +82,8 @@ export default function WorshipTab() {
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchSetlists();
+    // Since we use real-time listeners, refreshing just re-triggers a small delay for UX
+    setTimeout(() => setRefreshing(false), 800);
   };
 
   const now = new Date();
