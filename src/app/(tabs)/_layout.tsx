@@ -11,7 +11,7 @@ import HomeIcon from '../../components/Navigation/Icons/HomeIcon';
 import BibleIcon from '../../components/Navigation/Icons/BibleIcon';
 import CommunityIcon from '../../components/Navigation/Icons/CommunityIcon';
 import ServeIcon from '../../components/Navigation/Icons/ServeIcon';
-import { ContinueWatchingCard } from '../../features/sermons/presentation/components/ContinueWatchingCard';
+
 import { GlobalVideoPlayer } from '../../features/sermons/presentation/components/GlobalVideoPlayer';
 import { useAudio } from '../../features/sermons/presentation/context/AudioContext';
 import { canViewStaffScreen } from '../../permissions/mobilePermissions';
@@ -536,33 +536,7 @@ export default function TabLayout() {
         />
       </Tabs>
 
-      {/* ── Global Floating Continue Watching ── */}
-      {showMiniPlayer && topSermon && topSermon.progress.mediaType === 'audio' && (
-        <View style={[styles.globalContinueWatching, { bottom: Math.max(insets.bottom, 16) + 64 }]}>
-          <ContinueWatchingCard
-            progress={topSermon.progress}
-            sermon={topSermon.sermon}
-            isPlaying={isCurrentAudioPlaying}
-            onPlayPause={topSermon.progress.mediaType === 'audio' ? () => {
-              if (audio.player?.playing) {
-                audio.pauseAudio();
-              } else {
-                router.navigate({ pathname: '/audio-player' as any, params: { id: topSermon.progress.sermonId } });
-              }
-            } : undefined}
-            onDismiss={() => {
-              useSermonPlaybackStore.getState().dismissSermon(topSermon.progress.sermonId);
-            }}
-            onPress={() => {
-              if (topSermon.progress.mediaType === 'video') {
-                router.navigate({ pathname: '/sermon-detail' as any, params: { id: topSermon.progress.sermonId } });
-              } else {
-                router.navigate({ pathname: '/audio-player' as any, params: { id: topSermon.progress.sermonId } });
-              }
-            }}
-          />
-        </View>
-      )}
+
       {/* ── Global Sync Toast ── */}
       {!!syncToastMessage && (
         <View style={[
@@ -629,12 +603,7 @@ const styles = StyleSheet.create({
   navItemActive: {
     transform: [{ translateY: -2 }],
   },
-  globalContinueWatching: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    zIndex: 100,
-  },
+
   floatingToast: {
     position: 'absolute',
     left: 24,
