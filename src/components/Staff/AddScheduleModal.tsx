@@ -11,7 +11,7 @@ import { BlurView } from 'expo-blur';
 import { BounceCard } from '@/components/ui/BounceCard';
 import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 import { useModalKeyboard } from '@/hooks/useModalKeyboard';
-
+import { useAuthStore } from '../../store/useAuthStore';
 interface AddScheduleModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -43,6 +43,8 @@ const fmtTime = (d: Date) => {
 };
 
 export default function AddScheduleModal({ isOpen, onClose, eventToEdit }: AddScheduleModalProps) {
+  const userProfile = useAuthStore((state) => state.userProfile);
+
   const initDate = (() => {
     const d = new Date();
     if (eventToEdit?.date) {
@@ -121,7 +123,12 @@ export default function AddScheduleModal({ isOpen, onClose, eventToEdit }: AddSc
       if (eventToEdit) {
         await updateDoc(doc(getActiveDb(), 'events', eventToEdit.id), payload);
       } else {
-        await addDoc(collection(getActiveDb(), 'events'), { ...payload, duties: [], createdAt: serverTimestamp() });
+        if (!userProfile?.churchId) {
+          Alert.alert('Error', 'No church ID associated with this account. Cannot create event.');
+          setSaving(false);
+          return;
+        }
+        await addDoc(collection(getActiveDb(), 'events'), { ...payload, duties: [], createdAt: serverTimestamp(), churchId: userProfile.churchId });
       }
       onClose();
     } catch (e) {
