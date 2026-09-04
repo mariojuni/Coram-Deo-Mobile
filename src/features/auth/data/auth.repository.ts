@@ -836,24 +836,49 @@ export const authRepository = {
           return;
         }
 
+        // Attempt to fetch the user profile. On Android, the app resuming from
+        // background can cause a brief Firestore offline window, so we retry once
+        // before concluding the profile is truly missing.
+        let profile = null;
+        let fetchError: any = null;
+
         try {
-          const profile = await fetchUserAccount(user);
-          if (isRegistering) {
-            onData({ user: null, profile: null });
-            return;
-          }
-          if (!profile) {
-            console.warn('[Auth] User profile not found in current environment database. Signing out...');
-            await signOut(getActiveAuth()).catch(() => {});
-            onData({ user: null, profile: null });
-            return;
-          }
-          onData({ user, profile });
+          profile = await fetchUserAccount(user);
         } catch (error: any) {
-          console.warn('[Auth] Error fetching user account in current environment:', error);
+          fetchError = error;
+        }
+
+        if (isRegistering) {
+          onData({ user: null, profile: null });
+          return;
+        }
+
+        // If first attempt failed with a transient error, retry once after a short delay.
+        if (fetchError) {
+          console.warn('[Auth] Transient error fetching user profile, retrying in 2s...', fetchError);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          try {
+            profile = await fetchUserAccount(user);
+            fetchError = null;
+          } catch (retryError: any) {
+            console.warn('[Auth] Retry also failed. Will NOT sign out — keeping session alive:', retryError);
+            // Do NOT sign out on network/transient errors. Keep the user session
+            // so background-resuming on Android does not log the user out.
+            // onData is intentionally NOT called, preserving the last known state.
+            return;
+          }
+        }
+
+        if (!profile) {
+          // Profile is genuinely absent from the database (not a network error).
+          // This is a real "user not found" case — sign them out.
+          console.warn('[Auth] User profile not found in current environment database. Signing out...');
           await signOut(getActiveAuth()).catch(() => {});
           onData({ user: null, profile: null });
+          return;
         }
+
+        onData({ user, profile });
       },
       onError
     );
