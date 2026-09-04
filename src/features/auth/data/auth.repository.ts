@@ -645,6 +645,10 @@ export const authRepository = {
   async loginWithGoogle(): Promise<AuthCredentialResult> {
     configureGoogleSigninForCurrentEnv();
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+    // Clear any stale/cached native Google session before prompting.
+    // This prevents DEVELOPER_ERROR (12500) when a previous email/password
+    // session exists with no active Google token in the OS account manager.
+    try { await GoogleSignin.signOut(); } catch (_) {}
     const response = await GoogleSignin.signIn();
     const idToken = response.data?.idToken;
 
@@ -813,6 +817,10 @@ export const authRepository = {
   },
 
   logout(): Promise<void> {
+    // Also sign out from Google's native session so the OS-level account
+    // token is cleared. Without this, a subsequent Google sign-in can fail
+    // with DEVELOPER_ERROR due to a stale/invalid cached token.
+    GoogleSignin.signOut().catch(() => {});
     return signOut(getActiveAuth());
   },
 
