@@ -95,6 +95,10 @@ export default function RegisterScreen() {
         setErrorMsg('Please fill in all required fields (*)');
         return;
       }
+      if (/\s/.test(username)) {
+        setErrorMsg('Username must not contain spaces.');
+        return;
+      }
       const pwdError = validatePasswordRequirements(password);
       if (pwdError) {
         setErrorMsg(pwdError);
