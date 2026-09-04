@@ -51,15 +51,36 @@ const withAndroidSigningFix = (config: ExpoConfig) => {
   ]);
 };
 
-const withFirebaseSPMDisable = (config: ExpoConfig) => {
+const withFirebaseSPMDisableAndRecaptcha = (config: ExpoConfig) => {
   return withDangerousMod(config, [
     'ios',
     async (config) => {
       const podfilePath = path.join(config.modRequest.platformProjectRoot, 'Podfile');
       if (fs.existsSync(podfilePath)) {
         let contents = fs.readFileSync(podfilePath, 'utf-8');
+        let modified = false;
+
+        // 1. Disable SPM
         if (!contents.includes('$RNFirebaseDisableSPM = true')) {
           contents = "$RNFirebaseDisableSPM = true\n" + contents;
+          modified = true;
+        }
+
+        // 2. Add RecaptchaEnterprise pod for Phone Auth (SMS)
+        const recaptchaPod = "pod 'RecaptchaEnterprise', '~> 18.0'";
+        if (!contents.includes("pod 'RecaptchaEnterprise'")) {
+          // Find the config = use_native_modules! line and insert after it
+          const targetLine = "config = use_native_modules!(config_command)";
+          if (contents.includes(targetLine)) {
+            contents = contents.replace(
+              targetLine,
+              `${targetLine}\n\n  # Injected by app.config.ts: Required for Firebase Phone Auth (SMS)\n  ${recaptchaPod}\n`
+            );
+            modified = true;
+          }
+        }
+
+        if (modified) {
           fs.writeFileSync(podfilePath, contents);
         }
       }
@@ -226,5 +247,5 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     owner: "maryow"
   };
 
-  return withRemoveOrientationRestriction(withAndroidSigningFix(withFirebaseSPMDisable(baseConfig)));
+  return withRemoveOrientationRestriction(withAndroidSigningFix(withFirebaseSPMDisableAndRecaptcha(baseConfig)));
 };
