@@ -1,8 +1,7 @@
 import { useRouter } from 'expo-router';
-import { AlertCircle, ArrowLeft, CheckCircle2, Mail } from 'lucide-react-native';
+import { AlertCircle, ArrowLeft, CheckCircle2, User, Mail } from 'lucide-react-native';
 import { useState } from 'react';
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -13,40 +12,64 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useAuthStore } from '../../store/useAuthStore';
+import { getAuth, signInWithPhoneNumber, sendPasswordResetEmail } from '@react-native-firebase/auth';
 import { PrimaryGradientButton } from '../../components/ui/PrimaryGradientButton';
 
 export default function ForgotPasswordScreen() {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
+  const [isSuccess, setIsSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [isSuccess, setIsSuccess] = useState(false);
 
   const router = useRouter();
-  const sendPasswordReset = useAuthStore((state) => state.sendPasswordReset);
 
-  const handleSendResetLink = async () => {
-    const trimmedEmail = email.trim();
-    if (!trimmedEmail) {
-      setErrorMsg('Email address is required.');
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trimmedEmail)) {
-      setErrorMsg('Please enter a valid email address.');
+  const handleSubmit = async () => {
+    const trimmed = identifier.trim();
+    if (!trimmed) {
+      setErrorMsg('Please enter your email address or phone number.');
       return;
     }
 
     setErrorMsg('');
     setIsLoading(true);
 
+    const isEmail = trimmed.includes('@');
+    const auth = getAuth();
+
     try {
-      await sendPasswordReset(trimmedEmail);
-      setIsSuccess(true);
+      if (isEmail) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(trimmed)) {
+          throw new Error('Please enter a valid email address.');
+        }
+        
+        try {
+          await sendPasswordResetEmail(auth, trimmed);
+        } catch (emailErr: any) {
+          // Silently succeed for user-not-found to prevent email enumeration
+          if (emailErr.code !== 'auth/user-not-found') {
+            throw emailErr;
+          }
+        }
+        
+        setIsSuccess(true);
+      } else {
+        // Assume phone number if no '@' is present
+        const phoneRegex = /^\+?[0-9\s\-]+$/;
+        if (!phoneRegex.test(trimmed) || trimmed.replace(/\D/g, '').length < 7) {
+          throw new Error('Please enter a valid phone number with your country code (e.g. +1).');
+        }
+        
+        const confirmation = await signInWithPhoneNumber(auth, trimmed);
+        
+        router.push({
+          pathname: '/(auth)/verify-otp-reset',
+          params: { verificationId: confirmation.verificationId, phoneNumber: trimmed }
+        });
+      }
     } catch (error: any) {
-      setErrorMsg(error.message || 'We could not send the reset link right now. Please try again later.');
+      console.error("Caught Error:", error);
+      setErrorMsg(error.message || 'Something went wrong. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -80,7 +103,7 @@ export default function ForgotPasswordScreen() {
               </Text>
               {!isSuccess && (
                 <Text style={styles.subtitle}>
-                  Enter the email address connected to your church app account. We’ll send a password reset link to your email.
+                  Enter your email address or phone number connected to your account. We'll send you a link or code to reset your password.
                 </Text>
               )}
             </View>
@@ -91,20 +114,20 @@ export default function ForgotPasswordScreen() {
                 accessibilityRole="alert"
                 accessibilityLiveRegion="polite"
               >
-                <CheckCircle2 size={48} color="#10B981" style={styles.successIcon} />
+                <View style={styles.iconWrapper}>
+                  <CheckCircle2 size={32} color="#10B981" />
+                </View>
                 <Text style={styles.successTitle}>Check your email</Text>
                 <Text style={styles.successText}>
-                  If an account exists for this email, we’ll send a password reset link.
+                  We've sent a password reset link to{'\n'}
+                  <Text style={styles.highlightText}>{identifier}</Text>
                 </Text>
-                <TouchableOpacity
+                
+                <PrimaryGradientButton
+                  title="Back to Login"
                   onPress={() => router.push('/(auth)/login')}
-                  activeOpacity={0.8}
-                  style={styles.backToLoginButton}
-                  accessibilityLabel="Back to login"
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.backToLoginText}>Back to Login</Text>
-                </TouchableOpacity>
+                  style={{ width: '100%', marginTop: 8 }}
+                />
               </View>
             ) : (
               <View>
@@ -121,25 +144,25 @@ export default function ForgotPasswordScreen() {
 
                 <View style={styles.formGroup}>
                   <View style={styles.inputWrapper}>
-                    <Mail size={18} color="#888" style={styles.inputIcon} />
+                    <User size={18} color="#888" style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
-                      placeholder="Email address"
+                      placeholder="Email or Phone (e.g. +1234567890)"
                       placeholderTextColor="#888"
-                      value={email}
-                      onChangeText={setEmail}
+                      value={identifier}
+                      onChangeText={setIdentifier}
                       autoCapitalize="none"
                       keyboardType="email-address"
-                      accessibilityLabel="Email address"
-                      accessibilityHint="Enter your email to receive a reset link"
+                      accessibilityLabel="Email or Phone number"
+                      accessibilityHint="Enter your email or phone number to receive a reset link or code"
                       editable={!isLoading}
                     />
                   </View>
                 </View>
 
                 <PrimaryGradientButton
-                  title="Send Reset Link"
-                  onPress={handleSendResetLink}
+                  title="Continue"
+                  onPress={handleSubmit}
                   loading={isLoading}
                   style={{ marginTop: 16 }}
                 />
@@ -222,59 +245,45 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1a1a1a',
   },
-  primaryButton: {
-    height: 56,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#B66DFF',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  primaryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '800',
-  },
   successContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 32,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFFFFF',
     borderRadius: 24,
     padding: 24,
     borderWidth: 1,
     borderColor: '#F3F4F6',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
   },
-  successIcon: {
-    marginBottom: 16,
+  iconWrapper: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#ECFDF5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   successTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '800',
-    color: '#1a1a1a',
+    color: '#111827',
     marginBottom: 12,
   },
   successText: {
     fontSize: 15,
-    color: '#4B5563',
+    color: '#6B7280',
     textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 32,
+    lineHeight: 24,
+    marginBottom: 28,
   },
-  backToLoginButton: {
-    backgroundColor: '#1a1a1a',
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-    width: '100%',
-    alignItems: 'center',
-  },
-  backToLoginText: {
-    color: '#fff',
-    fontSize: 15,
+  highlightText: {
     fontWeight: '700',
+    color: '#111827',
   },
 });
