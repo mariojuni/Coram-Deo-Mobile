@@ -63,8 +63,10 @@ export default function ForgotPasswordScreen() {
         }
         
         // This disables the strict APNs/reCAPTCHA app verification check specifically for simulators
-        // so that Test Phone Numbers can be used seamlessly!
-        auth.settings.appVerificationDisabledForTesting = true;
+        // so that Test Phone Numbers can be used seamlessly! We only run this in DEV to avoid breaking TestFlight.
+        if (__DEV__) {
+          auth.settings.appVerificationDisabledForTesting = true;
+        }
         
         const confirmation = await signInWithPhoneNumber(auth, phoneNoSpaces);
         
