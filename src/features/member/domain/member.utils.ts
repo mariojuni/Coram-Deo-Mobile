@@ -81,3 +81,31 @@ export const isUserInMinistry = (ministryMembers: any[] | undefined, currentUser
     const ids = [currentUser?.uid, userProfile?.memberId].filter(Boolean);
     return ministryMembers?.some((m) => ids.includes(m.memberId)) ?? false;
 };
+
+export const deduplicateMembers = (members: any[]) => {
+    const uniqueMap = new Map<string, any>();
+    for (const m of members) {
+        const nameKey = formatMemberName(m).toLowerCase().trim();
+        const emailKey = (m.email || '').toLowerCase().trim();
+        let mapKey = null;
+
+        if (emailKey && uniqueMap.has(`email:${emailKey}`)) {
+            mapKey = `email:${emailKey}`;
+        } else if (nameKey && uniqueMap.has(`name:${nameKey}`)) {
+            mapKey = `name:${nameKey}`;
+        }
+
+        if (mapKey) {
+            const existing = uniqueMap.get(mapKey);
+            if (!existing.email && m.email) {
+                if (emailKey) uniqueMap.set(`email:${emailKey}`, m);
+                if (nameKey) uniqueMap.set(`name:${nameKey}`, m);
+            }
+        } else {
+            if (emailKey) uniqueMap.set(`email:${emailKey}`, m);
+            if (nameKey) uniqueMap.set(`name:${nameKey}`, m);
+            uniqueMap.set(`id:${m.id}`, m);
+        }
+    }
+    return Array.from(new Set(uniqueMap.values()));
+};

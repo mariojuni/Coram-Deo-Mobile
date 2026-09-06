@@ -1,6 +1,7 @@
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { getActiveDb } from '../../../firebase';
 import type { Member, Service } from '../domain/member.types';
+import { deduplicateMembers } from '../domain/member.utils';
 
 type MembersListener = (members: Member[]) => void;
 type ServicesListener = (services: Service[]) => void;
@@ -20,9 +21,10 @@ export const memberRepository = {
     return onSnapshot(
       membersQuery,
       (snapshot) => {
-        const members = snapshot.docs.map((docSnap) =>
+        let members = snapshot.docs.map((docSnap) =>
           mapDocWithId<Member>(docSnap.data() as Record<string, unknown>, docSnap.id)
         );
+        members = deduplicateMembers(members) as Member[];
         onData(members);
       },
       onError
