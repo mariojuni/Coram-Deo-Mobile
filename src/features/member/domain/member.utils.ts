@@ -85,6 +85,8 @@ export const isUserInMinistry = (ministryMembers: any[] | undefined, currentUser
 export const deduplicateMembers = (members: any[]) => {
     const uniqueMap = new Map<string, any>();
     for (const m of members) {
+        // Create a shallow copy so we don't mutate the original store objects directly if we don't want to,
+        // though mutating them might be fine. We'll use a new object for new members.
         const nameKey = formatMemberName(m).toLowerCase().trim();
         const emailKey = (m.email || '').toLowerCase().trim();
         let mapKey = null;
@@ -97,22 +99,25 @@ export const deduplicateMembers = (members: any[]) => {
 
         if (mapKey) {
             const existing = uniqueMap.get(mapKey);
-            const aliasIds = existing.aliasIds || [];
-            if (m.id && m.id !== existing.id && !aliasIds.includes(m.id)) {
-                aliasIds.push(m.id);
+            
+            if (m.id && m.id !== existing.id && !existing.aliasIds.includes(m.id)) {
+                existing.aliasIds.push(m.id);
             }
             
-            const merged = { ...m, ...existing, aliasIds };
-            
-            if (!existing.email && m.email) {
-                merged.email = m.email;
-                if (emailKey) uniqueMap.set(`email:${emailKey}`, merged);
-                if (nameKey) uniqueMap.set(`name:${nameKey}`, merged);
-            } else {
-                uniqueMap.set(mapKey, merged);
+            // Merge missing properties from m into existing
+            for (const key of Object.keys(m)) {
+                if (existing[key] === undefined || existing[key] === null || existing[key] === '') {
+                    existing[key] = m[key];
+                }
+            }
+
+            // If the merge brought in a new email, index it
+            const newEmailKey = (existing.email || '').toLowerCase().trim();
+            if (newEmailKey && !uniqueMap.has(`email:${newEmailKey}`)) {
+                uniqueMap.set(`email:${newEmailKey}`, existing);
             }
         } else {
-            const newMember = { ...m, aliasIds: m.aliasIds || [] };
+            const newMember = { ...m, aliasIds: m.aliasIds ? [...m.aliasIds] : [] };
             if (emailKey) uniqueMap.set(`email:${emailKey}`, newMember);
             if (nameKey) uniqueMap.set(`name:${nameKey}`, newMember);
             uniqueMap.set(`id:${m.id}`, newMember);
