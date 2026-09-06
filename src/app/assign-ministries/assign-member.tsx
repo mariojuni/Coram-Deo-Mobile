@@ -85,7 +85,7 @@ export default function AssignMemberScreen() {
 
     const sourceMembers = combinedTeam.length > 0
       ? combinedTeam.map(m => {
-          const globalMember = allMembers.find(g => g.id === m.memberId);
+          const globalMember = allMembers.find(g => g.id === m.memberId || g.aliasIds?.includes(m.memberId));
           return {
             id: m.memberId,
             name: formatMemberName(globalMember || (m as any)),
@@ -122,7 +122,7 @@ export default function AssignMemberScreen() {
       if (userId === null) {
         if (existing) await ministryRepository.deleteAssignment(existing.id);
       } else {
-        const member = memberById.get(userId);
+        const member = allMembers.find(g => g.id === userId || g.aliasIds?.includes(userId));
         if (existing) {
           if (existing.memberId !== userId) {
             await ministryRepository.updateAssignment(existing.id, {

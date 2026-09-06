@@ -97,14 +97,25 @@ export const deduplicateMembers = (members: any[]) => {
 
         if (mapKey) {
             const existing = uniqueMap.get(mapKey);
+            const aliasIds = existing.aliasIds || [];
+            if (m.id && m.id !== existing.id && !aliasIds.includes(m.id)) {
+                aliasIds.push(m.id);
+            }
+            
+            const merged = { ...m, ...existing, aliasIds };
+            
             if (!existing.email && m.email) {
-                if (emailKey) uniqueMap.set(`email:${emailKey}`, m);
-                if (nameKey) uniqueMap.set(`name:${nameKey}`, m);
+                merged.email = m.email;
+                if (emailKey) uniqueMap.set(`email:${emailKey}`, merged);
+                if (nameKey) uniqueMap.set(`name:${nameKey}`, merged);
+            } else {
+                uniqueMap.set(mapKey, merged);
             }
         } else {
-            if (emailKey) uniqueMap.set(`email:${emailKey}`, m);
-            if (nameKey) uniqueMap.set(`name:${nameKey}`, m);
-            uniqueMap.set(`id:${m.id}`, m);
+            const newMember = { ...m, aliasIds: m.aliasIds || [] };
+            if (emailKey) uniqueMap.set(`email:${emailKey}`, newMember);
+            if (nameKey) uniqueMap.set(`name:${nameKey}`, newMember);
+            uniqueMap.set(`id:${m.id}`, newMember);
         }
     }
     return Array.from(new Set(uniqueMap.values()));

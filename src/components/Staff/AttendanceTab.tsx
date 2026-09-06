@@ -228,7 +228,8 @@ export default function AttendanceTab({ members, showStaffFeatures }: Attendance
   };
 
   const uncheckedMembers = members.filter(
-    m => !checkins.some(c => c.memberId === m.id) && !pendingCheckins.some(p => p.memberId === m.id)
+    m => !checkins.some(c => c.memberId === m.id || m.aliasIds?.includes(c.memberId)) && 
+         !pendingCheckins.some(p => p.memberId === m.id || m.aliasIds?.includes(p.memberId))
   );
 
   const matchingUncheckedMembers = uncheckedMembers.filter(m => 
@@ -251,8 +252,8 @@ export default function AttendanceTab({ members, showStaffFeatures }: Attendance
   ] as AttendanceRecord[];
 
   const displayedCheckins = allCheckins.filter(c => {
-    const mem = members.find(m => m.id === c.memberId);
-    return (mem?.name || mem?.firstName || '').toLowerCase().includes(searchCheckedInQuery.toLowerCase());
+    const mem = members.find(m => m.id === c.memberId || m.aliasIds?.includes(c.memberId));
+    return (mem?.name || mem?.firstName || c.memberName || '').toLowerCase().includes(searchCheckedInQuery.toLowerCase());
   });
 
   if (!hasAccess) {
@@ -342,7 +343,7 @@ export default function AttendanceTab({ members, showStaffFeatures }: Attendance
       <View style={styles.listContainer}>
         {displayedCheckins.length > 0 ? (
           displayedCheckins.map(c => {
-            const memberInfo = members.find(m => m.id === c.memberId) || {};
+            const memberInfo = members.find(m => m.id === c.memberId || m.aliasIds?.includes(c.memberId)) || { name: c.memberName };
             const isNew = memberInfo.status === 'new' || memberInfo.role === 'First-time Visitor';
             const memberName = formatMemberName(memberInfo);
             return (
