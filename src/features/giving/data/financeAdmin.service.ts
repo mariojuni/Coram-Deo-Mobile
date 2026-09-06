@@ -256,19 +256,26 @@ export async function getMonthlyFinanceSummary(churchId: string, startOfMonthIso
   const iso = startOfMonthIso || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
   const startOfMonthDate = iso.split('T')[0];
   
+  // Calculate the end of the month string for bounding the queries
+  const parsedDate = new Date(iso);
+  const endOfMonthObj = new Date(parsedDate.getFullYear(), parsedDate.getMonth() + 1, 0);
+  const endOfMonthDate = `${endOfMonthObj.getFullYear()}-${String(endOfMonthObj.getMonth() + 1).padStart(2, '0')}-${String(endOfMonthObj.getDate()).padStart(2, '0')}`;
+  
   // Fetch approved/completed giving for this month
   const givingQ = query(
     collection(getActiveDb(), GIVING_COLLECTION),
     where('churchId', '==', churchId),
     where('status', 'in', ['approved', 'completed']),
-    where('date', '>=', startOfMonthDate)
+    where('date', '>=', startOfMonthDate),
+    where('date', '<=', endOfMonthDate)
   );
   
   // Fetch expenses for this month
   const expenseQ = query(
     collection(getActiveDb(), EXPENSE_COLLECTION),
     where('churchId', '==', churchId),
-    where('date', '>=', startOfMonthDate)
+    where('date', '>=', startOfMonthDate),
+    where('date', '<=', endOfMonthDate)
   );
 
   // Fetch pending count
