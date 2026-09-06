@@ -12,6 +12,7 @@ import {
 import {
   doc,
   getDoc,
+  getDocFromCache,
   collection,
   query,
   where,
@@ -218,7 +219,26 @@ function normalizeLegacyRole(
 
 export async function fetchUserAccount(user: User): Promise<UserAccount | null> {
   let profileDocRef = doc(getActiveDb(), 'users', user.uid);
-  let profileSnapshot = await getDoc(profileDocRef);
+
+  // On Android, Firestore may be briefly offline when the app resumes from
+  // background or is killed and relaunched. In that case, getDoc() will throw
+  // a network error rather than returning null. We fall back to the local
+  // Firestore disk cache so the user session is preserved.
+  let profileSnapshot: Awaited<ReturnType<typeof getDoc>>;
+  try {
+    profileSnapshot = await getDoc(profileDocRef);
+  } catch (serverError: any) {
+    console.warn('[Auth] getDoc failed (network/offline?), trying local cache...', serverError?.code ?? serverError);
+    try {
+      profileSnapshot = await getDocFromCache(profileDocRef);
+      console.log('[Auth] Served user profile from Firestore local cache.');
+    } catch (cacheError: any) {
+      // Cache also miss — rethrow the original server error so the retry
+      // logic in subscribeToAuthState can handle it.
+      console.warn('[Auth] Cache miss too. Re-throwing original error.', cacheError?.code ?? cacheError);
+      throw serverError;
+    }
+  }
 
   if (!profileSnapshot.exists()) {
     // Search users collection by authUid for linked imported members
@@ -853,15 +873,26 @@ export const authRepository = {
           return;
         }
 
-        // If first attempt failed with a transient error, retry once after a short delay.
+        // If first attempt failed with a transient error, retry with increasing
+        // delays. On Android, Firestore's network reconnection after a kill/resume
+        // can take several seconds, especially on slower networks.
         if (fetchError) {
-          console.warn('[Auth] Transient error fetching user profile, retrying in 2s...', fetchError);
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          try {
-            profile = await fetchUserAccount(user);
-            fetchError = null;
-          } catch (retryError: any) {
-            console.warn('[Auth] Retry also failed. Will NOT sign out — keeping session alive:', retryError);
+          const retryDelays = [3000, 5000]; // 3s then 5s
+          let lastRetryError: any = fetchError;
+          for (const delay of retryDelays) {
+            console.warn(`[Auth] Transient error fetching user profile, retrying in ${delay / 1000}s...`, lastRetryError);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            try {
+              profile = await fetchUserAccount(user);
+              lastRetryError = null;
+              break; // success — exit the retry loop
+            } catch (retryError: any) {
+              lastRetryError = retryError;
+            }
+          }
+
+          if (lastRetryError) {
+            console.warn('[Auth] All retries failed. Will NOT sign out — keeping session alive:', lastRetryError);
             // Do NOT sign out on network/transient errors. Keep the user session
             // so background-resuming on Android does not log the user out.
             // onData is intentionally NOT called, preserving the last known state.
