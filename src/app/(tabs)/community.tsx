@@ -333,10 +333,10 @@ function EventsTab({ searchQuery }: SubScreenProps) {
 
   const todaysEvents = useMemo(
     () =>
-      searchableEvents
+      upcomingEvents
         .filter((event) => normalizeDateToYmd(event.date) === todayString)
         .sort((a, b) => parseTimeTo24h(a.time || '9:00 AM').localeCompare(parseTimeTo24h(b.time || '9:00 AM'))),
-    [searchableEvents, todayString]
+    [upcomingEvents, todayString]
   );
 
   const todaysEventIds = useMemo(() => new Set(todaysEvents.map((event) => event.id)), [todaysEvents]);

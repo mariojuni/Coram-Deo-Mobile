@@ -101,18 +101,18 @@ export function useHomeScreenData() {
 
 
 
+  const upcomingEvents = useMemo(() => getUpcomingSchedules(activeSchedules, 20), [activeSchedules]);
+
   const todaysEvents = useMemo(
     () =>
-      activeSchedules
+      upcomingEvents
         .filter((event) => normalizeDateToYmd(event.date) === todayString)
         .sort((a, b) => parseTimeTo24h(a.time || '9:00 AM').localeCompare(parseTimeTo24h(b.time || '9:00 AM'))),
      
-    [activeSchedules, todayString]
+    [upcomingEvents, todayString]
   );
 
   const todaysEventIds = useMemo(() => new Set(todaysEvents.map((event) => event.id)), [todaysEvents]);
-
-  const upcomingEvents = useMemo(() => getUpcomingSchedules(activeSchedules, 20), [activeSchedules]);
 
   const upcomingList = useMemo(
     () => upcomingEvents.filter((e) => !todaysEventIds.has(e.id)),
