@@ -439,13 +439,7 @@ export const getUserPreferences = async () => {
     }
   }
 
-  const merged = { ...defaultPrefs };
-  if (data) {
-    if (data.activeTranslation) merged.activeTranslation = data.activeTranslation;
-    if (data.activeBook) merged.activeBook = data.activeBook;
-    if (data.activeChapter) merged.activeChapter = data.activeChapter;
-    if (data.activePassageId) merged.activePassageId = data.activePassageId;
-  }
+  const merged = { ...defaultPrefs, ...(data || {}) };
 
   const savedVersions = await getSavedVersions();
   const isAvailable = savedVersions.some((v: any) => String(v.id) === String(merged.activeTranslation));

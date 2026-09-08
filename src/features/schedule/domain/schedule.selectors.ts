@@ -48,14 +48,8 @@ export function getUpcomingSchedules(schedules: Schedule[], maxCount = 5): Sched
       if (normDate > todayStr) return true;
       if (normDate < todayStr) return false;
 
-      let endTimeParsed = parseTimeTo24h(schedule.endTime || schedule.time);
-      if (!schedule.endTime) {
-        let h = parseInt(endTimeParsed.split(':')[0], 10) + 2;
-        if (h > 23) h = 23;
-        endTimeParsed = `${String(h).padStart(2, '0')}:${endTimeParsed.split(':')[1]}`;
-      }
-
-      return endTimeParsed >= currentTimeStr;
+      // Always return true for today's events so they stay visible all day
+      return true;
     })
     .sort((a, b) => {
       const aDate = normalizeDateToYmd(a.date) || a.date;

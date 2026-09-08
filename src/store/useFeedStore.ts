@@ -30,6 +30,7 @@ interface FeedStore {
   loadMoreHighlights: () => void;
   clearFeedsListener: () => void;
   retryFeeds: () => void;
+  refreshNotes: () => void;
   removeNote: (id: string) => void;
   toggleNoteLike: (id: string, uid: string) => void;
 }
@@ -180,6 +181,35 @@ export const useFeedStore = create<FeedStore>((set, get) => ({
     // Clear and restart the feeds listener for the current church
     get().clearFeedsListener();
     get().initializeFeedsListener();
+  },
+
+  refreshNotes: () => {
+    const { useAuthStore } = require('./useAuthStore');
+    const userProfile = useAuthStore.getState().userProfile;
+    const currentUser = useAuthStore.getState().currentUser;
+    const churchId = userProfile?.churchId || (userProfile as any)?.church_id;
+    
+    if (churchId && currentUser?.uid) {
+      set({ notesLoading: true });
+      Promise.all([
+        sermonRepository.fetchUserNotes(currentUser.uid, churchId).catch(() => []),
+        bibleNoteRepository.getChurchNotes(churchId).catch(() => [])
+      ]).then(([sermonNotes, bibleNotes]) => {
+        const combined: FeedNoteItem[] = [
+          ...sermonNotes.map(n => ({ ...n, _type: 'sermon' as const })),
+          ...bibleNotes.map(n => ({ ...n, _type: 'bible' as const }))
+        ];
+        combined.sort((a, b) => {
+          const timeA = a.createdAt && (a.createdAt as any).toDate ? (a.createdAt as any).toDate().getTime() : (a.createdAt ? new Date(a.createdAt as any).getTime() : 0);
+          const timeB = b.createdAt && (b.createdAt as any).toDate ? (b.createdAt as any).toDate().getTime() : (b.createdAt ? new Date(b.createdAt as any).getTime() : 0);
+          return timeB - timeA;
+        });
+        set({ notes: combined, notesLoading: false, feedError: null });
+      }).catch(err => {
+        console.warn('Failed to fetch combined notes:', err);
+        set({ notesLoading: false, feedError: 'Failed to load notes. Please try again.' });
+      });
+    }
   },
 
   removeNote: (id: string) => {

@@ -125,6 +125,7 @@ export default function HomeScreen() {
   const [savingEventId, setSavingEventId] = useState<string | null>(null);
   const screenWidth = Dimensions.get('window').width;
   const cardWidth = screenWidth - 48;
+  const scrollRef = useRef<ScrollView>(null);
   const currentUserId = currentUser?.uid ?? '';
 
   const currentMemberIds = useMemo(() => {
@@ -228,6 +229,18 @@ export default function HomeScreen() {
     },
     [cardWidth]
   );
+
+  useEffect(() => {
+    if (heroCards.length <= 1) return;
+    const interval = setInterval(() => {
+      setActiveSlide((prev) => {
+        const nextSlide = (prev + 1) % heroCards.length;
+        scrollRef.current?.scrollTo({ x: nextSlide * cardWidth, animated: true });
+        return nextSlide;
+      });
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [heroCards.length, cardWidth]);
 
   const insets = useSafeAreaInsets();
 
@@ -402,6 +415,7 @@ export default function HomeScreen() {
 
             <>
               <ScrollView
+                ref={scrollRef as any}
                 horizontal
                 pagingEnabled
                 showsHorizontalScrollIndicator={false}

@@ -47,7 +47,16 @@ export default function MyJourneyScreen() {
   }, [activeTab, tabSlideAnim]);
 
   const handleContinueReading = () => {
-    router.replace('/(tabs)/bible');
+    if (router.canDismiss()) {
+      router.dismissAll();
+    } else if (router.canGoBack()) {
+      router.back();
+    }
+    
+    // Slight delay to ensure the stack is completely popped before switching tabs
+    setTimeout(() => {
+      router.push('/(tabs)/bible');
+    }, 100);
   };
   return (
     <View style={styles.root}>

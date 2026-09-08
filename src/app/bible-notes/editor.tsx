@@ -82,6 +82,10 @@ export default function BibleNoteEditorScreen() {
           status: 'active',
         });
       }
+      
+      const { useFeedStore } = require('@/store/useFeedStore');
+      useFeedStore.getState().refreshNotes();
+      
       reset();
       router.back();
     } catch (e) {

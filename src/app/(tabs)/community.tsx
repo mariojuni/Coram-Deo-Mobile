@@ -265,6 +265,7 @@ function EventsTab({ searchQuery }: SubScreenProps) {
   const [selectedEvent, setSelectedEvent] = useState<Schedule | null>(null);
   const { eventId } = useLocalSearchParams();
   const [activeTodaySlide, setActiveTodaySlide] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
 
   const searchableEvents = useMemo(() => {
     // Only show published or cancelled events in the community tab
@@ -341,6 +342,18 @@ function EventsTab({ searchQuery }: SubScreenProps) {
 
   const todaysEventIds = useMemo(() => new Set(todaysEvents.map((event) => event.id)), [todaysEvents]);
 
+  useEffect(() => {
+    if (todaysEvents.length <= 1) return;
+    const interval = setInterval(() => {
+      setActiveTodaySlide((prev) => {
+        const nextSlide = (prev + 1) % todaysEvents.length;
+        scrollRef.current?.scrollTo({ x: nextSlide * screenWidth, animated: true });
+        return nextSlide;
+      });
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [todaysEvents.length, screenWidth]);
+
   const upcomingList = useMemo(
     () => upcomingEvents.filter((event) => !todaysEventIds.has(event.id)),
     [upcomingEvents, todaysEventIds]
@@ -400,6 +413,7 @@ function EventsTab({ searchQuery }: SubScreenProps) {
       ) : todaysEvents.length > 0 ? (
         <View>
           <ScrollView
+            ref={scrollRef as any}
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
