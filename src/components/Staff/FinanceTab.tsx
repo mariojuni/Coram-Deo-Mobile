@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { PlusCircle, CheckCircle, Receipt, PieChart } from 'lucide-react-native';
+import { PlusCircle, CheckCircle, Receipt, PieChart, ArrowRightLeft } from 'lucide-react-native';
 import { SoftCard } from '../ui/SoftCard';
 
 export default function FinanceTab() {
@@ -28,6 +28,13 @@ export default function FinanceTab() {
       icon: Receipt,
       route: '/staff-finance/expense-tracker',
       color: '#FF6596',
+    },
+    {
+      title: 'Fund Transfer',
+      description: 'Move money between funds',
+      icon: ArrowRightLeft,
+      route: '/staff-finance/fund-transfer',
+      color: '#4ADE80',
     },
     {
       title: 'Finance Summary',

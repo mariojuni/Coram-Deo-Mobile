@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, ScrollView
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { ArrowDownRight, ArrowUpRight, Clock, PieChart, Wallet, ChevronLeft, ChevronRight, TrendingUp, TrendingDown } from 'lucide-react-native';
+import { ArrowDownRight, ArrowUpRight, Clock, PieChart, Wallet, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Bell } from 'lucide-react-native';
 import { useAuthStore } from '../../store/useAuthStore';
 import { getMonthlyFinanceSummary } from '../../features/giving/data/financeAdmin.service';
 import { GivingRecord, GivingExpense } from '../../features/giving/domain/giving.types';
@@ -75,7 +75,21 @@ export default function FinanceSummaryScreen() {
             <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
           </BounceCard>
           <Text style={styles.headerTitle} numberOfLines={1}>Finance Summary</Text>
-          <View style={[styles.headerCircle, { backgroundColor: 'transparent', borderWidth: 0, elevation: 0 }]} />
+          {summary.pendingCount > 0 ? (
+            <BounceCard 
+              bounceScale={0.85} 
+              style={styles.headerCircle} 
+              onPress={() => router.push('/staff-finance/pending-verification')} 
+              hitSlop={8}
+            >
+              <Clock size={22} color="#B66DFF" strokeWidth={2} />
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{summary.pendingCount > 99 ? '99+' : summary.pendingCount}</Text>
+              </View>
+            </BounceCard>
+          ) : (
+            <View style={[styles.headerCircle, { backgroundColor: 'transparent', borderWidth: 0, elevation: 0 }]} />
+          )}
         </View>
       </View>
 
@@ -149,22 +163,7 @@ export default function FinanceSummaryScreen() {
               </SoftCard>
             </View>
 
-            <SoftCard style={{ borderRadius: 24 }} innerStyle={{ borderRadius: 23 }}>
-              <TouchableOpacity 
-                style={styles.pendingCard} 
-                onPress={() => router.push('/staff-finance/pending-verification')}
-                activeOpacity={0.7}
-              >
-                <View style={styles.pendingContent}>
-                  <Clock size={24} color="#B66DFF" />
-                  <View style={{ marginLeft: 12 }}>
-                    <Text style={styles.pendingLabel}>Pending Verifications</Text>
-                    <Text style={styles.pendingSubText}>{summary.pendingCount} records need your attention</Text>
-                  </View>
-                </View>
-                <Text style={styles.pendingBadge}>{summary.pendingCount}</Text>
-              </TouchableOpacity>
-            </SoftCard>
+
 
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Recent Income</Text>
@@ -252,6 +251,25 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginHorizontal: 12,
   },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#EF4444',
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '800',
+  },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   content: { padding: 20, paddingBottom: 100 },
   
@@ -299,26 +317,7 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 13, color: '#888', fontWeight: '500', marginBottom: 4 },
   statValue: { fontSize: 18, fontWeight: '700', color: '#1a1a1a', letterSpacing: -0.5 },
 
-  pendingCard: {
-    backgroundColor: '#fff',
-    padding: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  pendingContent: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  pendingLabel: { fontSize: 16, fontWeight: '700', color: '#1a1a1a' },
-  pendingSubText: { fontSize: 13, color: '#888', marginTop: 4, fontWeight: '500' },
-  pendingBadge: {
-    backgroundColor: '#B66DFF',
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '800',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
+
   sectionHeader: {
     marginTop: 32,
     marginBottom: 12,

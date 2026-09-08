@@ -139,3 +139,16 @@ export interface DonationAccount {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface FundTransfer {
+  id: string;
+  churchId: string;
+  sourceFundId: string;
+  destinationFundId: string;
+  amount: number;
+  date: string;
+  notes?: string;
+  createdBy: string;
+  createdAt: string;
+}
+

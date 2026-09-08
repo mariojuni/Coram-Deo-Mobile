@@ -18,6 +18,7 @@ const GIVING_COLLECTION = 'givingRecords';
 const EXPENSE_COLLECTION = 'givingExpenses';
 const CAMPAIGN_COLLECTION = 'givingCampaigns';
 const EXPENSE_CATEGORIES_COLLECTION = 'expenseCategories';
+const FUND_TRANSFERS_COLLECTION = 'fundTransfers';
 
 export async function createManualGivingRecord(
   churchId: string, 
@@ -244,6 +245,44 @@ export async function getActiveExpenseCategories(churchId: string): Promise<Expe
   );
   const snap = await getDocs(q);
   return snap.docs.map(d => ({ ...d.data(), id: d.id } as ExpenseCategoryModel)).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export async function createFundTransfer(
+  churchId: string,
+  data: {
+    sourceFundId: string;
+    destinationFundId: string;
+    amount: number;
+    date: string;
+    notes?: string;
+  },
+  currentUserId: string
+): Promise<string> {
+  const newRef = doc(collection(getActiveDb(), FUND_TRANSFERS_COLLECTION));
+  
+  await setDoc(newRef, {
+    churchId,
+    sourceFundId: data.sourceFundId,
+    destinationFundId: data.destinationFundId,
+    amount: data.amount,
+    date: data.date,
+    notes: data.notes || '',
+    createdBy: currentUserId,
+    createdAt: serverTimestamp()
+  });
+
+  return newRef.id;
+}
+
+export async function getRecentFundTransfers(churchId: string, maxCount: number = 20): Promise<any[]> {
+  const q = query(
+    collection(getActiveDb(), FUND_TRANSFERS_COLLECTION),
+    where('churchId', '==', churchId),
+    orderBy('createdAt', 'desc'),
+    limit(maxCount)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ ...d.data(), id: d.id }));
 }
 
 export async function getMonthlyFinanceSummary(churchId: string, startOfMonthIso?: string): Promise<{ 
