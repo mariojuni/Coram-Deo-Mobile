@@ -24,6 +24,7 @@ type Preferences = {
   activeBook: string;
   activeChapter: string;
   activeTranslation: string | number;
+  scrollToVerse?: string;
 };
 
 type ChapterData = {
