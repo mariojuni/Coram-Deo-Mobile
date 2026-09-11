@@ -33,11 +33,11 @@ export function canManageAttendance(user: UserAccount | null | undefined, event?
     return true;
   }
 
-  if (roles.includes('ministry_leader') && event && event.ministryId) {
-    const managed = user.managedMinistryIds || [];
-    if (managed.includes(event.ministryId)) {
-      return true;
-    }
+  // ministry_leader can manage attendance for any church event.
+  // Scoping by managedMinistryIds is not applied here because most church-wide
+  // events (Sunday services, etc.) don't carry a ministryId field.
+  if (roles.includes('ministry_leader')) {
+    return true;
   }
 
   return false;
