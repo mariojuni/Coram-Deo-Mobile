@@ -59,7 +59,7 @@ export default function AssignMemberScreen() {
           return {
             memberId: data.memberId || data.userId,
             memberName: data.memberName,
-            role: data.ministryRole || 'Member'
+            role: data.ministryRole || data.role || 'Member'
           };
         });
         setMinistryRoster(roster);
@@ -79,7 +79,13 @@ export default function AssignMemberScreen() {
     // Create a map to deduplicate by memberId
     const rosterMap = new Map<string, { memberId: string; memberName?: string; role: string }>();
     
-    legacyTeam.forEach(m => rosterMap.set(m.memberId, { memberId: m.memberId, memberName: m.memberName, role: m.servingRole || m.role || 'Member' }));
+    legacyTeam.forEach(m => {
+      const memId = m.memberId || m.id || m.userId;
+      const memName = m.memberName || m.name || m.displayName;
+      if (memId) {
+        rosterMap.set(memId, { memberId: memId, memberName: memName, role: m.servingRole || m.role || 'Member' });
+      }
+    });
     ministryRoster.forEach(m => rosterMap.set(m.memberId, m)); // new ones overwrite legacy if duplicate
 
     const combinedTeam = Array.from(rosterMap.values());

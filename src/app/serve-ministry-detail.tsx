@@ -278,19 +278,24 @@ export default function ServeMinistryDetailScreen() {
               
               {membersExpanded && ministry?.members && (
                 <View style={[styles.listContainer, { marginTop: 12 }]}>
-                  {ministry.members.map((member) => (
-                    <View key={member.memberId} style={styles.memberRow}>
-                      <View style={[styles.avatar, { backgroundColor: '#F3EEFF' }]}>
-                        <User size={18} color="#8B6FE8" />
+                  {ministry.members.map((member) => {
+                    const memId = member.memberId || member.id || member.userId;
+                    const memName = member.memberName || member.name || member.displayName || 'Unnamed Member';
+                    const role = member.servingRole || member.role;
+                    return (
+                      <View key={memId} style={styles.memberRow}>
+                        <View style={[styles.avatar, { backgroundColor: '#F3EEFF' }]}>
+                          <User size={18} color="#8B6FE8" />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.memberName}>{memName}</Text>
+                          {role ? (
+                            <Text style={styles.memberRole}>{role}</Text>
+                          ) : null}
+                        </View>
                       </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.memberName}>{member.memberName}</Text>
-                        {member.role ? (
-                          <Text style={styles.memberRole}>{member.role}</Text>
-                        ) : null}
-                      </View>
-                    </View>
-                  ))}
+                    );
+                  })}
                 </View>
               )}
             </View>

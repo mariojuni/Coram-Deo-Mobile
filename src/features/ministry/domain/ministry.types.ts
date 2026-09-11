@@ -3,6 +3,11 @@ export interface MinistryMember {
   memberName: string;
   role?: string;
   avatar?: string;
+  id?: string;
+  userId?: string;
+  name?: string;
+  displayName?: string;
+  servingRole?: string;
 }
 
 export interface Ministry {
