@@ -33,6 +33,7 @@ export interface MinistryMemberDoc {
   ministryId: string;
   memberId: string;
   userId: string;
+  memberName?: string; // Stored for cross-platform name resolution fallback
   status: 'active' | 'inactive';
   ministryRole: string;
   joinedAt: string;

@@ -123,11 +123,24 @@ export const ministryApplicationService = {
       });
 
       // Set/update ministryMembers record
+      // Resolve member name from application fields or user/member docs
+      const userSnapData = userSnap?.exists() ? userSnap.data() : null;
+      const memberSnapData = memberSnap?.exists() ? memberSnap.data() : null;
+      const resolvedName = [
+        userSnapData?.firstName || memberSnapData?.firstName || application.applicantFirstName,
+        userSnapData?.middleName || memberSnapData?.middleName || application.applicantMiddleName,
+        userSnapData?.lastName || memberSnapData?.lastName || application.applicantLastName,
+      ].filter(Boolean).join(' ').trim()
+        || application.applicantName
+        || application.displayName
+        || '';
+
       const ministryMemberData: Omit<MinistryMemberDoc, 'id'> = {
         churchId: application.churchId,
         ministryId: application.ministryId,
         memberId: application.memberId,
         userId: application.userId,
+        memberName: resolvedName || undefined,
         status: 'active',
         ministryRole: assignedRole,
         joinedAt: now,

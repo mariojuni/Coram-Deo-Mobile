@@ -41,7 +41,7 @@ export default function AssignMemberScreen() {
   }, [assignmentsList, scheduleId, ministryId, roleName]);
 
   const [query, setQuery] = useState('');
-  const [ministryRoster, setMinistryRoster] = useState<{ memberId: string; role: string }[]>([]);
+  const [ministryRoster, setMinistryRoster] = useState<{ memberId: string; memberName?: string; role: string }[]>([]);
 
   // Fetch ministryMembers for this ministry
   useEffect(() => {
@@ -57,7 +57,8 @@ export default function AssignMemberScreen() {
         const roster = snap.docs.map(d => {
           const data = d.data();
           return {
-            memberId: data.memberId,
+            memberId: data.memberId || data.userId,
+            memberName: data.memberName,
             role: data.ministryRole || 'Member'
           };
         });
@@ -76,26 +77,32 @@ export default function AssignMemberScreen() {
     const legacyTeam = (ministry?.members && ministry.members.length > 0) ? ministry.members : [];
     
     // Create a map to deduplicate by memberId
-    const rosterMap = new Map<string, { memberId: string; role: string }>();
+    const rosterMap = new Map<string, { memberId: string; memberName?: string; role: string }>();
     
-    legacyTeam.forEach(m => rosterMap.set(m.memberId, { memberId: m.memberId, role: m.role || 'Member' }));
+    legacyTeam.forEach(m => rosterMap.set(m.memberId, { memberId: m.memberId, memberName: m.memberName, role: m.servingRole || m.role || 'Member' }));
     ministryRoster.forEach(m => rosterMap.set(m.memberId, m)); // new ones overwrite legacy if duplicate
 
     const combinedTeam = Array.from(rosterMap.values());
 
     const sourceMembers = combinedTeam.length > 0
       ? combinedTeam.map(m => {
+          // Try to match against global members (from users collection)
           const globalMember = allMembers.find(g => g.id === m.memberId || g.aliasIds?.includes(m.memberId));
+          // Fall back to the stored memberName in the roster doc itself
+          const resolvedName = globalMember
+            ? formatMemberName(globalMember)
+            : (m.memberName && m.memberName !== 'Unnamed Member' ? m.memberName : null);
           return {
             id: m.memberId,
-            name: formatMemberName(globalMember || (m as any)),
+            name: resolvedName,
             role: m.role || 'Member',
             avatar: globalMember?.photoUrl || globalMember?.avatar
           };
         })
       : [];
 
-    const uniqueSourceMembers = sourceMembers.filter(m => m.name && m.name !== 'Unnamed Member');
+    // Only filter out members where we truly have no name at all
+    const uniqueSourceMembers = sourceMembers.filter(m => m.name && m.name.trim() !== '');
     
     if (!q) return uniqueSourceMembers;
     return uniqueSourceMembers.filter((m) => (m.name ?? '').toLowerCase().includes(q) || (m.role ?? '').toLowerCase().includes(q));
