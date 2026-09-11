@@ -422,7 +422,7 @@ export function useBibleReader(
     const chapterIndex = chapters.findIndex((ch) => String(ch.id) === String(activeChapter));
 
     if (chapterIndex > 0) {
-      updatePreferences({ activeChapter: String(chapters[chapterIndex - 1].id) });
+      updatePreferences({ activeChapter: String(chapters[chapterIndex - 1].id), scrollToVerse: undefined });
       return;
     }
 
@@ -433,6 +433,7 @@ export function useBibleReader(
         updatePreferences({
           activeBook: prevBook.id,
           activeChapter: String(prevChapters[prevChapters.length - 1].id),
+          scrollToVerse: undefined,
         });
       }
     }
@@ -449,7 +450,7 @@ export function useBibleReader(
     const chapterIndex = chapters.findIndex((ch) => String(ch.id) === String(activeChapter));
 
     if (chapterIndex !== -1 && chapterIndex < chapters.length - 1) {
-      updatePreferences({ activeChapter: String(chapters[chapterIndex + 1].id) });
+      updatePreferences({ activeChapter: String(chapters[chapterIndex + 1].id), scrollToVerse: undefined });
       return;
     }
 
@@ -460,6 +461,7 @@ export function useBibleReader(
         updatePreferences({
           activeBook: nextBook.id,
           activeChapter: String(nextChapters[0].id),
+          scrollToVerse: undefined,
         });
       }
     }

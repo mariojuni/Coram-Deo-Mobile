@@ -131,6 +131,12 @@ export default function BibleScreen() {
   const handleUpdatePreferences = async (updates: Partial<BiblePreferencesWithHighlights>) => {
     setPreferences((previous) => {
       const newPrefs = { ...(previous || DEFAULT_PREFERENCES), ...updates };
+      
+      // If scrollToVerse is explicitly set to undefined, remove it completely
+      if (updates.scrollToVerse === undefined && 'scrollToVerse' in newPrefs) {
+        delete newPrefs.scrollToVerse;
+      }
+      
       saveUserPreferences(newPrefs);
       cachedPreferences = newPrefs;
 
@@ -214,7 +220,7 @@ export default function BibleScreen() {
         books={books}
         activeBookId={safePreferences.activeBook}
         onSelectChapter={(bookId, chapterNum) => {
-          handleUpdatePreferences({ activeBook: String(bookId), activeChapter: String(chapterNum) });
+          handleUpdatePreferences({ activeBook: String(bookId), activeChapter: String(chapterNum), scrollToVerse: undefined } as any);
           setIsBooksModalOpen(false);
         }}
       />
