@@ -81,12 +81,14 @@ export default function RegisterScreen() {
   const [emergencyContact, setEmergencyContact] = useState('');
   
   const [isLoading, setIsLoading] = useState(false);
+  const [isAppleLoading, setIsAppleLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const router = useRouter();
   const signup = useAuthStore((state) => state.signup);
   const loginWithGoogle = useAuthStore((state) => state.loginWithGoogle);
+  const loginWithApple = useAuthStore((state) => state.loginWithApple);
 
   const handleNext = async () => {
     setErrorMsg('');
@@ -201,9 +203,27 @@ export default function RegisterScreen() {
     try {
       await loginWithGoogle();
     } catch (error: any) {
-      setErrorMsg(error.message);
+      const errorMessage = error?.message?.toLowerCase() || '';
+      if (!errorMessage.includes('no id token found')) {
+        setErrorMsg(error.message);
+      }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleAppleLogin = async () => {
+    setErrorMsg('');
+    setIsAppleLoading(true);
+    try {
+      await loginWithApple();
+    } catch (error: any) {
+      const errorMessage = error?.message?.toLowerCase() || '';
+      if (!errorMessage.includes('canceled') && !errorMessage.includes('no identity token')) {
+        setErrorMsg(error.message);
+      }
+    } finally {
+      setIsAppleLoading(false);
     }
   };
 
@@ -468,9 +488,23 @@ export default function RegisterScreen() {
                 </View>
 
                 <View style={styles.socialButtonsRow}>
-                  <TouchableOpacity style={styles.socialIconBtn} onPress={handleGoogleLogin} disabled={isLoading} activeOpacity={0.8}>
-                    <Image source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png' }} style={styles.socialIcon} contentFit="contain" />
+                  <TouchableOpacity style={styles.socialIconBtn} onPress={handleGoogleLogin} disabled={isLoading || isAppleLoading} activeOpacity={0.8} accessibilityRole="button">
+                    {isLoading ? (
+                      <ActivityIndicator size="small" color="#666" />
+                    ) : (
+                      <Image source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png' }} style={styles.socialIcon} contentFit="contain" />
+                    )}
                   </TouchableOpacity>
+
+                  {Platform.OS === 'ios' && (
+                    <TouchableOpacity style={[styles.socialIconBtn, { backgroundColor: '#000' }]} onPress={handleAppleLogin} disabled={isLoading || isAppleLoading} activeOpacity={0.8} accessibilityRole="button">
+                      {isAppleLoading ? (
+                        <ActivityIndicator size="small" color="#FFF" />
+                      ) : (
+                        <Image source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg' }} style={[styles.socialIcon, { tintColor: '#fff' }]} contentFit="contain" />
+                      )}
+                    </TouchableOpacity>
+                  )}
                 </View>
 
                 <View style={styles.footer}>
