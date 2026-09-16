@@ -152,7 +152,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       },
       infoPlist: {
         UIBackgroundModes: [
-          "audio",
           "remote-notification",
           "fetch"
         ],
@@ -197,7 +196,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         "expo-build-properties",
         {
           "ios": {
-            "useFrameworks": "static"
+            "useFrameworks": "static",
+            "deploymentTarget": "16.4",
+            "enableSceneSupport": true
           }
         }
       ],
@@ -233,7 +234,16 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       "expo-video",
       "expo-audio",
       "expo-sharing",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-apple-authentication",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow CoramDeo to access your photos to let you update your profile picture and share images in the community."
+        }
+      ],
+
+      "./plugins/withPodfileDeploymentTarget.js"
     ],
     experiments: {
       typedRoutes: true

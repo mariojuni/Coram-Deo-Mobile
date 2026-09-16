@@ -33,6 +33,7 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isAppleLoading, setIsAppleLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [isEnvModalOpen, setIsEnvModalOpen] = useState(false);
 
@@ -40,6 +41,7 @@ export default function LoginScreen() {
   const router = useRouter();
   const login = useAuthStore((state) => state.login);
   const loginWithGoogle = useAuthStore((state) => state.loginWithGoogle);
+  const loginWithApple = useAuthStore((state) => state.loginWithApple);
 
   const handleScreenTap = () => {
     // In production build, triple tap does nothing
@@ -102,6 +104,21 @@ export default function LoginScreen() {
       }
     } finally {
       setIsGoogleLoading(false);
+    }
+  };
+
+  const handleAppleLogin = async () => {
+    setErrorMsg('');
+    setIsAppleLoading(true);
+    try {
+      await loginWithApple();
+    } catch (error: any) {
+      const errorMessage = error?.message?.toLowerCase() || '';
+      if (!errorMessage.includes('no identity token')) {
+        setErrorMsg(error.message);
+      }
+    } finally {
+      setIsAppleLoading(false);
     }
   };
 
@@ -186,7 +203,7 @@ export default function LoginScreen() {
                 title="Sign In"
                 onPress={handleLogin}
                 loading={isEmailLoading}
-                disabled={isGoogleLoading}
+                disabled={isGoogleLoading || isAppleLoading}
                 style={{ marginTop: 8 }}
               />
 
@@ -197,13 +214,23 @@ export default function LoginScreen() {
               </View>
 
               <View style={styles.socialButtonsRow}>
-                <TouchableOpacity style={styles.socialIconBtn} onPress={handleGoogleLogin} disabled={isEmailLoading || isGoogleLoading} activeOpacity={0.8} accessibilityRole="button">
+                <TouchableOpacity style={styles.socialIconBtn} onPress={handleGoogleLogin} disabled={isEmailLoading || isGoogleLoading || isAppleLoading} activeOpacity={0.8} accessibilityRole="button">
                   {isGoogleLoading ? (
                     <ActivityIndicator size="small" color="#666" />
                   ) : (
                     <Image source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png' }} style={styles.socialIcon} contentFit="contain" />
                   )}
                 </TouchableOpacity>
+
+                {Platform.OS === 'ios' && (
+                  <TouchableOpacity style={[styles.socialIconBtn, { backgroundColor: '#000' }]} onPress={handleAppleLogin} disabled={isEmailLoading || isGoogleLoading || isAppleLoading} activeOpacity={0.8} accessibilityRole="button">
+                    {isAppleLoading ? (
+                      <ActivityIndicator size="small" color="#FFF" />
+                    ) : (
+                      <Image source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg' }} style={[styles.socialIcon, { tintColor: '#fff' }]} contentFit="contain" />
+                    )}
+                  </TouchableOpacity>
+                )}
               </View>
 
               <View style={styles.footer}>

@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { useRouter } from 'expo-router';
 import { BounceCard } from '@/components/ui/BounceCard';
-import { ChevronRight, LogOut, Shield, User, Activity, ChevronLeft, Lock } from 'lucide-react-native';
+import { ChevronRight, LogOut, Shield, User, Activity, ChevronLeft, Lock, UserMinus } from 'lucide-react-native';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -61,6 +61,41 @@ export default function AccountSettingsScreen() {
         },
       },
     ]);
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to permanently delete your account? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const deleteAccount = useAuthStore.getState().deleteAccount;
+              await deleteAccount();
+              router.replace('/(auth)/login');
+            } catch (error: any) {
+              console.error('Delete account failed:', error);
+              if (error?.code === 'auth/requires-recent-login') {
+                Alert.alert(
+                  'Re-authentication Required',
+                  'For your security, please sign out and sign in again before deleting your account.',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Sign Out', style: 'default', onPress: handleLogout }
+                  ]
+                );
+              } else {
+                Alert.alert('Error', error?.message || 'Failed to delete account.');
+              }
+            }
+          },
+        },
+      ]
+    );
   };
 
   const renderSectionHeader = (title: string) => (
@@ -142,6 +177,14 @@ export default function AccountSettingsScreen() {
               label="Sign Out"
               subtitle="Safely sign out of this device"
               onPress={handleLogout}
+              isDestructive
+            />
+            <View style={styles.divider} />
+            <ModernSettingRow
+              icon={<UserMinus size={18} color="#EF4444" />}
+              label="Delete Account"
+              subtitle="Permanently remove your account and data"
+              onPress={handleDeleteAccount}
               isDestructive
             />
           </View>

@@ -1,12 +1,15 @@
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
+import * as AppleAuthentication from "expo-apple-authentication";
 import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
+  OAuthProvider,
   onAuthStateChanged,
   sendPasswordResetEmail,
   signInWithCredential,
   signInWithEmailAndPassword,
   signOut,
+  deleteUser,
   type User,
 } from "firebase/auth";
 import {
@@ -834,6 +837,205 @@ export const authRepository = {
     }
 
     return authCredential;
+  },
+
+  async loginWithApple(): Promise<AuthCredentialResult> {
+    const credential = await AppleAuthentication.signInAsync({
+      requestedScopes: [
+        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+        AppleAuthentication.AppleAuthenticationScope.EMAIL,
+      ],
+    });
+
+    const { identityToken, fullName, email } = credential;
+
+    if (!identityToken) {
+      throw new Error("No identity token provided by Apple");
+    }
+
+    const provider = new OAuthProvider('apple.com');
+    const googleCredential = provider.credential({
+      idToken: identityToken,
+    });
+    
+    const currentAuth = getActiveAuth();
+    console.log("[Auth Repository] Calling signInWithCredential for Apple with app:", currentAuth.app.name);
+    
+    const authCredential = await signInWithCredential(currentAuth, googleCredential);
+    const user = authCredential.user;
+
+    // Use Apple's provided email if available, otherwise fallback to Firebase Auth user email
+    const userEmail = email || user.email || undefined;
+    const cleanEmail = userEmail ? userEmail.trim().toLowerCase() : undefined;
+    
+    const existingUserDoc = cleanEmail ? await findUserAccountByEmail(cleanEmail) : null;
+    const userDocRefByUid = doc(getActiveDb(), "users", user.uid);
+    const userDocByUid = await getDoc(userDocRefByUid);
+
+    if (existingUserDoc) {
+      const data = existingUserDoc.data();
+      
+      if (data.authUid && data.authUid !== user.uid) {
+        throw new Error("An account with this email already exists. Please sign in using your original login method, then link Apple Sign-In from Profile settings.");
+      }
+
+      const updates: any = {
+        lastLoginAt: new Date().toISOString(),
+      };
+      
+      if (!data.authUid) updates.authUid = user.uid;
+      if (!data.emailLowercase && cleanEmail) updates.emailLowercase = cleanEmail;
+      
+      const providers = data.providers || [];
+      if (!providers.includes("apple.com")) {
+        updates.providers = [...providers, "apple.com"];
+      }
+
+      if (!data.photoUrl && user.photoURL) updates.photoUrl = user.photoURL;
+      
+      // Apple only provides fullName on the very first sign-in
+      if (fullName) {
+        if (!data.firstName && fullName.givenName) updates.firstName = fullName.givenName;
+        if (!data.lastName && fullName.familyName) updates.lastName = fullName.familyName;
+      } else if (user.displayName) {
+        const nameParts = user.displayName.split(" ");
+        if (!data.firstName) updates.firstName = nameParts[0] || "";
+        if (!data.lastName) updates.lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
+      }
+
+      if (data.status === 'pending_church_link' || data.status === 'pendingChurchLink' || !data.churchId) {
+        const phoneNumber = user.phoneNumber || data.phoneNumber;
+        const matchedMember = await findMemberByEmailOrPhone(userEmail, phoneNumber);
+
+        if (matchedMember && (!matchedMember.accountId || matchedMember.accountId === user.uid)) {
+          updates.status = 'active';
+          updates.churchId = matchedMember.churchId ?? null;
+          updates.memberId = matchedMember.id ?? null;
+
+          const memberRef = doc(getActiveDb(), 'users', matchedMember.id);
+          await updateDoc(memberRef, {
+            accountId: user.uid,
+            authUid: user.uid,
+            updatedAt: serverTimestamp(),
+          });
+        }
+      }
+
+      try {
+        if (Object.keys(updates).length > 0) {
+          updates.updatedAt = serverTimestamp();
+          await updateDoc(existingUserDoc.ref, updates);
+        }
+      } catch (err) {
+        console.warn("[Auth Repository] Failed to update existing user doc on Apple sign-in:", err);
+      }
+    } else if (userDocByUid.exists()) {
+      try {
+        await updateDoc(userDocRefByUid, {
+          lastLoginAt: new Date().toISOString(),
+          updatedAt: serverTimestamp(),
+        });
+      } catch (err) {
+        console.warn("[Auth Repository] Failed to update user doc by UID on Apple sign-in:", err);
+      }
+    } else {
+      // New user from Apple
+      const phoneNumber = user.phoneNumber || undefined;
+      const matchedMember = await findMemberByEmailOrPhone(userEmail, phoneNumber);
+
+      let firstName = "";
+      let lastName = "";
+      
+      if (fullName) {
+        firstName = fullName.givenName || "";
+        lastName = fullName.familyName || "";
+      } else {
+        const nameParts = (user.displayName || "").split(" ");
+        firstName = nameParts[0] || "";
+        lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
+      }
+
+      const churchId = matchedMember?.churchId ?? null;
+      if (matchedMember) {
+        const memberRef = doc(getActiveDb(), "users", matchedMember.id);
+        const status = matchedMember.churchId ? "active" : "pending_church_link";
+
+        try {
+          await updateDoc(memberRef, {
+            authUid: user.uid,
+            accountId: user.uid,
+            status,
+            churchId,
+            memberId: matchedMember.id,
+            email: userEmail || matchedMember.email || "",
+            emailLowercase: cleanEmail || matchedMember.emailLowercase || "",
+            photoUrl: user.photoURL || matchedMember.photoUrl || "",
+            firstName: matchedMember.firstName || firstName,
+            lastName: matchedMember.lastName || lastName,
+            authProvider: "apple",
+            providers: Array.from(new Set([...(matchedMember.providers || []), "apple.com"])),
+            lastLoginAt: new Date().toISOString(),
+            updatedAt: serverTimestamp(),
+          });
+        } catch (err) {
+          console.warn("[Auth Repository] Failed to link existing member doc on Apple sign-in:", err);
+        }
+      } else {
+        const userAccount: Omit<UserAccount, "uid"> = {
+          authUid: user.uid,
+          accountId: user.uid,
+          memberId: user.uid,
+          firstName,
+          lastName,
+          email: userEmail || "",
+          emailLowercase: cleanEmail,
+          phoneNumber: phoneNumber || "",
+          photoUrl: user.photoURL || "",
+          username: userEmail ? userEmail.split("@")[0] : `user${Date.now()}`,
+          authProvider: "apple",
+          providers: ["apple.com"],
+          status: "pending_church_link",
+          churchId: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          lastLoginAt: new Date().toISOString(),
+          systemRoles: ["member"] as import("../domain/auth.types").SystemRole[],
+          primaryRole: "member" as import("../domain/auth.types").SystemRole,
+          role: "member",
+        };
+
+        try {
+          await setDoc(userDocRefByUid, userAccount);
+        } catch (err) {
+          console.warn("[Auth Repository] Failed to create new user doc on Apple sign-in:", err);
+        }
+      }
+    }
+
+    return authCredential;
+  },
+  
+  async deleteAccount(): Promise<void> {
+    const auth = getActiveAuth();
+    const currentUser = auth.currentUser;
+    if (!currentUser) throw new Error("No authenticated user.");
+
+    try {
+      const userRef = doc(getActiveDb(), "users", currentUser.uid);
+      await updateDoc(userRef, {
+        status: "deleted",
+        email: "deleted@user.com",
+        emailLowercase: "deleted@user.com",
+        firstName: "Deleted",
+        lastName: "User",
+        photoUrl: "",
+        phoneNumber: "",
+        updatedAt: serverTimestamp(),
+      });
+      await deleteUser(currentUser);
+    } catch (error) {
+      throw error;
+    }
   },
 
   logout(): Promise<void> {

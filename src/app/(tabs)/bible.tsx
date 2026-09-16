@@ -133,8 +133,8 @@ export default function BibleScreen() {
       const newPrefs = { ...(previous || DEFAULT_PREFERENCES), ...updates };
       
       // If scrollToVerse is explicitly set to undefined, remove it completely
-      if (updates.scrollToVerse === undefined && 'scrollToVerse' in newPrefs) {
-        delete newPrefs.scrollToVerse;
+      if ((updates as any).scrollToVerse === undefined && 'scrollToVerse' in newPrefs) {
+        delete (newPrefs as any).scrollToVerse;
       }
       
       saveUserPreferences(newPrefs);

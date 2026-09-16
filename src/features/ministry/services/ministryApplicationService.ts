@@ -127,12 +127,12 @@ export const ministryApplicationService = {
       const userSnapData = userSnap?.exists() ? userSnap.data() : null;
       const memberSnapData = memberSnap?.exists() ? memberSnap.data() : null;
       const resolvedName = [
-        userSnapData?.firstName || memberSnapData?.firstName || application.applicantFirstName,
-        userSnapData?.middleName || memberSnapData?.middleName || application.applicantMiddleName,
-        userSnapData?.lastName || memberSnapData?.lastName || application.applicantLastName,
+        userSnapData?.firstName || memberSnapData?.firstName || (application as any).applicantFirstName,
+        userSnapData?.middleName || memberSnapData?.middleName || (application as any).applicantMiddleName,
+        userSnapData?.lastName || memberSnapData?.lastName || (application as any).applicantLastName,
       ].filter(Boolean).join(' ').trim()
         || application.applicantName
-        || application.displayName
+        || (application as any).displayName
         || '';
 
       const ministryMemberData: Omit<MinistryMemberDoc, 'id'> = {

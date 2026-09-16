@@ -253,7 +253,7 @@ export default function AttendanceTab({ members, showStaffFeatures }: Attendance
 
   const displayedCheckins = allCheckins.filter(c => {
     const mem = members.find(m => m.id === c.memberId || m.aliasIds?.includes(c.memberId));
-    return (mem?.name || mem?.firstName || c.memberName || '').toLowerCase().includes(searchCheckedInQuery.toLowerCase());
+    return (mem?.name || mem?.firstName || (c as any).memberName || '').toLowerCase().includes(searchCheckedInQuery.toLowerCase());
   });
 
   if (!hasAccess) {
@@ -343,7 +343,7 @@ export default function AttendanceTab({ members, showStaffFeatures }: Attendance
       <View style={styles.listContainer}>
         {displayedCheckins.length > 0 ? (
           displayedCheckins.map(c => {
-            const memberInfo = members.find(m => m.id === c.memberId || m.aliasIds?.includes(c.memberId)) || { name: c.memberName };
+            const memberInfo = members.find(m => m.id === c.memberId || m.aliasIds?.includes(c.memberId)) || { name: (c as any).memberName };
             const isNew = memberInfo.status === 'new' || memberInfo.role === 'First-time Visitor';
             const memberName = formatMemberName(memberInfo);
             return (

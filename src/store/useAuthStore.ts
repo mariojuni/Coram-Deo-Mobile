@@ -10,6 +10,7 @@ import { useSermonStore } from './useSermonStore';
 import { useWorshipStore } from './useWorshipStore';
 import { useDiscipleshipGroupStore } from './useDiscipleshipGroupStore';
 import { useMinistryStore } from './useMinistryStore';
+import { useFeedStore } from './useFeedStore';
 
 interface AuthState {
   currentUser: User | null;
@@ -19,16 +20,15 @@ interface AuthState {
   signup: (payload: RegistrationPayload) => Promise<AuthCredentialResult>;
   login: (email: string, password: string) => Promise<AuthCredentialResult>;
   loginWithGoogle: () => Promise<AuthCredentialResult>;
+  loginWithApple: () => Promise<AuthCredentialResult>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   initializeAuthListener: () => void;
   updateUserProfile: (updates: Partial<UserAccount>) => void;
 }
 
-import { useFeedStore } from './useFeedStore';
-
 export const clearAllStoreListeners = () => {
-  useMemberStore.getState().initializeMembersListener(null);
   useMemberStore.getState().initializeServicesListener(null);
   useMemberStore.getState().initializeHouseholdsListener(null);
   useScheduleStore.getState().clearSchedulesListener();
@@ -98,6 +98,25 @@ export const useAuthStore = create<AuthState>((set) => ({
       throw error;
     }
   },
+  loginWithApple: async () => {
+    try {
+      const result = await authRepository.loginWithApple();
+      if (result.user) {
+        const updatedProfile = await fetchUserAccount(result.user);
+        if (updatedProfile) {
+          set({ userProfile: updatedProfile });
+        }
+      }
+      return result;
+    } catch (error: any) {
+      console.error("Apple Sign-In Error", error);
+      const errorStr = String(error);
+      if (errorStr.includes('ERR_REQUEST_CANCELED') || errorStr.includes('canceled')) {
+        throw new Error('Apple Sign-In was canceled.');
+      }
+      throw error;
+    }
+  },
   logout: async () => {
     try {
       const currentUser = useAuthStore.getState().currentUser;
@@ -121,6 +140,17 @@ export const useAuthStore = create<AuthState>((set) => ({
       console.warn('Failed to clear sensitive cache on logout', e);
     }
     return authRepository.logout();
+  },
+  deleteAccount: async () => {
+    try {
+      await authRepository.deleteAccount();
+      clearAllStoreListeners();
+      await clearSensitiveCache();
+      await import('@react-native-async-storage/async-storage').then(m => m.default.removeItem('bible_prefs'));
+      set({ currentUser: null, userProfile: null });
+    } catch (error) {
+      throw error;
+    }
   },
   initializeAuthListener: () => {
     authRepository.subscribeToAuthState(
