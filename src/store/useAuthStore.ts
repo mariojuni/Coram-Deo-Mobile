@@ -79,6 +79,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const result = await authRepository.loginWithGoogle();
       if (result.user) {
+        // Set currentUser immediately so the routing effect in _layout.tsx
+        // triggers navigation to home without waiting for onAuthStateChanged.
+        set({ currentUser: result.user });
         const updatedProfile = await fetchUserAccount(result.user);
         if (updatedProfile) {
           set({ userProfile: updatedProfile });
@@ -102,6 +105,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const result = await authRepository.loginWithApple();
       if (result.user) {
+        // Set currentUser immediately so the routing effect in _layout.tsx
+        // triggers navigation to home without waiting for onAuthStateChanged.
+        set({ currentUser: result.user });
         const updatedProfile = await fetchUserAccount(result.user);
         if (updatedProfile) {
           set({ userProfile: updatedProfile });
