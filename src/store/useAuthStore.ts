@@ -82,10 +82,15 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (result.user) {
         set({ currentUser: result.user });
 
+        const googleGivenName = (result as any)._googleGivenName ?? null;
+        const googleFamilyName = (result as any)._googleFamilyName ?? null;
+
         authRepository.enrichGoogleUserInBackground(
           result.user,
           result.user.email || undefined,
           result.user.phoneNumber || undefined,
+          googleGivenName,
+          googleFamilyName
         ).then(() => {
           return fetchUserAccount(result.user);
         }).then((updatedProfile) => {

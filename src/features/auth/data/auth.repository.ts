@@ -689,9 +689,13 @@ export const authRepository = {
     const currentAuth = getActiveAuth();
     console.log("[Auth Repository] Calling signInWithCredential with app:", currentAuth.app.name, "projectId:", currentAuth.app.options.projectId, "senderId:", currentAuth.app.options.messagingSenderId);
 
+    const authCredential = await signInWithCredential(currentAuth, googleCredential);
+    (authCredential as any)._googleGivenName = response.data?.user?.givenName ?? null;
+    (authCredential as any)._googleFamilyName = response.data?.user?.familyName ?? null;
+
     // Return immediately after Firebase auth succeeds.
     // All Firestore enrichment runs fire-and-forget via enrichGoogleUserInBackground (called from the store).
-    return signInWithCredential(currentAuth, googleCredential);
+    return authCredential;
   },
 
 
@@ -703,12 +707,18 @@ export const authRepository = {
     user: User,
     email: string | undefined,
     phoneNumber: string | undefined,
+    googleGivenName?: string | null,
+    googleFamilyName?: string | null,
   ): Promise<void> {
     try {
       const cleanEmail = email ? email.trim().toLowerCase() : undefined;
       const existingUserDoc = cleanEmail ? await findUserAccountByEmail(cleanEmail) : null;
       const userDocRefByUid = doc(getActiveDb(), "users", user.uid);
       const userDocByUid = await getDoc(userDocRefByUid);
+
+      const nameParts = (user.displayName || "").split(" ");
+      const fallbackFirstName = googleGivenName || nameParts[0] || "";
+      const fallbackLastName = googleFamilyName || (nameParts.length > 1 ? nameParts.slice(1).join(" ") : "");
 
       if (existingUserDoc) {
         const data = existingUserDoc.data();
@@ -725,11 +735,8 @@ export const authRepository = {
         const providers = data.providers || [];
         if (!providers.includes("google.com")) updates.providers = [...providers, "google.com"];
         if (!data.photoUrl && user.photoURL) updates.photoUrl = user.photoURL;
-        if (user.displayName) {
-          const nameParts = user.displayName.split(" ");
-          if (!data.firstName) updates.firstName = nameParts[0] || "";
-          if (!data.lastName) updates.lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
-        }
+        if (!data.firstName && fallbackFirstName) updates.firstName = fallbackFirstName;
+        if (!data.lastName && fallbackLastName) updates.lastName = fallbackLastName;
 
         if (data.status === 'pending_church_link' || data.status === 'pendingChurchLink' || !data.churchId) {
           const matchedMember = await findMemberByEmailOrPhone(email, phoneNumber);
@@ -750,15 +757,20 @@ export const authRepository = {
           await updateDoc(existingUserDoc.ref, updates);
         }
       } else if (userDocByUid.exists()) {
-        await updateDoc(userDocRefByUid, {
+        const data = userDocByUid.data();
+        const updates: any = {
           lastLoginAt: new Date().toISOString(),
           updatedAt: serverTimestamp(),
-        });
+        };
+        if (!data.firstName && fallbackFirstName) updates.firstName = fallbackFirstName;
+        if (!data.lastName && fallbackLastName) updates.lastName = fallbackLastName;
+        if (!data.email && email) updates.email = email;
+        if (!data.emailLowercase && cleanEmail) updates.emailLowercase = cleanEmail;
+        if (!data.photoUrl && user.photoURL) updates.photoUrl = user.photoURL;
+        
+        await updateDoc(userDocRefByUid, updates);
       } else {
         const matchedMember = await findMemberByEmailOrPhone(email, phoneNumber);
-        const nameParts = (user.displayName || "").split(" ");
-        const firstName = nameParts[0] || "";
-        const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
         const churchId = matchedMember?.churchId ?? null;
 
         if (matchedMember) {
@@ -774,8 +786,8 @@ export const authRepository = {
               email: email || matchedMember.email || "",
               emailLowercase: cleanEmail || matchedMember.emailLowercase || "",
               photoUrl: user.photoURL || matchedMember.photoUrl || "",
-              firstName: matchedMember.firstName || firstName,
-              lastName: matchedMember.lastName || lastName,
+              firstName: matchedMember.firstName || fallbackFirstName,
+              lastName: matchedMember.lastName || fallbackLastName,
               authProvider: "google",
               providers: Array.from(new Set([...(matchedMember.providers || []), "google.com"])),
               lastLoginAt: new Date().toISOString(),
@@ -789,8 +801,8 @@ export const authRepository = {
             authUid: user.uid,
             accountId: user.uid,
             memberId: user.uid,
-            firstName,
-            lastName,
+            firstName: fallbackFirstName,
+            lastName: fallbackLastName,
             email: email || "",
             emailLowercase: cleanEmail,
             phoneNumber: phoneNumber || "",
@@ -881,15 +893,12 @@ export const authRepository = {
         if (!providers.includes("apple.com")) updates.providers = [...providers, "apple.com"];
         if (!data.photoUrl && user.photoURL) updates.photoUrl = user.photoURL;
 
-        // Apple only provides fullName on the very first sign-in
-        if (fullName) {
-          if (!data.firstName && fullName.givenName) updates.firstName = fullName.givenName;
-          if (!data.lastName && fullName.familyName) updates.lastName = fullName.familyName;
-        } else if (user.displayName) {
-          const nameParts = user.displayName.split(" ");
-          if (!data.firstName) updates.firstName = nameParts[0] || "";
-          if (!data.lastName) updates.lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
-        }
+        const fallbackNameParts = user.displayName ? user.displayName.split(" ") : [];
+        const fallbackFirstName = fullName?.givenName || fallbackNameParts[0] || "";
+        const fallbackLastName = fullName?.familyName || (fallbackNameParts.length > 1 ? fallbackNameParts.slice(1).join(" ") : "");
+
+        if (!data.firstName && fallbackFirstName) updates.firstName = fallbackFirstName;
+        if (!data.lastName && fallbackLastName) updates.lastName = fallbackLastName;
 
         if (data.status === 'pending_church_link' || data.status === 'pendingChurchLink' || !data.churchId) {
           const phoneNumber = user.phoneNumber || data.phoneNumber;
@@ -911,10 +920,22 @@ export const authRepository = {
           await updateDoc(existingUserDoc.ref, updates);
         }
       } else if (userDocByUid.exists()) {
-        await updateDoc(userDocRefByUid, {
+        const data = userDocByUid.data();
+        const fallbackNameParts = user.displayName ? user.displayName.split(" ") : [];
+        const fallbackFirstName = fullName?.givenName || fallbackNameParts[0] || "";
+        const fallbackLastName = fullName?.familyName || (fallbackNameParts.length > 1 ? fallbackNameParts.slice(1).join(" ") : "");
+
+        const updates: any = {
           lastLoginAt: new Date().toISOString(),
           updatedAt: serverTimestamp(),
-        });
+        };
+        if (!data.firstName && fallbackFirstName) updates.firstName = fallbackFirstName;
+        if (!data.lastName && fallbackLastName) updates.lastName = fallbackLastName;
+        if (!data.email && userEmail) updates.email = userEmail;
+        if (!data.emailLowercase && cleanEmail) updates.emailLowercase = cleanEmail;
+        if (!data.photoUrl && user.photoURL) updates.photoUrl = user.photoURL;
+
+        await updateDoc(userDocRefByUid, updates);
       } else {
         const phoneNumber = user.phoneNumber || undefined;
         const matchedMember = await findMemberByEmailOrPhone(userEmail, phoneNumber);
