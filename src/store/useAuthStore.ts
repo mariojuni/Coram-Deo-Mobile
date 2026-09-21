@@ -77,29 +77,30 @@ export const useAuthStore = create<AuthState>((set) => ({
   sendPasswordReset: (email) => authRepository.sendPasswordReset(email),
   loginWithGoogle: async () => {
     try {
+      authRepository.setOAuthProcessing(true);
       const result = await authRepository.loginWithGoogle();
       if (result.user) {
-        // Set currentUser immediately so routing triggers navigation without
-        // waiting for onAuthStateChanged — this is what makes sign-in feel instant.
         set({ currentUser: result.user });
 
-        // Fire-and-forget: all Firestore reads/writes run in the background.
-        // The onAuthStateChanged listener will update userProfile when ready.
         authRepository.enrichGoogleUserInBackground(
           result.user,
           result.user.email || undefined,
           result.user.phoneNumber || undefined,
         ).then(() => {
-          // Refresh profile after enrichment so the store reflects the latest data.
           return fetchUserAccount(result.user);
         }).then((updatedProfile) => {
           if (updatedProfile) set({ userProfile: updatedProfile });
         }).catch((err) => {
           console.warn('[Auth Store] Background Google enrichment error:', err);
+        }).finally(() => {
+          authRepository.setOAuthProcessing(false);
         });
+      } else {
+        authRepository.setOAuthProcessing(false);
       }
       return result;
     } catch (error: any) {
+      authRepository.setOAuthProcessing(false);
       console.error("Google Sign-In Error", error);
       const errorStr = String(error);
       if (errorStr.includes('NETWORK_ERROR') || errorStr.includes('network-request-failed')) {
@@ -114,17 +115,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   loginWithApple: async () => {
     try {
+      authRepository.setOAuthProcessing(true);
       const result = await authRepository.loginWithApple();
       if (result.user) {
-        // Set currentUser immediately so routing triggers navigation without
-        // waiting for onAuthStateChanged — this is what makes sign-in feel instant.
         set({ currentUser: result.user });
 
-        // Retrieve the fullName/email stashed by loginWithApple onto the result object.
         const appleFullName = (result as any)._appleFullName ?? null;
         const appleEmail = (result as any)._appleEmail ?? result.user.email ?? undefined;
 
-        // Fire-and-forget: all Firestore reads/writes run in the background.
         authRepository.enrichAppleUserInBackground(
           result.user,
           appleEmail,
@@ -135,10 +133,15 @@ export const useAuthStore = create<AuthState>((set) => ({
           if (updatedProfile) set({ userProfile: updatedProfile });
         }).catch((err) => {
           console.warn('[Auth Store] Background Apple enrichment error:', err);
+        }).finally(() => {
+          authRepository.setOAuthProcessing(false);
         });
+      } else {
+        authRepository.setOAuthProcessing(false);
       }
       return result;
     } catch (error: any) {
+      authRepository.setOAuthProcessing(false);
       console.error("Apple Sign-In Error", error);
       const errorStr = String(error);
       if (errorStr.includes('ERR_REQUEST_CANCELED') || errorStr.includes('canceled')) {

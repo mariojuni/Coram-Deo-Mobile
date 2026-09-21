@@ -416,10 +416,16 @@ function buildMemberUpdates(
 }
 
 let isRegistering = false;
+let isOAuthProcessing = false;
+
+export function setOAuthProcessing(value: boolean) {
+  isOAuthProcessing = value;
+}
 
 export const authRepository = {
   checkUsernameTaken,
   checkEmailTaken,
+  setOAuthProcessing,
 
   async sendPasswordReset(email: string): Promise<void> {
     const cleanEmail = email.trim().toLowerCase();
@@ -1071,6 +1077,11 @@ export const authRepository = {
         }
 
         if (!profile) {
+          if (isOAuthProcessing) {
+            console.warn('[Auth] User profile not found, but OAuth is processing. Skipping auto-signout.');
+            onData({ user, profile: null });
+            return;
+          }
           // Profile is genuinely absent from the database (not a network error).
           // This is a real "user not found" case — sign them out.
           console.warn('[Auth] User profile not found in current environment database. Signing out...');
