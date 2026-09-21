@@ -680,163 +680,137 @@ export const authRepository = {
     }
 
     const googleCredential = GoogleAuthProvider.credential(idToken);
-    
     const currentAuth = getActiveAuth();
     console.log("[Auth Repository] Calling signInWithCredential with app:", currentAuth.app.name, "projectId:", currentAuth.app.options.projectId, "senderId:", currentAuth.app.options.messagingSenderId);
-    
-    const authCredential = await signInWithCredential(currentAuth, googleCredential);
-    const user = authCredential.user;
 
-    const email = user.email || undefined;
-    const cleanEmail = email ? email.trim().toLowerCase() : undefined;
-    
-    // Check if user account already exists by email
-    const existingUserDoc = cleanEmail ? await findUserAccountByEmail(cleanEmail) : null;
-    const userDocRefByUid = doc(getActiveDb(), "users", user.uid);
-    const userDocByUid = await getDoc(userDocRefByUid);
+    // Return immediately after Firebase auth succeeds.
+    // All Firestore enrichment runs fire-and-forget via enrichGoogleUserInBackground (called from the store).
+    return signInWithCredential(currentAuth, googleCredential);
+  },
 
-    if (existingUserDoc) {
-      const data = existingUserDoc.data();
-      
-      if (data.authUid && data.authUid !== user.uid) {
-        // Different authUid exists for this email
-        throw new Error("An account with this email already exists. Please sign in using your original login method, then link Google Sign-In from Profile settings.");
-      }
 
-      // Link to existing userAccount or just update login stats
-      const updates: any = {
-        lastLoginAt: new Date().toISOString(),
-      };
-      
-      if (!data.authUid) updates.authUid = user.uid;
-      if (!data.emailLowercase && cleanEmail) updates.emailLowercase = cleanEmail;
-      
-      const providers = data.providers || [];
-      if (!providers.includes("google.com")) {
-        updates.providers = [...providers, "google.com"];
-      }
+  /**
+   * Exported so the store can run it fire-and-forget after navigation.
+   * All Firestore reads/writes for Google sign-in happen here.
+   */
+  async enrichGoogleUserInBackground(
+    user: User,
+    email: string | undefined,
+    phoneNumber: string | undefined,
+  ): Promise<void> {
+    try {
+      const cleanEmail = email ? email.trim().toLowerCase() : undefined;
+      const existingUserDoc = cleanEmail ? await findUserAccountByEmail(cleanEmail) : null;
+      const userDocRefByUid = doc(getActiveDb(), "users", user.uid);
+      const userDocByUid = await getDoc(userDocRefByUid);
 
-      if (!data.photoUrl && user.photoURL) updates.photoUrl = user.photoURL;
-      if (user.displayName) {
-        const nameParts = user.displayName.split(" ");
-        if (!data.firstName) updates.firstName = nameParts[0] || "";
-        if (!data.lastName)
-          updates.lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
-      }
+      if (existingUserDoc) {
+        const data = existingUserDoc.data();
 
-      // Retry linking if the user is still pending
-      if (data.status === 'pending_church_link' || data.status === 'pendingChurchLink' || !data.churchId) {
-        const phoneNumber = user.phoneNumber || data.phoneNumber;
-        const matchedMember = await findMemberByEmailOrPhone(email, phoneNumber);
-
-        if (matchedMember && (!matchedMember.accountId || matchedMember.accountId === user.uid)) {
-          updates.status = 'active';
-          updates.churchId = matchedMember.churchId ?? null;
-          updates.memberId = matchedMember.id ?? null;
-
-          const memberRef = doc(getActiveDb(), 'users', matchedMember.id);
-          await updateDoc(memberRef, {
-            accountId: user.uid,
-            authUid: user.uid,
-            updatedAt: serverTimestamp(),
-          });
+        if (data.authUid && data.authUid !== user.uid) {
+          // Conflict — nothing we can do silently; will surface on next sign-in
+          console.warn("[Auth] enrichGoogleUserInBackground: conflicting authUid for", cleanEmail);
+          return;
         }
-      }
 
-      try {
+        const updates: any = { lastLoginAt: new Date().toISOString() };
+        if (!data.authUid) updates.authUid = user.uid;
+        if (!data.emailLowercase && cleanEmail) updates.emailLowercase = cleanEmail;
+        const providers = data.providers || [];
+        if (!providers.includes("google.com")) updates.providers = [...providers, "google.com"];
+        if (!data.photoUrl && user.photoURL) updates.photoUrl = user.photoURL;
+        if (user.displayName) {
+          const nameParts = user.displayName.split(" ");
+          if (!data.firstName) updates.firstName = nameParts[0] || "";
+          if (!data.lastName) updates.lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
+        }
+
+        if (data.status === 'pending_church_link' || data.status === 'pendingChurchLink' || !data.churchId) {
+          const matchedMember = await findMemberByEmailOrPhone(email, phoneNumber);
+          if (matchedMember && (!matchedMember.accountId || matchedMember.accountId === user.uid)) {
+            updates.status = 'active';
+            updates.churchId = matchedMember.churchId ?? null;
+            updates.memberId = matchedMember.id ?? null;
+            await updateDoc(doc(getActiveDb(), 'users', matchedMember.id), {
+              accountId: user.uid,
+              authUid: user.uid,
+              updatedAt: serverTimestamp(),
+            });
+          }
+        }
+
         if (Object.keys(updates).length > 0) {
           updates.updatedAt = serverTimestamp();
           await updateDoc(existingUserDoc.ref, updates);
         }
-      } catch (err) {
-        console.warn("[Auth Repository] Failed to update existing user doc on Google sign-in:", err);
-      }
-    } else if (userDocByUid.exists()) {
-      // UID exists but email is different (should be rare)
-      try {
+      } else if (userDocByUid.exists()) {
         await updateDoc(userDocRefByUid, {
           lastLoginAt: new Date().toISOString(),
           updatedAt: serverTimestamp(),
         });
-      } catch (err) {
-        console.warn("[Auth Repository] Failed to update user doc by UID on Google sign-in:", err);
-      }
-    } else {
-      // New user from Google
-      const phoneNumber = user.phoneNumber || undefined;
-      const matchedMember = await findMemberByEmailOrPhone(email, phoneNumber);
-
-      const nameParts = (user.displayName || "").split(" ");
-      const firstName = nameParts[0] || "";
-      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
-      const churchId = matchedMember?.churchId ?? null;
-      if (matchedMember) {
-        // Link and update the existing member document directly (single document, no duplicates)
-        const memberRef = doc(getActiveDb(), "users", matchedMember.id);
+      } else {
+        const matchedMember = await findMemberByEmailOrPhone(email, phoneNumber);
         const nameParts = (user.displayName || "").split(" ");
         const firstName = nameParts[0] || "";
         const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
-        const churchId = matchedMember.churchId ?? null;
-        const status = matchedMember.churchId ? "active" : "pending_church_link";
+        const churchId = matchedMember?.churchId ?? null;
 
-        try {
-          await updateDoc(memberRef, {
+        if (matchedMember) {
+          const memberRef = doc(getActiveDb(), "users", matchedMember.id);
+          const status = matchedMember.churchId ? "active" : "pending_church_link";
+          try {
+            await updateDoc(memberRef, {
+              authUid: user.uid,
+              accountId: user.uid,
+              status,
+              churchId,
+              memberId: matchedMember.id,
+              email: email || matchedMember.email || "",
+              emailLowercase: cleanEmail || matchedMember.emailLowercase || "",
+              photoUrl: user.photoURL || matchedMember.photoUrl || "",
+              firstName: matchedMember.firstName || firstName,
+              lastName: matchedMember.lastName || lastName,
+              authProvider: "google",
+              providers: Array.from(new Set([...(matchedMember.providers || []), "google.com"])),
+              lastLoginAt: new Date().toISOString(),
+              updatedAt: serverTimestamp(),
+            });
+          } catch (err) {
+            console.warn("[Auth] enrichGoogleUserInBackground: failed to link member doc", err);
+          }
+        } else {
+          const userAccount: Omit<UserAccount, "uid"> = {
             authUid: user.uid,
             accountId: user.uid,
-            status,
-            churchId,
-            memberId: matchedMember.id,
-            email: email || matchedMember.email || "",
-            emailLowercase: cleanEmail || matchedMember.emailLowercase || "",
-            photoUrl: user.photoURL || matchedMember.photoUrl || "",
-            firstName: matchedMember.firstName || firstName,
-            lastName: matchedMember.lastName || lastName,
+            memberId: user.uid,
+            firstName,
+            lastName,
+            email: email || "",
+            emailLowercase: cleanEmail,
+            phoneNumber: phoneNumber || "",
+            photoUrl: user.photoURL || "",
+            username: email ? email.split("@")[0] : `user${Date.now()}`,
             authProvider: "google",
-            providers: Array.from(new Set([...(matchedMember.providers || []), "google.com"])),
+            providers: ["google.com"],
+            status: "pending_church_link",
+            churchId: null,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
             lastLoginAt: new Date().toISOString(),
-            updatedAt: serverTimestamp(),
-          });
-        } catch (err) {
-          console.warn("[Auth Repository] Failed to link existing member doc on Google sign-in:", err);
-        }
-      } else {
-        // Create new user document at user.uid only if no existing member was matched
-        const nameParts = (user.displayName || "").split(" ");
-        const firstName = nameParts[0] || "";
-        const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
-
-        const userAccount: Omit<UserAccount, "uid"> = {
-          authUid: user.uid,
-          accountId: user.uid,
-          memberId: user.uid,
-          firstName,
-          lastName,
-          email: email || "",
-          emailLowercase: cleanEmail,
-          phoneNumber: phoneNumber || "",
-          photoUrl: user.photoURL || "",
-          username: email ? email.split("@")[0] : `user${Date.now()}`,
-          authProvider: "google",
-          providers: ["google.com"],
-          status: "pending_church_link",
-          churchId: null,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          lastLoginAt: new Date().toISOString(),
-          systemRoles: ["member"] as import("../domain/auth.types").SystemRole[],
-          primaryRole: "member" as import("../domain/auth.types").SystemRole,
-          role: "member", // legacy compat
-        };
-
-        try {
-          await setDoc(userDocRefByUid, userAccount);
-        } catch (err) {
-          console.warn("[Auth Repository] Failed to create new user doc on Google sign-in:", err);
+            systemRoles: ["member"] as import("../domain/auth.types").SystemRole[],
+            primaryRole: "member" as import("../domain/auth.types").SystemRole,
+            role: "member",
+          };
+          try {
+            await setDoc(userDocRefByUid, userAccount);
+          } catch (err) {
+            console.warn("[Auth] enrichGoogleUserInBackground: failed to create user doc", err);
+          }
         }
       }
+    } catch (err) {
+      console.warn("[Auth] enrichGoogleUserInBackground: unhandled error", err);
     }
-
-    return authCredential;
   },
 
   async loginWithApple(): Promise<AuthCredentialResult> {
@@ -854,167 +828,161 @@ export const authRepository = {
     }
 
     const provider = new OAuthProvider('apple.com');
-    const googleCredential = provider.credential({
-      idToken: identityToken,
-    });
-    
+    const appleCredential = provider.credential({ idToken: identityToken });
     const currentAuth = getActiveAuth();
     console.log("[Auth Repository] Calling signInWithCredential for Apple with app:", currentAuth.app.name);
-    
-    const authCredential = await signInWithCredential(currentAuth, googleCredential);
-    const user = authCredential.user;
 
-    // Use Apple's provided email if available, otherwise fallback to Firebase Auth user email
-    const userEmail = email || user.email || undefined;
-    const cleanEmail = userEmail ? userEmail.trim().toLowerCase() : undefined;
-    
-    const existingUserDoc = cleanEmail ? await findUserAccountByEmail(cleanEmail) : null;
-    const userDocRefByUid = doc(getActiveDb(), "users", user.uid);
-    const userDocByUid = await getDoc(userDocRefByUid);
+    const authCredential = await signInWithCredential(currentAuth, appleCredential);
 
-    if (existingUserDoc) {
-      const data = existingUserDoc.data();
-      
-      if (data.authUid && data.authUid !== user.uid) {
-        throw new Error("An account with this email already exists. Please sign in using your original login method, then link Apple Sign-In from Profile settings.");
-      }
+    // Stash fullName and email on the credential result so the store can forward them
+    // to enrichAppleUserInBackground without re-parsing.
+    (authCredential as any)._appleFullName = fullName;
+    (authCredential as any)._appleEmail = email;
 
-      const updates: any = {
-        lastLoginAt: new Date().toISOString(),
-      };
-      
-      if (!data.authUid) updates.authUid = user.uid;
-      if (!data.emailLowercase && cleanEmail) updates.emailLowercase = cleanEmail;
-      
-      const providers = data.providers || [];
-      if (!providers.includes("apple.com")) {
-        updates.providers = [...providers, "apple.com"];
-      }
+    // Return immediately — navigation happens now. Firestore enrichment runs in
+    // the background via enrichAppleUserInBackground (called from the store).
+    return authCredential;
+  },
 
-      if (!data.photoUrl && user.photoURL) updates.photoUrl = user.photoURL;
-      
-      // Apple only provides fullName on the very first sign-in
-      if (fullName) {
-        if (!data.firstName && fullName.givenName) updates.firstName = fullName.givenName;
-        if (!data.lastName && fullName.familyName) updates.lastName = fullName.familyName;
-      } else if (user.displayName) {
-        const nameParts = user.displayName.split(" ");
-        if (!data.firstName) updates.firstName = nameParts[0] || "";
-        if (!data.lastName) updates.lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
-      }
 
-      if (data.status === 'pending_church_link' || data.status === 'pendingChurchLink' || !data.churchId) {
-        const phoneNumber = user.phoneNumber || data.phoneNumber;
-        const matchedMember = await findMemberByEmailOrPhone(userEmail, phoneNumber);
+  /**
+   * Exported so the store can run it fire-and-forget after navigation.
+   * All Firestore reads/writes for Apple sign-in happen here.
+   */
+  async enrichAppleUserInBackground(
+    user: User,
+    userEmail: string | undefined,
+    fullName: import('expo-apple-authentication').AppleAuthenticationFullName | null,
+  ): Promise<void> {
+    try {
+      const cleanEmail = userEmail ? userEmail.trim().toLowerCase() : undefined;
+      const existingUserDoc = cleanEmail ? await findUserAccountByEmail(cleanEmail) : null;
+      const userDocRefByUid = doc(getActiveDb(), "users", user.uid);
+      const userDocByUid = await getDoc(userDocRefByUid);
 
-        if (matchedMember && (!matchedMember.accountId || matchedMember.accountId === user.uid)) {
-          updates.status = 'active';
-          updates.churchId = matchedMember.churchId ?? null;
-          updates.memberId = matchedMember.id ?? null;
+      if (existingUserDoc) {
+        const data = existingUserDoc.data();
 
-          const memberRef = doc(getActiveDb(), 'users', matchedMember.id);
-          await updateDoc(memberRef, {
-            accountId: user.uid,
-            authUid: user.uid,
-            updatedAt: serverTimestamp(),
-          });
+        if (data.authUid && data.authUid !== user.uid) {
+          console.warn("[Auth] enrichAppleUserInBackground: conflicting authUid for", cleanEmail);
+          return;
         }
-      }
 
-      try {
+        const updates: any = { lastLoginAt: new Date().toISOString() };
+        if (!data.authUid) updates.authUid = user.uid;
+        if (!data.emailLowercase && cleanEmail) updates.emailLowercase = cleanEmail;
+        const providers = data.providers || [];
+        if (!providers.includes("apple.com")) updates.providers = [...providers, "apple.com"];
+        if (!data.photoUrl && user.photoURL) updates.photoUrl = user.photoURL;
+
+        // Apple only provides fullName on the very first sign-in
+        if (fullName) {
+          if (!data.firstName && fullName.givenName) updates.firstName = fullName.givenName;
+          if (!data.lastName && fullName.familyName) updates.lastName = fullName.familyName;
+        } else if (user.displayName) {
+          const nameParts = user.displayName.split(" ");
+          if (!data.firstName) updates.firstName = nameParts[0] || "";
+          if (!data.lastName) updates.lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
+        }
+
+        if (data.status === 'pending_church_link' || data.status === 'pendingChurchLink' || !data.churchId) {
+          const phoneNumber = user.phoneNumber || data.phoneNumber;
+          const matchedMember = await findMemberByEmailOrPhone(userEmail, phoneNumber);
+          if (matchedMember && (!matchedMember.accountId || matchedMember.accountId === user.uid)) {
+            updates.status = 'active';
+            updates.churchId = matchedMember.churchId ?? null;
+            updates.memberId = matchedMember.id ?? null;
+            await updateDoc(doc(getActiveDb(), 'users', matchedMember.id), {
+              accountId: user.uid,
+              authUid: user.uid,
+              updatedAt: serverTimestamp(),
+            });
+          }
+        }
+
         if (Object.keys(updates).length > 0) {
           updates.updatedAt = serverTimestamp();
           await updateDoc(existingUserDoc.ref, updates);
         }
-      } catch (err) {
-        console.warn("[Auth Repository] Failed to update existing user doc on Apple sign-in:", err);
-      }
-    } else if (userDocByUid.exists()) {
-      try {
+      } else if (userDocByUid.exists()) {
         await updateDoc(userDocRefByUid, {
           lastLoginAt: new Date().toISOString(),
           updatedAt: serverTimestamp(),
         });
-      } catch (err) {
-        console.warn("[Auth Repository] Failed to update user doc by UID on Apple sign-in:", err);
-      }
-    } else {
-      // New user from Apple
-      const phoneNumber = user.phoneNumber || undefined;
-      const matchedMember = await findMemberByEmailOrPhone(userEmail, phoneNumber);
-
-      let firstName = "";
-      let lastName = "";
-      
-      if (fullName) {
-        firstName = fullName.givenName || "";
-        lastName = fullName.familyName || "";
       } else {
-        const nameParts = (user.displayName || "").split(" ");
-        firstName = nameParts[0] || "";
-        lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
-      }
+        const phoneNumber = user.phoneNumber || undefined;
+        const matchedMember = await findMemberByEmailOrPhone(userEmail, phoneNumber);
 
-      const churchId = matchedMember?.churchId ?? null;
-      if (matchedMember) {
-        const memberRef = doc(getActiveDb(), "users", matchedMember.id);
-        const status = matchedMember.churchId ? "active" : "pending_church_link";
+        let firstName = "";
+        let lastName = "";
+        if (fullName) {
+          firstName = fullName.givenName || "";
+          lastName = fullName.familyName || "";
+        } else {
+          const nameParts = (user.displayName || "").split(" ");
+          firstName = nameParts[0] || "";
+          lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
+        }
 
-        try {
-          await updateDoc(memberRef, {
+        const churchId = matchedMember?.churchId ?? null;
+        if (matchedMember) {
+          const memberRef = doc(getActiveDb(), "users", matchedMember.id);
+          const status = matchedMember.churchId ? "active" : "pending_church_link";
+          try {
+            await updateDoc(memberRef, {
+              authUid: user.uid,
+              accountId: user.uid,
+              status,
+              churchId,
+              memberId: matchedMember.id,
+              email: userEmail || matchedMember.email || "",
+              emailLowercase: cleanEmail || matchedMember.emailLowercase || "",
+              photoUrl: user.photoURL || matchedMember.photoUrl || "",
+              firstName: matchedMember.firstName || firstName,
+              lastName: matchedMember.lastName || lastName,
+              authProvider: "apple",
+              providers: Array.from(new Set([...(matchedMember.providers || []), "apple.com"])),
+              lastLoginAt: new Date().toISOString(),
+              updatedAt: serverTimestamp(),
+            });
+          } catch (err) {
+            console.warn("[Auth] enrichAppleUserInBackground: failed to link member doc", err);
+          }
+        } else {
+          const userAccount: Omit<UserAccount, "uid"> = {
             authUid: user.uid,
             accountId: user.uid,
-            status,
-            churchId,
-            memberId: matchedMember.id,
-            email: userEmail || matchedMember.email || "",
-            emailLowercase: cleanEmail || matchedMember.emailLowercase || "",
-            photoUrl: user.photoURL || matchedMember.photoUrl || "",
-            firstName: matchedMember.firstName || firstName,
-            lastName: matchedMember.lastName || lastName,
+            memberId: user.uid,
+            firstName,
+            lastName,
+            email: userEmail || "",
+            emailLowercase: cleanEmail,
+            phoneNumber: phoneNumber || "",
+            photoUrl: user.photoURL || "",
+            username: userEmail ? userEmail.split("@")[0] : `user${Date.now()}`,
             authProvider: "apple",
-            providers: Array.from(new Set([...(matchedMember.providers || []), "apple.com"])),
+            providers: ["apple.com"],
+            status: "pending_church_link",
+            churchId: null,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
             lastLoginAt: new Date().toISOString(),
-            updatedAt: serverTimestamp(),
-          });
-        } catch (err) {
-          console.warn("[Auth Repository] Failed to link existing member doc on Apple sign-in:", err);
-        }
-      } else {
-        const userAccount: Omit<UserAccount, "uid"> = {
-          authUid: user.uid,
-          accountId: user.uid,
-          memberId: user.uid,
-          firstName,
-          lastName,
-          email: userEmail || "",
-          emailLowercase: cleanEmail,
-          phoneNumber: phoneNumber || "",
-          photoUrl: user.photoURL || "",
-          username: userEmail ? userEmail.split("@")[0] : `user${Date.now()}`,
-          authProvider: "apple",
-          providers: ["apple.com"],
-          status: "pending_church_link",
-          churchId: null,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          lastLoginAt: new Date().toISOString(),
-          systemRoles: ["member"] as import("../domain/auth.types").SystemRole[],
-          primaryRole: "member" as import("../domain/auth.types").SystemRole,
-          role: "member",
-        };
-
-        try {
-          await setDoc(userDocRefByUid, userAccount);
-        } catch (err) {
-          console.warn("[Auth Repository] Failed to create new user doc on Apple sign-in:", err);
+            systemRoles: ["member"] as import("../domain/auth.types").SystemRole[],
+            primaryRole: "member" as import("../domain/auth.types").SystemRole,
+            role: "member",
+          };
+          try {
+            await setDoc(userDocRefByUid, userAccount);
+          } catch (err) {
+            console.warn("[Auth] enrichAppleUserInBackground: failed to create user doc", err);
+          }
         }
       }
+    } catch (err) {
+      console.warn("[Auth] enrichAppleUserInBackground: unhandled error", err);
     }
-
-    return authCredential;
   },
-  
+
   async deleteAccount(): Promise<void> {
     const auth = getActiveAuth();
     const currentUser = auth.currentUser;

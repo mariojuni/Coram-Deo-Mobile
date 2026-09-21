@@ -1,5 +1,5 @@
 import { ExpoConfig, ConfigContext } from 'expo/config';
-import { withDangerousMod, withAndroidManifest } from 'expo/config-plugins';
+import { withDangerousMod, withAndroidManifest, withInfoPlist } from 'expo/config-plugins';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -120,6 +120,18 @@ const withRemoveOrientationRestriction = (config: ExpoConfig) => {
     return config;
   });
 };
+
+/**
+ * expo-audio automatically injects "audio" into UIBackgroundModes during prebuild.
+ * This app does NOT play audio in the background (only in-app), so we strip it
+ * to satisfy App Store Guideline 2.5.4.
+ */
+const withRemoveAudioBackgroundMode = (config: ExpoConfig) =>
+  withInfoPlist(config, (c) => {
+    const modes: string[] = c.modResults.UIBackgroundModes ?? [];
+    c.modResults.UIBackgroundModes = modes.filter((m) => m !== 'audio');
+    return c;
+  });
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   const isProd = process.env.EXPO_PUBLIC_APP_ENV === 'production';
@@ -257,5 +269,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     owner: "maryow"
   };
 
-  return withRemoveOrientationRestriction(withAndroidSigningFix(withFirebaseSPMDisableAndRecaptcha(baseConfig)));
+  // withRemoveAudioBackgroundMode runs LAST so it strips the 'audio' entry that
+  // expo-audio injects, regardless of plugin execution order.
+  return withRemoveAudioBackgroundMode(
+    withRemoveOrientationRestriction(withAndroidSigningFix(withFirebaseSPMDisableAndRecaptcha(baseConfig)))
+  );
 };

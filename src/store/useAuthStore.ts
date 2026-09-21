@@ -79,13 +79,24 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const result = await authRepository.loginWithGoogle();
       if (result.user) {
-        // Set currentUser immediately so the routing effect in _layout.tsx
-        // triggers navigation to home without waiting for onAuthStateChanged.
+        // Set currentUser immediately so routing triggers navigation without
+        // waiting for onAuthStateChanged — this is what makes sign-in feel instant.
         set({ currentUser: result.user });
-        const updatedProfile = await fetchUserAccount(result.user);
-        if (updatedProfile) {
-          set({ userProfile: updatedProfile });
-        }
+
+        // Fire-and-forget: all Firestore reads/writes run in the background.
+        // The onAuthStateChanged listener will update userProfile when ready.
+        authRepository.enrichGoogleUserInBackground(
+          result.user,
+          result.user.email || undefined,
+          result.user.phoneNumber || undefined,
+        ).then(() => {
+          // Refresh profile after enrichment so the store reflects the latest data.
+          return fetchUserAccount(result.user);
+        }).then((updatedProfile) => {
+          if (updatedProfile) set({ userProfile: updatedProfile });
+        }).catch((err) => {
+          console.warn('[Auth Store] Background Google enrichment error:', err);
+        });
       }
       return result;
     } catch (error: any) {
@@ -105,13 +116,26 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const result = await authRepository.loginWithApple();
       if (result.user) {
-        // Set currentUser immediately so the routing effect in _layout.tsx
-        // triggers navigation to home without waiting for onAuthStateChanged.
+        // Set currentUser immediately so routing triggers navigation without
+        // waiting for onAuthStateChanged — this is what makes sign-in feel instant.
         set({ currentUser: result.user });
-        const updatedProfile = await fetchUserAccount(result.user);
-        if (updatedProfile) {
-          set({ userProfile: updatedProfile });
-        }
+
+        // Retrieve the fullName/email stashed by loginWithApple onto the result object.
+        const appleFullName = (result as any)._appleFullName ?? null;
+        const appleEmail = (result as any)._appleEmail ?? result.user.email ?? undefined;
+
+        // Fire-and-forget: all Firestore reads/writes run in the background.
+        authRepository.enrichAppleUserInBackground(
+          result.user,
+          appleEmail,
+          appleFullName,
+        ).then(() => {
+          return fetchUserAccount(result.user);
+        }).then((updatedProfile) => {
+          if (updatedProfile) set({ userProfile: updatedProfile });
+        }).catch((err) => {
+          console.warn('[Auth Store] Background Apple enrichment error:', err);
+        });
       }
       return result;
     } catch (error: any) {
