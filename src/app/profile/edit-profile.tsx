@@ -6,7 +6,8 @@ import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Camera, Check, X } from 'lucide-react-native';
+import { ArrowLeft, Camera, Check, X, User, Calendar, ChevronDown, Phone, MapPin, Heart } from 'lucide-react-native';
+import CustomDatePicker from '@/components/CustomDatePicker';
 import * as ImagePicker from 'expo-image-picker';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -31,6 +32,17 @@ export default function EditProfileScreen() {
 
   const [loading, setLoading] = useState(false);
   const [photoUrl, setPhotoUrl] = useState(userProfile?.photoUrl || currentUser?.photoURL || '');
+  const [showGenderModal, setShowGenderModal] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const formatDateToMDYYYY = (date: Date) => {
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const year = date.getFullYear();
+    return `${month}/${day}/${year}`;
+  };
+  
+  const GENDER_OPTIONS = ['Male', 'Female'];
   const [formData, setFormData] = useState({
     firstName: userProfile?.firstName || defaultFirstName,
     middleName: userProfile?.middleName || '',
@@ -38,7 +50,14 @@ export default function EditProfileScreen() {
     phoneNumber: userProfile?.phoneNumber || currentUser?.phoneNumber || '',
     birthDate: userProfile?.birthDate || userProfile?.birthday || '',
     address: userProfile?.address || '',
+    gender: userProfile?.gender || '',
+    emergencyContact: userProfile?.emergencyContact || '',
   });
+
+  const initialDate = formData.birthDate ? new Date(formData.birthDate) : new Date(2000, 0, 1);
+  const [birthdayDate, setBirthdayDate] = useState<Date>(
+    isNaN(initialDate.getTime()) ? new Date(2000, 0, 1) : initialDate
+  );
 
   useEffect(() => {
     if (!canEditOwnProfile(userProfile)) {
@@ -70,9 +89,6 @@ export default function EditProfileScreen() {
     if (!uri || uri.startsWith('http')) return null; 
     
     try {
-      const churchId = userProfile?.churchId || 'default';
-      const memberId = userProfile?.memberId || userProfile?.uid;
-      
       const blob = await new Promise<Blob>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.onload = function() {
@@ -105,19 +121,26 @@ export default function EditProfileScreen() {
       const uploadedUrl = await uploadAvatar(photoUrl);
       if (uploadedUrl) {
         finalPhotoUrl = uploadedUrl;
-        
-
       }
 
       const updates: any = {
-        firstName: formData.firstName,
-        middleName: formData.middleName,
-        lastName: formData.lastName,
-        phoneNumber: formData.phoneNumber,
-        birthDate: formData.birthDate,
-        address: formData.address,
+        firstName: formData.firstName ?? '',
+        middleName: formData.middleName ?? '',
+        lastName: formData.lastName ?? '',
+        phoneNumber: formData.phoneNumber ?? '',
+        birthDate: formData.birthDate ?? '',
+        address: formData.address ?? '',
+        gender: formData.gender ?? '',
+        emergencyContact: formData.emergencyContact ?? '',
         updatedAt: serverTimestamp(),
       };
+      
+      // Ensure no undefined values are passed to Firestore
+      Object.keys(updates).forEach(key => {
+        if (updates[key] === undefined) {
+          updates[key] = null;
+        }
+      });
 
       if (finalPhotoUrl) {
         updates.photoUrl = finalPhotoUrl;
@@ -132,12 +155,14 @@ export default function EditProfileScreen() {
       }
       
       updateUserProfile({
-        firstName: formData.firstName,
-        middleName: formData.middleName,
-        lastName: formData.lastName,
-        phoneNumber: formData.phoneNumber,
-        birthDate: formData.birthDate,
-        address: formData.address,
+        firstName: updates.firstName,
+        middleName: updates.middleName,
+        lastName: updates.lastName,
+        phoneNumber: updates.phoneNumber,
+        birthDate: updates.birthDate,
+        address: updates.address,
+        gender: updates.gender,
+        emergencyContact: updates.emergencyContact,
         ...(finalPhotoUrl ? { photoUrl: finalPhotoUrl } : {})
       });
 
@@ -199,75 +224,128 @@ export default function EditProfileScreen() {
 
             <View style={styles.cardGroup}>
               <View style={styles.formGroup}>
-                <Text style={styles.label}>First Name</Text>
-                <TextInput
-                  style={styles.input}
-                  value={formData.firstName}
-                  onChangeText={(t) => setFormData({ ...formData, firstName: t })}
-                  placeholder="E.g. John"
-                  placeholderTextColor="#9CA3AF"
-                />
+                <Text style={styles.inputLabel}>First Name</Text>
+                <View style={styles.inputWrapper}>
+                  <User size={18} color="#888" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    value={formData.firstName}
+                    onChangeText={(t) => setFormData({ ...formData, firstName: t })}
+                    placeholder="E.g. John"
+                    placeholderTextColor="#888"
+                  />
+                </View>
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Middle Name</Text>
-                <TextInput
-                  style={styles.input}
-                  value={formData.middleName}
-                  onChangeText={(t) => setFormData({ ...formData, middleName: t })}
-                  placeholder="E.g. Smith"
-                  placeholderTextColor="#9CA3AF"
-                />
+                <Text style={styles.inputLabel}>Middle Name</Text>
+                <View style={styles.inputWrapper}>
+                  <User size={18} color="#888" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    value={formData.middleName}
+                    onChangeText={(t) => setFormData({ ...formData, middleName: t })}
+                    placeholder="E.g. Smith"
+                    placeholderTextColor="#888"
+                  />
+                </View>
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Last Name</Text>
-                <TextInput
-                  style={styles.input}
-                  value={formData.lastName}
-                  onChangeText={(t) => setFormData({ ...formData, lastName: t })}
-                  placeholder="E.g. Doe"
-                  placeholderTextColor="#9CA3AF"
-                />
+                <Text style={styles.inputLabel}>Last Name</Text>
+                <View style={styles.inputWrapper}>
+                  <User size={18} color="#888" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    value={formData.lastName}
+                    onChangeText={(t) => setFormData({ ...formData, lastName: t })}
+                    placeholder="E.g. Doe"
+                    placeholderTextColor="#888"
+                  />
+                </View>
               </View>
             </View>
 
             <View style={styles.cardGroup}>
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Phone Number</Text>
-                <TextInput
-                  style={styles.input}
-                  value={formData.phoneNumber}
-                  onChangeText={(t) => setFormData({ ...formData, phoneNumber: t })}
-                  placeholder="+1 234 567 8900"
-                  placeholderTextColor="#9CA3AF"
-                  keyboardType="phone-pad"
-                />
+                <Text style={styles.inputLabel}>Phone Number</Text>
+                <View style={styles.inputWrapper}>
+                  <Phone size={18} color="#888" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    value={formData.phoneNumber}
+                    onChangeText={(t) => setFormData({ ...formData, phoneNumber: t })}
+                    placeholder="+1 234 567 8900"
+                    placeholderTextColor="#888"
+                    keyboardType="phone-pad"
+                  />
+                </View>
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Birth Date (YYYY-MM-DD)</Text>
-                <TextInput
-                  style={styles.input}
-                  value={formData.birthDate as string}
-                  onChangeText={(t) => setFormData({ ...formData, birthDate: t })}
-                  placeholder="1990-01-01"
-                  placeholderTextColor="#9CA3AF"
-                />
+                <Text style={styles.inputLabel}>Birth Date</Text>
+                <TouchableOpacity
+                  style={styles.inputWrapper}
+                  onPress={() => setShowDatePicker(true)}
+                  activeOpacity={0.8}
+                >
+                  <Calendar size={18} color="#888" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="M/D/YYYY"
+                    placeholderTextColor="#888"
+                    value={formData.birthDate as string}
+                    editable={false}
+                    pointerEvents="none"
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.cardGroup}>
+              <View style={styles.formGroup}>
+                <Text style={styles.inputLabel}>Gender</Text>
+                <TouchableOpacity
+                  style={styles.inputWrapper}
+                  onPress={() => setShowGenderModal(true)}
+                  activeOpacity={0.8}
+                >
+                  <User size={18} color="#888" style={styles.inputIcon} />
+                  <Text style={[styles.input, styles.selectInputText, !formData.gender && styles.placeholderText]}>
+                    {formData.gender || 'Select Gender'}
+                  </Text>
+                  <ChevronDown size={18} color="#888" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.inputLabel}>Emergency Contact</Text>
+                <View style={styles.inputWrapper}>
+                  <Heart size={18} color="#888" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    value={formData.emergencyContact as string}
+                    onChangeText={(t) => setFormData({ ...formData, emergencyContact: t })}
+                    placeholder="Name / Phone Number"
+                    placeholderTextColor="#888"
+                  />
+                </View>
               </View>
             </View>
 
             <View style={styles.cardGroup}>
               <View style={[styles.formGroup, { marginBottom: 0 }]}>
-                <Text style={styles.label}>Address</Text>
-                <TextInput
-                  style={[styles.input, styles.textArea]}
-                  value={formData.address as string}
-                  onChangeText={(t) => setFormData({ ...formData, address: t })}
-                  placeholder="Enter your full address"
-                  placeholderTextColor="#9CA3AF"
-                  multiline
-                />
+                <Text style={styles.inputLabel}>Address</Text>
+                <View style={styles.inputWrapper}>
+                  <MapPin size={18} color="#888" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    value={formData.address as string}
+                    onChangeText={(t) => setFormData({ ...formData, address: t })}
+                    placeholder="Enter your full address"
+                    placeholderTextColor="#888"
+                  />
+                </View>
               </View>
             </View>
 
@@ -275,6 +353,51 @@ export default function EditProfileScreen() {
 
         </ScrollView>
       </KeyboardAvoidingView>
+      
+      <CustomDatePicker
+        visible={showDatePicker}
+        date={birthdayDate}
+        onConfirm={(selectedDate) => {
+          setBirthdayDate(selectedDate);
+          setFormData({ ...formData, birthDate: formatDateToMDYYYY(selectedDate) });
+          setShowDatePicker(false);
+        }}
+        onCancel={() => setShowDatePicker(false)}
+        minimumDate={new Date(1920, 0, 1)}
+        maximumDate={new Date()}
+        accentColor="#B66DFF"
+      />
+
+      <AppModal
+        isOpen={showGenderModal}
+        onClose={() => setShowGenderModal(false)}
+        title="Select Gender"
+        dynamicHeight={true}
+        heightRatio={0.35}
+        containerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }}
+      >
+        <View style={styles.genderOptionsContainer}>
+          {GENDER_OPTIONS.map((option) => {
+            const isSelected = formData.gender === option;
+            return (
+              <TouchableOpacity
+                key={option}
+                style={[styles.genderOptionCard, isSelected && styles.genderOptionCardSelected]}
+                onPress={() => {
+                  setFormData({ ...formData, gender: option });
+                  setShowGenderModal(false);
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.genderOptionText, isSelected && styles.genderOptionTextSelected]}>
+                  {option}
+                </Text>
+                {isSelected && <Check size={20} color="#B66DFF" />}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </AppModal>
     </AppModal>
   );
 }
@@ -348,16 +471,61 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   formGroup: { marginBottom: 20 },
-  label: { fontSize: 13, fontWeight: '700', color: '#6B7280', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
-  input: {
-    backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#F3F4F6',
-    borderRadius: 12, paddingHorizontal: 16, paddingVertical: 16,
-    fontSize: 16, color: '#111827', fontWeight: '500'
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 8,
+    marginLeft: 4,
   },
-  textArea: {
-    minHeight: 100,
-    paddingTop: 16,
-    textAlignVertical: 'top'
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  input: {
+    flex: 1,
+    height: 56,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1a1a1a',
+  },
+  selectInputText: {
+    lineHeight: 56,
+  },
+  placeholderText: {
+    color: '#888888',
+  },
+  genderOptionsContainer: {
+    gap: 12,
+  },
+  genderOptionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  genderOptionCardSelected: {
+    backgroundColor: '#FDF2F8',
+    borderColor: '#FF6596',
+  },
+  genderOptionText: {
+    fontSize: 16,
+    color: '#4B5563',
+    fontWeight: '500',
+  },
+  genderOptionTextSelected: {
+    color: '#111827',
+    fontWeight: '700',
   },
   saveBtn: {
     borderRadius: 16, marginTop: 12, shadowColor: '#007AFF', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
