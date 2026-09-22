@@ -63,7 +63,9 @@ export default function AccountSecurityScreen() {
              await updateDoc(userRef, { providers: [...currentProviders, 'password'], updatedAt: serverTimestamp() });
            }
         }
-        Alert.alert('Success', 'Password set successfully. You can now sign in using Google or email and password.');
+        const currentProviders = userProfile?.providers || [];
+        const providerName = currentProviders.includes('apple.com') ? 'Apple' : (currentProviders.includes('google.com') ? 'Google' : 'your connected accounts');
+        Alert.alert('Success', `Password set successfully. You can now sign in using ${providerName} or email and password.`);
       } else {
         const credential = EmailAuthProvider.credential(currentUser.email, currentPassword);
         await reauthenticateWithCredential(currentUser, credential);

@@ -164,6 +164,10 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (!appReady) return;
+    
+    // Prevent premature navigation during OAuth processing where currentUser is set 
+    // but userProfile is still being fetched in the background.
+    if (currentUser && !userProfile) return;
 
     const inAuthGroup = segments[0] === '(auth)';
     const inPendingScreen = segments[0] === 'pending-church-link';
