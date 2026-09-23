@@ -227,7 +227,10 @@ export default function AttendanceTab({ members, showStaffFeatures }: Attendance
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  const uncheckedMembers = members.filter(
+  const eligibleStatuses = ['active', 'visitor', 'fellowship'];
+  const eligibleMembers = members.filter(m => eligibleStatuses.includes(m.status?.toLowerCase() || ''));
+
+  const uncheckedMembers = eligibleMembers.filter(
     m => !checkins.some(c => c.memberId === m.id || m.aliasIds?.includes(c.memberId)) && 
          !pendingCheckins.some(p => p.memberId === m.id || m.aliasIds?.includes(p.memberId))
   );
@@ -333,7 +336,7 @@ export default function AttendanceTab({ members, showStaffFeatures }: Attendance
           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12, paddingHorizontal: 4 }}>
             <Users size={14} color="#666" style={{ marginRight: 6 }} />
             <Text style={{ fontSize: 13, color: '#666', fontWeight: '500' }}>
-              <Text style={{ color: '#1a1a1a', fontWeight: '800' }}>{allCheckins.length} / {members.length}</Text> people present
+              <Text style={{ color: '#1a1a1a', fontWeight: '800' }}>{allCheckins.length} / {eligibleMembers.length}</Text> people present
             </Text>
           </View>
         )}
