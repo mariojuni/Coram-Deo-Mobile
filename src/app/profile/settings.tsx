@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { BounceCard } from '@/components/ui/BounceCard';
 import { ChevronRight, LogOut, Shield, User, Activity, ChevronLeft, Lock, UserMinus } from 'lucide-react-native';
@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { getSoftShadowStyle, getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 import { useAuthStore } from '@/store/useAuthStore';
+import { DeleteAccountModal } from '@/components/profile/DeleteAccountModal';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const BACKGROUND_GRADIENT = ['#F9FAFB', '#F3F4F6'] as const;
@@ -44,6 +45,7 @@ export default function AccountSettingsScreen() {
   const insets = useSafeAreaInsets();
   const userProfile = useAuthStore((state) => state.userProfile);
   const logout = useAuthStore((state) => state.logout);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const handleLogout = async () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out of your account?', [
@@ -64,38 +66,7 @@ export default function AccountSettingsScreen() {
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(
-      'Delete Account',
-      'Are you sure you want to permanently delete your account? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const deleteAccount = useAuthStore.getState().deleteAccount;
-              await deleteAccount();
-              router.replace('/(auth)/login');
-            } catch (error: any) {
-              console.error('Delete account failed:', error);
-              if (error?.code === 'auth/requires-recent-login') {
-                Alert.alert(
-                  'Re-authentication Required',
-                  'For your security, please sign out and sign in again before deleting your account.',
-                  [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Sign Out', style: 'default', onPress: handleLogout }
-                  ]
-                );
-              } else {
-                Alert.alert('Error', error?.message || 'Failed to delete account.');
-              }
-            }
-          },
-        },
-      ]
-    );
+    setIsDeleteModalOpen(true);
   };
 
   const renderSectionHeader = (title: string) => (
@@ -192,6 +163,12 @@ export default function AccountSettingsScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      <DeleteAccountModal 
+        isOpen={isDeleteModalOpen} 
+        onClose={() => setIsDeleteModalOpen(false)} 
+        onSuccess={() => router.replace('/(auth)/login')} 
+      />
     </View>
   );
 }

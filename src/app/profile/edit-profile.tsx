@@ -13,7 +13,6 @@ import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { getActiveDb, getActiveStorage } from '../../firebase';
 import { getActiveAuth } from '../../firebase';
-import { updateEmail } from 'firebase/auth';
 import { useAuthStore } from '@/store/useAuthStore';
 import { canEditOwnProfile } from '@/permissions/mobilePermissions';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -51,7 +50,6 @@ export default function EditProfileScreen() {
     firstName: userProfile?.firstName || defaultFirstName,
     middleName: userProfile?.middleName || '',
     lastName: userProfile?.lastName || defaultLastName,
-    email: userProfile?.email || currentUser?.email || '',
     phoneNumber: userProfile?.phoneNumber || currentUser?.phoneNumber || '',
     birthDate: userProfile?.birthDate || userProfile?.birthday || '',
     address: userProfile?.address || '',
@@ -149,20 +147,6 @@ export default function EditProfileScreen() {
 
       if (finalPhotoUrl) {
         updates.photoUrl = finalPhotoUrl;
-      }
-
-      if (isGoogleOrAppleAuth && formData.email && formData.email !== currentUser?.email) {
-        try {
-          await updateEmail(currentUser, formData.email);
-          updates.email = formData.email;
-        } catch (e: any) {
-          if (e.code === 'auth/requires-recent-login') {
-            Alert.alert('Re-authentication Required', 'Please sign out and sign in again to update your email address.');
-            setLoading(false);
-            return;
-          }
-          throw e;
-        }
       }
 
       const userRef = doc(getActiveDb(), 'users', userProfile.uid);
@@ -286,23 +270,6 @@ export default function EditProfileScreen() {
             </View>
 
             <View style={styles.cardGroup}>
-              {isGoogleOrAppleAuth && (
-                <View style={styles.formGroup}>
-                  <Text style={styles.inputLabel}>Email Address</Text>
-                  <View style={styles.inputWrapper}>
-                    <Mail size={18} color="#888" style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.input}
-                      value={formData.email}
-                      onChangeText={(t) => setFormData({ ...formData, email: t })}
-                      placeholder="Enter email address"
-                      placeholderTextColor="#888"
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                    />
-                  </View>
-                </View>
-              )}
 
               <View style={styles.formGroup}>
                 <Text style={styles.inputLabel}>Phone Number</Text>

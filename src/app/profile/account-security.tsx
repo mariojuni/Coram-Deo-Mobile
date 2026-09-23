@@ -22,6 +22,14 @@ export default function AccountSecurityScreen() {
   const currentUser = useAuthStore((s) => s.currentUser);
   const userProfile = useAuthStore((s) => s.userProfile);
 
+  const providers = userProfile?.providers || [];
+  const isGoogleAuth = providers.includes('google.com');
+  const isAppleAuth = providers.includes('apple.com');
+  const hasPassword = providers.includes('password');
+
+  // If changing email but user only has social login (no password), they can't use this form
+  const isSocialOnlyEmailChange = isEmail && !hasPassword && (isGoogleAuth || isAppleAuth);
+
   const [loading, setLoading] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newValue, setNewValue] = useState('');
@@ -122,9 +130,13 @@ export default function AccountSecurityScreen() {
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
         <View style={styles.dragHandle} />
         <View style={styles.headerContent}>
-          <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={handleSave} disabled={loading} hitSlop={8} activeOpacity={0.8}>
-            {loading ? <ActivityIndicator size="small" color="#EF4444" /> : <Check size={20} color="#EF4444" strokeWidth={2.5} />}
-          </BounceCard>
+          {isSocialOnlyEmailChange ? (
+            <View style={styles.iconBtnPlaceholder} />
+          ) : (
+            <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={handleSave} disabled={loading} hitSlop={8} activeOpacity={0.8}>
+              {loading ? <ActivityIndicator size="small" color="#EF4444" /> : <Check size={20} color="#EF4444" strokeWidth={2.5} />}
+            </BounceCard>
+          )}
           <Text style={styles.headerTitle}>{isEmail ? 'Change Email' : (isSetPassword ? 'Set Password' : 'Change Password')}</Text>
           <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => router.back()} hitSlop={8} activeOpacity={0.8}>
             <X size={24} color="#111827" strokeWidth={2} />
@@ -135,64 +147,79 @@ export default function AccountSecurityScreen() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: 80 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             
-            {!isSetPassword && (
+            {isSocialOnlyEmailChange ? (
+              <View style={styles.cardGroup}>
+                <Text style={styles.socialInfoTitle}>Social Login Connected</Text>
+                <Text style={styles.socialInfoText}>
+                  Your account is securely linked to {isGoogleAuth ? 'Google' : 'Apple'}. 
+                  Because you sign in using a social provider, your email address ({userProfile?.email}) is managed by them and cannot be changed here.
+                </Text>
+                <Text style={styles.socialInfoText}>
+                  If you wish to sign in with an email and password instead, you can set a password in the Account Settings menu.
+                </Text>
+              </View>
+            ) : (
               <>
-                <View style={styles.alertCard}>
-                  <View style={styles.alertIcon}>
-                    <ShieldAlert size={24} color="#EF4444" />
-                  </View>
-                  <Text style={styles.description}>
-                    For your security, please enter your current password to verify your identity before making this change.
-                  </Text>
-                </View>
+                {!isSetPassword && (
+                  <>
+                    <View style={styles.alertCard}>
+                      <View style={styles.alertIcon}>
+                        <ShieldAlert size={24} color="#EF4444" />
+                      </View>
+                      <Text style={styles.description}>
+                        For your security, please enter your current password to verify your identity before making this change.
+                      </Text>
+                    </View>
+
+                    <View style={styles.cardGroup}>
+                      <View style={styles.formGroup}>
+                        <Text style={styles.label}>Current Password</Text>
+                        <TextInput
+                          style={styles.input}
+                          value={currentPassword}
+                          onChangeText={setCurrentPassword}
+                          placeholder="Enter current password"
+                          placeholderTextColor="#9CA3AF"
+                          secureTextEntry
+                          autoCapitalize="none"
+                        />
+                      </View>
+                    </View>
+                  </>
+                )}
 
                 <View style={styles.cardGroup}>
                   <View style={styles.formGroup}>
-                    <Text style={styles.label}>Current Password</Text>
+                    <Text style={styles.label}>{isEmail ? 'New Email' : 'New Password'}</Text>
                     <TextInput
                       style={styles.input}
-                      value={currentPassword}
-                      onChangeText={setCurrentPassword}
-                      placeholder="Enter current password"
+                      value={newValue}
+                      onChangeText={setNewValue}
+                      placeholder={isEmail ? "Enter new email address" : "Enter new password"}
                       placeholderTextColor="#9CA3AF"
-                      secureTextEntry
+                      secureTextEntry={!isEmail}
                       autoCapitalize="none"
+                      keyboardType={isEmail ? 'email-address' : 'default'}
                     />
                   </View>
+
+                  {!isEmail && (
+                    <View style={[styles.formGroup, { marginBottom: 0 }]}>
+                      <Text style={styles.label}>Confirm New Password</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={confirmValue}
+                        onChangeText={setConfirmValue}
+                        placeholder="Confirm your new password"
+                        placeholderTextColor="#9CA3AF"
+                        secureTextEntry
+                        autoCapitalize="none"
+                      />
+                    </View>
+                  )}
                 </View>
               </>
             )}
-
-            <View style={styles.cardGroup}>
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>{isEmail ? 'New Email' : 'New Password'}</Text>
-                <TextInput
-                  style={styles.input}
-                  value={newValue}
-                  onChangeText={setNewValue}
-                  placeholder={isEmail ? "Enter new email address" : "Enter new password"}
-                  placeholderTextColor="#9CA3AF"
-                  secureTextEntry={!isEmail}
-                  autoCapitalize="none"
-                  keyboardType={isEmail ? 'email-address' : 'default'}
-                />
-              </View>
-
-              {!isEmail && (
-                <View style={[styles.formGroup, { marginBottom: 0 }]}>
-                  <Text style={styles.label}>Confirm New Password</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={confirmValue}
-                    onChangeText={setConfirmValue}
-                    placeholder="Confirm your new password"
-                    placeholderTextColor="#9CA3AF"
-                    secureTextEntry
-                    autoCapitalize="none"
-                  />
-                </View>
-              )}
-            </View>
 
         </ScrollView>
       </KeyboardAvoidingView>
@@ -280,5 +307,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#F3F4F6',
     borderRadius: 12, paddingHorizontal: 16, paddingVertical: 16,
     fontSize: 16, color: '#111827', fontWeight: '500'
+  },
+  socialInfoTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 12,
+  },
+  socialInfoText: {
+    fontSize: 15,
+    color: '#4B5563',
+    lineHeight: 22,
+    marginBottom: 16,
+  },
+  iconBtnPlaceholder: {
+    width: 40,
+    height: 40,
   }
 });
