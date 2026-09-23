@@ -181,12 +181,32 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   deleteAccount: async () => {
     try {
-      await authRepository.deleteAccount();
+      const currentUser = useAuthStore.getState().currentUser;
+      if (currentUser) {
+        try {
+          const { getMessaging, getToken } = await import('@react-native-firebase/messaging');
+          const messaging = getMessaging();
+          const token = await getToken(messaging);
+          if (token) {
+            const { PushTokenService } = await import('../services/notification/PushTokenService');
+            await PushTokenService.unregisterDeviceToken(currentUser.uid, token);
+          }
+        } catch (err) {
+          console.warn('Failed to unregister push token on deleteAccount', err);
+        }
+      }
+
+      // Clear listeners BEFORE deleting the account to prevent Firestore permission denied errors
       clearAllStoreListeners();
       await clearSensitiveCache();
       await import('@react-native-async-storage/async-storage').then(m => m.default.removeItem('bible_prefs'));
+      
+      await authRepository.deleteAccount();
       set({ currentUser: null, userProfile: null });
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.code === 'auth/requires-recent-login' || error?.message?.includes('recent-login')) {
+         authRepository.logout();
+      }
       throw error;
     }
   },
