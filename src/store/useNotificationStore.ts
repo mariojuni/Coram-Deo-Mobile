@@ -10,7 +10,10 @@ interface NotificationState {
   loading: boolean;
   setUnreadCount: (count: number) => void;
   initializeListener: (userId: string) => () => void;
+  clearListener: () => void;
 }
+
+let activeUnsubscribe: (() => void) | null = null;
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
   unreadCount: 0,
@@ -21,6 +24,11 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     Notifications.setBadgeCountAsync(unread).catch(console.warn);
   },
   initializeListener: (userId: string) => {
+    if (activeUnsubscribe) {
+      activeUnsubscribe();
+      activeUnsubscribe = null;
+    }
+    
     if (!userId) return () => {};
 
     const db = getActiveDb();
@@ -47,6 +55,14 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       set({ loading: false });
     });
 
+    activeUnsubscribe = unsubscribe;
     return unsubscribe;
   },
+  clearListener: () => {
+    if (activeUnsubscribe) {
+      activeUnsubscribe();
+      activeUnsubscribe = null;
+    }
+    set({ unreadCount: 0, loading: false });
+  }
 }));
