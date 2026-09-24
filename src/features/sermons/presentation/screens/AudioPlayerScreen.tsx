@@ -34,7 +34,7 @@ export function AudioPlayerScreen() {
   const colors = useTheme();
   const insets = useSafeAreaInsets();
   
-  const { playAudio, pauseAudio, seekAudio, setRate, player } = useAudio();
+  const { playAudio, pauseAudio, resumeAudio, seekAudio, setRate, player } = useAudio();
   
   const { 
     currentSermon, 
@@ -128,8 +128,7 @@ export function AudioPlayerScreen() {
       await pauseAudio();
     } else {
       if (sound) {
-        const finalUrl = await sermonRepository.resolveMediaUrl(currentSermon?.audioStoragePath || '');
-        await playAudio(finalUrl, currentSermon?.id || '');
+        resumeAudio();
       } else {
         await loadAudio();
       }
