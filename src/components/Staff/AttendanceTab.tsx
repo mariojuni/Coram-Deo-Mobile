@@ -227,8 +227,8 @@ export default function AttendanceTab({ members, showStaffFeatures }: Attendance
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  const eligibleStatuses = ['active', 'visitor', 'fellowship'];
-  const eligibleMembers = members.filter(m => eligibleStatuses.includes(m.status?.toLowerCase() || ''));
+  const eligibleStatuses = ['active', 'activate', 'fellowship', 'visitor', 'visitors'];
+  const eligibleMembers = members.filter(m => eligibleStatuses.includes(m.membershipStatus?.toLowerCase() || ''));
 
   const uncheckedMembers = eligibleMembers.filter(
     m => !checkins.some(c => c.memberId === m.id || m.aliasIds?.includes(c.memberId)) && 

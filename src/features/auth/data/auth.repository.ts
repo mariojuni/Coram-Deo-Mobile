@@ -1015,22 +1015,13 @@ export const authRepository = {
     const currentUser = auth.currentUser;
     if (!currentUser) throw new Error("No authenticated user.");
 
-    try {
-      const userRef = doc(getActiveDb(), "users", currentUser.uid);
-      await updateDoc(userRef, {
-        status: "deleted",
-        email: "deleted@user.com",
-        emailLowercase: "deleted@user.com",
-        firstName: "Deleted",
-        lastName: "User",
-        photoUrl: "",
-        phoneNumber: "",
-        updatedAt: serverTimestamp(),
-      });
-      await deleteUser(currentUser);
-    } catch (error) {
-      throw error;
-    }
+    // Delete the Firebase Auth account. The backend's `onUserDeleted`
+    // (beforeUserDeleted) trigger will anonymise the Firestore document
+    // using Admin SDK, so we don't need a client-side updateDoc here.
+    // Doing updateDoc before deleteUser caused a race condition where
+    // active Firestore listeners would fire a permission-denied error
+    // the instant the auth token was invalidated.
+    await deleteUser(currentUser);
   },
 
   logout(): Promise<void> {
