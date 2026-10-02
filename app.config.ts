@@ -194,9 +194,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       googleServicesFile: isProd ? "./credentials/production/google-services.json" : "./credentials/staging/google-services.json",
       permissions: [
         "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS",
-        "android.permission.FOREGROUND_SERVICE",
-        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+        "android.permission.MODIFY_AUDIO_SETTINGS"
       ]
     },
     web: {

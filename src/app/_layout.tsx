@@ -172,13 +172,15 @@ export default function RootLayout() {
     const inAuthGroup = segments[0] === '(auth)';
     const inPendingScreen = segments[0] === 'pending-church-link';
     const inDisabledScreen = segments[0] === 'disabled-account';
-    const inWalkthrough = segments[0] === 'walkthrough';
+    const inWalkthrough = (segments[0] as string) === 'walkthrough';
+    const inCompleteProfile = (segments[0] as string) === 'complete-profile';
     
     // Using strict super_admin bypass — checks systemRoles array (multi-role compatible)
     const isSuperAdmin = Array.isArray(userProfile?.systemRoles)
       ? userProfile.systemRoles.includes('super_admin')
       : userProfile?.role === 'super_admin';
-    const isPending = !isSuperAdmin && (userProfile?.status === 'pending_church_link' || (!userProfile?.churchId && currentUser));
+    const isPendingProfile = userProfile?.onboardingStatus === 'PENDING_PROFILE';
+    const isPendingChurch = !isSuperAdmin && (userProfile?.status === 'pending_church_link' || (!userProfile?.churchId && currentUser));
     
     const isDisabled = currentUser && (userProfile?.status === 'disabled' || !canAccessMobileApp(userProfile));
 
@@ -190,10 +192,13 @@ export default function RootLayout() {
       }
     } else if (isDisabled && !inDisabledScreen) {
        router.replace('/disabled-account');
-    } else if (currentUser && !isDisabled && isPending && !inPendingScreen) {
+    } else if (currentUser && !isDisabled && isPendingProfile && !inCompleteProfile) {
+       // Force user to complete their profile before anything else
+       router.replace('/complete-profile' as any);
+    } else if (currentUser && !isDisabled && !isPendingProfile && isPendingChurch && !inPendingScreen) {
       // Redirect to pending screen
       router.replace('/pending-church-link');
-    } else if (currentUser && !isPending && !isDisabled && (inAuthGroup || inPendingScreen || inDisabledScreen || inWalkthrough)) {
+    } else if (currentUser && !isPendingChurch && !isDisabled && !isPendingProfile && (inAuthGroup || inPendingScreen || inDisabledScreen || inWalkthrough || inCompleteProfile)) {
       // Redirect to main app
       router.replace('/(tabs)');
     }
@@ -209,6 +214,7 @@ export default function RootLayout() {
               <Stack.Screen name="walkthrough" options={{ headerShown: false }} />
               <Stack.Screen name="(auth)" options={{ headerShown: false }} />
               <Stack.Screen name="pending-church-link" options={{ headerShown: false }} />
+              <Stack.Screen name="complete-profile" options={{ headerShown: false }} />
               <Stack.Screen name="disabled-account" options={{ headerShown: false }} />
               <Stack.Screen name="scanner" options={{ presentation: 'modal', headerShown: false }} />
               <Stack.Screen name="my-qr" options={{ presentation: 'transparentModal', animation: 'none', headerShown: false }} />

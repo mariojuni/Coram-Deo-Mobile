@@ -27,10 +27,13 @@ let activeAuth = Platform.OS === 'web'
 let activeDb = getFirestore(activeApp, initialConfig.firestoreDatabaseId || 'coramdeo');
 let activeStorage = getStorage(activeApp);
 
+import { getFunctions } from 'firebase/functions';
+
 export const getActiveApp = () => activeApp;
 export const getActiveAuth = () => activeAuth;
 export const getActiveDb = () => activeDb;
 export const getActiveStorage = () => activeStorage;
+export const getActiveFunctions = () => getFunctions(activeApp, 'asia-southeast1');
 
 // NOTE: We do NOT export Proxies for App, Auth, DB, or Storage.
 // In Firebase JS SDK v10+, passing a Proxy to functions like `onSnapshot` or `collection`

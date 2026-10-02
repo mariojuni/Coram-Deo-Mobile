@@ -818,6 +818,7 @@ export const authRepository = {
             systemRoles: ["member"] as import("../domain/auth.types").SystemRole[],
             primaryRole: "member" as import("../domain/auth.types").SystemRole,
             role: "member",
+            onboardingStatus: "PENDING_PROFILE",
           };
           try {
             await setDoc(userDocRefByUid, userAccount);
@@ -997,6 +998,7 @@ export const authRepository = {
             systemRoles: ["member"] as import("../domain/auth.types").SystemRole[],
             primaryRole: "member" as import("../domain/auth.types").SystemRole,
             role: "member",
+            onboardingStatus: "PENDING_PROFILE",
           };
           try {
             await setDoc(userDocRefByUid, userAccount);

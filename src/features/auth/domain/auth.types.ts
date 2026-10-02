@@ -41,6 +41,7 @@ export interface UserAccount {
   managedMinistryIds?: string[];
   /** @deprecated Use systemRoles instead. Kept for legacy Firestore docs that have not been migrated. */
   role?: SystemRole | string;
+  onboardingStatus?: 'PENDING_PROFILE' | 'COMPLETED';
   createdAt: string;
   updatedAt: string;
   lastLoginAt?: string;

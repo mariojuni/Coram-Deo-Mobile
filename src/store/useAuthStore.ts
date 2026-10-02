@@ -27,6 +27,7 @@ interface AuthState {
   sendPasswordReset: (email: string) => Promise<void>;
   initializeAuthListener: () => void;
   updateUserProfile: (updates: Partial<UserAccount>) => void;
+  refreshUserProfile: () => Promise<void>;
 }
 
 export const clearAllStoreListeners = () => {
@@ -70,7 +71,7 @@ export const clearAllCachesAndReset = async () => {
   }
 };
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   currentUser: null,
   userProfile: null,
   loading: true,
@@ -236,5 +237,18 @@ export const useAuthStore = create<AuthState>((set) => ({
     set((state) => ({
       userProfile: state.userProfile ? { ...state.userProfile, ...updates } : null,
     }));
+  },
+  refreshUserProfile: async () => {
+    const { currentUser } = get();
+    if (currentUser) {
+      try {
+        const profile = await fetchUserAccount(currentUser);
+        if (profile) {
+          set({ userProfile: profile });
+        }
+      } catch (err) {
+        console.warn('Failed to refresh user profile:', err);
+      }
+    }
   }
 }));
