@@ -74,6 +74,14 @@ export default function CompleteProfileScreen() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await useAuthStore.getState().logout();
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Failed to logout');
+    }
+  };
+
   const handleCompleteProfile = async () => {
     setErrorMsg('');
     setIsLoading(true);
@@ -246,7 +254,7 @@ export default function CompleteProfileScreen() {
             )}
 
             <View style={styles.buttonContainer}>
-              {step === 2 && (
+              {step === 2 ? (
                 <View style={{ flex: 1 }}>
                   <TouchableOpacity
                     style={[styles.primaryButton, { backgroundColor: '#F3F4F6' }]}
@@ -256,8 +264,18 @@ export default function CompleteProfileScreen() {
                     <Text style={[styles.primaryButtonText, { color: '#666' }]}>Back</Text>
                   </TouchableOpacity>
                 </View>
+              ) : (
+                <View style={{ flex: 1 }}>
+                  <TouchableOpacity
+                    style={[styles.primaryButton, { backgroundColor: '#F3F4F6' }]}
+                    onPress={handleLogout}
+                    disabled={isLoading}
+                  >
+                    <Text style={[styles.primaryButtonText, { color: '#666' }]}>Logout</Text>
+                  </TouchableOpacity>
+                </View>
               )}
-              <View style={{ flex: step === 2 ? 1 : undefined, width: step === 1 ? '100%' : undefined }}>
+              <View style={{ flex: 1 }}>
                 <PrimaryGradientButton
                   title={step === 2 ? 'Complete' : 'Next Step'}
                   onPress={step === 2 ? handleCompleteProfile : handleNext}
