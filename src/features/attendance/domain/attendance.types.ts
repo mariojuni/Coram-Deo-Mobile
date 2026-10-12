@@ -17,6 +17,11 @@ export interface AttendanceRecord {
   timestamp?: Timestamp | Date | number | null;
 }
 
+export interface AttendanceCheckin extends AttendanceRecord {
+  type?: string;
+  role?: string;
+}
+
 export interface CreateAttendanceRecordInput {
   churchId: string;
   eventId: string;

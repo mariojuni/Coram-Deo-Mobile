@@ -10,19 +10,33 @@ export function useScheduleFeed() {
   const [schedulesLoading, setSchedulesLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
+    scheduleRepository.getCachedSchedules(userProfile?.churchId ?? undefined).then((cached) => {
+      if (isMounted && cached && cached.length > 0) {
+        setSchedules((prev) => (prev.length === 0 ? cached : prev));
+        setSchedulesLoading(false);
+      }
+    }).catch(console.error);
+
     const unsubscribe = scheduleRepository.subscribeToSchedules(
       userProfile?.churchId ?? undefined,
       (nextSchedules: Schedule[]) => {
-        setSchedules(nextSchedules);
-        setSchedulesLoading(false);
+        if (isMounted) {
+          setSchedules(nextSchedules);
+          setSchedulesLoading(false);
+        }
       },
       (error) => {
         console.error('Error fetching schedules:', error);
-        setSchedulesLoading(false);
+        if (isMounted) setSchedulesLoading(false);
       }
     );
 
-    return unsubscribe;
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, [userProfile?.churchId]);
 
   const updateRsvp = useCallback(async (eventId: string, userId: string, status: Rsvp['status']) => {

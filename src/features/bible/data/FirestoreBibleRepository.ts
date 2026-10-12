@@ -79,9 +79,21 @@ export class FirestoreBibleRepository implements BibleRepository {
       const q = query(booksRef, orderBy('order', 'asc'));
       const snapshot = await getDocs(q);
       
-      return snapshot.docs.map(doc => ({
-        ...doc.data()
-      })) as BibleBook[];
+      return snapshot.docs.map((doc, index) => {
+        const data = doc.data();
+        const bookId = data.id || data.usfm || doc.id;
+        return {
+          id: String(bookId),
+          usfm: String(data.usfm || bookId),
+          name: data.name || data.localName || data.title || String(bookId),
+          longName: data.longName || undefined,
+          abbreviation: data.abbreviation || data.localAbbreviation || String(bookId),
+          canon: (data.canon as any) || 'other',
+          order: typeof data.order === 'number' ? data.order : index,
+          chapterCount: Number(data.chapterCount || data.chapters?.length || 0),
+          chapters: data.chapters,
+        } as BibleBook;
+      });
     } catch (e) {
       console.warn(`Error fetching books for ${versionId}:`, e);
       throw e;

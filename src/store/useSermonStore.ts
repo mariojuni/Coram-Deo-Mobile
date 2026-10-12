@@ -120,6 +120,11 @@ export const useSermonStore = create<SermonState>((set, get) => ({
 
     if (get().sermons.length === 0) {
       set({ loading: true });
+      sermonRepository.getCachedSermonsFeed(churchId).then((cached) => {
+        if (cached && cached.length > 0 && get().sermons.length === 0) {
+          set({ sermons: cached, loading: false });
+        }
+      }).catch(console.error);
     }
 
     const activeFilters = { ...get().filters, churchId, allowedVisibility: getAllowedVisibility() };
@@ -421,10 +426,20 @@ export const useSermonStore = create<SermonState>((set, get) => ({
 
   loadDownloadedSermons: async (userId: string) => {
     try {
+      // 1. Immediately populate from local storage for offline / instant render
+      const local = await sermonRepository.getLocalDownloadRecords(userId);
+      if (local.length > 0) {
+        set({
+          downloadsList: local,
+          downloadedSermons: new Set(local.map(d => `${d.sermonId}_audio`).concat(local.map(d => `${d.sermonId}_video`)))
+        });
+      }
+
+      // 2. Sync with server/local repository
       const downloads = await sermonRepository.getDownloadedSermons(userId);
       set({
         downloadsList: downloads,
-        downloadedSermons: new Set(downloads.map(d => `${d.sermonId}_audio`)) // Simplified mapping
+        downloadedSermons: new Set(downloads.map(d => `${d.sermonId}_audio`).concat(downloads.map(d => `${d.sermonId}_video`)))
       });
     } catch (error) {
       console.error('Error loading downloaded sermons:', error);
@@ -433,14 +448,7 @@ export const useSermonStore = create<SermonState>((set, get) => ({
 
   checkIfDownloaded: async (userId: string, sermonId: string, mediaType?: 'audio' | 'video'): Promise<boolean> => {
     try {
-      const { currentSermon } = get();
-      const typeToCheck = mediaType || (currentSermon?.mediaType === 'video' ? 'video' : 'audio');
-
-      if (currentSermon && currentSermon.id === sermonId) {
-        const uri = await getLocalSermonMediaUri(currentSermon, typeToCheck);
-        return uri !== null;
-      }
-      return false;
+      return await sermonRepository.checkIfDownloaded(userId, sermonId);
     } catch (error) {
       console.error('Error checking download status:', error);
       return false;

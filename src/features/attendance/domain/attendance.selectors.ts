@@ -8,7 +8,7 @@ export function getTodayStr(): string {
 export function getAttendanceStats(todayCheckins: AttendanceCheckin[], memberCount: number) {
   const checkedInMembers = todayCheckins.filter((checkin) => checkin.type === 'member');
   const firstTimeVisitors = todayCheckins.filter(
-    (checkin) => checkin.role === 'First-time Visitor' || checkin.status === 'new'
+    (checkin) => checkin.role === 'First-time Visitor' || (checkin as any).status === 'new'
   );
   const totalRegisteredMembers = memberCount || 1;
   const checkedInRatio = Math.round((checkedInMembers.length / totalRegisteredMembers) * 100);

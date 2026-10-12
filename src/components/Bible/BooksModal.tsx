@@ -112,7 +112,10 @@ export default function BooksModal({ isOpen, onClose, books, onSelectChapter, ac
   };
 
   const renderChapters = (book: any) => {
-    const chapters = book.chapters || (book.chapterCount ? Array.from({ length: book.chapterCount }, (_, i) => ({ id: String(i + 1), human_reference: String(i + 1) })) : []);
+    const rawCount = Number(book.chapterCount || (book.chapters ? book.chapters.length : 0));
+    const chapters = book.chapters && book.chapters.length > 0
+      ? book.chapters
+      : (rawCount > 0 ? Array.from({ length: rawCount }, (_, i) => ({ id: String(i + 1), human_reference: String(i + 1) })) : []);
     
     return (
       <View style={styles.chapterGridContainer}>
@@ -304,8 +307,12 @@ export default function BooksModal({ isOpen, onClose, books, onSelectChapter, ac
                       style={[styles.bookItem, isExpanded && styles.bookItemExpanded]}
                       onPress={() => toggleBook(book.id)}
                     >
-                      <Text style={[styles.bookName, isExpanded && styles.bookNameExpanded, String(book.id) === String(activeBookId) && styles.bookNameActive]}>
-                        {book.title || book.name}
+                      <Text style={[
+                        styles.bookName, 
+                        isExpanded && styles.bookNameExpanded, 
+                        (String(book.id) === String(activeBookId) || String(book.usfm) === String(activeBookId)) && styles.bookNameActive
+                      ]}>
+                        {book.name || book.title || book.abbreviation || getHumanReadableBookName(String(book.usfm || book.id))}
                       </Text>
                     </TouchableOpacity>
                     {isExpanded && renderChapters(book)}

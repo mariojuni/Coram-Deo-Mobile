@@ -19,6 +19,7 @@ import {
   onSnapshot,
 } from 'firebase/firestore';
 import * as FileSystem from 'expo-file-system/legacy';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getActiveDb, getActiveStorage, getActiveAuth } from '@/firebase';
 import { ref, getDownloadURL } from 'firebase/storage';
 import type {
@@ -37,6 +38,122 @@ const DOWNLOADS_COLLECTION = 'sermon_downloads';
 
 class SermonRepository {
   private resolvedUrlCache: Record<string, string> = {};
+
+  async saveCachedSermon(sermon: Sermon): Promise<void> {
+    try {
+      const key = `@sermon_cache_${sermon.id}`;
+      await AsyncStorage.setItem(key, JSON.stringify(sermon));
+    } catch (e) {
+      console.warn('Failed to save cached sermon:', e);
+    }
+  }
+
+  async getCachedSermon(sermonId: string): Promise<Sermon | null> {
+    try {
+      const key = `@sermon_cache_${sermonId}`;
+      const raw = await AsyncStorage.getItem(key);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (parsed.sermonDate) parsed.sermonDate = new Date(parsed.sermonDate);
+      if (parsed.createdAt) parsed.createdAt = new Date(parsed.createdAt);
+      if (parsed.updatedAt) parsed.updatedAt = new Date(parsed.updatedAt);
+      if (parsed.publishedAt) parsed.publishedAt = new Date(parsed.publishedAt);
+      return parsed;
+    } catch (e) {
+      console.warn('Failed to load cached sermon:', e);
+      return null;
+    }
+  }
+
+  async saveLocalDownloadRecord(userId: string, download: SermonDownload, sermon?: Sermon): Promise<void> {
+    try {
+      const key = `@sermon_downloads_${userId}`;
+      const records = await this.getLocalDownloadRecords(userId);
+      const existingIdx = records.findIndex(r => r.sermonId === download.sermonId);
+      const updatedItem: SermonDownload = {
+        ...download,
+        sermonData: sermon || download.sermonData,
+      };
+      if (existingIdx >= 0) {
+        records[existingIdx] = updatedItem;
+      } else {
+        records.unshift(updatedItem);
+      }
+      await AsyncStorage.setItem(key, JSON.stringify(records));
+      if (sermon) {
+        await this.saveCachedSermon(sermon);
+      }
+    } catch (e) {
+      console.warn('Failed to save local download record:', e);
+    }
+  }
+
+  async getLocalDownloadRecords(userId: string): Promise<SermonDownload[]> {
+    try {
+      const key = `@sermon_downloads_${userId}`;
+      const raw = await AsyncStorage.getItem(key);
+      if (!raw) return [];
+      const list: SermonDownload[] = JSON.parse(raw);
+      return list.map(item => ({
+        ...item,
+        fileUri: item.fileUri || item.filePath,
+        filePath: item.filePath || item.fileUri || '',
+        downloadedAt: item.downloadedAt ? new Date(item.downloadedAt) : new Date(),
+        sermonData: item.sermonData ? {
+          ...item.sermonData,
+          sermonDate: item.sermonData.sermonDate ? new Date(item.sermonData.sermonDate) : new Date(),
+          createdAt: item.sermonData.createdAt ? new Date(item.sermonData.createdAt) : new Date(),
+          updatedAt: item.sermonData.updatedAt ? new Date(item.sermonData.updatedAt) : new Date(),
+        } : undefined,
+      }));
+    } catch (e) {
+      console.warn('Failed to get local download records:', e);
+      return [];
+    }
+  }
+
+  async deleteLocalDownloadRecord(userId: string, sermonId: string): Promise<void> {
+    try {
+      const key = `@sermon_downloads_${userId}`;
+      const records = await this.getLocalDownloadRecords(userId);
+      const filtered = records.filter(r => r.sermonId !== sermonId);
+      await AsyncStorage.setItem(key, JSON.stringify(filtered));
+    } catch (e) {
+      console.warn('Failed to delete local download record:', e);
+    }
+  }
+
+  async saveCachedSermonsFeed(churchId: string, sermons: Sermon[]): Promise<void> {
+    try {
+      const key = `@sermons_feed_${churchId}`;
+      await AsyncStorage.setItem(key, JSON.stringify(sermons.slice(0, 30)));
+      for (const s of sermons.slice(0, 30)) {
+        this.saveCachedSermon(s).catch(() => {});
+      }
+    } catch (e) {
+      console.warn('Failed to save cached sermons feed:', e);
+    }
+  }
+
+  async getCachedSermonsFeed(churchId?: string): Promise<Sermon[]> {
+    try {
+      if (!churchId) return [];
+      const key = `@sermons_feed_${churchId}`;
+      const raw = await AsyncStorage.getItem(key);
+      if (!raw) return [];
+      const list = JSON.parse(raw);
+      return list.map((item: any) => ({
+        ...item,
+        sermonDate: item.sermonDate ? new Date(item.sermonDate) : new Date(),
+        createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
+        updatedAt: item.updatedAt ? new Date(item.updatedAt) : new Date(),
+        publishedAt: item.publishedAt ? new Date(item.publishedAt) : undefined,
+      }));
+    } catch (e) {
+      console.warn('Failed to load cached sermons feed:', e);
+      return [];
+    }
+  }
 
   /**
    * Resolves a raw Firebase Storage path to a playable download URL.
@@ -160,6 +277,9 @@ class SermonRepository {
 
     return onSnapshot(q, (snapshot) => {
       const sermons = snapshot.docs.map((doc) => this.mapDocToSermon(doc));
+      if (filters.churchId && (!filters.filter || filters.filter === 'all')) {
+        this.saveCachedSermonsFeed(filters.churchId, sermons).catch(() => {});
+      }
       onData(sermons);
     }, onError);
   }
@@ -226,9 +346,18 @@ class SermonRepository {
   }
 
   async fetchSermonById(id: string): Promise<Sermon | null> {
-    const docRef = doc(getActiveDb(), SERMONS_COLLECTION, id);
-    const docSnap = await getDoc(docRef);
-    return docSnap.exists() ? this.mapDocToSermon(docSnap) : null;
+    try {
+      const docRef = doc(getActiveDb(), SERMONS_COLLECTION, id);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const sermon = this.mapDocToSermon(docSnap);
+        this.saveCachedSermon(sermon).catch(() => {});
+        return sermon;
+      }
+    } catch (err) {
+      console.warn('fetchSermonById online fetch error (falling back to cache):', err);
+    }
+    return await this.getCachedSermon(id);
   }
 
   // Increment view count
@@ -546,77 +675,177 @@ class SermonRepository {
   }
 
   async saveDownloadRecord(userId: string, sermon: Sermon, fileUri: string): Promise<void> {
-    const downloadRef = doc(getActiveDb(), DOWNLOADS_COLLECTION, `${userId}_${sermon.id}`);
-    await setDoc(downloadRef, {
+    const size = await this.getFileSize(fileUri);
+    const localRecord: SermonDownload = {
+      id: `${userId}_${sermon.id}`,
       userId,
       sermonId: sermon.id,
-      fileUri: fileUri,
-      downloadedAt: Timestamp.now(),
-      size: await this.getFileSize(fileUri),
-    });
+      fileUri,
+      filePath: fileUri,
+      downloadedAt: new Date(),
+      size,
+      fileSize: size,
+      quality: 'high',
+      sermonData: sermon,
+    };
+
+    // 1. Save to local storage first (instant, guaranteed offline access)
+    await this.saveLocalDownloadRecord(userId, localRecord, sermon);
+
+    // 2. Sync download record to Firestore
+    try {
+      const downloadRef = doc(getActiveDb(), DOWNLOADS_COLLECTION, `${userId}_${sermon.id}`);
+      await setDoc(downloadRef, {
+        userId,
+        sermonId: sermon.id,
+        fileUri: fileUri,
+        downloadedAt: Timestamp.now(),
+        size,
+      });
+    } catch (e) {
+      console.warn('Could not sync download record to Firestore (offline?):', e);
+    }
   }
 
   async deleteDownloadRecord(userId: string, sermonId: string): Promise<void> {
-    const downloadRef = doc(getActiveDb(), DOWNLOADS_COLLECTION, `${userId}_${sermonId}`);
-    await deleteDoc(downloadRef);
+    await this.deleteLocalDownloadRecord(userId, sermonId);
+    try {
+      const downloadRef = doc(getActiveDb(), DOWNLOADS_COLLECTION, `${userId}_${sermonId}`);
+      await deleteDoc(downloadRef);
+    } catch (e) {
+      console.warn('Could not delete download record from Firestore:', e);
+    }
   }
 
   async getDownloadedSermons(userId: string): Promise<SermonDownload[]> {
-    const downloadsRef = collection(getActiveDb(), DOWNLOADS_COLLECTION);
-    const q = query(downloadsRef, where('userId', '==', userId));
-    const snapshot = await getDocs(q);
+    // 1. Load locally cached records first
+    const localRecords = await this.getLocalDownloadRecords(userId);
 
-    return snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-      downloadedAt: doc.data().downloadedAt?.toDate(),
-    } as unknown as SermonDownload));
+    // 2. Try fetching from Firestore if network is available
+    try {
+      const downloadsRef = collection(getActiveDb(), DOWNLOADS_COLLECTION);
+      const q = query(downloadsRef, where('userId', '==', userId));
+      const snapshot = await getDocs(q);
+
+      const serverRecords = snapshot.docs.map((docSnap) => {
+        const data = docSnap.data();
+        return {
+          id: docSnap.id,
+          ...data,
+          fileUri: data.fileUri || data.filePath,
+          downloadedAt: data.downloadedAt?.toDate ? data.downloadedAt.toDate() : new Date(),
+        } as unknown as SermonDownload;
+      });
+
+      // Merge server records with locally cached sermonData
+      const localMap = new Map(localRecords.map((r) => [r.sermonId, r]));
+      const merged = serverRecords.map((sr) => {
+        const local = localMap.get(sr.sermonId);
+        return {
+          ...sr,
+          sermonData: local?.sermonData,
+        };
+      });
+
+      // If server returned records, update local storage cache
+      if (merged.length > 0) {
+        const key = `@sermon_downloads_${userId}`;
+        await AsyncStorage.setItem(key, JSON.stringify(merged));
+      }
+
+      return merged.length > 0 ? merged : localRecords;
+    } catch (err) {
+      console.warn('getDownloadedSermons offline fallback to local cache:', err);
+      return localRecords;
+    }
   }
 
   async deleteDownload(userId: string, sermonId: string): Promise<void> {
-    const downloadRef = doc(getActiveDb(), DOWNLOADS_COLLECTION, `${userId}_${sermonId}`);
-    const downloadDoc = await getDoc(downloadRef);
-
-    if (downloadDoc.exists()) {
-      const data = downloadDoc.data();
-      
-      // Delete file from device
-      const fileInfo = await FileSystem.getInfoAsync(data.fileUri);
-      if (fileInfo.exists) {
-        await FileSystem.deleteAsync(data.fileUri);
+    const localRecords = await this.getLocalDownloadRecords(userId);
+    const found = localRecords.find((r) => r.sermonId === sermonId);
+    if (found && (found.fileUri || found.filePath)) {
+      const path = found.fileUri || found.filePath!;
+      try {
+        const fileInfo = await FileSystem.getInfoAsync(path);
+        if (fileInfo.exists) {
+          await FileSystem.deleteAsync(path, { idempotent: true });
+        }
+      } catch (err) {
+        console.warn('Error deleting local file:', err);
       }
-
-      // Delete Firestore record
-      await deleteDoc(downloadRef);
     }
+
+    try {
+      const downloadRef = doc(getActiveDb(), DOWNLOADS_COLLECTION, `${userId}_${sermonId}`);
+      const downloadDoc = await getDoc(downloadRef);
+      if (downloadDoc.exists()) {
+        const data = downloadDoc.data();
+        if (data.fileUri) {
+          const fileInfo = await FileSystem.getInfoAsync(data.fileUri);
+          if (fileInfo.exists) {
+            await FileSystem.deleteAsync(data.fileUri, { idempotent: true });
+          }
+        }
+      }
+    } catch {
+      // Ignore if offline
+    }
+
+    await this.deleteDownloadRecord(userId, sermonId);
   }
 
   async checkIfDownloaded(userId: string, sermonId: string): Promise<boolean> {
-    const downloadRef = doc(getActiveDb(), DOWNLOADS_COLLECTION, `${userId}_${sermonId}`);
-    const downloadDoc = await getDoc(downloadRef);
-    
-    if (!downloadDoc.exists()) {
-      return false;
+    // 1. Check local download records first (works offline, instant)
+    const localRecords = await this.getLocalDownloadRecords(userId);
+    const found = localRecords.find((r) => r.sermonId === sermonId);
+    if (found && (found.fileUri || found.filePath)) {
+      const path = found.fileUri || found.filePath!;
+      const fileInfo = await FileSystem.getInfoAsync(path);
+      if (fileInfo.exists) return true;
     }
 
-    // Check if file still exists on device
-    const data = downloadDoc.data();
-    const fileInfo = await FileSystem.getInfoAsync(data.fileUri);
-    return fileInfo.exists;
+    // 2. Check Firestore if online
+    try {
+      const downloadRef = doc(getActiveDb(), DOWNLOADS_COLLECTION, `${userId}_${sermonId}`);
+      const downloadDoc = await getDoc(downloadRef);
+      if (downloadDoc.exists()) {
+        const data = downloadDoc.data();
+        if (data.fileUri) {
+          const fileInfo = await FileSystem.getInfoAsync(data.fileUri);
+          return fileInfo.exists;
+        }
+      }
+    } catch {
+      // Offline fallback
+    }
+
+    return false;
   }
 
   async getDownloadUri(userId: string, sermonId: string): Promise<string | null> {
-    const downloadRef = doc(getActiveDb(), DOWNLOADS_COLLECTION, `${userId}_${sermonId}`);
-    const downloadDoc = await getDoc(downloadRef);
-    
-    if (!downloadDoc.exists()) {
-      return null;
+    const localRecords = await this.getLocalDownloadRecords(userId);
+    const found = localRecords.find((r) => r.sermonId === sermonId);
+    if (found && (found.fileUri || found.filePath)) {
+      const path = found.fileUri || found.filePath!;
+      const fileInfo = await FileSystem.getInfoAsync(path);
+      if (fileInfo.exists) return path;
     }
 
-    const data = downloadDoc.data();
-    const fileInfo = await FileSystem.getInfoAsync(data.fileUri);
-    
-    return fileInfo.exists ? data.fileUri : null;
+    try {
+      const downloadRef = doc(getActiveDb(), DOWNLOADS_COLLECTION, `${userId}_${sermonId}`);
+      const downloadDoc = await getDoc(downloadRef);
+      if (downloadDoc.exists()) {
+        const data = downloadDoc.data();
+        if (data.fileUri) {
+          const fileInfo = await FileSystem.getInfoAsync(data.fileUri);
+          return fileInfo.exists ? data.fileUri : null;
+        }
+      }
+    } catch {
+      // Offline fallback
+    }
+
+    return null;
   }
 
   private async getFileSize(uri: string): Promise<number> {

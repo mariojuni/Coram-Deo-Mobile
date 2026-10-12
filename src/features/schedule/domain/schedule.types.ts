@@ -27,5 +27,7 @@ export interface Schedule {
   songList?: any[];
   setlistStatus?: string;
   status?: string;
+  completedAt?: unknown;
   createdAt?: unknown;
 }
+

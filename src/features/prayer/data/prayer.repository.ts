@@ -9,11 +9,12 @@ import {
     runTransaction,
     updateDoc,
     deleteDoc,
+    getDocs,
+    where,
 } from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getActiveDb } from '../../../firebase';
 import type { Prayer } from '../domain/prayer.types';
-import { getDocs } from 'firebase/firestore';
-import { where } from 'firebase/firestore';
 
 type PrayersListener = (prayers: Prayer[]) => void;
 type ErrorListener = (error: Error) => void;
@@ -43,6 +44,25 @@ function toPrayerModel(data: Record<string, unknown>, id: string): Prayer {
 }
 
 export const prayerRepository = {
+  async getCachedPrayers(churchId: string): Promise<Prayer[]> {
+    try {
+      const raw = await AsyncStorage.getItem(`@prayers_cache_${churchId}`);
+      if (!raw) return [];
+      return JSON.parse(raw);
+    } catch (e) {
+      console.warn('Failed to load cached prayers:', e);
+      return [];
+    }
+  },
+
+  async saveCachedPrayers(churchId: string, prayers: Prayer[]): Promise<void> {
+    try {
+      await AsyncStorage.setItem(`@prayers_cache_${churchId}`, JSON.stringify(prayers));
+    } catch (e) {
+      console.warn('Failed to save cached prayers:', e);
+    }
+  },
+
   subscribeToPrayers(churchId: string | undefined | null, onData: PrayersListener, onError: ErrorListener): () => void {
     if (!churchId) return () => {};
     const prayerQuery = query(collection(getActiveDb(), `churches/${churchId}/prayer_requests`), orderBy('createdAt', 'desc'));
@@ -51,6 +71,7 @@ export const prayerRepository = {
       prayerQuery,
       (snapshot) => {
         const prayers = snapshot.docs.map((docSnap) => toPrayerModel(docSnap.data() as Record<string, unknown>, docSnap.id));
+        prayerRepository.saveCachedPrayers(churchId, prayers).catch(() => {});
         onData(prayers);
       },
       (error) => {
@@ -178,25 +199,39 @@ export const prayerRepository = {
   },
 
   async fetchUserPrayers(churchId: string, userId: string): Promise<Prayer[]> {
-    const q = query(
-      collection(getActiveDb(), `churches/${churchId}/prayer_requests`),
-      where('userId', '==', userId)
-    );
-    const snapshot = await getDocs(q);
-    const prayers = snapshot.docs.map(d => toPrayerModel(d.data(), d.id));
-    prayers.sort((a, b) => {
-      const timeA = a.createdAt
-        ? (a.createdAt as any).toDate
-          ? (a.createdAt as any).toDate().getTime()
-          : new Date(a.createdAt as any).getTime()
-        : 0;
-      const timeB = b.createdAt
-        ? (b.createdAt as any).toDate
-          ? (b.createdAt as any).toDate().getTime()
-          : new Date(b.createdAt as any).getTime()
-        : 0;
-      return timeB - timeA;
-    });
-    return prayers;
+    const cacheKey = `@user_prayers_${churchId}_${userId}`;
+    try {
+      const q = query(
+        collection(getActiveDb(), `churches/${churchId}/prayer_requests`),
+        where('userId', '==', userId)
+      );
+      const snapshot = await getDocs(q);
+      const prayers = snapshot.docs.map(d => toPrayerModel(d.data(), d.id));
+      prayers.sort((a, b) => {
+        const timeA = a.createdAt
+          ? (a.createdAt as any).toDate
+            ? (a.createdAt as any).toDate().getTime()
+            : new Date(a.createdAt as any).getTime()
+          : 0;
+        const timeB = b.createdAt
+          ? (b.createdAt as any).toDate
+            ? (b.createdAt as any).toDate().getTime()
+            : new Date(b.createdAt as any).getTime()
+          : 0;
+        return timeB - timeA;
+      });
+      AsyncStorage.setItem(cacheKey, JSON.stringify(prayers)).catch(() => {});
+      return prayers;
+    } catch (e) {
+      console.warn('Failed to fetch user prayers online, loading from cache:', e);
+      try {
+        const raw = await AsyncStorage.getItem(cacheKey);
+        if (raw) return JSON.parse(raw);
+        const cachedAll = await this.getCachedPrayers(churchId);
+        return cachedAll.filter((p) => p.userId === userId);
+      } catch {
+        return [];
+      }
+    }
   },
 };

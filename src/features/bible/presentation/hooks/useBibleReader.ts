@@ -401,13 +401,21 @@ export function useBibleReader(
     ]
   );
 
+  const isSameBook = useCallback((book: Book, targetBookId: string) => {
+    const norm = String(targetBookId).trim().toUpperCase();
+    return (
+      String(book.id).trim().toUpperCase() === norm ||
+      String((book as any).usfm || '').trim().toUpperCase() === norm
+    );
+  }, []);
+
   const getEffectiveChapters = useCallback(
     (book: Book): { id: string }[] => {
       if (book.chapters && book.chapters.length > 0) {
-        return book.chapters as { id: string }[];
+        return book.chapters.map((c) => ({ id: String(c.id) }));
       }
-      const count = book.chapterCount;
-      if (count && count > 0) {
+      const count = Number(book.chapterCount);
+      if (!isNaN(count) && count > 0) {
         return Array.from({ length: count }, (_, i) => ({ id: String(i + 1) }));
       }
       return [];
@@ -416,57 +424,96 @@ export function useBibleReader(
   );
 
   const handlePrevChapter = useCallback(() => {
-    const bookIndex = books.findIndex((book) => book.id === activeBook);
-    if (bookIndex === -1) return;
+    const currentChapterNum = parseInt(String(activeChapter), 10) || 1;
+    const bookIndex = books.findIndex((book) => isSameBook(book, activeBook));
+
+    if (bookIndex === -1) {
+      if (currentChapterNum > 1) {
+        updatePreferences({ activeChapter: String(currentChapterNum - 1), scrollToVerse: undefined });
+      }
+      return;
+    }
+
     const currentBook = books[bookIndex];
     const chapters = getEffectiveChapters(currentBook);
-    const chapterIndex = chapters.findIndex((ch) => String(ch.id) === String(activeChapter));
+    const chapterIndex = chapters.findIndex(
+      (ch) => String(ch.id) === String(activeChapter) || parseInt(String(ch.id), 10) === currentChapterNum
+    );
 
     if (chapterIndex > 0) {
       updatePreferences({ activeChapter: String(chapters[chapterIndex - 1].id), scrollToVerse: undefined });
       return;
     }
 
+    if (chapterIndex === -1 && currentChapterNum > 1) {
+      updatePreferences({ activeChapter: String(currentChapterNum - 1), scrollToVerse: undefined });
+      return;
+    }
+
+    // Go to previous book's last chapter
     if (bookIndex > 0) {
       const prevBook = books[bookIndex - 1];
       const prevChapters = getEffectiveChapters(prevBook);
+      const targetBookId = (prevBook as any).usfm || prevBook.id;
       if (prevChapters.length > 0) {
         updatePreferences({
-          activeBook: prevBook.id,
+          activeBook: String(targetBookId),
           activeChapter: String(prevChapters[prevChapters.length - 1].id),
+          scrollToVerse: undefined,
+        });
+      } else {
+        const prevCount = Number((prevBook as any).chapterCount) || 1;
+        updatePreferences({
+          activeBook: String(targetBookId),
+          activeChapter: String(prevCount),
           scrollToVerse: undefined,
         });
       }
     }
-  }, [activeBook, activeChapter, books, getEffectiveChapters, updatePreferences]);
+  }, [activeBook, activeChapter, books, getEffectiveChapters, isSameBook, updatePreferences]);
 
   const handleNextChapter = useCallback(() => {
     // If the user navigates to the next chapter manually, count the current one as read
     markAsRead();
 
-    const bookIndex = books.findIndex((book) => book.id === activeBook);
-    if (bookIndex === -1) return;
+    const currentChapterNum = parseInt(String(activeChapter), 10) || 1;
+    const bookIndex = books.findIndex((book) => isSameBook(book, activeBook));
+
+    if (bookIndex === -1) {
+      updatePreferences({ activeChapter: String(currentChapterNum + 1), scrollToVerse: undefined });
+      return;
+    }
+
     const currentBook = books[bookIndex];
     const chapters = getEffectiveChapters(currentBook);
-    const chapterIndex = chapters.findIndex((ch) => String(ch.id) === String(activeChapter));
+    const chapterIndex = chapters.findIndex(
+      (ch) => String(ch.id) === String(activeChapter) || parseInt(String(ch.id), 10) === currentChapterNum
+    );
 
     if (chapterIndex !== -1 && chapterIndex < chapters.length - 1) {
       updatePreferences({ activeChapter: String(chapters[chapterIndex + 1].id), scrollToVerse: undefined });
       return;
     }
 
+    const rawCount = Number((currentBook as any).chapterCount) || chapters.length;
+    if (chapterIndex === -1 && rawCount > 0 && currentChapterNum < rawCount) {
+      updatePreferences({ activeChapter: String(currentChapterNum + 1), scrollToVerse: undefined });
+      return;
+    }
+
+    // Go to next book's first chapter
     if (bookIndex < books.length - 1) {
       const nextBook = books[bookIndex + 1];
       const nextChapters = getEffectiveChapters(nextBook);
-      if (nextChapters.length > 0) {
-        updatePreferences({
-          activeBook: nextBook.id,
-          activeChapter: String(nextChapters[0].id),
-          scrollToVerse: undefined,
-        });
-      }
+      const targetBookId = (nextBook as any).usfm || nextBook.id;
+      const firstChapter = nextChapters.length > 0 ? String(nextChapters[0].id) : '1';
+      updatePreferences({
+        activeBook: String(targetBookId),
+        activeChapter: firstChapter,
+        scrollToVerse: undefined,
+      });
     }
-  }, [activeBook, activeChapter, books, getEffectiveChapters, updatePreferences, markAsRead]);
+  }, [activeBook, activeChapter, books, getEffectiveChapters, isSameBook, updatePreferences, markAsRead]);
 
   const verseBackgroundColor = useCallback(
     (verseNumber: string) => {

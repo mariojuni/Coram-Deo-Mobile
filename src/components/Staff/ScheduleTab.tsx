@@ -1,15 +1,17 @@
-import { CalendarPlus, Clock, MapPin, Pencil, CalendarDays } from 'lucide-react-native';
+import { CalendarPlus, Clock, MapPin, Pencil, CalendarDays, CheckCircle2 } from 'lucide-react-native';
 import { useEffect, useCallback, useMemo, useState } from 'react';
-import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native';
+import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated, Alert } from 'react-native';
 import { Image } from 'expo-image';
 import { useMemberStore } from '../../store/useMemberStore';
 import { useMinistryStore } from '../../store/useMinistryStore';
-import { getMinisterialTeam, type Schedule, useScheduleStore } from '../../store/useScheduleStore';
+import { getMinisterialTeam, type Schedule, useScheduleStore, isScheduleCompleted } from '../../store/useScheduleStore';
 import AddScheduleModal from './AddScheduleModal';
 import { useAuthStore } from '../../store/useAuthStore';
 import { createMemberIdMap } from '../../features/member/domain/member.utils';
 import { SoftCard, getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 import { useRouter } from 'expo-router';
+import { doc, updateDoc, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
+import { getActiveDb } from '../../firebase';
 
 type TeamMemberCard = {
   avatar: string;
@@ -36,6 +38,7 @@ export default function ScheduleTab({
   const schedules = useScheduleStore((state) => state.schedules);
   const { assignments, initializeAssignmentsListener } = useMinistryStore();
   const userProfile = useAuthStore((s) => s.userProfile);
+  const [filterTab, setFilterTab] = useState<'active' | 'completed'>('active');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [eventToEdit, setEventToEdit] = useState<Schedule | null>(null);
   const members = useMemberStore((state) => state.members);
@@ -76,7 +79,7 @@ export default function ScheduleTab({
     return () => unsubscribe();
   }, [initializeAssignmentsListener, userProfile?.churchId]);
 
-  const scheduleItems = useMemo<ScheduleCardItem[]>(
+  const allScheduleItems = useMemo<ScheduleCardItem[]>(
     () =>
       schedules.map((schedule) => {
         const { month, day, weekday } = formatDate(schedule.date);
@@ -106,131 +109,201 @@ export default function ScheduleTab({
     [memberById, schedules, assignments]
   );
 
-  const renderScheduleItem = useCallback(
-    ({ item }: { item: ScheduleCardItem }) => (
-      <SoftCard style={{ marginBottom: 0, borderRadius: 16 }} innerStyle={{ borderRadius: 15 }}>
-        <TouchableOpacity
-          style={[styles.card, item.team.length === 0 && styles.cardWithoutTeam]}
-          activeOpacity={0.7}
-          onPress={() => router.push({ pathname: '/assign-ministries', params: { scheduleId: item.schedule.id } })}
-          onLongPress={() => {
-            setEventToEdit(item.schedule);
-            setIsAddModalOpen(true);
-          }}
-          delayLongPress={400}
-        >
-          <View style={styles.cardContent}>
-            <View style={styles.dateBlock}>
-              <Text style={styles.dateMonth}>{item.month}</Text>
-              <Text style={styles.dateDay}>{item.day}</Text>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: '#9CA3AF', marginTop: 2, letterSpacing: 0.5 }}>{item.weekdayShort}</Text>
-            </View>
+  const activeItems = useMemo(
+    () => allScheduleItems.filter((item) => !isScheduleCompleted(item.schedule)),
+    [allScheduleItems]
+  );
 
-            <View style={styles.detailsBlock}>
-              {item.schedule.status && (
-                <View style={{ flexDirection: 'row', marginBottom: 4 }}>
-                  <View
-                    style={[
-                      styles.statusBadge,
-                      { marginRight: 0 },
-                      item.schedule.status.toLowerCase() === 'published'
-                        ? styles.statusPublished
-                        : item.schedule.status.toLowerCase() === 'cancelled'
-                        ? styles.statusCancelled
-                        : styles.statusDraft,
-                    ]}
-                  >
-                    <Text
+  const completedItems = useMemo(
+    () => allScheduleItems.filter((item) => isScheduleCompleted(item.schedule)),
+    [allScheduleItems]
+  );
+
+  const displayedItems = filterTab === 'active' ? activeItems : completedItems;
+
+  const handleCompleteEvent = useCallback((schedule: Schedule) => {
+    Alert.alert(
+      'Mark Completed',
+      `Are you sure you want to mark "${schedule.title}" as completed?\n\nIt will be automatically hidden from upcoming events.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Mark Completed',
+          style: 'default',
+          onPress: async () => {
+            try {
+              await updateDoc(doc(getActiveDb(), 'events', schedule.id), {
+                status: 'completed',
+                completedAt: new Date().toISOString(),
+              });
+
+              // Close attendance sessions if any
+              const sessionsQ = query(
+                collection(getActiveDb(), 'attendance_sessions'),
+                where('eventId', '==', schedule.id)
+              );
+              const sessionsSnap = await getDocs(sessionsQ);
+              if (!sessionsSnap.empty) {
+                const batch = writeBatch(getActiveDb());
+                sessionsSnap.forEach((sDoc) => {
+                  batch.update(doc(getActiveDb(), 'attendance_sessions', sDoc.id), { status: 'Closed' });
+                });
+                await batch.commit();
+              }
+            } catch (e) {
+              console.error('Error completing event:', e);
+              Alert.alert('Error', 'Failed to mark event as completed.');
+            }
+          },
+        },
+      ]
+    );
+  }, []);
+
+  const renderScheduleItem = useCallback(
+    ({ item }: { item: ScheduleCardItem }) => {
+      const isCompleted = isScheduleCompleted(item.schedule);
+      return (
+        <SoftCard style={{ marginBottom: 0, borderRadius: 16 }} innerStyle={{ borderRadius: 15 }}>
+          <TouchableOpacity
+            style={[styles.card, item.team.length === 0 && styles.cardWithoutTeam]}
+            activeOpacity={0.7}
+            onPress={() => router.push({ pathname: '/assign-ministries', params: { scheduleId: item.schedule.id } })}
+            onLongPress={() => {
+              setEventToEdit(item.schedule);
+              setIsAddModalOpen(true);
+            }}
+            delayLongPress={400}
+          >
+            <View style={styles.cardContent}>
+              <View style={styles.dateBlock}>
+                <Text style={styles.dateMonth}>{item.month}</Text>
+                <Text style={styles.dateDay}>{item.day}</Text>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#9CA3AF', marginTop: 2, letterSpacing: 0.5 }}>{item.weekdayShort}</Text>
+              </View>
+
+              <View style={styles.detailsBlock}>
+                {(item.schedule.status || isCompleted) && (
+                  <View style={{ flexDirection: 'row', marginBottom: 4 }}>
+                    <View
                       style={[
-                        styles.statusText,
-                        item.schedule.status.toLowerCase() === 'published'
-                          ? styles.statusTextPublished
-                          : item.schedule.status.toLowerCase() === 'cancelled'
-                          ? styles.statusTextCancelled
-                          : styles.statusTextDraft,
+                        styles.statusBadge,
+                        { marginRight: 0 },
+                        isCompleted
+                          ? styles.statusCompleted
+                          : item.schedule.status?.toLowerCase() === 'published'
+                          ? styles.statusPublished
+                          : item.schedule.status?.toLowerCase() === 'cancelled'
+                          ? styles.statusCancelled
+                          : styles.statusDraft,
                       ]}
                     >
-                      {item.schedule.status.toUpperCase()}
+                      <Text
+                        style={[
+                          styles.statusText,
+                          isCompleted
+                            ? styles.statusTextCompleted
+                            : item.schedule.status?.toLowerCase() === 'published'
+                            ? styles.statusTextPublished
+                            : item.schedule.status?.toLowerCase() === 'cancelled'
+                            ? styles.statusTextCancelled
+                            : styles.statusTextDraft,
+                        ]}
+                      >
+                        {isCompleted ? 'COMPLETED' : item.schedule.status?.toUpperCase()}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+                <View style={styles.titleRow}>
+                  <Text style={styles.eventTitle} numberOfLines={1}>
+                    {item.schedule.title}
+                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    {!isCompleted && (
+                      <TouchableOpacity
+                        style={styles.completeBtn}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        onPress={() => handleCompleteEvent(item.schedule)}
+                        accessibilityLabel="Mark Completed"
+                      >
+                        <CheckCircle2 size={16} color="#059669" />
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity
+                      style={styles.editBtn}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      onPress={() => {
+                        setEventToEdit(item.schedule);
+                        setIsAddModalOpen(true);
+                      }}
+                    >
+                      <Pencil size={14} color="#aaa" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View style={[styles.roleRow, item.team.length === 0 && styles.roleRowWithoutTeam]}>
+                  <View style={styles.timeRow}>
+                    <Clock size={12} color="#888" style={styles.timeIcon} />
+                    <Text style={styles.infoText}>
+                      {item.schedule.time || '9:00 AM'}
+                      {item.schedule.endTime ? ` - ${item.schedule.endTime}` : ''}
                     </Text>
                   </View>
                 </View>
-              )}
-              <View style={styles.titleRow}>
-                <Text style={styles.eventTitle} numberOfLines={1}>
-                  {item.schedule.title}
-                </Text>
-                <TouchableOpacity
-                  style={styles.editBtn}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  onPress={() => {
-                    setEventToEdit(item.schedule);
-                    setIsAddModalOpen(true);
-                  }}
-                >
-                  <Pencil size={14} color="#aaa" />
-                </TouchableOpacity>
-              </View>
 
-              <View style={[styles.roleRow, item.team.length === 0 && styles.roleRowWithoutTeam]}>
-                <View style={styles.timeRow}>
-                  <Clock size={12} color="#888" style={styles.timeIcon} />
-                  <Text style={styles.infoText}>
-                    {item.schedule.time || '9:00 AM'}
-                    {item.schedule.endTime ? ` - ${item.schedule.endTime}` : ''}
-                  </Text>
+                <View style={styles.infoRow}>
+                  <MapPin size={14} color="#888" style={styles.locationIcon} />
+                  <Text style={styles.infoText}>{item.schedule.location || 'Main Sanctuary'}</Text>
                 </View>
-              </View>
 
-              <View style={styles.infoRow}>
-                <MapPin size={14} color="#888" style={styles.locationIcon} />
-                <Text style={styles.infoText}>{item.schedule.location || 'Main Sanctuary'}</Text>
+                {item.team.length > 0 && (
+                  <View style={styles.teamRow}>
+                    <ScrollView 
+                      horizontal 
+                      showsHorizontalScrollIndicator={false} 
+                      contentContainerStyle={styles.teamScrollContent}
+                      style={styles.teamScrollView}
+                    >
+                      <View style={styles.teamAvatars}>
+                        {item.team.map((member, index) => (
+                          <View
+                            key={`${member.id}-${index}`}
+                            style={[
+                              styles.avatarWrapper,
+                              { zIndex: 10 - index },
+                              index > 0 && styles.stackedAvatar,
+                            ]}
+                          >
+                            <Image source={{ uri: member.avatar }} style={styles.teamAvatar} transition={200} cachePolicy="memory-disk" contentFit="cover" />
+                          </View>
+                        ))}
+                      </View>
+                    </ScrollView>
+                    <Text style={styles.tapHint}>Tap to assign →</Text>
+                  </View>
+                )}
               </View>
-
-              {item.team.length > 0 && (
-                <View style={styles.teamRow}>
-                  <ScrollView 
-                    horizontal 
-                    showsHorizontalScrollIndicator={false} 
-                    contentContainerStyle={styles.teamScrollContent}
-                    style={styles.teamScrollView}
-                  >
-                    <View style={styles.teamAvatars}>
-                      {item.team.map((member, index) => (
-                        <View
-                          key={`${member.id}-${index}`}
-                          style={[
-                            styles.avatarWrapper,
-                            { zIndex: 10 - index },
-                            index > 0 && styles.stackedAvatar,
-                          ]}
-                        >
-                          <Image source={{ uri: member.avatar }} style={styles.teamAvatar} transition={200} cachePolicy="memory-disk" contentFit="cover" />
-                        </View>
-                      ))}
-                    </View>
-                  </ScrollView>
-                  <Text style={styles.tapHint}>Tap to assign →</Text>
-                </View>
-              )}
             </View>
-          </View>
-        </TouchableOpacity>
-      </SoftCard>
-    ),
-    []
+          </TouchableOpacity>
+        </SoftCard>
+      );
+    },
+    [handleCompleteEvent, router]
   );
 
   const renderSeparator = useCallback(() => <View style={styles.listSeparator} />, []);
 
   return (
     <View style={styles.container}>
-      {scheduleItems.length === 0 ? (
+      {displayedItems.length === 0 ? (
         <Animated.ScrollView 
           onScroll={onScroll} 
           scrollEventThrottle={16}
-          contentContainerStyle={{ paddingTop: headerHeight + 16, flexGrow: 1 }}
+          contentContainerStyle={{ paddingTop: headerHeight + 16, flexGrow: 1, paddingHorizontal: 20 }}
         >
-          <View style={[styles.headerRow, { paddingHorizontal: 20 }]}>
+          <View style={styles.headerRow}>
             <Text style={styles.title}>Event Schedules</Text>
             <TouchableOpacity 
               style={styles.addIconBtn} 
@@ -242,19 +315,65 @@ export default function ScheduleTab({
               <CalendarPlus size={24} color="#FF6596" />
             </TouchableOpacity>
           </View>
+
+          <View style={styles.filterPillsRow}>
+            <TouchableOpacity
+              style={[styles.filterPill, filterTab === 'active' && styles.filterPillActive]}
+              onPress={() => setFilterTab('active')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.filterPillText, filterTab === 'active' && styles.filterPillTextActive]}>
+                Upcoming ({activeItems.length})
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.filterPill, filterTab === 'completed' && styles.filterPillActive]}
+              onPress={() => setFilterTab('completed')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.filterPillText, filterTab === 'completed' && styles.filterPillTextActive]}>
+                Completed ({completedItems.length})
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 12 }}>
-            <CalendarDays size={56} color="#FF6596" strokeWidth={1.5} />
-            <Text style={{ fontSize: 18, fontWeight: '800', color: '#1F2937', textAlign: 'center', marginBottom: 4 }}>
-              No Events Yet
-            </Text>
-            <Text style={{ fontSize: 14, color: '#6B7280', textAlign: 'center', lineHeight: 20 }}>
-              You haven't added any event schedules yet.{'\n'}Tap the + icon above to create one.
-            </Text>
+            {filterTab === 'active' ? (
+              <>
+                <CalendarDays size={56} color="#FF6596" strokeWidth={1.5} />
+                <Text style={{ fontSize: 18, fontWeight: '800', color: '#1F2937', textAlign: 'center', marginBottom: 4 }}>
+                  No Upcoming Events
+                </Text>
+                <Text style={{ fontSize: 14, color: '#6B7280', textAlign: 'center', lineHeight: 20 }}>
+                  All events are completed or none have been scheduled yet.{'\n'}Tap the + icon above to create one.
+                </Text>
+                {completedItems.length > 0 && (
+                  <TouchableOpacity
+                    style={styles.switchFilterBtn}
+                    onPress={() => setFilterTab('completed')}
+                  >
+                    <Text style={styles.switchFilterBtnText}>
+                      View Completed Events ({completedItems.length})
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            ) : (
+              <>
+                <CheckCircle2 size={56} color="#10B981" strokeWidth={1.5} />
+                <Text style={{ fontSize: 18, fontWeight: '800', color: '#1F2937', textAlign: 'center', marginBottom: 4 }}>
+                  No Completed Events
+                </Text>
+                <Text style={{ fontSize: 14, color: '#6B7280', textAlign: 'center', lineHeight: 20 }}>
+                  Events that have ended or been marked completed will automatically appear here.
+                </Text>
+              </>
+            )}
           </View>
         </Animated.ScrollView>
       ) : (
         <Animated.FlatList
-          data={scheduleItems}
+          data={displayedItems}
           renderItem={renderScheduleItem}
           keyExtractor={(item: any) => item.schedule.id}
           ItemSeparatorComponent={renderSeparator}
@@ -262,17 +381,40 @@ export default function ScheduleTab({
           onScroll={onScroll}
           scrollEventThrottle={16}
           ListHeaderComponent={
-            <View style={styles.headerRow}>
-              <Text style={styles.title}>Event Schedules</Text>
-              <TouchableOpacity 
-                style={styles.addIconBtn} 
-                onPress={() => {
-                  setEventToEdit(null);
-                  setIsAddModalOpen(true);
-                }}
-              >
-                <CalendarPlus size={24} color="#FF6596" />
-              </TouchableOpacity>
+            <View>
+              <View style={styles.headerRow}>
+                <Text style={styles.title}>Event Schedules</Text>
+                <TouchableOpacity 
+                  style={styles.addIconBtn} 
+                  onPress={() => {
+                    setEventToEdit(null);
+                    setIsAddModalOpen(true);
+                  }}
+                >
+                  <CalendarPlus size={24} color="#FF6596" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.filterPillsRow}>
+                <TouchableOpacity
+                  style={[styles.filterPill, filterTab === 'active' && styles.filterPillActive]}
+                  onPress={() => setFilterTab('active')}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.filterPillText, filterTab === 'active' && styles.filterPillTextActive]}>
+                    Upcoming ({activeItems.length})
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.filterPill, filterTab === 'completed' && styles.filterPillActive]}
+                  onPress={() => setFilterTab('completed')}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.filterPillText, filterTab === 'completed' && styles.filterPillTextActive]}>
+                    Completed ({completedItems.length})
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           }
           initialNumToRender={6}
@@ -302,6 +444,51 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, paddingHorizontal: 4 },
   title: { fontSize: 18, fontWeight: '800', color: '#1a1a1a' },
   addIconBtn: { ...getTopBarButtonShadowStyle(24), padding: 8, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
+  filterPillsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+    paddingHorizontal: 4,
+  },
+  filterPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  filterPillActive: {
+    backgroundColor: '#FF6596',
+    borderColor: '#FF6596',
+  },
+  filterPillText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+  filterPillTextActive: {
+    color: '#FFFFFF',
+  },
+  switchFilterBtn: {
+    marginTop: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  switchFilterBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FF6596',
+  },
+  completeBtn: {
+    padding: 4,
+    borderRadius: 6,
+    backgroundColor: '#ECFDF5',
+  },
   emptyState: { padding: 40, alignItems: 'center' },
   emptyText: { color: '#888', fontSize: 15 },
   listContainer: { paddingBottom: 8, paddingHorizontal: 20 },
@@ -325,10 +512,12 @@ const styles = StyleSheet.create({
   statusPublished: { backgroundColor: '#DCFCE7' },
   statusDraft: { backgroundColor: '#FEF3C7' },
   statusCancelled: { backgroundColor: '#FEE2E2' },
+  statusCompleted: { backgroundColor: '#E0E7FF' },
   statusText: { fontSize: 10, fontWeight: '800' },
   statusTextPublished: { color: '#15803D' },
   statusTextDraft: { color: '#B45309' },
   statusTextCancelled: { color: '#B91C1C' },
+  statusTextCompleted: { color: '#4338CA' },
   roleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
   roleRowWithoutTeam: { marginBottom: 2 },
   dotSeparator: { color: '#ccc', marginHorizontal: 6, fontSize: 14 },
@@ -346,5 +535,5 @@ const styles = StyleSheet.create({
   stackedAvatar: { marginLeft: -12 },
   teamAvatar: { width: 32, height: 32, borderRadius: 16, borderWidth: 2, borderColor: '#fff', flexShrink: 0 },
   tapHint: { fontSize: 11, color: '#FF6596', fontWeight: '600', flexShrink: 0 },
-  editBtn: { padding: 4, marginLeft: 4 },
+  editBtn: { padding: 4, marginLeft: 2 },
 });

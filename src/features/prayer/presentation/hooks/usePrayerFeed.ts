@@ -11,25 +11,43 @@ export function usePrayerFeed() {
   const churchId = userProfile?.churchId;
 
   useEffect(() => {
-    if (!churchId) return;
+    if (!churchId) {
+      setLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+
+    // Load cached prayers immediately for offline or fast display
+    prayerRepository.getCachedPrayers(churchId).then((cached) => {
+      if (isMounted && cached && cached.length > 0) {
+        setPrayers((prev) => (prev.length === 0 ? cached : prev));
+        setLoading(false);
+      }
+    }).catch(console.error);
 
     const unsubscribe = prayerRepository.subscribeToPrayers(
       churchId,
       (nextPrayers) => {
-        setPrayers(nextPrayers);
-        setLoading(false);
+        if (isMounted) {
+          setPrayers(nextPrayers);
+          setLoading(false);
+        }
       },
       (error: any) => {
         if (error?.code === 'permission-denied' || error?.message?.includes('permission')) {
-          setLoading(false);
+          if (isMounted) setLoading(false);
           return;
         }
         console.error('Error fetching prayers:', error);
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     );
 
-    return unsubscribe;
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, [churchId]);
 
   const togglePrayerLike = useCallback(async (prayerId: string, userId: string) => {

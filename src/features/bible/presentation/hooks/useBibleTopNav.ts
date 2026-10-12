@@ -26,13 +26,19 @@ export function useBibleTopNav(
   savedVersions: BibleVersion[]
 ) {
   return useMemo(() => {
-    const currentBook = books.find((book) => book.id === preferences.activeBook);
+    const currentBook = books.find(
+      (book) =>
+        String(book.id).toUpperCase() === String(preferences.activeBook).toUpperCase() ||
+        String((book as any).usfm || '').toUpperCase() === String(preferences.activeBook).toUpperCase()
+    );
     const activeVersion = savedVersions.find(
       (version) => String(version.id) === String(preferences.activeTranslation)
     );
 
+    const bookTitle = currentBook?.name || currentBook?.title || getHumanReadableBookName(preferences.activeBook);
+
     return {
-      leftText: `${getHumanReadableBookName(preferences.activeBook)} ${preferences.activeChapter}`,
+      leftText: `${bookTitle} ${preferences.activeChapter}`,
       rightText: activeVersion?.local_abbreviation || activeVersion?.abbreviation || 'BIBLE',
     };
   }, [books, preferences.activeBook, preferences.activeChapter, preferences.activeTranslation, savedVersions]);

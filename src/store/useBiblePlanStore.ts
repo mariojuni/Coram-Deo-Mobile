@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { biblePlanRepository } from '../features/biblePlan/data/biblePlan.repository';
 import { biblePlanProgressRepository } from '../features/biblePlan/data/biblePlanProgress.repository';
 import { userBiblePlanRepository } from '../features/biblePlan/data/userBiblePlan.repository';
@@ -99,12 +100,28 @@ export const useBiblePlanStore = create<BiblePlanStore>((set, get) => ({
       set({ plans: [], plansLoading: false });
       return () => {};
     }
-    set({ plansLoading: true });
+
+    // Load cached plans immediately for offline / instant render
+    AsyncStorage.getItem(`@bible_plans_cache_${churchId}`).then((raw) => {
+      if (raw) {
+        try {
+          const cached = JSON.parse(raw);
+          if (cached && cached.length > 0 && get().plans.length === 0) {
+            set({ plans: cached, plansLoading: false });
+          }
+        } catch {}
+      }
+    }).catch(console.error);
+
+    set({ plansLoading: get().plans.length === 0 });
     plansChurchId = churchId;
     plansRefCount = 1;
     plansUnsubscribe = biblePlanRepository.subscribeToPublishedPlans(
       churchId,
-      (plans) => set({ plans, plansLoading: false }),
+      (plans) => {
+        set({ plans, plansLoading: false });
+        AsyncStorage.setItem(`@bible_plans_cache_${churchId}`, JSON.stringify(plans)).catch(() => {});
+      },
       (error: any) => {
         if (error?.code === 'permission-denied' || error?.message?.includes('permission')) {
           set({ plansLoading: false });
@@ -142,13 +159,29 @@ export const useBiblePlanStore = create<BiblePlanStore>((set, get) => ({
       set({ userBiblePlans: [], userBiblePlansLoading: false });
       return () => {};
     }
-    set({ userBiblePlansLoading: true });
+
+    // Load cached user plans immediately for offline / instant render
+    AsyncStorage.getItem(`@user_bible_plans_cache_${userId}_${churchId}`).then((raw) => {
+      if (raw) {
+        try {
+          const cached = JSON.parse(raw);
+          if (cached && cached.length > 0 && get().userBiblePlans.length === 0) {
+            set({ userBiblePlans: cached, userBiblePlansLoading: false });
+          }
+        } catch {}
+      }
+    }).catch(console.error);
+
+    set({ userBiblePlansLoading: get().userBiblePlans.length === 0 });
     userPlansKey = key;
     userPlansRefCount = 1;
     userPlansUnsubscribe = userBiblePlanRepository.subscribeToUserBiblePlans(
       userId,
       churchId,
-      (plans) => set({ userBiblePlans: plans, userBiblePlansLoading: false }),
+      (plans) => {
+        set({ userBiblePlans: plans, userBiblePlansLoading: false });
+        AsyncStorage.setItem(`@user_bible_plans_cache_${userId}_${churchId}`, JSON.stringify(plans)).catch(() => {});
+      },
       (error: any) => {
         if (error?.code === 'permission-denied' || error?.message?.includes('permission')) {
           set({ userBiblePlansLoading: false });
@@ -186,14 +219,30 @@ export const useBiblePlanStore = create<BiblePlanStore>((set, get) => ({
       set({ planProgress: [], planProgressLoading: false });
       return () => {};
     }
-    set({ planProgress: [], planProgressLoading: true });
+
+    // Load cached progress immediately for offline / instant render
+    AsyncStorage.getItem(`@bible_plan_progress_cache_${userId}_${planId}_${churchId}`).then((raw) => {
+      if (raw) {
+        try {
+          const cached = JSON.parse(raw);
+          if (cached && cached.length > 0 && get().planProgress.length === 0) {
+            set({ planProgress: cached, planProgressLoading: false });
+          }
+        } catch {}
+      }
+    }).catch(console.error);
+
+    set({ planProgressLoading: get().planProgress.length === 0 });
     progressKey = key;
     progressRefCount = 1;
     progressUnsubscribe = biblePlanProgressRepository.subscribeToProgressForPlan(
       userId,
       planId,
       churchId,
-      (progress) => set({ planProgress: progress, planProgressLoading: false }),
+      (progress) => {
+        set({ planProgress: progress, planProgressLoading: false });
+        AsyncStorage.setItem(`@bible_plan_progress_cache_${userId}_${planId}_${churchId}`, JSON.stringify(progress)).catch(() => {});
+      },
       (error: any) => {
         if (error?.code === 'permission-denied' || error?.message?.includes('permission')) {
           set({ planProgressLoading: false });
@@ -247,8 +296,45 @@ export const useBiblePlanStore = create<BiblePlanStore>((set, get) => ({
     await biblePlanProgressRepository.resetPlanProgress(userId, planId, churchId);
   },
 
-  markDayCompleted: (payload, onProgress) =>
-    biblePlanProgressRepository.markDayCompleted(payload, onProgress),
+  markDayCompleted: async (payload, onProgress) => {
+    // 1. Optimistic update so completed state reflects instantly even offline
+    const currentProgress = get().planProgress;
+    const existing = currentProgress.find((p) => p.dayId === payload.dayId);
+    let updatedProgress: BiblePlanProgress[];
+    if (existing) {
+      updatedProgress = currentProgress.map((p) =>
+        p.dayId === payload.dayId ? { ...p, isCompleted: true, completedAt: new Date().toISOString() } : p
+      );
+    } else {
+      updatedProgress = [
+        ...currentProgress,
+        {
+          id: `local_${payload.dayId}`,
+          churchId: payload.churchId,
+          planId: payload.planId,
+          dayId: payload.dayId,
+          userId: payload.userId,
+          dayNumber: payload.dayNumber,
+          isCompleted: true,
+          completedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ];
+    }
+    set({ planProgress: updatedProgress });
+    AsyncStorage.setItem(
+      `@bible_plan_progress_cache_${payload.userId}_${payload.planId}_${payload.churchId}`,
+      JSON.stringify(updatedProgress)
+    ).catch(() => {});
+
+    // 2. Perform background sync to repository
+    try {
+      await biblePlanProgressRepository.markDayCompleted(payload, onProgress);
+    } catch (e) {
+      console.warn('Could not sync markDayCompleted to server (offline?):', e);
+    }
+  },
 
   openPlanUpdate: (dayNumber, totalDays) =>
     set({ planUpdateVisible: true, planUpdateStep: 0, planUpdateStepLabel: 'Starting…', planUpdateDayNumber: dayNumber, planUpdateTotalDays: totalDays }),

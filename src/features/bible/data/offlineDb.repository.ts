@@ -105,8 +105,11 @@ export const saveBibleBooks = async (translationId: string | number, books: Bibl
     db.withTransactionSync(() => {
       for (let i = 0; i < books.length; i++) {
         const b = books[i];
+        const usfm = b.usfm || b.id || String(i);
         const bookId = b.id || b.usfm || String(i);
+        const name = b.name || b.abbreviation || usfm;
         const chaptersJson = b.chapters ? JSON.stringify(b.chapters) : null;
+        const chCount = Number(b.chapterCount || (b.chapters ? b.chapters.length : 0));
         db.runSync(
           `INSERT OR REPLACE INTO bible_books 
            (translationId, bookId, name, longName, abbreviation, canon, orderIndex, chapterCount, chaptersJson) 
@@ -114,12 +117,12 @@ export const saveBibleBooks = async (translationId: string | number, books: Bibl
           [
             String(translationId),
             bookId,
-            b.name || '',
+            name,
             b.longName || null,
-            b.abbreviation || null,
+            b.abbreviation || usfm,
             b.canon || 'other',
-            b.order ?? i,
-            b.chapterCount || (b.chapters ? b.chapters.length : 0),
+            typeof b.order === 'number' ? b.order : i,
+            chCount,
             chaptersJson,
           ]
         );
@@ -148,19 +151,37 @@ export const getBibleBooks = async (translationId: string | number): Promise<Bib
       [String(translationId)]
     );
 
-    if (!rows || rows.length === 0) return null;
+    if (rows && rows.length > 0) {
+      return rows.map((r) => ({
+        id: r.bookId,
+        usfm: r.bookId,
+        name: r.name || r.abbreviation || r.bookId,
+        longName: r.longName || undefined,
+        abbreviation: r.abbreviation || r.bookId,
+        canon: (r.canon as any) || 'other',
+        order: r.orderIndex,
+        chapterCount: Number(r.chapterCount || 0),
+        chapters: r.chaptersJson ? JSON.parse(r.chaptersJson) : undefined,
+      }));
+    }
 
-    return rows.map((r) => ({
-      id: r.bookId,
-      usfm: r.bookId,
-      name: r.name,
-      longName: r.longName || undefined,
-      abbreviation: r.abbreviation || undefined,
-      canon: (r.canon as any) || 'other',
-      order: r.orderIndex,
-      chapterCount: r.chapterCount,
-      chapters: r.chaptersJson ? JSON.parse(r.chaptersJson) : undefined,
-    }));
+    // Fallback: check bible_indices if bible_books was not populated
+    const indexData = await getBibleIndex(translationId);
+    if (indexData && Array.isArray(indexData.books) && indexData.books.length > 0) {
+      return indexData.books.map((b: any, index: number) => ({
+        id: b.id || b.usfm || String(index),
+        usfm: b.usfm || b.id || String(index),
+        name: b.name || b.human || b.abbreviation || b.id,
+        longName: b.longName || b.long_name,
+        abbreviation: b.abbreviation || b.usfm,
+        canon: b.canon || 'other',
+        order: typeof b.order === 'number' ? b.order : index,
+        chapterCount: Number(b.chapterCount || b.chapters?.length || 0),
+        chapters: b.chapters,
+      }));
+    }
+
+    return null;
   } catch (error) {
     console.error(`Failed to get books for ${translationId}:`, error);
     return null;

@@ -8,7 +8,7 @@ import * as ScreenOrientation from 'expo-screen-orientation';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import React, { useEffect, useState, useRef } from 'react';
-import { Animated, ActivityIndicator, StyleSheet, View, Dimensions } from 'react-native';
+import { Animated, ActivityIndicator, StyleSheet, View, Dimensions, DeviceEventEmitter } from 'react-native';
 import BibleReader from '../../components/Bible/BibleReader';
 import BooksModal from '../../components/Bible/BooksModal';
 import TopNavBar from '../../components/Navigation/TopNavBar';
@@ -18,7 +18,7 @@ import { useBibleVersionStore } from '../../store/useBibleVersionStore';
 import { useUIStore } from '../../store/useUIStore';
 import { getSavedVersions, getUserPreferences, saveUserPreferences } from '../../utils/bibleApi';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { bibleDataService } from '@/features/bible/data/BibleDataService';
+import { bibleDataService, BIBLE_DOWNLOAD_COMPLETED_EVENT } from '@/features/bible/data/BibleDataService';
 import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
 import OfflineBanner from '@/components/Navigation/OfflineBanner';
 
@@ -107,7 +107,7 @@ export default function BibleScreen() {
     }, [])
   );
 
-  // Fetch books index when translation changes
+  // Fetch books index when translation changes or download completes
   useEffect(() => {
     if (!preferences?.activeTranslation) return;
     const loadBooks = async () => {
@@ -117,6 +117,16 @@ export default function BibleScreen() {
       setBooks(newBooks);
     };
     loadBooks();
+
+    const sub = DeviceEventEmitter.addListener(BIBLE_DOWNLOAD_COMPLETED_EVENT, (completedVersionId) => {
+      if (String(completedVersionId) === String(preferences.activeTranslation)) {
+        loadBooks();
+      }
+    });
+
+    return () => {
+      sub.remove();
+    };
   }, [preferences?.activeTranslation]);
 
   const setTabBarVisible = useUIStore((state) => state.setTabBarVisible);

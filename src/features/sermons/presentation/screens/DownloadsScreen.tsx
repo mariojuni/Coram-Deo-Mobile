@@ -42,9 +42,9 @@ export function DownloadsScreen() {
         setLoading(true);
         const { sermonRepository } = require('../../data/sermon.repository');
         
-        // Fetch sermon details for each download directly from repository
-        // to avoid mutating the global currentSermon state
+        // Use attached sermonData if available, otherwise fetch from repository (which caches offline)
         const sermonPromises = downloadsList.map(async (download) => {
+          if (download.sermonData) return download.sermonData;
           return await sermonRepository.fetchSermonById(download.sermonId);
         });
         

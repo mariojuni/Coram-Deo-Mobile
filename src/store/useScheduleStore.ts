@@ -8,6 +8,7 @@ import {
   getUpcomingSchedules,
   getUserMinisterialRoles,
   getUserRsvpStatus,
+  isScheduleCompleted,
   parseTimeTo24h,
 } from '../features/schedule/domain/schedule.selectors';
 import type { Rsvp, Schedule } from '../features/schedule/domain/schedule.types';
@@ -23,15 +24,25 @@ let schedulesUnsubscribe: (() => void) | null = null;
 let schedulesSubscriberCount = 0;
 
 
-export const useScheduleStore = create<ScheduleStore>((set) => ({
+export const useScheduleStore = create<ScheduleStore>((set, get) => ({
   schedules: [],
   schedulesLoading: true,
   initializeSchedulesListener: () => {
     schedulesSubscriberCount += 1;
 
+    const { useAuthStore } = require('./useAuthStore');
+    const churchId = useAuthStore.getState().userProfile?.churchId;
+
+    // Load cached schedules immediately for offline / instant render
+    if (get().schedules.length === 0) {
+      scheduleRepository.getCachedSchedules(churchId || undefined).then((cached) => {
+        if (cached && cached.length > 0 && get().schedules.length === 0) {
+          set({ schedules: cached, schedulesLoading: false });
+        }
+      }).catch(console.error);
+    }
+
     if (!schedulesUnsubscribe) {
-      const { useAuthStore } = require('./useAuthStore');
-      const churchId = useAuthStore.getState().userProfile?.churchId;
       schedulesUnsubscribe = scheduleRepository.subscribeToSchedules(
         churchId || undefined,
         (nextSchedules) => {
@@ -73,7 +84,7 @@ export const useScheduleStore = create<ScheduleStore>((set) => ({
 export type { Duty, Rsvp, Schedule } from '../features/schedule/domain/schedule.types';
 export {
   getMinisterialTeam, getUndismissedDutyNotificationsForAdmin, getUndismissedNotificationCount, getUpcomingMinisterialDuties, getUpcomingSchedules, getUserMinisterialRoles,
-  getUserRsvpStatus, parseTimeTo24h
+  getUserRsvpStatus, isScheduleCompleted, parseTimeTo24h
 };
 
 export async function updateRsvp(eventId: string, userId: string, status: string): Promise<void> {

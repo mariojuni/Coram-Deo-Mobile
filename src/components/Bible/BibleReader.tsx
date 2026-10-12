@@ -98,7 +98,11 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
   const [activeVerse, setActiveVerse] = useState<Verse | null>(null);
   const { activeBook, activeChapter } = preferences;
   const fontSize = preferences?.fontSize || 18;
-  const activeBookObj = books.find(b => b.id === activeBook);
+  const activeBookObj = books.find(
+    (b) =>
+      String(b.id).toUpperCase() === String(activeBook).toUpperCase() ||
+      String(b.usfm || '').toUpperCase() === String(activeBook).toUpperCase()
+  );
 
   // Animate nav arrows translateY: 0 (tab bar visible) ↔ 90 (tab bar hidden)
   const navTranslateY = useRef(new Animated.Value(0)).current;

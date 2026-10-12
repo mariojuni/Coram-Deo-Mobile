@@ -72,12 +72,16 @@ export interface SermonFavorite {
 }
 
 export interface SermonDownload {
+  id?: string;
   sermonId: string;
   userId: string;
-  filePath: string;
-  fileSize: number;
-  quality: 'high' | 'medium' | 'low';
+  filePath?: string;
+  fileUri?: string;
+  fileSize?: number;
+  size?: number;
+  quality?: 'high' | 'medium' | 'low';
   downloadedAt: Date;
+  sermonData?: Sermon;
 }
 
 // Filter & Sort types

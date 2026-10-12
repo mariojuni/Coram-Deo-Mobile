@@ -31,26 +31,47 @@ export function normalizeDateToYmd(value: string): string | null {
 }
 
 /**
+ * Checks whether a schedule is completed.
+ * Returns true if:
+ * 1. The schedule status is explicitly 'completed' (case-insensitive).
+ * 2. The event date is in the past (before today).
+ * 3. The event date is today and its endTime has passed.
+ */
+export function isScheduleCompleted(schedule: Schedule, now = new Date()): boolean {
+  if (schedule.status?.toLowerCase() === 'completed') {
+    return true;
+  }
+
+  const normDate = normalizeDateToYmd(schedule.date) || schedule.date;
+  if (!normDate) return false;
+
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const todayStr = `${year}-${month}-${day}`;
+
+  if (normDate < todayStr) {
+    return true;
+  }
+
+  if (normDate === todayStr && schedule.endTime) {
+    const endTime24 = parseTimeTo24h(schedule.endTime);
+    const currentTime24 = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    return currentTime24 > endTime24;
+  }
+
+  return false;
+}
+
+/**
  * Returns only upcoming schedules (today's events still in progress + future),
  * sorted by date then start time.
  */
 export function getUpcomingSchedules(schedules: Schedule[], maxCount = 5): Schedule[] {
   const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  const todayStr = `${year}-${month}-${day}`;
-  const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
   return schedules
-    .filter((schedule) => {
-      const normDate = normalizeDateToYmd(schedule.date) || schedule.date;
-      if (normDate > todayStr) return true;
-      if (normDate < todayStr) return false;
-
-      // Always return true for today's events so they stay visible all day
-      return true;
-    })
+    .filter((schedule) => !isScheduleCompleted(schedule, now))
     .sort((a, b) => {
       const aDate = normalizeDateToYmd(a.date) || a.date;
       const bDate = normalizeDateToYmd(b.date) || b.date;
@@ -59,6 +80,7 @@ export function getUpcomingSchedules(schedules: Schedule[], maxCount = 5): Sched
     })
     .slice(0, maxCount);
 }
+
 
 /**
  * Extracts the current user's ministerial duty roles from assignments for a schedule.

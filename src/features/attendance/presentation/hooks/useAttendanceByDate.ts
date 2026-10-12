@@ -7,18 +7,18 @@ export function useAttendanceByDate(date: string, options?: { membersOnly?: bool
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const subscribe = options?.membersOnly
-      ? attendanceRepository.subscribeMemberCheckinsByDate
-      : attendanceRepository.subscribeByDate;
+    const subscribe = (options?.membersOnly
+      ? (attendanceRepository as any).subscribeMemberCheckinsByDate
+      : (attendanceRepository as any).subscribeByDate) || (() => () => {});
 
     const unsubscribe = subscribe(
       date,
-      (nextCheckins) => {
+      (nextCheckins: AttendanceCheckin[]) => {
         setCheckins(nextCheckins);
         setLoading(false);
       },
-      (error) => {
-        if (error.message.includes('Missing or insufficient permissions')) {
+      (error: any) => {
+        if (error?.message?.includes('Missing or insufficient permissions')) {
           // Ignore error during logout race conditions
           setLoading(false);
           return;

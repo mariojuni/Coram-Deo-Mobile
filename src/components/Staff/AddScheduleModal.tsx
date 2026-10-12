@@ -1,4 +1,4 @@
-import { addDoc, collection, doc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { addDoc, collection, doc, getDocs, query, serverTimestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { Calendar as CalendarIcon, Clock, X } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -70,7 +70,9 @@ export default function AddScheduleModal({ isOpen, onClose, eventToEdit }: AddSc
     eventToEdit?.endTime ? parseTime(eventToEdit.endTime) : new Date(new Date().setHours(11, 0, 0, 0))
   );
   const [location, setLocation] = useState(eventToEdit?.location ?? 'Main Sanctuary');
-  const [status, setStatus] = useState<'draft' | 'published' | 'cancelled'>((eventToEdit?.status as 'draft' | 'published' | 'cancelled') ?? 'published');
+  const [status, setStatus] = useState<'draft' | 'published' | 'completed' | 'cancelled'>(
+    (eventToEdit?.status?.toLowerCase() as 'draft' | 'published' | 'completed' | 'cancelled') ?? 'published'
+  );
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
@@ -89,7 +91,7 @@ export default function AddScheduleModal({ isOpen, onClose, eventToEdit }: AddSc
         setStartTime(eventToEdit.time ? parseTime(eventToEdit.time) : new Date(new Date().setHours(9, 0, 0, 0)));
         setEndTime(eventToEdit.endTime ? parseTime(eventToEdit.endTime) : new Date(new Date().setHours(11, 0, 0, 0)));
         setLocation(eventToEdit.location ?? 'Main Sanctuary');
-        setStatus((eventToEdit.status?.toLowerCase() as 'draft' | 'published' | 'cancelled') ?? 'published');
+        setStatus((eventToEdit.status?.toLowerCase() as 'draft' | 'published' | 'completed' | 'cancelled') ?? 'published');
       } else {
         setTitle('Sunday Worship Service');
         setDate(new Date());
@@ -112,7 +114,7 @@ export default function AddScheduleModal({ isOpen, onClose, eventToEdit }: AddSc
     }
     setSaving(true);
     try {
-      const payload = {
+      const payload: Record<string, any> = {
         title: title.trim(),
         date: fmtDateDB(date),
         time: fmtTime(startTime),
@@ -120,8 +122,29 @@ export default function AddScheduleModal({ isOpen, onClose, eventToEdit }: AddSc
         location: location.trim(),
         status,
       };
+
+      if (status === 'completed') {
+        payload.completedAt = (eventToEdit as any)?.completedAt || new Date().toISOString();
+      }
+
       if (eventToEdit) {
         await updateDoc(doc(getActiveDb(), 'events', eventToEdit.id), payload);
+
+        // If marked completed, also close any associated attendance sessions
+        if (status === 'completed') {
+          const sessionsQ = query(
+            collection(getActiveDb(), 'attendance_sessions'),
+            where('eventId', '==', eventToEdit.id)
+          );
+          const sessionsSnap = await getDocs(sessionsQ);
+          if (!sessionsSnap.empty) {
+            const batch = writeBatch(getActiveDb());
+            sessionsSnap.forEach((sDoc) => {
+              batch.update(doc(getActiveDb(), 'attendance_sessions', sDoc.id), { status: 'Closed' });
+            });
+            await batch.commit();
+          }
+        }
       } else {
         if (!userProfile?.churchId) {
           Alert.alert('Error', 'No church ID associated with this account. Cannot create event.');
@@ -215,21 +238,27 @@ export default function AddScheduleModal({ isOpen, onClose, eventToEdit }: AddSc
           />
 
           <Text style={s.label}>Status</Text>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             <TouchableOpacity 
-              style={[s.statusOption, status === 'draft' && s.statusOptionSelected]}
+              style={[s.statusOption, { flexBasis: '48%' }, status === 'draft' && s.statusOptionSelected]}
               onPress={() => setStatus('draft')}
             >
               <Text style={[s.statusOptionText, status === 'draft' && s.statusOptionTextSelected]}>Draft</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[s.statusOption, status === 'published' && s.statusOptionSelected]}
+              style={[s.statusOption, { flexBasis: '48%' }, status === 'published' && s.statusOptionSelected]}
               onPress={() => setStatus('published')}
             >
               <Text style={[s.statusOptionText, status === 'published' && s.statusOptionTextSelected]}>Published</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[s.statusOption, status === 'cancelled' && s.statusOptionSelected]}
+              style={[s.statusOption, { flexBasis: '48%' }, status === 'completed' && s.statusOptionSelected]}
+              onPress={() => setStatus('completed')}
+            >
+              <Text style={[s.statusOptionText, status === 'completed' && s.statusOptionTextSelected]}>Completed</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[s.statusOption, { flexBasis: '48%' }, status === 'cancelled' && s.statusOptionSelected]}
               onPress={() => setStatus('cancelled')}
             >
               <Text style={[s.statusOptionText, status === 'cancelled' && s.statusOptionTextSelected]}>Cancelled</Text>

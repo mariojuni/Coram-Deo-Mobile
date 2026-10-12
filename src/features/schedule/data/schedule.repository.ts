@@ -1,4 +1,5 @@
 import { addDoc, collection, deleteDoc, doc, getDoc, onSnapshot, orderBy, query, runTransaction, serverTimestamp, updateDoc, where } from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getActiveDb } from '../../../firebase';
 import { worshipRepository } from '../../worship/data/worship.repository';
 import type { WorshipSetlistItem } from '../../worship/domain/worship.types';
@@ -58,11 +59,33 @@ function toSchedule(docId: string, data: Record<string, unknown>): Schedule {
     songList: Array.isArray(data.songList) ? data.songList : undefined,
     enableRSVP: typeof data.enableRSVP === 'boolean' ? data.enableRSVP : false,
     status: typeof data.status === 'string' ? data.status : 'Published',
+    completedAt: data.completedAt,
     createdAt: data.createdAt,
   };
 }
 
 export const scheduleRepository = {
+  async getCachedSchedules(churchId?: string): Promise<Schedule[]> {
+    try {
+      const key = `@schedules_cache_${churchId || 'default'}`;
+      const raw = await AsyncStorage.getItem(key);
+      if (!raw) return [];
+      return JSON.parse(raw);
+    } catch (e) {
+      console.warn('Failed to load cached schedules/events:', e);
+      return [];
+    }
+  },
+
+  async saveCachedSchedules(churchId: string | undefined, schedules: Schedule[]): Promise<void> {
+    try {
+      const key = `@schedules_cache_${churchId || 'default'}`;
+      await AsyncStorage.setItem(key, JSON.stringify(schedules));
+    } catch (e) {
+      console.warn('Failed to save cached schedules/events:', e);
+    }
+  },
+
   subscribeToSchedules(churchId: string | undefined, onData: SchedulesListener, onError: ErrorListener): () => void {
 
     const scheduleQuery = query(
@@ -91,7 +114,8 @@ export const scheduleRepository = {
         // Sort schedules manually to avoid needing a composite index
         currentSchedules.sort((a, b) => a.date.localeCompare(b.date));
 
-        // Emit initial schedules immediately
+        // Cache and emit initial schedules immediately
+        scheduleRepository.saveCachedSchedules(churchId, currentSchedules).catch(() => {});
         onData([...currentSchedules]);
 
         if (!churchId) return;
@@ -153,6 +177,7 @@ export const scheduleRepository = {
                   };
                 });
 
+                scheduleRepository.saveCachedSchedules(churchId, updatedSchedules).catch(() => {});
                 onData(updatedSchedules);
               },
               (err) => console.warn('Error listening to setlist items:', err)

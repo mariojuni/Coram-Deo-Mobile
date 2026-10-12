@@ -22,6 +22,7 @@ import {
   saveBibleIndex,
   isBibleOffline 
 } from './offlineDb.repository';
+import { getHumanReadableBookName } from '@/utils/scriptureReferenceParser';
 
 export class BibleDataService implements BibleRepository {
   private firestoreRepo: FirestoreBibleRepository;
@@ -286,24 +287,41 @@ export class BibleDataService implements BibleRepository {
               }
 
               // Ensure books metadata is saved
-              if (!books || books.length === 0) {
+              if (fullBibleJson.index && Array.isArray(fullBibleJson.index.books) && fullBibleJson.index.books.length > 0) {
+                books = fullBibleJson.index.books.map((b: any, idx: number) => ({
+                  id: String(b.id || b.usfm || idx),
+                  usfm: String(b.usfm || b.id || idx),
+                  name: b.name || b.human || b.abbreviation || getHumanReadableBookName(b.usfm || b.id),
+                  longName: b.long_name || b.longName,
+                  abbreviation: b.abbreviation || b.usfm,
+                  canon: b.canon || 'other',
+                  order: typeof b.order === 'number' ? b.order : idx,
+                  chapterCount: Number(b.chapterCount || b.chapters?.length || 0),
+                  chapters: b.chapters,
+                }));
+                await saveBibleBooks(versionId, books);
+              } else if (!books || books.length === 0) {
                 const derivedBooksMap = new Map<string, { bookId: string; maxChapter: number }>();
                 for (const c of chaptersArray) {
                   const bId = c.book_id;
+                  const chNum = parseInt(String(c.chapter), 10) || 1;
                   const current = derivedBooksMap.get(bId) || { bookId: bId, maxChapter: 0 };
-                  if (c.chapter > current.maxChapter) current.maxChapter = c.chapter;
+                  if (chNum > current.maxChapter) current.maxChapter = chNum;
                   derivedBooksMap.set(bId, current);
                 }
                 const derivedBooks: BibleBook[] = Array.from(derivedBooksMap.values()).map((b, idx) => ({
                   id: b.bookId,
                   usfm: b.bookId,
-                  name: b.bookId,
+                  name: getHumanReadableBookName(b.bookId) || b.bookId,
+                  abbreviation: b.bookId,
                   canon: 'other',
                   order: idx,
                   chapterCount: b.maxChapter,
                 }));
                 await saveBibleBooks(versionId, derivedBooks);
                 books = derivedBooks;
+              } else {
+                await saveBibleBooks(versionId, books);
               }
 
               await saveTranslationMeta({
