@@ -33,6 +33,8 @@ import { doc, getDoc } from "firebase/firestore";
 import { getActiveDb } from "@/firebase";
 import { styles } from "@/features/bible/presentation/version-manager/styles";
 
+import { useNetworkStore } from "@/store/useNetworkStore";
+
 export default function VersionDetailScreen() {
   const router = useRouter();
   const { bibleStr } = useLocalSearchParams();
@@ -98,6 +100,11 @@ export default function VersionDetailScreen() {
 
   const handleDownload = async () => {
     if (isDownloaded && !updateInfo?.hasUpdate) return;
+
+    if (!useNetworkStore.getState().isConnected) {
+      Alert.alert("Offline", "Downloading or updating a Bible requires an active internet connection.");
+      return;
+    }
 
     setIsDownloading(true);
 

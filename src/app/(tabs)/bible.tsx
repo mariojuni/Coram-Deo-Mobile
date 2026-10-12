@@ -16,9 +16,11 @@ import { getActiveDb } from '../../firebase';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useBibleVersionStore } from '../../store/useBibleVersionStore';
 import { useUIStore } from '../../store/useUIStore';
-import { fetchBibleIndex, getSavedVersions, getUserPreferences, saveUserPreferences } from '../../utils/bibleApi';
+import { getSavedVersions, getUserPreferences, saveUserPreferences } from '../../utils/bibleApi';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { bibleDataService } from '@/features/bible/data/BibleDataService';
 import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
+import OfflineBanner from '@/components/Navigation/OfflineBanner';
 
 type BiblePreferencesWithHighlights = BiblePreferences;
 
@@ -53,6 +55,7 @@ export default function BibleScreen() {
   const [isLandscape, setIsLandscape] = useState(false);
   const [isSplitMode, setIsSplitMode] = useState(false);
 
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -214,6 +217,13 @@ export default function BibleScreen() {
         }}
       />
 
+      <OfflineBanner 
+        style={[
+          styles.offlineBanner, 
+          { top: insets.top + (isLandscape ? 44 : 58) }
+        ]} 
+      />
+
       <BooksModal
         isOpen={isBooksModalOpen}
         onClose={() => setIsBooksModalOpen(false)}
@@ -230,4 +240,10 @@ export default function BibleScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAFAFA' },
+  offlineBanner: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    zIndex: 95,
+  },
 });

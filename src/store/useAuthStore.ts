@@ -1,6 +1,6 @@
 import type { User } from 'firebase/auth';
 import { create } from 'zustand';
-import { authRepository, RegistrationPayload, fetchUserAccount } from '../features/auth/data/auth.repository';
+import { authRepository, RegistrationPayload, fetchUserAccount, saveCachedUserProfile } from '../features/auth/data/auth.repository';
 import type { AuthCredentialResult, UserAccount } from '../features/auth/domain/auth.types';
 import { clearSensitiveCache } from '../features/files/services/fileCacheService';
 import { useMemberStore } from './useMemberStore';
@@ -234,9 +234,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     );
   },
   updateUserProfile: (updates) => {
-    set((state) => ({
-      userProfile: state.userProfile ? { ...state.userProfile, ...updates } : null,
-    }));
+    set((state) => {
+      const updated = state.userProfile ? { ...state.userProfile, ...updates } : null;
+      if (updated && state.currentUser) {
+        saveCachedUserProfile(state.currentUser.uid, updated).catch(() => {});
+      }
+      return { userProfile: updated };
+    });
   },
   refreshUserProfile: async () => {
     const { currentUser } = get();

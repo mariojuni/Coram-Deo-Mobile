@@ -20,6 +20,7 @@ import { getMessaging, onMessage, onNotificationOpenedApp, getInitialNotificatio
 import { PushTokenService } from '../services/notification/PushTokenService';
 import { useNotificationStore } from '../store/useNotificationStore';
 import { NotificationNavigationResolver } from '../services/notification/NotificationNavigationResolver';
+import { useNetworkStore } from '../store/useNetworkStore';
 
 // Register background handler outside of React component lifecycle
 try {
@@ -83,6 +84,14 @@ export default function RootLayout() {
   useEffect(() => {
     loadTranslation();
   }, [loadTranslation]);
+
+  // Initialize network connectivity monitoring
+  useEffect(() => {
+    const unsubscribe = useNetworkStore.getState().initializeListener();
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   const userProfile = useAuthStore((state) => state.userProfile);
 

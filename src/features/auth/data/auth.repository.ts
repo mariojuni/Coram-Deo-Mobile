@@ -29,6 +29,45 @@ import { currentActiveFirebaseEnv, getActiveAuth, getActiveDb } from "../../../f
 import { getFirebaseConfigForEnv } from "../../../config/environments";
 import type { Member } from "@/features/member/domain/member.types";
 import type { UserAccount, AuthCredentialResult } from "../domain/auth.types";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const CACHED_USER_PROFILE_PREFIX = 'cached_user_profile_';
+
+export async function saveCachedUserProfile(uid: string, profile: UserAccount): Promise<void> {
+  try {
+    await AsyncStorage.setItem(`${CACHED_USER_PROFILE_PREFIX}${uid}`, JSON.stringify(profile));
+  } catch (e) {
+    console.warn('[Auth] Failed to cache user profile in AsyncStorage:', e);
+  }
+}
+
+export async function getCachedUserProfile(uid: string): Promise<UserAccount | null> {
+  try {
+    const raw = await AsyncStorage.getItem(`${CACHED_USER_PROFILE_PREFIX}${uid}`);
+    if (raw) {
+      return JSON.parse(raw) as UserAccount;
+    }
+  } catch (e) {
+    console.warn('[Auth] Failed to read cached user profile from AsyncStorage:', e);
+  }
+  return null;
+}
+
+export async function clearCachedUserProfile(uid?: string): Promise<void> {
+  try {
+    if (uid) {
+      await AsyncStorage.removeItem(`${CACHED_USER_PROFILE_PREFIX}${uid}`);
+    } else {
+      const keys = await AsyncStorage.getAllKeys();
+      const profileKeys = keys.filter(k => k.startsWith(CACHED_USER_PROFILE_PREFIX));
+      if (profileKeys.length > 0) {
+        await AsyncStorage.multiRemove(profileKeys);
+      }
+    }
+  } catch (e) {
+    console.warn('[Auth] Failed to clear cached user profile:', e);
+  }
+}
 
 function configureGoogleSigninForCurrentEnv() {
   try {
@@ -236,8 +275,12 @@ export async function fetchUserAccount(user: User): Promise<UserAccount | null> 
       profileSnapshot = await getDocFromCache(profileDocRef);
       console.log('[Auth] Served user profile from Firestore local cache.');
     } catch (cacheError: any) {
-      // Cache also miss — rethrow the original server error so the retry
-      // logic in subscribeToAuthState can handle it.
+      // Check our persistent AsyncStorage profile cache
+      const cached = await getCachedUserProfile(user.uid);
+      if (cached) {
+        console.log('[Auth] Served user profile from AsyncStorage local cache.');
+        return cached;
+      }
       console.warn('[Auth] Cache miss too. Re-throwing original error.', cacheError?.code ?? cacheError);
       throw serverError;
     }
@@ -332,7 +375,7 @@ export async function fetchUserAccount(user: User): Promise<UserAccount | null> 
   // Keep legacy `role` in sync for any still-using callers (Firestore rules, etc.).
   const legacyRole = normalizeLegacyRole((data.role as string) ?? primaryRole);
 
-  return {
+  const userAccount = {
     uid: user.uid,
     id: docId,
     ...data,
@@ -345,6 +388,11 @@ export async function fetchUserAccount(user: User): Promise<UserAccount | null> 
     primaryRole,
     memberId: (data.memberId as string) || docId,
   } as unknown as UserAccount;
+
+  // Persist to local cache for instant offline access
+  saveCachedUserProfile(user.uid, userAccount).catch(() => {});
+
+  return userAccount;
 }
 
 async function findUserAccountByEmail(email: string) {
@@ -1026,7 +1074,11 @@ export const authRepository = {
     await deleteUser(currentUser);
   },
 
-  logout(): Promise<void> {
+  async logout(): Promise<void> {
+    const current = getActiveAuth().currentUser;
+    if (current) {
+      await clearCachedUserProfile(current.uid);
+    }
     // Also sign out from Google's native session so the OS-level account
     // token is cleared. Without this, a subsequent Google sign-in can fail
     // with DEVELOPER_ERROR due to a stale/invalid cached token.
@@ -1046,9 +1098,19 @@ export const authRepository = {
           return;
         }
 
-        // Attempt to fetch the user profile. On Android, the app resuming from
-        // background can cause a brief Firestore offline window, so we retry once
-        // before concluding the profile is truly missing.
+        // 1. Instant offline boot: Check if we have a cached profile for this user
+        let cachedProfile: UserAccount | null = null;
+        try {
+          cachedProfile = await getCachedUserProfile(user.uid);
+          if (cachedProfile) {
+            console.log('[Auth] Dispatched cached user profile immediately for fast offline boot.');
+            onData({ user, profile: cachedProfile });
+          }
+        } catch (e) {
+          console.warn('[Auth] Error reading initial cached profile:', e);
+        }
+
+        // 2. Fetch fresh user profile from Firestore
         let profile = null;
         let fetchError: any = null;
 
@@ -1063,11 +1125,21 @@ export const authRepository = {
           return;
         }
 
-        // If first attempt failed with a transient error, retry with increasing
-        // delays. On Android, Firestore's network reconnection after a kill/resume
-        // can take several seconds, especially on slower networks.
+        // If fresh profile fetched successfully, dispatch it
+        if (profile) {
+          onData({ user, profile });
+          return;
+        }
+
+        // If fetch failed with an error, check if we already dispatched cachedProfile
         if (fetchError) {
-          const retryDelays = [3000, 5000]; // 3s then 5s
+          if (cachedProfile) {
+            console.log('[Auth] Network fetch failed, retaining cached profile.');
+            return;
+          }
+
+          // If no cached profile existed, retry with delays
+          const retryDelays = [2000, 4000];
           let lastRetryError: any = fetchError;
           for (const delay of retryDelays) {
             console.warn(`[Auth] Transient error fetching user profile, retrying in ${delay / 1000}s...`, lastRetryError);
@@ -1075,17 +1147,25 @@ export const authRepository = {
             try {
               profile = await fetchUserAccount(user);
               lastRetryError = null;
-              break; // success — exit the retry loop
+              break;
             } catch (retryError: any) {
               lastRetryError = retryError;
             }
           }
 
+          if (profile) {
+            onData({ user, profile });
+            return;
+          }
+
           if (lastRetryError) {
-            console.warn('[Auth] All retries failed. Will NOT sign out — keeping session alive:', lastRetryError);
+            console.warn('[Auth] All retries failed. Checking local cache once more:', lastRetryError);
+            const fallbackCached = await getCachedUserProfile(user.uid);
+            if (fallbackCached) {
+              onData({ user, profile: fallbackCached });
+              return;
+            }
             // Do NOT sign out on network/transient errors. Keep the user session
-            // so background-resuming on Android does not log the user out.
-            // onData is intentionally NOT called, preserving the last known state.
             return;
           }
         }
@@ -1100,6 +1180,7 @@ export const authRepository = {
           // This is a real "user not found" case — sign them out.
           console.warn('[Auth] User profile not found in current environment database. Signing out...');
           await signOut(getActiveAuth()).catch(() => {});
+          await clearCachedUserProfile(user.uid);
           onData({ user: null, profile: null });
           return;
         }
