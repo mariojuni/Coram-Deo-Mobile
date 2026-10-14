@@ -98,10 +98,29 @@ export interface BibleChapter {
   verses: BibleVerse[];
 }
 
+export interface VerseComparisonEntry {
+  versionId: string;
+  abbreviation: string;
+  title: string;
+  languageTag?: string;
+  verses: Array<{
+    verseNumber: string;
+    text: string;
+  }>;
+  formattedText: string;
+}
+
 export interface BibleRepository {
   getLanguages(): Promise<BibleLanguage[]>;
   getVersions(languageTag?: string): Promise<BibleVersionSummary[]>;
   getVersionDetails(versionId: string): Promise<BibleVersionDetails>;
   getBooks(versionId: string): Promise<BibleBook[]>;
   getChapter(versionId: string, bookId: string, chapter: number): Promise<BibleChapter>;
+  getCompareVerses(
+    bookId: string,
+    chapter: number,
+    verseNumbers: string[],
+    currentTranslationId?: string | number
+  ): Promise<VerseComparisonEntry[]>;
 }
+

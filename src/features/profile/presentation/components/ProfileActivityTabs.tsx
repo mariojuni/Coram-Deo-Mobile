@@ -76,15 +76,24 @@ export function ProfileActivityTabs({
     async (passageId: string, verseNumber?: number) => {
       try {
         const prefs = await getUserPreferences();
-        const [book, chapter] = passageId.split('.');
+        const parts = passageId.split('.');
+        const book = parts[0] || 'GEN';
+        const chapter = parts[1] || '1';
         await saveUserPreferences({
           ...prefs,
-          activeBook: book || 'GEN',
-          activeChapter: chapter || '1',
+          activeBook: book,
+          activeChapter: chapter,
           activePassageId: passageId,
-          scrollToVerse: verseNumber ? String(verseNumber) : undefined,
         } as any);
-        router.navigate('/(tabs)/bible');
+        router.navigate({
+          pathname: '/(tabs)/bible',
+          params: {
+            book,
+            chapter,
+            verse: verseNumber ? String(verseNumber) : undefined,
+            t: Date.now().toString(),
+          },
+        });
       } catch (e) {
         console.error('Failed to open passage:', e);
         router.navigate('/(tabs)/bible');

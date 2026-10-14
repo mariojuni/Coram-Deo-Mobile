@@ -8,7 +8,8 @@ import {
   BibleVersionSummary, 
   BibleVersionDetails, 
   BibleBook, 
-  BibleChapter 
+  BibleChapter,
+  VerseComparisonEntry
 } from '../domain/BibleRepository';
 import { fetchLanguages, fetchBiblesByLanguage, fetchBibleIndex, fetchChapterData, getChapterFromCache, getSavedVersions, saveVersion, removeVersion, downloadBibleOffline, getUserPreferences, saveUserPreferences, fetchOrganization } from './bible.repository';
 import { 
@@ -20,8 +21,11 @@ import {
   saveChaptersBatch, 
   saveTranslationMeta, 
   saveBibleIndex,
-  isBibleOffline 
+  isBibleOffline,
+  getDownloadedTranslations,
+  getOfflinePassageForTranslations
 } from './offlineDb.repository';
+
 import { getHumanReadableBookName } from '@/utils/scriptureReferenceParser';
 
 export class BibleDataService implements BibleRepository {
@@ -464,7 +468,159 @@ export class BibleDataService implements BibleRepository {
       return false;
     }
   }
+
+  async getCompareVerses(
+    bookId: string,
+    chapter: number,
+    verseNumbers: string[],
+    currentTranslationId?: string | number
+  ): Promise<VerseComparisonEntry[]> {
+    const passageId = `${bookId}.${chapter}`;
+
+    // 1. Get all chapters stored locally for this passage across translations
+    const offlinePassages = await getOfflinePassageForTranslations(passageId);
+
+    // 2. Get saved versions list from AsyncStorage and offline translations meta from SQLite
+    const [savedVersions, offlineMetaList] = await Promise.all([
+      getSavedVersions().catch(() => []),
+      getDownloadedTranslations().catch(() => []),
+    ]);
+
+    // Build lookup maps for metadata
+    const metaMap = new Map<string, { abbreviation: string; title: string; languageTag?: string }>();
+    for (const m of offlineMetaList) {
+      metaMap.set(String(m.id), {
+        abbreviation: m.abbreviation || m.id,
+        title: m.title || m.abbreviation || m.id,
+        languageTag: m.languageTag,
+      });
+    }
+    for (const s of savedVersions) {
+      const id = String((s as any).id);
+      const existing = metaMap.get(id);
+      metaMap.set(id, {
+        abbreviation: (s as any).local_abbreviation || (s as any).abbreviation || existing?.abbreviation || id,
+        title: (s as any).localized_title || (s as any).title || existing?.title || id,
+        languageTag: (s as any).language_tag || (s as any).language?.tag || existing?.languageTag,
+      });
+    }
+
+    // 3. Collect passage content per translation
+    const passageMap = new Map<string, string>();
+    for (const p of offlinePassages) {
+      passageMap.set(String(p.translationId), p.content);
+    }
+
+    // If any saved version was not in offlinePassages, also check fetchChapterData
+    for (const s of savedVersions) {
+      const sId = String((s as any).id);
+      if (!passageMap.has(sId)) {
+        try {
+          const chData = await fetchChapterData(sId, passageId);
+          if (chData) {
+            passageMap.set(sId, typeof chData === 'string' ? chData : JSON.stringify(chData));
+          }
+        } catch {}
+      }
+    }
+
+    if (currentTranslationId && !passageMap.has(String(currentTranslationId))) {
+      try {
+        const currentCh = await fetchChapterData(String(currentTranslationId), passageId);
+        if (currentCh) {
+          passageMap.set(String(currentTranslationId), typeof currentCh === 'string' ? currentCh : JSON.stringify(currentCh));
+        }
+      } catch {}
+    }
+
+
+    const cleanText = (text: any): string => {
+      if (!text || typeof text !== 'string') return '';
+      return text
+        .replace(/\{\{note:\d+\}\}/g, '')
+        .replace(/[\u200B-\u200D\uFEFF]/g, '')
+        .replace(/<[^>]*>/g, '')
+        .replace(/#/g, '')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/\s+/g, ' ')
+        .trim();
+    };
+
+    const requestedSet = new Set(verseNumbers.map(String));
+    const results: VerseComparisonEntry[] = [];
+
+    for (const [translationId, contentStr] of passageMap.entries()) {
+      try {
+        const verses = JSON.parse(contentStr);
+        if (!Array.isArray(verses)) continue;
+
+        const matchedVerses: Array<{ verseNumber: string; text: string }> = [];
+
+        for (const v of verses) {
+          const vNum = String(v.verseNumber);
+          const isExact = requestedSet.has(vNum);
+          const isRangeMatch = !isExact && verseNumbers.some((req) => {
+            if (vNum.includes('-')) {
+              const [start, end] = vNum.split('-').map(Number);
+              const r = Number(req);
+              return !isNaN(start) && !isNaN(end) && !isNaN(r) && r >= start && r <= end;
+            }
+            return false;
+          });
+
+          if (isExact || isRangeMatch) {
+            matchedVerses.push({
+              verseNumber: vNum,
+              text: cleanText(v.content || ''),
+            });
+          }
+        }
+
+        if (matchedVerses.length > 0) {
+          const meta = metaMap.get(translationId) || {
+            abbreviation: translationId,
+            title: translationId,
+          };
+
+          const formattedText = matchedVerses.map((mv) => `${mv.verseNumber} ${mv.text}`).join('\n');
+
+          results.push({
+            versionId: translationId,
+            abbreviation: meta.abbreviation,
+            title: meta.title,
+            languageTag: meta.languageTag,
+            verses: matchedVerses,
+            formattedText,
+          });
+        }
+      } catch (err) {
+        console.warn(`[BibleDataService] Error parsing verses for translation ${translationId}:`, err);
+      }
+    }
+
+    // Sort: Current active translation first, then by savedVersions list order
+    const savedOrder = savedVersions.map((s: any) => String(s.id));
+    results.sort((a, b) => {
+      if (currentTranslationId && String(a.versionId) === String(currentTranslationId)) return -1;
+      if (currentTranslationId && String(b.versionId) === String(currentTranslationId)) return 1;
+
+      const idxA = savedOrder.indexOf(String(a.versionId));
+      const idxB = savedOrder.indexOf(String(b.versionId));
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return a.abbreviation.localeCompare(b.abbreviation);
+    });
+
+    return results;
+  }
 }
+
 
 // Export a singleton instance
 export const bibleDataService = new BibleDataService();

@@ -1,3 +1,4 @@
+import { parseScriptureReference } from '@/utils/scriptureReferenceParser';
 import { Fonts } from '@/constants/theme';
 import { useBibleVersionStore } from '@/store/useBibleVersionStore';
 import { fetchVerseOfTheDay, getUserPreferences, saveUserPreferences } from '@/utils/bibleApi';
@@ -5,7 +6,7 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { BookOpen, ChevronRight, Sparkles, Star } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
@@ -51,12 +52,6 @@ export function VerseOfTheDayCard() {
   const votdLoading = useBibleVersionStore((s) => s.votdLoading);
   const loadVotd = useBibleVersionStore((s) => s.loadVotd);
 
-  const [cachedPrefs, setCachedPrefs] = useState<any>(null);
-
-  useEffect(() => {
-    getUserPreferences().then(setCachedPrefs).catch(console.error);
-  }, []);
-
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -66,21 +61,59 @@ export function VerseOfTheDayCard() {
   const handlePressIn = () => scale.set(withTiming(0.975, { duration: 150 }));
   const handlePressOut = () => scale.set(withTiming(1, { duration: 200 }));
 
-  const handlePress = () => {
+  const handlePress = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (votdData?.passageId) {
+    if (!votdData) return;
+
+    let book = '';
+    let chapter = '';
+    let verse = '';
+
+    if (votdData.passageId) {
       const parts = votdData.passageId.split('.');
       if (parts.length >= 2) {
-        try {
-          const prefs = { ...(cachedPrefs || {}) };
-          prefs.activeBook = parts[0];
-          prefs.activeChapter = parts[1];
-          // Fire and forget save to avoid delaying navigation
-          saveUserPreferences(prefs).catch(e => console.error('Failed to save prefs', e));
-          router.navigate('/(tabs)/bible');
-        } catch (e) {
-          console.error('Failed to navigate to verse', e);
+        book = parts[0];
+        chapter = parts[1];
+        if (parts.length >= 3) {
+          const match = parts[2].match(/\d+/);
+          if (match) {
+            verse = match[0];
+          }
         }
+      }
+    }
+
+    if ((!verse || !book || !chapter) && votdData.reference) {
+      const parsed = parseScriptureReference(votdData.reference);
+      if (parsed) {
+        if (!book && parsed.bookId) book = parsed.bookId;
+        if (!chapter && parsed.chapter) chapter = parsed.chapter;
+        if (!verse && parsed.startVerse) verse = parsed.startVerse;
+      }
+    }
+
+    if (book && chapter) {
+      try {
+        const currentPrefs = await getUserPreferences();
+        await saveUserPreferences({
+          ...currentPrefs,
+          activeBook: book,
+          activeChapter: chapter,
+          activePassageId: `${book}.${chapter}`,
+        });
+
+        router.navigate({
+          pathname: '/(tabs)/bible',
+          params: {
+            book,
+            chapter,
+            verse: verse || undefined,
+            t: Date.now().toString(),
+          },
+        });
+      } catch (e) {
+        console.error('Failed to navigate to verse', e);
+        router.navigate('/(tabs)/bible');
       }
     }
   };

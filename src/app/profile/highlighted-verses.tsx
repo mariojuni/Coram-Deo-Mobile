@@ -68,9 +68,16 @@ export default function HighlightedVersesScreen() {
         activeBook: book,
         activeChapter: chapter,
         activePassageId: passageId,
-        scrollToVerse: verseNumber ? String(verseNumber) : undefined,
       } as any);
-      router.navigate('/(tabs)/bible');
+      router.navigate({
+        pathname: '/(tabs)/bible',
+        params: {
+          book,
+          chapter,
+          verse: verseNumber ? String(verseNumber) : undefined,
+          t: Date.now().toString(),
+        },
+      });
     } catch (e) {
       console.error('Failed to open Bible', e);
     }

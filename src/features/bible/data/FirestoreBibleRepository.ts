@@ -113,4 +113,9 @@ export class FirestoreBibleRepository implements BibleRepository {
       throw e;
     }
   }
+
+  async getCompareVerses(): Promise<import('../domain/BibleRepository').VerseComparisonEntry[]> {
+    return [];
+  }
 }
+

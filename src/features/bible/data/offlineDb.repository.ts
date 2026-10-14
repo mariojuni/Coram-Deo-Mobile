@@ -287,3 +287,41 @@ export const isBibleOffline = async (translationId: string | number) => {
     return false;
   }
 };
+
+export interface DownloadedTranslationMeta {
+  id: string;
+  abbreviation: string;
+  title: string;
+  languageTag: string;
+  contentVersion?: number;
+  downloadedAt?: number;
+  chapterCount?: number;
+}
+
+export const getDownloadedTranslations = async (): Promise<DownloadedTranslationMeta[]> => {
+  try {
+    const rows = db.getAllSync<DownloadedTranslationMeta>(
+      'SELECT id, abbreviation, title, languageTag, contentVersion, downloadedAt, chapterCount FROM bible_translations ORDER BY downloadedAt ASC'
+    );
+    return rows || [];
+  } catch (error) {
+    console.error('Failed to get downloaded translations:', error);
+    return [];
+  }
+};
+
+export const getOfflinePassageForTranslations = async (
+  passageId: string
+): Promise<Array<{ translationId: string; content: string }>> => {
+  try {
+    const rows = db.getAllSync<{ translationId: string; content: string }>(
+      'SELECT translationId, content FROM bible_chapters_v3 WHERE passageId = ?',
+      [passageId]
+    );
+    return rows || [];
+  } catch (error) {
+    console.error(`Failed to get offline passage ${passageId} across translations:`, error);
+    return [];
+  }
+};
+

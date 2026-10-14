@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { bibleHighlightRepository } from '@/features/bibleHighlights/data/bibleHighlight.repository';
 import { bibleActivityRepository } from '@/features/myJourney/data/myJourney.repository';
 import type { BibleHighlight } from '@/features/bibleHighlights/domain/bibleHighlight.types';
+import { getHumanReadableBookName } from '@/utils/scriptureReferenceParser';
 
 const highlightColors = {
   yellow: 'rgba(254, 240, 138, 0.55)',
@@ -43,6 +44,56 @@ type Book = {
   chapters?: { id: string | number }[];
   chapterCount?: number;
   id: string;
+};
+
+/**
+ * Formats an array of verse numbers/strings into a compact sequence representation.
+ * Consecutive numbers are grouped into ranges like "3-5".
+ * Non-consecutive groups are joined by commas: "3-5, 10, 11-15".
+ */
+export const formatVerseSequence = (verses: (string | number)[]): string => {
+  if (!verses || verses.length === 0) return '';
+
+  const allNums: number[] = [];
+  for (const v of verses) {
+    const s = String(v).trim();
+    if (s.includes('-') || s.includes('–')) {
+      const parts = s.split(/[-–]/).map((p) => parseInt(p, 10)).filter((n) => !isNaN(n));
+      if (parts.length === 2 && parts[0] <= parts[1]) {
+        for (let i = parts[0]; i <= parts[1]; i++) {
+          allNums.push(i);
+        }
+        continue;
+      }
+    }
+    const parsed = parseInt(s, 10);
+    if (!isNaN(parsed)) {
+      allNums.push(parsed);
+    }
+  }
+
+  if (allNums.length === 0) {
+    return verses.join(', ');
+  }
+
+  const sorted = Array.from(new Set(allNums)).sort((a, b) => a - b);
+  const ranges: string[] = [];
+  let start = sorted[0];
+  let prev = sorted[0];
+
+  for (let i = 1; i < sorted.length; i++) {
+    const current = sorted[i];
+    if (current === prev + 1) {
+      prev = current;
+    } else {
+      ranges.push(start === prev ? `${start}` : `${start}-${prev}`);
+      start = current;
+      prev = current;
+    }
+  }
+  ranges.push(start === prev ? `${start}` : `${start}-${prev}`);
+
+  return ranges.join(', ');
 };
 
 export function useBibleReader(
@@ -210,26 +261,13 @@ export function useBibleReader(
       .filter((line) => line.trim().length > 0);
 
     const activeBookObj = books.find((b) => String(b.id) === String(activeBook));
-    const bookTitle = (activeBookObj as any)?.localTitle || (activeBookObj as any)?.title || activeBook;
+    const bookTitle =
+      getHumanReadableBookName(activeBook) ||
+      (activeBookObj as any)?.localTitle ||
+      (activeBookObj as any)?.title ||
+      activeBook;
 
-    let rangeStr = '';
-    if (sortedNums.length === 1) {
-      rangeStr = `${sortedNums[0]}`;
-    } else if (sortedNums.length > 1) {
-      let isConsecutive = true;
-      for (let i = 1; i < sortedNums.length; i++) {
-        if (sortedNums[i] !== sortedNums[i - 1] + 1) {
-          isConsecutive = false;
-          break;
-        }
-      }
-      if (isConsecutive) {
-        rangeStr = `${sortedNums[0]}-${sortedNums[sortedNums.length - 1]}`;
-      } else {
-        rangeStr = sortedNums.join(', ');
-      }
-    }
-
+    const rangeStr = formatVerseSequence(selectedVerses);
     const reference = `- ${bookTitle} ${activeChapter}:${rangeStr}`;
     const formattedCopyText = `${lines.join('\n')}\n\n${reference}`;
 
@@ -263,26 +301,13 @@ export function useBibleReader(
       .sort((a, b) => a - b);
 
     const activeBookObj = books.find((b) => String(b.id) === String(activeBook));
-    const bookTitle = (activeBookObj as any)?.localTitle || (activeBookObj as any)?.title || activeBook;
+    const bookTitle =
+      getHumanReadableBookName(activeBook) ||
+      (activeBookObj as any)?.localTitle ||
+      (activeBookObj as any)?.title ||
+      activeBook;
 
-    let rangeStr = '';
-    if (sortedNums.length === 1) {
-      rangeStr = `${sortedNums[0]}`;
-    } else if (sortedNums.length > 1) {
-      let isConsecutive = true;
-      for (let i = 1; i < sortedNums.length; i++) {
-        if (sortedNums[i] !== sortedNums[i - 1] + 1) {
-          isConsecutive = false;
-          break;
-        }
-      }
-      if (isConsecutive) {
-        rangeStr = `${sortedNums[0]}–${sortedNums[sortedNums.length - 1]}`;
-      } else {
-        rangeStr = sortedNums.join(', ');
-      }
-    }
-
+    const rangeStr = formatVerseSequence(selectedVerses);
     const reference = `${bookTitle} ${activeChapter}:${rangeStr}`;
     
     const lines = sortedNums
@@ -311,6 +336,41 @@ export function useBibleReader(
     markAsRead(); // Creating a note counts as a meaningful read
     return scripture;
   }, [activeTranslation, activeBook, activeChapter, books, chapterDataByVerseNumber, selectedVerses]);
+
+  const handleComparePress = useCallback(() => {
+    if (selectedVerses.length === 0) return null;
+
+    const sortedNums = [...selectedVerses]
+      .map((v) => parseInt(v, 10))
+      .filter((n) => !isNaN(n))
+      .sort((a, b) => a - b);
+
+    const activeBookObj = books.find(
+      (b) => String(b.id) === String(activeBook) || String((b as any).usfm) === String(activeBook)
+    );
+    const bookTitle =
+      getHumanReadableBookName(activeBook) ||
+      (activeBookObj as any)?.name ||
+      (activeBookObj as any)?.localTitle ||
+      (activeBookObj as any)?.title ||
+      activeBook;
+
+    const rangeStr = formatVerseSequence(selectedVerses);
+    const reference = `${bookTitle} ${activeChapter}:${rangeStr}`;
+
+    const compareTarget = {
+      bookId: activeBook,
+      bookName: bookTitle,
+      chapter: parseInt(activeChapter, 10),
+      verseNumbers: sortedNums.length > 0 ? sortedNums.map(String) : selectedVerses,
+      verseRangeLabel: rangeStr,
+      reference,
+    };
+
+    setSelectedVerses([]);
+    return compareTarget;
+  }, [activeBook, activeChapter, books, selectedVerses]);
+
 
   const handleHighlight = useCallback(
     (color: keyof typeof highlightColors | 'clear') => {
@@ -539,6 +599,7 @@ export function useBibleReader(
       verseBackgroundColor,
       handleCopy,
       handleNotePress,
+      handleComparePress,
       handleHighlight,
       handleNextChapter,
       handlePrevChapter,
@@ -554,6 +615,7 @@ export function useBibleReader(
       verseBackgroundColor,
       handleCopy,
       handleNotePress,
+      handleComparePress,
       handleHighlight,
       handleNextChapter,
       handlePrevChapter,

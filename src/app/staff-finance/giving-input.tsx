@@ -157,7 +157,7 @@ export default function GivingInputScreen() {
       >
         <ScrollView contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 24) + 70 }]} keyboardShouldPersistTaps="handled">
         <Text style={styles.label}>Giver Type</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
+        <View style={styles.chipRow}>
           {['loose_offering', 'member', 'household', 'non_member', 'anonymous'].map(type => (
             <TouchableOpacity 
               key={type} 
@@ -169,7 +169,7 @@ export default function GivingInputScreen() {
               </Text>
             </TouchableOpacity>
           ))}
-        </ScrollView>
+        </View>
 
         {form.giverType === 'household' && (
           <View style={[styles.inputGroup, { zIndex: 1000 }]}>
@@ -264,7 +264,7 @@ export default function GivingInputScreen() {
         </View>
 
         <Text style={styles.label}>Payment Method</Text>
-        <View style={[styles.row, { flexWrap: 'wrap' }]}>
+        <View style={styles.chipRow}>
           {['cash', 'gcash', 'bank_transfer', 'check'].map(method => (
             <TouchableOpacity 
               key={method} 
@@ -278,7 +278,7 @@ export default function GivingInputScreen() {
           ))}
         </View>
 
-        <View style={[styles.inputGroup, { marginTop: 16 }]}>
+        <View style={styles.inputGroup}>
           <Text style={styles.label}>Reference Number (Optional)</Text>
           <TextInput 
             style={styles.input}
@@ -389,6 +389,12 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
   },
   row: { flexDirection: 'row', gap: 12 },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
   chip: {
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -396,7 +402,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     borderWidth: 1,
     borderColor: '#e5e5e5',
-    marginBottom: 8,
   },
   chipActive: {
     backgroundColor: '#6DC8FF15',

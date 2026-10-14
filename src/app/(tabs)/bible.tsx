@@ -5,9 +5,9 @@ import {
     type BibleVersion,
 } from '@/features/bible/presentation/hooks/useBibleTopNav';
 import * as ScreenOrientation from 'expo-screen-orientation';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Animated, ActivityIndicator, StyleSheet, View, Dimensions, DeviceEventEmitter } from 'react-native';
 import BibleReader from '../../components/Bible/BibleReader';
 import BooksModal from '../../components/Bible/BooksModal';
@@ -40,6 +40,14 @@ let cachedSavedVersions: BibleVersion[] = [];
 let cachedBooks: BibleBook[] = [];
 
 export default function BibleScreen() {
+  const params = useLocalSearchParams<{
+    book?: string;
+    chapter?: string;
+    verse?: string;
+    scrollToVerse?: string;
+    t?: string;
+  }>();
+
   const userProfile = useAuthStore((state) => state.userProfile);
   const setTranslation = useBibleVersionStore((state) => state.setTranslation);
   const globalTranslation = useBibleVersionStore((state) => state.activeTranslation);
@@ -54,6 +62,8 @@ export default function BibleScreen() {
   
   const [isLandscape, setIsLandscape] = useState(false);
   const [isSplitMode, setIsSplitMode] = useState(false);
+  const [activeScrollVerse, setActiveScrollVerse] = useState<string | undefined>(undefined);
+  const lastProcessedNavRef = useRef<string | null>(null);
 
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -72,6 +82,36 @@ export default function BibleScreen() {
     return () => subscription.remove();
   }, []);
 
+  // Handle incoming route params (e.g. from Verse of the Day or deep links)
+  useEffect(() => {
+    const navKey = params.t || (params.book && params.chapter ? `${params.book}.${params.chapter}.${params.verse || params.scrollToVerse || ''}` : null);
+    if (!navKey || navKey === lastProcessedNavRef.current) return;
+    lastProcessedNavRef.current = navKey;
+
+    const requestedBook = params.book;
+    const requestedChapter = params.chapter;
+    const requestedVerse = params.verse || params.scrollToVerse;
+
+    if (requestedBook && requestedChapter) {
+      setPreferences((prev) => {
+        const base = prev || cachedPreferences || DEFAULT_PREFERENCES;
+        const updated = {
+          ...base,
+          activeBook: String(requestedBook),
+          activeChapter: String(requestedChapter),
+          fontSize: base.fontSize || 18,
+        };
+        cachedPreferences = updated;
+        saveUserPreferences(updated);
+        return updated;
+      });
+    }
+
+    if (requestedVerse) {
+      setActiveScrollVerse(String(requestedVerse));
+    }
+  }, [params.book, params.chapter, params.verse, params.scrollToVerse, params.t]);
+
   // Instantly sync active translation from global store
   useEffect(() => {
     if (globalTranslation && preferences && globalTranslation !== preferences.activeTranslation) {
@@ -86,15 +126,19 @@ export default function BibleScreen() {
 
   // Load initial preferences and versions
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
       const init = async () => {
         const prefs = (await getUserPreferences()) as BiblePreferencesWithHighlights;
         setPreferences((prev) => {
           // If we already have a global translation (which updates instantly), don't let a slow storage read override it
           const currentGlobal = useBibleVersionStore.getState().activeTranslation;
-          let newPrefs = prefs;
-          if (currentGlobal && currentGlobal !== prefs?.activeTranslation) {
-            newPrefs = { ...prefs, activeTranslation: currentGlobal as string };
+          let newPrefs = {
+            ...(prev || DEFAULT_PREFERENCES),
+            ...prefs,
+            fontSize: prev?.fontSize || prefs?.fontSize || 18,
+          };
+          if (currentGlobal && currentGlobal !== newPrefs.activeTranslation) {
+            newPrefs = { ...newPrefs, activeTranslation: currentGlobal as string };
           }
           cachedPreferences = newPrefs;
           return newPrefs;
@@ -145,8 +189,8 @@ export default function BibleScreen() {
     setPreferences((previous) => {
       const newPrefs = { ...(previous || DEFAULT_PREFERENCES), ...updates };
       
-      // If scrollToVerse is explicitly set to undefined, remove it completely
-      if ((updates as any).scrollToVerse === undefined && 'scrollToVerse' in newPrefs) {
+      // Ensure transient navigation fields never stay in preferences
+      if ('scrollToVerse' in newPrefs) {
         delete (newPrefs as any).scrollToVerse;
       }
       
@@ -161,6 +205,11 @@ export default function BibleScreen() {
       return newPrefs;
     });
   };
+
+  const handleScrolledToVerse = useCallback(() => {
+    setActiveScrollVerse(undefined);
+    router.setParams({ verse: undefined, scrollToVerse: undefined, t: undefined });
+  }, [router]);
 
   const safePreferences = preferences || DEFAULT_PREFERENCES;
   const { leftText, rightText } = useBibleTopNav(books, safePreferences, savedVersions);
@@ -197,7 +246,8 @@ export default function BibleScreen() {
         preferences={preferences}
         updatePreferences={handleUpdatePreferences}
         books={books}
-        scrollToVerse={(preferences as any)?.scrollToVerse}
+        scrollToVerse={activeScrollVerse}
+        onScrolledToVerse={handleScrolledToVerse}
         controlsTabBar={!isLandscape} // don't let it toggle tab bar if we forced it hidden in landscape
         scrollY={scrollY}
         isLandscape={isLandscape}
@@ -240,7 +290,8 @@ export default function BibleScreen() {
         books={books}
         activeBookId={safePreferences.activeBook}
         onSelectChapter={(bookId, chapterNum) => {
-          handleUpdatePreferences({ activeBook: String(bookId), activeChapter: String(chapterNum), scrollToVerse: undefined } as any);
+          setActiveScrollVerse(undefined);
+          handleUpdatePreferences({ activeBook: String(bookId), activeChapter: String(chapterNum) });
           setIsBooksModalOpen(false);
         }}
       />

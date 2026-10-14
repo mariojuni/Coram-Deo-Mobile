@@ -398,6 +398,7 @@ const defaultPrefs = {
   activeBook: 'GEN',
   activeChapter: '1',
   activePassageId: 'GEN.1',
+  fontSize: 18,
 };
 
 export const getUserPreferences = async () => {
@@ -440,6 +441,10 @@ export const getUserPreferences = async () => {
   }
 
   const merged = { ...defaultPrefs, ...(data || {}) };
+  if (typeof merged.fontSize !== 'number' || isNaN(merged.fontSize)) {
+    merged.fontSize = 18;
+  }
+  delete (merged as any).scrollToVerse;
 
   const savedVersions = await getSavedVersions();
   const isAvailable = savedVersions.some((v: any) => String(v.id) === String(merged.activeTranslation));
@@ -452,17 +457,26 @@ export const getUserPreferences = async () => {
 };
 
 export const saveUserPreferences = async (prefs: any) => {
-  await AsyncStorage.setItem('bible_prefs', JSON.stringify(prefs));
+  let existing: any = {};
+  try {
+    const raw = await AsyncStorage.getItem('bible_prefs');
+    if (raw) existing = JSON.parse(raw);
+  } catch {}
+
+  const merged = { ...defaultPrefs, ...existing, ...prefs };
+  delete merged.scrollToVerse;
+
+  await AsyncStorage.setItem('bible_prefs', JSON.stringify(merged));
 
   const currentUser = getActiveAuth().currentUser;
   if (currentUser) {
     try {
       const docRef = doc(getActiveDb(), 'users', currentUser.uid, 'bible', 'preferences');
       try {
-        await updateDoc(docRef, prefs);
+        await updateDoc(docRef, merged);
       } catch (error: any) {
         if (error.code === 'not-found') {
-          await setDoc(docRef, prefs);
+          await setDoc(docRef, merged);
         } else {
           throw error;
         }

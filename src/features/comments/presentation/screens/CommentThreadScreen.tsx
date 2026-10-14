@@ -422,9 +422,16 @@ export function CommentThreadScreen() {
                     activeBook: book,
                     activeChapter: chapter,
                     activePassageId: parentData.passageId,
-                    scrollToVerse: startVerse,
                   } as any);
-                  router.push({ pathname: '/(tabs)/bible' });
+                  router.push({
+                    pathname: '/(tabs)/bible',
+                    params: {
+                      book,
+                      chapter,
+                      verse: startVerse,
+                      t: Date.now().toString(),
+                    },
+                  });
                 } catch (e) {
                   console.error('Failed to navigate to Bible passage', e);
                 }

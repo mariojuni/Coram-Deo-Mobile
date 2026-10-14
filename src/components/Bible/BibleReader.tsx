@@ -4,10 +4,11 @@ import { useBibleNoteStore } from '@/features/bibleNotes/presentation/hooks/useB
 import { useGlobalVideoStore } from '@/store/useGlobalVideoStore';
 import { getHumanReadableBookName } from '@/utils/scriptureReferenceParser';
 import { router } from 'expo-router';
-import { ChevronLeft, ChevronRight, Copy, X, MessageSquareText, Info, Minus, Plus } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Copy, X, MessageSquareText, Info, Minus, Plus, Columns } from 'lucide-react-native';
 import { BibleNoteIcon } from '@/components/ui/icons/BibleNoteIcon';
 import FontTypefaceIcon from '@/components/Navigation/Icons/FontTypefaceIcon';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import CompareVersesModal, { type CompareTarget } from './CompareVersesModal';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { getSoftShadowStyle, getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 import { ActivityIndicator, Animated, Dimensions, NativeScrollEvent, NativeSyntheticEvent, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform, Image } from 'react-native';
 import { BlurView } from 'expo-blur';
@@ -23,6 +24,7 @@ interface BibleReaderProps {
   hideChapterNav?: boolean;
   /** If set, after the chapter loads the reader will scroll to this verse number */
   scrollToVerse?: string;
+  onScrolledToVerse?: () => void;
   /** If true, hides/shows the tab bar based on scroll direction */
   controlsTabBar?: boolean;
   /** Optional animated value for scroll position */
@@ -85,7 +87,21 @@ const SUPERSCRIPT_MAP: Record<string, string> = {
 const toSuperscript = (num: string) =>
   num.split('').map(d => SUPERSCRIPT_MAP[d] ?? d).join('');
 
-export default function BibleReader({ preferences, updatePreferences, books, hideChapterNav = false, scrollToVerse, controlsTabBar = false, scrollY, isLandscape, isSplitMode, secondaryTranslation, isFontModalOpen, onCloseFontModal }: BibleReaderProps) {
+export default function BibleReader({
+  preferences,
+  updatePreferences,
+  books,
+  hideChapterNav = false,
+  scrollToVerse,
+  onScrolledToVerse,
+  controlsTabBar = false,
+  scrollY,
+  isLandscape,
+  isSplitMode,
+  secondaryTranslation,
+  isFontModalOpen,
+  onCloseFontModal,
+}: BibleReaderProps) {
   const { playerMode } = useGlobalVideoStore();
   const scrollRef = useRef<ScrollView>(null);
   const contentHeightRef = useRef<number>(0);
@@ -135,6 +151,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
     verseBackgroundColor,
     handleCopy,
     handleNotePress,
+    handleComparePress,
     handleHighlight,
     handleNextChapter,
     handlePrevChapter,
@@ -142,6 +159,9 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
     clearSelection,
     chapterHighlights,
   } = primaryReader;
+
+  const [isCompareOpen, setIsCompareOpen] = useState(false);
+  const [compareTarget, setCompareTarget] = useState<CompareTarget | null>(null);
 
   const activeColors = useMemo(() => {
     const colors = new Set<string>();
@@ -198,50 +218,98 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
     [internalScrollY, setTabBarVisible]
   );
 
+  const pendingScrollVerseRef = useRef<string | null>(null);
+  const onScrolledToVerseRef = useRef(onScrolledToVerse);
+  onScrolledToVerseRef.current = onScrolledToVerse;
+
+  const performScrollToVerse = useCallback((verseStr: string) => {
+    if (!verseStr || chapterData.length === 0) return false;
+    const targetVerseNum = parseInt(verseStr, 10);
+    if (isNaN(targetVerseNum)) return false;
+
+    if (targetVerseNum <= 1) {
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      setTimeout(() => {
+        onScrolledToVerseRef.current?.();
+      }, 350);
+      return true;
+    }
+
+    if (contentHeightRef.current <= 0) {
+      return false; // wait for onLayout
+    }
+
+    let charCountBefore = 0;
+    let totalCharCount = 0;
+
+    chapterData.forEach((v: Verse) => {
+      const vNum = parseInt(v.verseNumber, 10);
+      const headingLen = (v.heading || '').length * 1.5 + (v.subheading || '').length * 1.3 + (v.heading || v.subheading ? 80 : 0);
+      const len = (v.content || '').length + (v.verseNumber || '').length + 2 + headingLen;
+      if (!isNaN(vNum) && vNum < targetVerseNum) {
+        charCountBefore += len;
+      }
+      totalCharCount += len;
+    });
+
+    if (totalCharCount > 0 && contentHeightRef.current > 0) {
+      const ratio = charCountBefore / totalCharCount;
+      const targetY = ratio * contentHeightRef.current;
+      // Position verse comfortably in view below top bar (~40px below the 130px padding top)
+      const offsetY = Math.max(0, targetY - 40);
+      scrollRef.current?.scrollTo({ y: offsetY, animated: true });
+      setTimeout(() => {
+        onScrolledToVerseRef.current?.();
+      }, 400);
+      return true;
+    }
+
+    return false;
+  }, [chapterData]);
+
   // Scroll to target verse after chapter finishes loading based on character ratio & container height
   useEffect(() => {
-    if (loading || !scrollToVerse || chapterData.length === 0) return;
-    const targetVerseNum = parseInt(scrollToVerse, 10);
-    if (isNaN(targetVerseNum)) return;
+    if (loading || !scrollToVerse || chapterData.length === 0) {
+      pendingScrollVerseRef.current = null;
+      return;
+    }
 
-    const performScroll = () => {
-      let charCountBefore = 0;
-      let totalCharCount = 0;
+    pendingScrollVerseRef.current = scrollToVerse;
 
-      chapterData.forEach((v: Verse) => {
-        const vNum = parseInt(v.verseNumber, 10);
-        const len = (v.content || '').length + (v.verseNumber || '').length + 2;
-        if (!isNaN(vNum) && vNum < targetVerseNum) {
-          charCountBefore += len;
+    const timer1 = setTimeout(() => {
+      if (pendingScrollVerseRef.current) {
+        if (performScrollToVerse(pendingScrollVerseRef.current)) {
+          pendingScrollVerseRef.current = null;
         }
-        totalCharCount += len;
-      });
-
-      if (totalCharCount > 0 && contentHeightRef.current > 0) {
-        const ratio = charCountBefore / totalCharCount;
-        const targetY = ratio * contentHeightRef.current;
-        // Position verse near top third / above center
-        const offsetY = Math.max(0, targetY - 120);
-        scrollRef.current?.scrollTo({ y: offsetY, animated: true });
       }
-    };
+    }, 200);
 
-    const timer = setTimeout(performScroll, 300);
-    const secondaryTimer = setTimeout(performScroll, 600);
+    const timer2 = setTimeout(() => {
+      if (pendingScrollVerseRef.current) {
+        if (performScrollToVerse(pendingScrollVerseRef.current)) {
+          pendingScrollVerseRef.current = null;
+        }
+      }
+    }, 500);
+
     return () => {
-      clearTimeout(timer);
-      clearTimeout(secondaryTimer);
+      clearTimeout(timer1);
+      clearTimeout(timer2);
     };
-  }, [loading, scrollToVerse, chapterData]);
+  }, [loading, scrollToVerse, chapterData, performScrollToVerse]);
 
   const onNextChapter = () => {
+    pendingScrollVerseRef.current = null;
     handleNextChapter();
     scrollRef.current?.scrollTo({ y: 0, animated: true });
+    onScrolledToVerseRef.current?.();
   };
 
   const onPrevChapter = () => {
+    pendingScrollVerseRef.current = null;
     handlePrevChapter();
     scrollRef.current?.scrollTo({ y: 0, animated: true });
+    onScrolledToVerseRef.current?.();
   };
 
   // Always-current refs so the PanResponder (created once) calls the latest handlers
@@ -321,7 +389,7 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
 
   const highlightPanResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dy) > 5,
       onPanResponderMove: (_, g) => {
         if (g.dy > 0) {
@@ -466,6 +534,15 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
         style={[styles.chapterContent, isSecondary && { paddingLeft: 12 }, { fontSize: fontSize, lineHeight: fontSize * 1.6 }]}
         onLayout={isSecondary ? undefined : (e) => {
           contentHeightRef.current = e.nativeEvent.layout.height;
+          if (pendingScrollVerseRef.current) {
+            requestAnimationFrame(() => {
+              if (pendingScrollVerseRef.current) {
+                if (performScrollToVerse(pendingScrollVerseRef.current)) {
+                  pendingScrollVerseRef.current = null;
+                }
+              }
+            });
+          }
         }}
       >
         {reader.chapterData.flatMap((verse: Verse) => {
@@ -667,6 +744,22 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
                 <BibleNoteIcon size={20} color="#4B5563" />
                 <Text style={styles.actionButtonText}>Note</Text>
               </TouchableOpacity>
+
+              {/* Compare Card */}
+              <TouchableOpacity
+                style={styles.actionButton}
+                activeOpacity={0.7}
+                onPress={() => {
+                  const target = handleComparePress();
+                  if (target) {
+                    setCompareTarget(target);
+                    setIsCompareOpen(true);
+                  }
+                }}
+              >
+                <Columns size={20} color="#4B5563" />
+                <Text style={styles.actionButtonText}>Compare</Text>
+              </TouchableOpacity>
             </View>
 
             <View style={styles.highlightColorDivider} />
@@ -737,6 +830,17 @@ export default function BibleReader({ preferences, updatePreferences, books, hid
           </TouchableOpacity>
         </View>
       </Animated.View>
+
+      {/* Compare Verses Modal */}
+      <CompareVersesModal
+        isOpen={isCompareOpen}
+        onClose={() => setIsCompareOpen(false)}
+        target={compareTarget}
+        activeTranslation={preferences?.activeTranslation}
+        onSelectTranslation={(newTranslationId) => {
+          updatePreferences({ activeTranslation: newTranslationId });
+        }}
+      />
 
       {/* Cross-Reference / Notes Bottom Sheet */}
       <AppModal
@@ -905,6 +1009,7 @@ const styles = StyleSheet.create({  container: { flex: 1, backgroundColor: '#faf
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    flexShrink: 0,
   },
   actionButton: {
     paddingVertical: 8,

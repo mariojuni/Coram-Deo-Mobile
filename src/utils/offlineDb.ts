@@ -11,5 +11,7 @@ export {
     saveChapter,
     saveChaptersBatch,
     saveTranslationMeta,
+    getDownloadedTranslations,
+    getOfflinePassageForTranslations,
 } from '../features/bible/data/offlineDb.repository';
 
