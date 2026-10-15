@@ -7,8 +7,9 @@ import CustomDatePicker from '@/components/CustomDatePicker';
 import AppModal from '@/components/ui/AppModal';
 import { useAuthStore } from '../../store/useAuthStore';
 import { PrimaryGradientButton } from '../../components/ui/PrimaryGradientButton';
-import { getActiveFunctions } from '../../firebase';
+import { getActiveDb, getActiveFunctions } from '../../firebase';
 import { httpsCallable } from 'firebase/functions';
+import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 
 function formatDateToMDYYYY(date: Date): string {
   const month = date.getMonth() + 1;
@@ -89,19 +90,36 @@ export default function CompleteProfileScreen() {
     const cleanPhone = phoneNumber.replace(/\D/g, '');
     const finalPhone = cleanPhone === '63' || cleanPhone === '' ? '' : phoneNumber.replace(/\s+/g, '').trim();
 
+    const payload = {
+      firstName: firstName.trim(),
+      middleName: middleName.trim(),
+      lastName: lastName.trim(),
+      birthDate: birthday,
+      gender,
+      phoneNumber: finalPhone,
+      address: address.trim(),
+      emergencyContact: emergencyContact.trim(),
+    };
+
     try {
-      const completeOAuthProfile = httpsCallable(getActiveFunctions(), 'completeOAuthProfile');
-      await completeOAuthProfile({
-        firstName: firstName.trim(),
-        middleName: middleName.trim(),
-        lastName: lastName.trim(),
-        birthDate: birthday,
-        gender,
-        phoneNumber: finalPhone,
-        address: address.trim(),
-        emergencyContact: emergencyContact.trim(),
-      });
-      
+      try {
+        const completeOAuthProfile = httpsCallable(getActiveFunctions(), 'completeOAuthProfile');
+        await completeOAuthProfile(payload);
+      } catch (fnErr) {
+        // Fallback: owner is allowed to update their own profile fields by Firestore rules.
+        console.warn('[CompleteProfile] Callable failed, writing directly to Firestore:', fnErr);
+        const uid = useAuthStore.getState().currentUser?.uid;
+        if (!uid) throw fnErr;
+        await setDoc(
+          doc(getActiveDb(), 'users', uid),
+          { ...payload, birthday: payload.birthDate, onboardingStatus: 'COMPLETED', updatedAt: serverTimestamp() },
+          { merge: true }
+        );
+      }
+
+      // Optimistic local update so the router redirects immediately (and the cache is updated).
+      useAuthStore.getState().updateUserProfile({ ...payload, birthday: payload.birthDate, onboardingStatus: 'COMPLETED' });
+
       // Refresh profile so auth router will pick up the updated onboardingStatus
       if (refreshUserProfile) {
          await refreshUserProfile();

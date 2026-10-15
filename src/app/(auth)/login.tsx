@@ -18,6 +18,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore, clearAllCachesAndReset } from '../../store/useAuthStore';
+import { AppAuthError } from '../../features/auth/domain/auth-error.types';
+import { mapAuthError } from '../../features/auth/utils/auth-error-mapper';
 import EnvironmentSwitcherModal from '../../components/EnvironmentSwitcherModal';
 import {
   BUILD_ENV,
@@ -75,6 +77,13 @@ export default function LoginScreen() {
     }
   };
 
+  const handleAuthError = (error: unknown) => {
+    const authError = error instanceof AppAuthError ? error : mapAuthError(error);
+    if (!authError.isCancellation) {
+      setErrorMsg(authError.displayMessage);
+    }
+  };
+
   const handleLogin = async () => {
     if (!identifier.trim() || !password) {
       setErrorMsg('Please enter your email/username and password');
@@ -86,7 +95,7 @@ export default function LoginScreen() {
     try {
       await login(identifier, password);
     } catch (error: any) {
-      setErrorMsg(error.message);
+      handleAuthError(error);
     } finally {
       setIsEmailLoading(false);
     }
@@ -98,10 +107,7 @@ export default function LoginScreen() {
     try {
       await loginWithGoogle();
     } catch (error: any) {
-      const errorMessage = error?.message?.toLowerCase() || '';
-      if (!errorMessage.includes('no id token found')) {
-        setErrorMsg(error.message);
-      }
+      handleAuthError(error);
     } finally {
       setIsGoogleLoading(false);
     }
@@ -113,10 +119,7 @@ export default function LoginScreen() {
     try {
       await loginWithApple();
     } catch (error: any) {
-      const errorMessage = error?.message?.toLowerCase() || '';
-      if (!errorMessage.includes('no identity token')) {
-        setErrorMsg(error.message);
-      }
+      handleAuthError(error);
     } finally {
       setIsAppleLoading(false);
     }

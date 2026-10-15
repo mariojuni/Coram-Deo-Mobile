@@ -40,6 +40,7 @@ export default function RootLayout() {
 
   const initialized = useAuthStore((state) => state.initialized);
   const currentUser = useAuthStore((state) => state.currentUser);
+  const isOAuthProcessing = useAuthStore((state) => state.isOAuthProcessing);
   const initializeAuthListener = useAuthStore((state) => state.initializeAuthListener);
   const initializeMembersListener = useMemberStore((state) => state.initializeMembersListener);
   const initializeServicesListener = useMemberStore((state) => state.initializeServicesListener);
@@ -175,7 +176,8 @@ export default function RootLayout() {
     if (!appReady) return;
     
     // Prevent premature navigation during OAuth processing where currentUser is set 
-    // but userProfile is still being fetched in the background.
+    // but userProfile is still being enriched.
+    if (isOAuthProcessing) return;
     if (currentUser && !userProfile) return;
 
     const inAuthGroup = segments[0] === '(auth)';
@@ -188,8 +190,24 @@ export default function RootLayout() {
     const isSuperAdmin = Array.isArray(userProfile?.systemRoles)
       ? userProfile.systemRoles.includes('super_admin')
       : userProfile?.role === 'super_admin';
-    const isPendingProfile = userProfile?.onboardingStatus === 'PENDING_PROFILE';
     const isPendingChurch = !isSuperAdmin && (userProfile?.status === 'pending_church_link' || (!userProfile?.churchId && currentUser));
+    const userProviders = Array.isArray(userProfile?.providers) ? userProfile.providers : [];
+    const authProvider = userProfile?.authProvider || '';
+    const authUserProviders = (currentUser?.providerData || []).map((p) => p?.providerId).filter(Boolean) as string[];
+    const allProviders = Array.from(new Set([...userProviders, ...authUserProviders]));
+
+    const isOAuth = 
+      authProvider === 'google' || 
+      authProvider === 'apple' || 
+      allProviders.includes('google.com') || 
+      allProviders.includes('apple.com');
+
+    // If onboardingStatus is PENDING_PROFILE, or if an OAuth user has not yet COMPLETED their profile,
+    // they MUST complete their profile before anything else.
+    const isPendingProfile =
+      !isSuperAdmin &&
+      (userProfile?.onboardingStatus === 'PENDING_PROFILE' ||
+        (isOAuth && userProfile?.onboardingStatus !== 'COMPLETED'));
     
     const isDisabled = currentUser && (userProfile?.status === 'disabled' || !canAccessMobileApp(userProfile));
 
@@ -211,7 +229,7 @@ export default function RootLayout() {
       // Redirect to main app
       router.replace('/(tabs)');
     }
-  }, [currentUser, userProfile, initialized, hasSeenWalkthrough, segments, router]);
+  }, [currentUser, userProfile, initialized, hasSeenWalkthrough, segments, router, isOAuthProcessing]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

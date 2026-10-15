@@ -7,6 +7,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import WalkthroughSlide from '../components/WalkthroughSlide';
 import { AuthGeometricHeader } from '../components/ui/AuthGeometricHeader';
 import { PrimaryGradientButton } from '../components/ui/PrimaryGradientButton';
+import { getSoftShadowStyle } from '../components/ui/SoftCard';
+import { AccessibleButton } from '../components/a11y/AccessibleButton';
 
 const SLIDES = [
   {
@@ -123,9 +125,14 @@ export default function WalkthroughScreen() {
                   textStyle={{ fontSize: 18 }}
                 />
                 
-                <TouchableOpacity onPress={() => handleComplete('/(auth)/login')} activeOpacity={0.8} style={styles.outlineButton}>
+                <AccessibleButton
+                  onPress={() => handleComplete('/(auth)/login')}
+                  activeOpacity={0.8}
+                  style={styles.outlineButton}
+                  accessibilityLabel="Log In"
+                >
                   <Text style={styles.outlineButtonText}>Log In</Text>
-                </TouchableOpacity>
+                </AccessibleButton>
               </View>
             ) : (
               <PrimaryGradientButton
@@ -197,33 +204,13 @@ const styles = StyleSheet.create({
   authButtonsContainer: {
     width: '100%',
   },
-  gradientButton: {
-    height: 56,
-    borderRadius: 28, // fully rounded like a pill
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: '100%',
-    shadowColor: '#FF6596',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  gradientButtonText: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
-  },
   outlineButton: {
-    height: 56,
-    borderRadius: 28,
+    ...getSoftShadowStyle(20),
+    width: '100%',
+    paddingVertical: 18,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    width: '100%',
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#F3F4F6',
@@ -232,14 +219,14 @@ const styles = StyleSheet.create({
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 2,
   },
   outlineButtonText: {
     color: '#374151',
     fontSize: 18,
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
+    fontWeight: '700',
+    letterSpacing: -0.2,
   },
 });

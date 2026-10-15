@@ -2,6 +2,8 @@ import type { User } from 'firebase/auth';
 import { create } from 'zustand';
 import { authRepository, RegistrationPayload, fetchUserAccount, saveCachedUserProfile } from '../features/auth/data/auth.repository';
 import type { AuthCredentialResult, UserAccount } from '../features/auth/domain/auth.types';
+import { mapAuthError } from '../features/auth/utils/auth-error-mapper';
+import { AppAuthError } from '../features/auth/domain/auth-error.types';
 import { clearSensitiveCache } from '../features/files/services/fileCacheService';
 import { useMemberStore } from './useMemberStore';
 import { useScheduleStore } from './useScheduleStore';
@@ -18,6 +20,7 @@ interface AuthState {
   userProfile: UserAccount | null;
   loading: boolean;
   initialized: boolean;
+  isOAuthProcessing: boolean;
   signup: (payload: RegistrationPayload) => Promise<AuthCredentialResult>;
   login: (email: string, password: string) => Promise<AuthCredentialResult>;
   loginWithGoogle: () => Promise<AuthCredentialResult>;
@@ -76,87 +79,80 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   userProfile: null,
   loading: true,
   initialized: false,
-  signup: (payload) => authRepository.signup(payload),
-  login: (email, password) => authRepository.login(email, password),
+  isOAuthProcessing: false,
+  signup: async (payload) => {
+    try {
+      return await authRepository.signup(payload);
+    } catch (error) {
+      throw mapAuthError(error);
+    }
+  },
+  login: async (email, password) => {
+    try {
+      return await authRepository.login(email, password);
+    } catch (error) {
+      throw mapAuthError(error);
+    }
+  },
   sendPasswordReset: (email) => authRepository.sendPasswordReset(email),
   loginWithGoogle: async () => {
     try {
+      set({ isOAuthProcessing: true });
       authRepository.setOAuthProcessing(true);
       const result = await authRepository.loginWithGoogle();
       if (result.user) {
-        set({ currentUser: result.user });
-
         const googleGivenName = (result as any)._googleGivenName ?? null;
         const googleFamilyName = (result as any)._googleFamilyName ?? null;
 
-        authRepository.enrichGoogleUserInBackground(
+        const updatedProfile = await authRepository.enrichGoogleUser(
           result.user,
           result.user.email || undefined,
           result.user.phoneNumber || undefined,
           googleGivenName,
           googleFamilyName
-        ).then(() => {
-          return fetchUserAccount(result.user);
-        }).then((updatedProfile) => {
-          if (updatedProfile) set({ userProfile: updatedProfile });
-        }).catch((err) => {
-          console.warn('[Auth Store] Background Google enrichment error:', err);
-        }).finally(() => {
-          authRepository.setOAuthProcessing(false);
-        });
+        );
+
+        set({ currentUser: result.user, userProfile: updatedProfile, isOAuthProcessing: false });
+        authRepository.setOAuthProcessing(false);
       } else {
+        set({ isOAuthProcessing: false });
         authRepository.setOAuthProcessing(false);
       }
       return result;
     } catch (error: any) {
+      set({ isOAuthProcessing: false });
       authRepository.setOAuthProcessing(false);
       console.error("Google Sign-In Error", error);
-      const errorStr = String(error);
-      if (errorStr.includes('NETWORK_ERROR') || errorStr.includes('network-request-failed')) {
-        throw new Error('A network error occurred. Please check your internet connection and try again.');
-      } else if (errorStr.includes('DEVELOPER_ERROR')) {
-        throw new Error('Google Sign-In failed. Please try again.');
-      } else if (errorStr.includes('SIGN_IN_CANCELLED') || errorStr.includes('canceled')) {
-        throw new Error('Google Sign-In was canceled.');
-      }
-      throw error;
+      throw mapAuthError(error);
     }
   },
   loginWithApple: async () => {
     try {
+      set({ isOAuthProcessing: true });
       authRepository.setOAuthProcessing(true);
       const result = await authRepository.loginWithApple();
       if (result.user) {
-        set({ currentUser: result.user });
-
         const appleFullName = (result as any)._appleFullName ?? null;
         const appleEmail = (result as any)._appleEmail ?? result.user.email ?? undefined;
 
-        authRepository.enrichAppleUserInBackground(
+        const updatedProfile = await authRepository.enrichAppleUser(
           result.user,
           appleEmail,
           appleFullName,
-        ).then(() => {
-          return fetchUserAccount(result.user);
-        }).then((updatedProfile) => {
-          if (updatedProfile) set({ userProfile: updatedProfile });
-        }).catch((err) => {
-          console.warn('[Auth Store] Background Apple enrichment error:', err);
-        }).finally(() => {
-          authRepository.setOAuthProcessing(false);
-        });
+        );
+
+        set({ currentUser: result.user, userProfile: updatedProfile, isOAuthProcessing: false });
+        authRepository.setOAuthProcessing(false);
       } else {
+        set({ isOAuthProcessing: false });
         authRepository.setOAuthProcessing(false);
       }
       return result;
     } catch (error: any) {
+      set({ isOAuthProcessing: false });
       authRepository.setOAuthProcessing(false);
       console.error("Apple Sign-In Error", error);
-      const errorStr = String(error);
-      if (errorStr.includes('ERR_REQUEST_CANCELED') || errorStr.includes('canceled')) {
-        throw new Error('Apple Sign-In was canceled.');
-      }
-      throw error;
+      throw mapAuthError(error);
     }
   },
   logout: async () => {

@@ -9,6 +9,8 @@ import CustomDatePicker from '@/components/CustomDatePicker';
 import AppModal from '@/components/ui/AppModal';
 import { useAuthStore } from '../../store/useAuthStore';
 import { authRepository } from '../../features/auth/data/auth.repository';
+import { AppAuthError } from '../../features/auth/domain/auth-error.types';
+import { mapAuthError } from '../../features/auth/utils/auth-error-mapper';
 import { PrimaryGradientButton } from '../../components/ui/PrimaryGradientButton';
 
 function formatDateToMDYYYY(date: Date): string {
@@ -185,15 +187,26 @@ export default function RegisterScreen() {
       // Show success modal upon registration completion
       setShowSuccessModal(true);
     } catch (error: any) {
-      const msg = error?.message || 'Registration failed. Please check your details.';
-      setErrorMsg(msg);
+      const authError = error instanceof AppAuthError ? error : mapAuthError(error);
+      setErrorMsg(authError.displayMessage);
       // Automatically redirect user back to Step 1 if error is password or username related
-      const lower = msg.toLowerCase();
-      if (lower.includes('password') || lower.includes('username')) {
+      if (
+        authError.code === 'AUTH-1004' ||
+        authError.code === 'AUTH-1006' ||
+        authError.userMessage.toLowerCase().includes('password') ||
+        authError.userMessage.toLowerCase().includes('username')
+      ) {
         setStep(1);
       }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleAuthError = (error: unknown) => {
+    const authError = error instanceof AppAuthError ? error : mapAuthError(error);
+    if (!authError.isCancellation) {
+      setErrorMsg(authError.displayMessage);
     }
   };
 
@@ -203,10 +216,7 @@ export default function RegisterScreen() {
     try {
       await loginWithGoogle();
     } catch (error: any) {
-      const errorMessage = error?.message?.toLowerCase() || '';
-      if (!errorMessage.includes('no id token found')) {
-        setErrorMsg(error.message);
-      }
+      handleAuthError(error);
     } finally {
       setIsLoading(false);
     }
@@ -218,10 +228,7 @@ export default function RegisterScreen() {
     try {
       await loginWithApple();
     } catch (error: any) {
-      const errorMessage = error?.message?.toLowerCase() || '';
-      if (!errorMessage.includes('canceled') && !errorMessage.includes('no identity token')) {
-        setErrorMsg(error.message);
-      }
+      handleAuthError(error);
     } finally {
       setIsAppleLoading(false);
     }
