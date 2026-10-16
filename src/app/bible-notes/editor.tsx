@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, SafeAreaView, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { router, Stack } from 'expo-router';
 import { Plus, Users, Lock, X } from 'lucide-react-native';
 import { useBibleNoteStore } from '@/features/bibleNotes/presentation/hooks/useBibleNoteStore';
@@ -102,7 +103,7 @@ export default function BibleNoteEditorScreen() {
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
-      <StatusBar barStyle="dark-content" />
+      <StatusBar style="dark" />
       
       {/* System Standard Blur Header */}
       <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 20) }]} pointerEvents="box-none">

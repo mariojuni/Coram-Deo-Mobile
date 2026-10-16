@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { AlertCircle, Calendar, Heart, Mail, MapPin, Phone, User, ArrowRight, ChevronDown, Check } from 'lucide-react-native';
+import { AlertCircle, Calendar, Heart, Mail, MapPin, Phone, User, ArrowLeft, ArrowRight, ChevronDown, Check, LogOut } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -59,6 +59,7 @@ export default function CompleteProfileScreen() {
   const [emergencyContact, setEmergencyContact] = useState(userProfile?.emergencyContact || '');
   
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   const router = useRouter();
@@ -76,10 +77,22 @@ export default function CompleteProfileScreen() {
   };
 
   const handleLogout = async () => {
+    setIsLoggingOut(true);
     try {
       await useAuthStore.getState().logout();
     } catch (err: any) {
       setErrorMsg(err?.message || 'Failed to logout');
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
+  const handleBack = async () => {
+    setErrorMsg('');
+    if (step > 1) {
+      setStep(step - 1);
+    } else {
+      await handleLogout();
     }
   };
 
@@ -153,6 +166,34 @@ export default function CompleteProfileScreen() {
         >
           <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
             
+            <View style={styles.topNav}>
+              <TouchableOpacity
+                onPress={handleBack}
+                style={styles.backBtn}
+                activeOpacity={0.8}
+                disabled={isLoading || isLoggingOut}
+                accessibilityRole="button"
+                accessibilityLabel="Go back"
+              >
+                <ArrowLeft size={24} color="#1a1a1a" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleLogout}
+                style={styles.logoutBtn}
+                activeOpacity={0.8}
+                disabled={isLoading || isLoggingOut}
+                accessibilityRole="button"
+                accessibilityLabel="Log out"
+              >
+                {isLoggingOut ? (
+                  <ActivityIndicator size="small" color="#EF4444" />
+                ) : (
+                  <LogOut size={22} color="#EF4444" />
+                )}
+              </TouchableOpacity>
+            </View>
+
             <View style={styles.spacer} />
 
             <View style={styles.authHeader}>
@@ -272,35 +313,12 @@ export default function CompleteProfileScreen() {
             )}
 
             <View style={styles.buttonContainer}>
-              {step === 2 ? (
-                <View style={{ flex: 1 }}>
-                  <TouchableOpacity
-                    style={[styles.primaryButton, { backgroundColor: '#F3F4F6' }]}
-                    onPress={() => setStep(1)}
-                    disabled={isLoading}
-                  >
-                    <Text style={[styles.primaryButtonText, { color: '#666' }]}>Back</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <View style={{ flex: 1 }}>
-                  <TouchableOpacity
-                    style={[styles.primaryButton, { backgroundColor: '#F3F4F6' }]}
-                    onPress={handleLogout}
-                    disabled={isLoading}
-                  >
-                    <Text style={[styles.primaryButtonText, { color: '#666' }]}>Logout</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-              <View style={{ flex: 1 }}>
-                <PrimaryGradientButton
-                  title={step === 2 ? 'Complete' : 'Next Step'}
-                  onPress={step === 2 ? handleCompleteProfile : handleNext}
-                  loading={isLoading}
-                  iconRight={step !== 2 ? <ArrowRight size={20} color="#fff" /> : undefined}
-                />
-              </View>
+              <PrimaryGradientButton
+                title={step === 2 ? 'Complete' : 'Next Step'}
+                onPress={step === 2 ? handleCompleteProfile : handleNext}
+                loading={isLoading}
+                iconRight={step !== 2 ? <ArrowRight size={20} color="#fff" /> : undefined}
+              />
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -364,8 +382,42 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     paddingBottom: 40,
   },
+  topNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 8,
+    zIndex: 10,
+  },
+  backBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  logoutBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
   spacer: {
-    height: 60, 
+    height: 24, 
   },
   authHeader: {
     marginBottom: 24,
@@ -456,19 +508,8 @@ const styles = StyleSheet.create({
     color: '#888888',
   },
   buttonContainer: {
-    flexDirection: 'row',
-    marginTop: 12,
-    gap: 12,
-  },
-  primaryButton: {
-    height: 56,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  primaryButtonText: {
-    fontSize: 16,
-    fontWeight: '800',
+    marginTop: 16,
+    width: '100%',
   },
   genderOptionsContainer: {
     gap: 12,

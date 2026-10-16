@@ -10,6 +10,8 @@ import { PrimaryGradientButton } from '../components/ui/PrimaryGradientButton';
 import { getSoftShadowStyle } from '../components/ui/SoftCard';
 import { AccessibleButton } from '../components/a11y/AccessibleButton';
 
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
+
 const SLIDES = [
   {
     id: '1',
@@ -40,6 +42,7 @@ const SLIDES = [
 export default function WalkthroughScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
+  const { isSmallDevice, isLandscapeOrFlexFold } = useResponsiveLayout();
   const flatListRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -121,24 +124,30 @@ export default function WalkthroughScreen() {
                 <PrimaryGradientButton
                   title="Create Account"
                   onPress={() => handleComplete('/(auth)/register')}
-                  style={{ marginBottom: 16 }}
-                  textStyle={{ fontSize: 18 }}
+                  style={{ marginBottom: isLandscapeOrFlexFold ? 8 : 12 }}
+                  textStyle={{ fontSize: isSmallDevice ? 16 : 18 }}
                 />
                 
                 <AccessibleButton
                   onPress={() => handleComplete('/(auth)/login')}
                   activeOpacity={0.8}
-                  style={styles.outlineButton}
+                  style={[
+                    styles.outlineButton,
+                    {
+                      paddingVertical: isLandscapeOrFlexFold ? 12 : isSmallDevice ? 14 : 18,
+                      borderRadius: isSmallDevice ? 16 : 20,
+                    },
+                  ]}
                   accessibilityLabel="Log In"
                 >
-                  <Text style={styles.outlineButtonText}>Log In</Text>
+                  <Text style={[styles.outlineButtonText, { fontSize: isSmallDevice ? 16 : 18 }]}>Log In</Text>
                 </AccessibleButton>
               </View>
             ) : (
               <PrimaryGradientButton
                 title="Next"
                 onPress={handleNext}
-                textStyle={{ fontSize: 18 }}
+                textStyle={{ fontSize: isSmallDevice ? 16 : 18 }}
               />
             )}
           </View>

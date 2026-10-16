@@ -90,6 +90,7 @@ import { useFeedStore } from '../../../../store/useFeedStore';
 import { bibleNoteRepository } from '@/features/bibleNotes/data/bibleNote.repository';
 import { getHumanReadableBookName } from '@/utils/scriptureReferenceParser';
 import { ShareImageGenerator, ShareImageGeneratorRef } from '../../../../components/Share/ShareImageGenerator';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 
 
 
@@ -100,13 +101,14 @@ import { ShareImageGenerator, ShareImageGeneratorRef } from '../../../../compone
 
 
 export function FeedsTab({ searchQuery }: SubScreenProps) {
-    const members = useMemberStore((state) => state.members);
+  const members = useMemberStore((state) => state.members);
   const userProfile = useAuthStore((state) => state.userProfile);
   const currentUser = useAuthStore((s) => s.currentUser);
   const router = useRouter();
   const navDebounceRef = useRef(false);
   const openPrayerModal = useUIStore((state) => state.openPrayerModal);
   const shareImageGeneratorRef = useRef<ShareImageGeneratorRef>(null);
+  const { horizontalPadding, birthdayCardWidth, verticalItemSpacing } = useResponsiveLayout();
 
   const { filter } = useLocalSearchParams();
   const [activeTabFilter, setActiveTabFilter] = useState<CommunityMemberTabFilter>(
@@ -407,7 +409,7 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
     return (
       <BounceCard
         key={`h-${post.id}`}
-        style={{ marginBottom: 12 }}
+        style={{ marginBottom: verticalItemSpacing }}
         onPress={() =>
           router.push({
             pathname: '/comment-thread',
@@ -604,7 +606,7 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
     return (
       <BounceCard
         key={`n-${note.id}`}
-        style={{ marginBottom: 12 }}
+        style={{ marginBottom: verticalItemSpacing }}
         activeOpacity={0.85}
         onPress={() => router.push(`/comment-thread?targetType=${isSermon ? 'sermon_note' : 'bible_note'}&targetId=${note.id}` as any)}
       >
@@ -754,7 +756,7 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
   ];
 
   return (
-    <View style={membersStyles.wrap}>
+    <View style={[membersStyles.wrap, { paddingHorizontal: horizontalPadding }]}>
       <ShareImageGenerator ref={shareImageGeneratorRef} />
       {(todayBirthdays.length > 0 || upcomingBirthdays.length > 0) && (
         <View style={[membersStyles.birthdaySnapshotOuter, { boxShadow: '0px 8px 24px rgba(182, 109, 255, 0.28)', marginBottom: 10, borderRadius: 24 }]}>
@@ -769,7 +771,7 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
           <View style={[membersStyles.snapshotOrb1, { backgroundColor: 'rgba(255,255,255,0.05)' }]} />
           <View style={[membersStyles.snapshotOrb2, { backgroundColor: 'rgba(255,255,255,0.05)' }]} />
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 20 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: horizontalPadding, paddingTop: 20 }}>
             <View style={{
               flexDirection: 'row',
               alignItems: 'center',
@@ -816,11 +818,11 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
             </TouchableOpacity>
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24, paddingTop: 16, gap: 10 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingBottom: 22, paddingTop: 16, gap: 10 }}>
             {todayBirthdays.map(m => (
               <View key={`today-${m.id}`} style={{
                 borderRadius: 16,
-                width: 175,
+                width: birthdayCardWidth,
               }}>
                 <View style={{
                   borderRadius: 16,
@@ -860,7 +862,7 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
             {upcomingBirthdays.map(m => (
               <View key={`up-${m.id}`} style={{
                 borderRadius: 16,
-                width: 175,
+                width: birthdayCardWidth,
               }}>
                 <View style={{
                   borderRadius: 16,
@@ -901,8 +903,8 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={membersStyles.frostTabFilterScroll}
-        style={membersStyles.frostTabFilterContainer}
+        contentContainerStyle={[membersStyles.frostTabFilterScroll, { paddingHorizontal: horizontalPadding }]}
+        style={[membersStyles.frostTabFilterContainer, { marginHorizontal: -horizontalPadding }]}
       >
         {filterTabs.map((tab) => {
           const isActive = activeTabFilter === tab.key;

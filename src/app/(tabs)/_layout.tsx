@@ -2,7 +2,7 @@ import { BlurView, BlurTargetView } from 'expo-blur';
 import { Tabs, usePathname, useRouter } from 'expo-router';
 import { Book, CheckCircle, Handshake, Home, Users, XCircle } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Platform, StyleSheet, Text, Pressable, View, PanResponder } from 'react-native';
+import { ActivityIndicator, Animated, Platform, StyleSheet, Text, Pressable, View, PanResponder, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { create } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
@@ -149,6 +149,7 @@ const AnimatedTabItem = ({ isFocused, route, options, onPress, onPressIn, onPres
 
 function CustomTabBar({ state, descriptors, navigation, isStaff, blurTarget }: any) {
   const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
   const tabBarVisible = useUIStore((s) => s.tabBarVisible);
   const hasNewAssignment = useMinistryStore((s) => s.hasNewAssignment);
   const memberAssignments = useMinistryStore((s) => s.memberAssignments);
@@ -194,13 +195,16 @@ function CustomTabBar({ state, descriptors, navigation, isStaff, blurTarget }: a
           tension: 120,
         }).start();
         
-        // Use pageX - 24 (container's left offset) to avoid child coordinate issues
-        const touchX = evt.nativeEvent.pageX - 24;
+        const currentLayout = tabLayoutsRef.current[stateRef.current?.routes[stateRef.current?.index]?.key];
+        const halfWidth = (currentLayout?.width || 64) / 2;
+        const touchX = evt.nativeEvent.locationX;
         dragStartX.current = touchX;
-        activeTabX.setValue(touchX - 32);
+        activeTabX.setValue(touchX - halfWidth);
       },
       onPanResponderMove: (evt, gestureState) => {
-        let newX = dragStartX.current + gestureState.dx - 32;
+        const currentLayout = tabLayoutsRef.current[stateRef.current?.routes[stateRef.current?.index]?.key];
+        const halfWidth = (currentLayout?.width || 64) / 2;
+        let newX = dragStartX.current + gestureState.dx - halfWidth;
         
         const layouts = tabLayoutsRef.current;
         const keys = Object.keys(layouts);
@@ -266,12 +270,20 @@ function CustomTabBar({ state, descriptors, navigation, isStaff, blurTarget }: a
             } else if (isFocused) {
                const layout = layouts[nearestTabKey];
                if (layout) {
-                 Animated.spring(activeTabX, {
-                   toValue: layout.x,
-                   useNativeDriver: false,
-                   friction: 9,
-                   tension: 65,
-                 }).start();
+                 Animated.parallel([
+                   Animated.spring(activeTabX, {
+                     toValue: layout.x,
+                     useNativeDriver: false,
+                     friction: 9,
+                     tension: 65,
+                   }),
+                   Animated.spring(activeTabWidth, {
+                     toValue: layout.width,
+                     useNativeDriver: false,
+                     friction: 9,
+                     tension: 65,
+                   }),
+                 ]).start();
                }
             }
           }
@@ -292,12 +304,20 @@ function CustomTabBar({ state, descriptors, navigation, isStaff, blurTarget }: a
          if (currentState && currentState.routes[currentState.index]) {
              const layout = layouts[currentState.routes[currentState.index].key];
              if (layout) {
-                 Animated.spring(activeTabX, {
+                 Animated.parallel([
+                   Animated.spring(activeTabX, {
                      toValue: layout.x,
                      useNativeDriver: false,
                      friction: 9,
                      tension: 65,
-                 }).start();
+                   }),
+                   Animated.spring(activeTabWidth, {
+                     toValue: layout.width,
+                     useNativeDriver: false,
+                     friction: 9,
+                     tension: 65,
+                   }),
+                 ]).start();
              }
          }
       }
@@ -310,18 +330,32 @@ function CustomTabBar({ state, descriptors, navigation, isStaff, blurTarget }: a
     if (!currentRoute) return;
     const layout = tabLayouts[currentRoute.key];
     if (layout) {
-      Animated.spring(activeTabX, {
-        toValue: layout.x,
-        useNativeDriver: false,
-        friction: 9,
-        tension: 65,
-      }).start();
-      Animated.spring(activeTabY, {
-        toValue: layout.y,
-        useNativeDriver: false,
-        friction: 9,
-        tension: 65,
-      }).start();
+      Animated.parallel([
+        Animated.spring(activeTabX, {
+          toValue: layout.x,
+          useNativeDriver: false,
+          friction: 9,
+          tension: 65,
+        }),
+        Animated.spring(activeTabY, {
+          toValue: layout.y,
+          useNativeDriver: false,
+          friction: 9,
+          tension: 65,
+        }),
+        Animated.spring(activeTabWidth, {
+          toValue: layout.width,
+          useNativeDriver: false,
+          friction: 9,
+          tension: 65,
+        }),
+        Animated.spring(activeTabHeight, {
+          toValue: layout.height,
+          useNativeDriver: false,
+          friction: 9,
+          tension: 65,
+        }),
+      ]).start();
     }
   }, [state.index, tabLayouts, state.routes]);
 
@@ -333,40 +367,47 @@ function CustomTabBar({ state, descriptors, navigation, isStaff, blurTarget }: a
     }).start();
   }, [tabBarVisible]);
 
+  const isSmallScreen = screenWidth < 375;
+
   return (
     <Animated.View
       style={[
         styles.navArea,
-        { bottom: Math.max(insets.bottom, 16), transform: [{ translateY: slideAnim }] },
+        {
+          bottom: Math.max(insets.bottom, 16),
+          paddingHorizontal: isSmallScreen ? 12 : 24,
+          transform: [{ translateY: slideAnim }],
+        },
       ]}
       pointerEvents="box-none"
     >
-      <Animated.View style={[styles.navContainer, { transform: [{ scale: containerScale }] }]} {...panResponder.panHandlers}>
-        {/* Standard frosted background for both platforms */}
-        <CustomBlurView intensity={80} tint="light" blurTarget={blurTarget} style={[StyleSheet.absoluteFill, { borderRadius: 40, overflow: 'hidden' }]} fallbackBackgroundColor="#FAFAFA" />
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.8)', borderRadius: 40 }]} pointerEvents="none" />
+      <View style={styles.navWrapper} pointerEvents="box-none">
+        <Animated.View style={[styles.navContainer, { transform: [{ scale: containerScale }] }]} {...panResponder.panHandlers}>
+          {/* Standard frosted background for both platforms */}
+          <CustomBlurView intensity={80} tint="light" blurTarget={blurTarget} style={[StyleSheet.absoluteFill, { borderRadius: 40, overflow: 'hidden' }]} fallbackBackgroundColor="#FAFAFA" />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.8)', borderRadius: 40 }]} pointerEvents="none" />
 
-        {/* Sliding Highlight Background */}
-        <Animated.View
-          style={{
-            position: 'absolute',
-            left: 0,
-            top: 0,
-            width: 64,
-            height: 52,
-            transform: [
-              { translateX: activeTabX },
-              { translateY: activeTabY },
-            ],
-            backgroundColor: 'rgba(255, 101, 150, 0.04)',
-            borderRadius: 30, // completely rounded pill
-            opacity: Object.keys(tabLayouts).length > 0 ? 1 : 0,
-            zIndex: 1,
-          }}
-          pointerEvents="none"
-        />
+          {/* Sliding Highlight Background */}
+          <Animated.View
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              width: activeTabWidth,
+              height: activeTabHeight,
+              transform: [
+                { translateX: activeTabX },
+                { translateY: activeTabY },
+              ],
+              backgroundColor: 'rgba(255, 101, 150, 0.04)',
+              borderRadius: 30, // completely rounded pill
+              opacity: Object.keys(tabLayouts).length > 0 ? 1 : 0,
+              zIndex: 1,
+            }}
+            pointerEvents="none"
+          />
 
-        {state.routes.map((route: any, index: number) => {
+          {state.routes.map((route: any, index: number) => {
           const { options } = descriptors[route.key];
           const isFocused = state.index === index;
 
@@ -438,8 +479,9 @@ function CustomTabBar({ state, descriptors, navigation, isStaff, blurTarget }: a
             />
           );
         })}
-      </Animated.View>
-      <FabMenu isStaff={isStaff} />
+        </Animated.View>
+        <FabMenu isStaff={isStaff} />
+      </View>
     </Animated.View>
   );
 }
@@ -569,16 +611,21 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   navArea: {
     position: 'absolute',
-    left: 24,
-    right: 24,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    left: 0,
+    right: 0,
     alignItems: 'center',
-    gap: 12,
     ...Platform.select({
       ios: { zIndex: 200 },
       android: { zIndex: 200, elevation: 0 },
     }),
+  },
+  navWrapper: {
+    width: '100%',
+    maxWidth: 540,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
   },
   navContainer: {
     flex: 1,
@@ -594,8 +641,8 @@ const styles = StyleSheet.create({
     boxShadow: '0px 20px 60px rgba(0, 0, 0, 0.06)',
   },
   navItem: {
+    flex: 1,
     padding: 2,
-    minWidth: 64,
     minHeight: 52,
     justifyContent: 'center',
     alignItems: 'center',
@@ -608,6 +655,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 24,
     right: 24,
+    maxWidth: 540,
+    alignSelf: 'center',
     zIndex: 200,
     flexDirection: 'row',
     alignItems: 'center',

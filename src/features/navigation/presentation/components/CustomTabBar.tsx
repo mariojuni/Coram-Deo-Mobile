@@ -1,7 +1,7 @@
 import FabMenu from '@/components/Navigation/FabMenu';
 import { getTabIcon } from '@/features/navigation/presentation/tabNavigation';
 import { BlurView } from 'expo-blur';
-import { Platform, StyleSheet, View, Pressable } from 'react-native';
+import { Platform, StyleSheet, View, Pressable, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getSoftShadowStyle } from '@/components/ui/SoftCard';
 import { BounceCard } from '@/components/ui/BounceCard';
@@ -87,55 +87,69 @@ const AnimatedTabItem = ({
 
 export function CustomTabBar({ tabBarProps, isStaff }: CustomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
   const { state, descriptors } = tabBarProps;
   const navigation = tabBarProps.navigation as {
     emit: (event: { canPreventDefault: true; target: string; type: 'tabPress' }) => NavigationEmitResult;
     navigate: (routeName: string) => void;
   };
 
+  const isSmallScreen = screenWidth < 375;
+
   return (
-    <View style={[styles.navArea, { bottom: Math.max(insets.bottom, 16) }]} pointerEvents="box-none">
-      <View style={styles.navContainer}>
-        {Platform.OS === 'ios' && (
-          <BlurView intensity={80} tint="light" style={[StyleSheet.absoluteFill, { borderRadius: 40, overflow: 'hidden' }]} />
-        )}
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)', borderRadius: 40 }]} pointerEvents="none" />
+    <View
+      style={[
+        styles.navArea,
+        {
+          bottom: Math.max(insets.bottom, 16),
+          paddingHorizontal: isSmallScreen ? 12 : 24,
+        },
+      ]}
+      pointerEvents="box-none"
+    >
+      <View style={styles.navWrapper} pointerEvents="box-none">
+        <View style={styles.navContainer}>
+          {Platform.OS === 'ios' && (
+            <BlurView intensity={80} tint="light" style={[StyleSheet.absoluteFill, { borderRadius: 40, overflow: 'hidden' }]} />
+          )}
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)', borderRadius: 40 }]} pointerEvents="none" />
 
-        {state.routes.map((route, index) => {
-          const { options } = descriptors[route.key];
-          const isFocused = state.index === index;
+          {state.routes.map((route, index) => {
+            const { options } = descriptors[route.key];
+            const isFocused = state.index === index;
 
-          if (options.href === null) {
-            return null;
-          }
-
-          const onPress = () => {
-            const event = navigation.emit({
-              type: 'tabPress',
-              target: route.key,
-              canPreventDefault: true,
-            });
-
-            if (!isFocused && !event.defaultPrevented) {
-              // Defer navigation slightly so the BounceCard animation can start smoothly
-              requestAnimationFrame(() => {
-                navigation.navigate(route.name);
-              });
+            if (options.href === null) {
+              return null;
             }
-          };
 
-          return (
-            <AnimatedTabItem
-              key={route.key}
-              route={route}
-              isFocused={isFocused}
-              options={options}
-              onPress={onPress}
-            />
-          );
-        })}
+            const onPress = () => {
+              const event = navigation.emit({
+                type: 'tabPress',
+                target: route.key,
+                canPreventDefault: true,
+              });
+
+              if (!isFocused && !event.defaultPrevented) {
+                // Defer navigation slightly so the BounceCard animation can start smoothly
+                requestAnimationFrame(() => {
+                  navigation.navigate(route.name);
+                });
+              }
+            };
+
+            return (
+              <AnimatedTabItem
+                key={route.key}
+                route={route}
+                isFocused={isFocused}
+                options={options}
+                onPress={onPress}
+              />
+            );
+          })}
+        </View>
+        <FabMenu isStaff={isStaff} />
       </View>
-      <FabMenu isStaff={isStaff} />
     </View>
   );
 }
@@ -143,8 +157,13 @@ export function CustomTabBar({ tabBarProps, isStaff }: CustomTabBarProps) {
 const styles = StyleSheet.create({
   navArea: {
     position: 'absolute',
-    left: 24,
-    right: 24,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  navWrapper: {
+    width: '100%',
+    maxWidth: 540,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -154,13 +173,16 @@ const styles = StyleSheet.create({
     ...getSoftShadowStyle(40),
     flex: 1,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 12,
     paddingVertical: 12,
     backgroundColor: Platform.OS === 'android' ? 'rgba(255, 255, 255, 0.9)' : 'transparent',
   },
   navItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: 4,
   },
 });

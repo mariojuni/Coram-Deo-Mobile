@@ -43,9 +43,11 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { EventDetailsModal } from '../../components/Events/EventDetailsModal';
 import { CommunitySongDetailModal } from '../../components/Worship/CommunitySongDetailModal';
 import { BounceCard } from '../../components/ui/BounceCard';
@@ -291,8 +293,13 @@ function EventsTab({ searchQuery }: SubScreenProps) {
       }
     }
   }, [eventId, searchableEvents]);
-  const screenWidth = Dimensions.get('window').width;
+  const { width: screenWidth } = useWindowDimensions();
   const heroCardHorizontalMargin = 0;
+
+  // Re-scroll to active slide when screen width changes (flip screen fold/unfold or orientation)
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ x: activeTodaySlide * screenWidth, animated: false });
+  }, [screenWidth, activeTodaySlide]);
 
   const userProfile = useAuthStore((state) => state.userProfile);
 
@@ -952,7 +959,12 @@ const SUB_SCREENS = [
 export default function CommunityScreen() {
   const params = useGlobalSearchParams<{ tab?: string | string[] }>();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const {
+    width: SCREEN_WIDTH,
+    insets,
+    scrollBottomInset,
+    maxContentWidth,
+  } = useResponsiveLayout();
   const [activeTab, setActiveTab] = useState<TabIndex>(() => getTabIndexFromParam(params.tab) ?? 0);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchByTab, setSearchByTab] = useState<Record<CommunityTabParam, string>>({
@@ -982,7 +994,10 @@ export default function CommunityScreen() {
   const indicatorWidth = useMemo(() => new Animated.Value(0), []);
   const initialised = useRef(false);
   const scrollViewRef = useRef<ScrollView>(null);
-  const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+  const [measuredHeaderHeight, setMeasuredHeaderHeight] = useState<number>(
+    Math.max(insets.top, 24) + 112
+  );
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const headerTranslateY = scrollY.interpolate({
@@ -1037,6 +1052,27 @@ export default function CommunityScreen() {
     setActiveTab(index);
   };
 
+  // Re-align tab indicator whenever window width changes (fold/unfold on flip screens, orientation)
+  useEffect(() => {
+    const layout = tabLayouts.current[activeTab];
+    if (layout) {
+      Animated.parallel([
+        Animated.spring(indicatorX, {
+          toValue: layout.x,
+          useNativeDriver: false,
+          tension: 100,
+          friction: 12,
+        }),
+        Animated.spring(indicatorWidth, {
+          toValue: layout.width,
+          useNativeDriver: false,
+          tension: 100,
+          friction: 12,
+        }),
+      ]).start();
+    }
+  }, [SCREEN_WIDTH, activeTab]);
+
   useEffect(() => {
     const paramIndex = getTabIndexFromParam(params.tab);
     if (paramIndex !== null && paramIndex !== activeTab) {
@@ -1065,6 +1101,12 @@ export default function CommunityScreen() {
     <View style={styles.container}>
       {/* ── Frosted sticky header ── */}
       <Animated.View
+        onLayout={(e) => {
+          const { height } = e.nativeEvent.layout;
+          if (height > 0 && Math.abs(height - measuredHeaderHeight) > 1) {
+            setMeasuredHeaderHeight(height);
+          }
+        }}
         style={[
           styles.frostedHeader,
           {
@@ -1199,14 +1241,23 @@ export default function CommunityScreen() {
 
       {/* ── Sub-screen content ── */}
       <Animated.ScrollView
-        contentContainerStyle={[styles.content, { paddingTop: headerHeight }]}
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingTop: measuredHeaderHeight + 6,
+            paddingBottom: scrollBottomInset,
+          },
+        ]}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
           { useNativeDriver: true }
         )}
         scrollEventThrottle={16}
+        showsVerticalScrollIndicator={false}
       >
-        <ActiveScreen searchQuery={activeSearchQuery} />
+        <View style={{ width: '100%', maxWidth: maxContentWidth, alignSelf: 'center' }}>
+          <ActiveScreen searchQuery={activeSearchQuery} />
+        </View>
       </Animated.ScrollView>
     </View>
   );
@@ -1331,7 +1382,6 @@ const styles = StyleSheet.create({
 
   content: {
     flexGrow: 1,
-    paddingBottom: 120,
   },
 });
 
@@ -1523,9 +1573,9 @@ export const membersStyles = StyleSheet.create({
   },
   wrap: {
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 16,
     gap: 12,
-    paddingBottom: 100,
+    paddingBottom: 24,
   },
   card: {
     backgroundColor: '#FFFFFF',
