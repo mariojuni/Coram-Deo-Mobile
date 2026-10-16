@@ -3,6 +3,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SermonsExperience } from '@/features/sermons/presentation/components/SermonsExperience';
 import { useAuthStore } from '@/store/useAuthStore';
 
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
+
 const NAVY = '#1A1A1A';
 const BEIGE = '#FAFAFA';
 const GOLD = '#FF6596';
@@ -25,14 +27,16 @@ export default function SermonsTab() {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Sermons</Text>
-        <Text style={styles.headerSubtitle}>Messages from the pulpit</Text>
-      </View>
+      <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center', flex: 1 }}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Sermons</Text>
+          <Text style={styles.headerSubtitle}>Messages from the pulpit</Text>
+        </View>
 
-      {/* Main content */}
-      <SermonsExperience showSearchInput={true} />
+        {/* Main content */}
+        <SermonsExperience showSearchInput={true} />
+      </View>
     </View>
   );
 }

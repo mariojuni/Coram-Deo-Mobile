@@ -13,6 +13,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { useUIStore } from '../../store/useUIStore';
 import { CommentButton } from '../../features/comments/presentation/components/CommentButton';
 import { useRouter } from 'expo-router';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 
 const PRAYER_FILTERS: PrayerFilter[] = ['Recent', 'My Requests'];
 
@@ -25,6 +26,7 @@ export default function PrayerScreen() {
   const [filter, setFilter] = useState<PrayerFilter>('Recent');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const router = useRouter();
+  const { isTabletOrDesktop } = useResponsiveLayout();
 
   const handlePray = async (id: string) => {
     try {
@@ -48,7 +50,7 @@ export default function PrayerScreen() {
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.6)' }]} pointerEvents="none" />
 
-        <View style={styles.header}>
+        <View style={[styles.header, { maxWidth: 640, width: '100%', alignSelf: 'center' }]}>
         {isSearchOpen ? (
           <View style={styles.searchBar}>
             <Search size={18} color="#666" />
@@ -72,8 +74,8 @@ export default function PrayerScreen() {
         </BounceCard>
       </View>
 
-      <View style={styles.filterContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+      <View style={[styles.filterContainer, { maxWidth: 640, width: '100%', alignSelf: 'center' }]}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.filterScroll, isTabletOrDesktop && { flexGrow: 1, justifyContent: 'center' }]}>
         {PRAYER_FILTERS.map((f) => (
             <TouchableOpacity 
               key={f} 
@@ -91,7 +93,7 @@ export default function PrayerScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={[styles.listContent, { paddingTop: Math.max(insets.top, 24) + 146 }]}>
+      <ScrollView contentContainerStyle={[styles.listContent, { paddingTop: Math.max(insets.top, 24) + 146, maxWidth: 640, width: '100%', alignSelf: 'center' }]}>
         {loading ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>Loading prayer requests...</Text>

@@ -151,6 +151,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     userInterfaceStyle: "light",
     backgroundColor: "#FAFAFA",
     ios: {
+      supportsTablet: true,
       buildNumber: String(buildNumber),
       appleTeamId: "267GZU5SHN",
       icon: "./assets/expo.icon",
@@ -169,6 +170,17 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         ],
         CFBundleDisplayName: appName,
         ITSAppUsesNonExemptEncryption: false,
+        UISupportedInterfaceOrientations: [
+          "UIInterfaceOrientationPortrait",
+          "UIInterfaceOrientationLandscapeLeft",
+          "UIInterfaceOrientationLandscapeRight"
+        ],
+        "UISupportedInterfaceOrientations~ipad": [
+          "UIInterfaceOrientationPortrait",
+          "UIInterfaceOrientationPortraitUpsideDown",
+          "UIInterfaceOrientationLandscapeLeft",
+          "UIInterfaceOrientationLandscapeRight"
+        ],
         CFBundleURLTypes: [
           {
             CFBundleURLSchemes: isProd

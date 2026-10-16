@@ -18,6 +18,7 @@ import { useBibleVersionStore } from '../../store/useBibleVersionStore';
 import { useUIStore } from '../../store/useUIStore';
 import { getSavedVersions, getUserPreferences, saveUserPreferences } from '../../utils/bibleApi';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { bibleDataService, BIBLE_DOWNLOAD_COMPLETED_EVENT } from '@/features/bible/data/BibleDataService';
 import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
 import OfflineBanner from '@/components/Navigation/OfflineBanner';
@@ -60,27 +61,16 @@ export default function BibleScreen() {
   const [isBooksModalOpen, setIsBooksModalOpen] = useState(false);
   const [isFontModalOpen, setIsFontModalOpen] = useState(false);
   
-  const [isLandscape, setIsLandscape] = useState(false);
+  const { isLandscape, isTablet, width: screenWidth } = useResponsiveLayout();
   const [isSplitMode, setIsSplitMode] = useState(false);
   const [activeScrollVerse, setActiveScrollVerse] = useState<string | undefined>(undefined);
   const lastProcessedNavRef = useRef<string | null>(null);
 
+  const canSplit = isLandscape || (isTablet && screenWidth >= 720);
+
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const scrollY = useRef(new Animated.Value(0)).current;
-
-  // Global orientation handled in _layout.tsx based on route segments
-
-  // Detect orientation changes
-  useEffect(() => {
-    const updateOrientation = () => {
-      const { width, height } = Dimensions.get('window');
-      setIsLandscape(width > height);
-    };
-    updateOrientation();
-    const subscription = Dimensions.addEventListener('change', updateOrientation);
-    return () => subscription.remove();
-  }, []);
 
   // Handle incoming route params (e.g. from Verse of the Day or deep links)
   useEffect(() => {
@@ -248,10 +238,10 @@ export default function BibleScreen() {
         books={books}
         scrollToVerse={activeScrollVerse}
         onScrolledToVerse={handleScrolledToVerse}
-        controlsTabBar={!isLandscape} // don't let it toggle tab bar if we forced it hidden in landscape
+        controlsTabBar={!canSplit} // don't toggle tab bar in split mode or wide view
         scrollY={scrollY}
         isLandscape={isLandscape}
-        isSplitMode={isSplitMode && isLandscape}
+        isSplitMode={isSplitMode && canSplit}
         secondaryTranslation={effectiveSecondaryTranslation}
         isFontModalOpen={isFontModalOpen}
         onCloseFontModal={() => setIsFontModalOpen(false)}
@@ -263,10 +253,10 @@ export default function BibleScreen() {
         rightText={rightText}
         onRightPress={() => router.push('/version-manager')}
         scrollY={scrollY}
-        showSplitIcon={isLandscape}
+        showSplitIcon={canSplit}
         showFontIcon={true}
         onFontPress={() => setIsFontModalOpen(!isFontModalOpen)}
-        isSplitMode={isSplitMode && isLandscape}
+        isSplitMode={isSplitMode && canSplit}
         onSplitPress={() => setIsSplitMode(!isSplitMode)}
         secondaryRightText={secondaryRightText}
         onSecondaryRightPress={() => {

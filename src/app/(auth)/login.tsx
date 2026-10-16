@@ -28,6 +28,7 @@ import {
 } from '../../config/environments';
 import { currentActiveFirebaseEnv, reinitFirebaseForEnv } from '../../firebase';
 import { PrimaryGradientButton } from '../../components/ui/PrimaryGradientButton';
+import { AdaptiveContainer } from '@/components/ui/AdaptiveContainer';
 
 export default function LoginScreen() {
   const [identifier, setIdentifier] = useState('');
@@ -136,113 +137,113 @@ export default function LoginScreen() {
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           >
             <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-              
-              <View style={[styles.spacer, { justifyContent: 'center', alignItems: 'center' }]}>
-                <Image 
-                  source={require('../../../assets/images/logo.png')} 
-                  style={{ width: 100, height: 100 }} 
-                  contentFit="contain"
-                />
-              </View>
-
-              <View style={styles.authHeader}>
-                <Text style={styles.title}>Welcome Back</Text>
-                <Text style={styles.subtitle}>Please enter your information below to sign in.</Text>
-              </View>
-
-              {!!errorMsg && (
-                  <View style={styles.errorContainer}>
-                    <AlertCircle size={16} color="#EF4444" />
-                    <Text style={styles.errorText}>{errorMsg}</Text>
-                  </View>
-              )}
-
-              <View style={styles.formGroup}>
-                <View style={styles.inputWrapper}>
-                  <Mail size={18} color="#888" style={styles.inputIcon} />
-                  <TextInput
-                    accessibilityRole="text"
-                    style={styles.input}
-                    placeholder="Email or Username"
-                    placeholderTextColor="#888"
-                    value={identifier}
-                    onChangeText={setIdentifier}
-                    autoCapitalize="none"
+              <AdaptiveContainer type="form">
+                <View style={[styles.spacer, { justifyContent: 'center', alignItems: 'center' }]}>
+                  <Image 
+                    source={require('../../../assets/images/logo.png')} 
+                    style={{ width: 100, height: 100 }} 
+                    contentFit="contain"
                   />
                 </View>
-              </View>
 
-              <View style={styles.formGroup}>
-                <View style={styles.inputWrapper}>
-                  <Lock size={18} color="#888" style={styles.inputIcon} />
-                  <TextInput
-                    accessibilityRole="text"
-                    style={styles.input}
-                    placeholder="Password"
-                    placeholderTextColor="#888"
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry={!showPassword}
-                  />
-                  <TouchableOpacity
-                    onPress={() => setShowPassword(!showPassword)}
-                    style={{ padding: 8 }}
-                    activeOpacity={0.7}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    accessibilityRole="button"
-                  >
-                    {showPassword ? <EyeOff size={20} color="#888" /> : <Eye size={20} color="#888" />}
+                <View style={styles.authHeader}>
+                  <Text style={styles.title}>Welcome Back</Text>
+                  <Text style={styles.subtitle}>Please enter your information below to sign in.</Text>
+                </View>
+
+                {!!errorMsg && (
+                    <View style={styles.errorContainer}>
+                      <AlertCircle size={16} color="#EF4444" />
+                      <Text style={styles.errorText}>{errorMsg}</Text>
+                    </View>
+                )}
+
+                <View style={styles.formGroup}>
+                  <View style={styles.inputWrapper}>
+                    <Mail size={18} color="#888" style={styles.inputIcon} />
+                    <TextInput
+                      accessibilityRole="text"
+                      style={styles.input}
+                      placeholder="Email or Username"
+                      placeholderTextColor="#888"
+                      value={identifier}
+                      onChangeText={setIdentifier}
+                      autoCapitalize="none"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.formGroup}>
+                  <View style={styles.inputWrapper}>
+                    <Lock size={18} color="#888" style={styles.inputIcon} />
+                    <TextInput
+                      accessibilityRole="text"
+                      style={styles.input}
+                      placeholder="Password"
+                      placeholderTextColor="#888"
+                      value={password}
+                      onChangeText={setPassword}
+                      secureTextEntry={!showPassword}
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowPassword(!showPassword)}
+                      style={{ padding: 8 }}
+                      activeOpacity={0.7}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      accessibilityRole="button"
+                    >
+                      {showPassword ? <EyeOff size={20} color="#888" /> : <Eye size={20} color="#888" />}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View style={styles.forgotPasswordContainer}>
+                  <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')} activeOpacity={0.8} accessibilityRole="button">
+                    <Text style={styles.forgotPasswordText}>Forgot password?</Text>
                   </TouchableOpacity>
                 </View>
-              </View>
 
-              <View style={styles.forgotPasswordContainer}>
-                <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')} activeOpacity={0.8} accessibilityRole="button">
-                  <Text style={styles.forgotPasswordText}>Forgot password?</Text>
-                </TouchableOpacity>
-              </View>
+                <PrimaryGradientButton
+                  title="Sign In"
+                  onPress={handleLogin}
+                  loading={isEmailLoading}
+                  disabled={isGoogleLoading || isAppleLoading}
+                  style={{ marginTop: 8 }}
+                />
 
-              <PrimaryGradientButton
-                title="Sign In"
-                onPress={handleLogin}
-                loading={isEmailLoading}
-                disabled={isGoogleLoading || isAppleLoading}
-                style={{ marginTop: 8 }}
-              />
+                <View style={styles.dividerContainer}>
+                  <View style={styles.dividerLine} />
+                  <Text style={styles.dividerText}>or sign in with</Text>
+                  <View style={styles.dividerLine} />
+                </View>
 
-              <View style={styles.dividerContainer}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>or sign in with</Text>
-                <View style={styles.dividerLine} />
-              </View>
-
-              <View style={styles.socialButtonsRow}>
-                <TouchableOpacity style={styles.socialIconBtn} onPress={handleGoogleLogin} disabled={isEmailLoading || isGoogleLoading || isAppleLoading} activeOpacity={0.8} accessibilityRole="button">
-                  {isGoogleLoading ? (
-                    <ActivityIndicator size="small" color="#666" />
-                  ) : (
-                    <Image source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png' }} style={styles.socialIcon} contentFit="contain" />
-                  )}
-                </TouchableOpacity>
-
-                {Platform.OS === 'ios' && (
-                  <TouchableOpacity style={[styles.socialIconBtn, { backgroundColor: '#000' }]} onPress={handleAppleLogin} disabled={isEmailLoading || isGoogleLoading || isAppleLoading} activeOpacity={0.8} accessibilityRole="button">
-                    {isAppleLoading ? (
-                      <ActivityIndicator size="small" color="#FFF" />
+                <View style={styles.socialButtonsRow}>
+                  <TouchableOpacity style={styles.socialIconBtn} onPress={handleGoogleLogin} disabled={isEmailLoading || isGoogleLoading || isAppleLoading} activeOpacity={0.8} accessibilityRole="button">
+                    {isGoogleLoading ? (
+                      <ActivityIndicator size="small" color="#666" />
                     ) : (
-                      <Image source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg' }} style={[styles.socialIcon, { tintColor: '#fff' }]} contentFit="contain" />
+                      <Image source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png' }} style={styles.socialIcon} contentFit="contain" />
                     )}
                   </TouchableOpacity>
-                )}
-              </View>
 
-              <View style={styles.footer}>
-                <Text style={styles.footerText}>Don&apos;t have an account? </Text>
-                <TouchableOpacity onPress={() => router.push('/(auth)/register')} activeOpacity={0.8} accessibilityRole="button">
-                  <Text style={styles.footerLink}>Register</Text>
-                </TouchableOpacity>
-              </View>
+                  {Platform.OS === 'ios' && (
+                    <TouchableOpacity style={[styles.socialIconBtn, { backgroundColor: '#000' }]} onPress={handleAppleLogin} disabled={isEmailLoading || isGoogleLoading || isAppleLoading} activeOpacity={0.8} accessibilityRole="button">
+                      {isAppleLoading ? (
+                        <ActivityIndicator size="small" color="#FFF" />
+                      ) : (
+                        <Image source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg' }} style={[styles.socialIcon, { tintColor: '#fff' }]} contentFit="contain" />
+                      )}
+                    </TouchableOpacity>
+                  )}
+                </View>
 
+                <View style={styles.footer}>
+                  <Text style={styles.footerText}>Don&apos;t have an account? </Text>
+                  <TouchableOpacity onPress={() => router.push('/(auth)/register')} activeOpacity={0.8} accessibilityRole="button">
+                    <Text style={styles.footerLink}>Register</Text>
+                  </TouchableOpacity>
+                </View>
+              </AdaptiveContainer>
             </ScrollView>
           </KeyboardAvoidingView>
         </SafeAreaView>

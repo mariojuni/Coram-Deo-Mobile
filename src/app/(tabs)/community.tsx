@@ -115,7 +115,7 @@ function getTabIndexFromParam(tabParam: string | string[] | undefined): TabIndex
 
 // ─── Placeholder sub-screen components ───────────────────────────────────────
 
-export function PrayerCardItem({ req, currentUser, handlePray, handleAnswered, openPrayerModal, deletePrayer, onShare }: { req: Prayer, currentUser: any, handlePray: (id: string) => void, handleAnswered: (id: string, currentValue: boolean) => void, openPrayerModal: (prayer: Prayer) => void, deletePrayer: (id: string) => void, onShare?: (prayer: Prayer) => void }) {
+export function PrayerCardItem({ req, currentUser, handlePray, handleAnswered, openPrayerModal, deletePrayer, onShare, style }: { req: Prayer, currentUser: any, handlePray: (id: string) => void, handleAnswered: (id: string, currentValue: boolean) => void, openPrayerModal: (prayer: Prayer) => void, deletePrayer: (id: string) => void, onShare?: (prayer: Prayer) => void, style?: any }) {
   const router = useRouter();
   const userProfile = useAuthStore((state) => state.userProfile);
   const isLiked = currentUser ? (req.likedBy || []).includes(currentUser.uid) : false;
@@ -124,7 +124,7 @@ export function PrayerCardItem({ req, currentUser, handlePray, handleAnswered, o
   return (
     <BounceCard
       onPress={() => router.push({ pathname: '/comment-thread', params: { targetType: 'prayer_request', targetId: req.id } })}
-      style={{ marginBottom: 12 }}
+      style={[{ marginBottom: 12 }, style]}
       activeOpacity={0.85}
     >
       <SoftCard innerStyle={{ padding: 16 }}>
@@ -294,12 +294,14 @@ function EventsTab({ searchQuery }: SubScreenProps) {
     }
   }, [eventId, searchableEvents]);
   const { width: screenWidth } = useWindowDimensions();
+  const { maxContentWidth, isTabletOrDesktop } = useResponsiveLayout();
+  const carouselWidth = Math.min(screenWidth, 640);
   const heroCardHorizontalMargin = 0;
 
   // Re-scroll to active slide when screen width changes (flip screen fold/unfold or orientation)
   useEffect(() => {
-    scrollRef.current?.scrollTo({ x: activeTodaySlide * screenWidth, animated: false });
-  }, [screenWidth, activeTodaySlide]);
+    scrollRef.current?.scrollTo({ x: activeTodaySlide * carouselWidth, animated: false });
+  }, [carouselWidth, activeTodaySlide]);
 
   const userProfile = useAuthStore((state) => state.userProfile);
 
@@ -354,7 +356,7 @@ function EventsTab({ searchQuery }: SubScreenProps) {
     const interval = setInterval(() => {
       setActiveTodaySlide((prev) => {
         const nextSlide = (prev + 1) % todaysEvents.length;
-        scrollRef.current?.scrollTo({ x: nextSlide * screenWidth, animated: true });
+        scrollRef.current?.scrollTo({ x: nextSlide * carouselWidth, animated: true });
         return nextSlide;
       });
     }, 5000);
@@ -412,7 +414,7 @@ function EventsTab({ searchQuery }: SubScreenProps) {
   }
 
   return (
-    <View style={eventsStyles.wrap}>
+    <View style={[eventsStyles.wrap, { maxWidth: 640, width: '100%', alignSelf: 'center' }]}>
       {schedulesLoading ? (
         <View style={placeholder.wrap}>
           <Text style={placeholder.subtitle}>Loading events...</Text>
@@ -427,7 +429,7 @@ function EventsTab({ searchQuery }: SubScreenProps) {
             style={eventsStyles.heroCarousel}
             contentContainerStyle={eventsStyles.heroCarouselContent}
             onMomentumScrollEnd={(event) => {
-              const slide = Math.round(event.nativeEvent.contentOffset.x / screenWidth);
+              const slide = Math.round(event.nativeEvent.contentOffset.x / carouselWidth);
               setActiveTodaySlide(slide);
             }}
           >
@@ -440,7 +442,7 @@ function EventsTab({ searchQuery }: SubScreenProps) {
                   activeOpacity={0.92}
                   onPress={() => setSelectedEvent(todayEvent)}
                   disabled={todayEvent.status?.toLowerCase() === 'cancelled'}
-                  style={[eventsStyles.heroSlide, { width: screenWidth }]}
+                  style={[eventsStyles.heroSlide, { width: carouselWidth }]}
                 >
                   <View style={[eventsStyles.heroCardOuter, { marginHorizontal: heroCardHorizontalMargin }]}>
                     <LinearGradient
@@ -565,7 +567,7 @@ function EventsTab({ searchQuery }: SubScreenProps) {
 
       <View style={{ marginTop: 4 }}>
         {upcomingList.length === 0 ? (
-          <BounceCard activeOpacity={0.95} style={{ marginBottom: 10 }}>
+          <BounceCard activeOpacity={0.95} style={{ marginBottom: 10, width: '100%' }}>
             <SoftCard innerStyle={eventsStyles.emptyTodayCardInner}>
               <View style={eventsStyles.emptyTodayIconRing}>
                 <CalendarDays size={26} color="#FF6596" />
@@ -648,11 +650,16 @@ function EventsTab({ searchQuery }: SubScreenProps) {
 }
 
 function SermonsTab({ searchQuery }: SubScreenProps) {
-  return <SermonsExperience searchQuery={searchQuery} showSearchInput={false} showDownloadEntryPoint={false} />;
+  return (
+    <View style={{ maxWidth: 640, width: '100%', alignSelf: 'center' }}>
+      <SermonsExperience searchQuery={searchQuery} showSearchInput={false} showDownloadEntryPoint={false} />
+    </View>
+  );
 }
 
 
 function SongsTab({ searchQuery }: SubScreenProps) {
+  const { isTabletOrDesktop } = useResponsiveLayout();
   const userProfile = useAuthStore((state) => state.userProfile);
   const songs = useCommunitySongsStore((s) => s.songs);
   const loading = useCommunitySongsStore((s) => s.songsLoading);
@@ -699,10 +706,10 @@ function SongsTab({ searchQuery }: SubScreenProps) {
   }
 
   return (
-    <View style={songsStyles.wrap}>
+    <View style={[songsStyles.wrap, { maxWidth: 640, width: '100%', alignSelf: 'center' }]}>
       {/* Category & Language Filter Bar */}
       <View style={{ marginBottom: 12, gap: 8 }}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[{ gap: 6 }, isTabletOrDesktop && { flexGrow: 1, justifyContent: 'center' }]}>
           {['all', 'english', 'tagalog', 'other'].map((lang) => (
             <TouchableOpacity
               key={lang}
@@ -758,42 +765,44 @@ function SongsTab({ searchQuery }: SubScreenProps) {
           <Text style={placeholder.subtitle}>Songs published by your church leadership will appear here.</Text>
         </View>
       ) : (
-        filteredSongs.map((song) => {
-          const hasLyrics = canViewLyricsInDirectory(song);
-          return (
-            <BounceCard key={song.id} activeOpacity={0.82} onPress={() => setSelectedSong(song)} style={{ marginBottom: 10 }}>
-              <SoftCard innerStyle={songsStyles.cardInner}>
-                <View style={songsStyles.iconWrap}>
-                  <Music size={20} color="#FF6596" />
-                </View>
-
-                <View style={songsStyles.details}>
-                  <Text style={songsStyles.title} numberOfLines={1}>{song.title}</Text>
-                  <Text style={songsStyles.artist} numberOfLines={1}>{song.artist || song.composer || 'Unknown Artist'}</Text>
-                  <View style={songsStyles.tagsRow}>
-                    {song.category && (
-                      <View style={songsStyles.tagPill}>
-                        <Text style={songsStyles.tagText}>{song.category}</Text>
-                      </View>
-                    )}
-                    {song.language && (
-                      <View style={[songsStyles.tagPill, { backgroundColor: '#F3E8FF' }]}>
-                        <Text style={[songsStyles.tagText, { color: '#8B5CF6' }]}>{song.language}</Text>
-                      </View>
-                    )}
-                    {hasLyrics && (
-                      <View style={[songsStyles.tagPill, { backgroundColor: '#ECFDF3' }]}>
-                        <Text style={[songsStyles.tagText, { color: '#10B981' }]}>Lyrics</Text>
-                      </View>
-                    )}
+        <View>
+          {filteredSongs.map((song) => {
+            const hasLyrics = canViewLyricsInDirectory(song);
+            return (
+              <BounceCard key={song.id} activeOpacity={0.82} onPress={() => setSelectedSong(song)} style={{ marginBottom: 10 }}>
+                <SoftCard innerStyle={songsStyles.cardInner}>
+                  <View style={songsStyles.iconWrap}>
+                    <Music size={20} color="#FF6596" />
                   </View>
-                </View>
 
-                <ChevronRight size={18} color="#C0C8D8" />
-              </SoftCard>
-            </BounceCard>
-          );
-        })
+                  <View style={songsStyles.details}>
+                    <Text style={songsStyles.title} numberOfLines={1}>{song.title}</Text>
+                    <Text style={songsStyles.artist} numberOfLines={1}>{song.artist || song.composer || 'Unknown Artist'}</Text>
+                    <View style={songsStyles.tagsRow}>
+                      {song.category && (
+                        <View style={songsStyles.tagPill}>
+                          <Text style={songsStyles.tagText}>{song.category}</Text>
+                        </View>
+                      )}
+                      {song.language && (
+                        <View style={[songsStyles.tagPill, { backgroundColor: '#F3E8FF' }]}>
+                          <Text style={[songsStyles.tagText, { color: '#8B5CF6' }]}>{song.language}</Text>
+                        </View>
+                      )}
+                      {hasLyrics && (
+                        <View style={[songsStyles.tagPill, { backgroundColor: '#ECFDF3' }]}>
+                          <Text style={[songsStyles.tagText, { color: '#10B981' }]}>Lyrics</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+
+                  <ChevronRight size={18} color="#C0C8D8" />
+                </SoftCard>
+              </BounceCard>
+            );
+          })}
+        </View>
       )}
 
       {/* Song Details Modal */}
@@ -964,6 +973,7 @@ export default function CommunityScreen() {
     insets,
     scrollBottomInset,
     maxContentWidth,
+    isTabletOrDesktop,
   } = useResponsiveLayout();
   const [activeTab, setActiveTab] = useState<TabIndex>(() => getTabIndexFromParam(params.tab) ?? 0);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -1020,8 +1030,7 @@ export default function CommunityScreen() {
 
   const handleTabLayout = (index: number, x: number, width: number) => {
     tabLayouts.current[index] = { x, width };
-    // Seed the indicator when the active tab's layout is first measured
-    if (index === activeTab && !initialised.current) {
+    if (index === activeTab) {
       indicatorX.setValue(x);
       indicatorWidth.setValue(width);
       initialised.current = true;
@@ -1141,67 +1150,72 @@ export default function CommunityScreen() {
 
         {/* Title row */}
         <Animated.View style={[styles.headerContent, { opacity: titleOpacity }]}>
-          {isSearchOpen ? (
-            <View style={styles.topSearchBoxExpanded}>
-              <Search size={14} color="#8A8C99" />
-              <TextInput
-                style={styles.topSearchInput}
-                placeholder={searchPlaceholderByTab[activeTabKey]}
-                placeholderTextColor="#9CA0B0"
-                value={activeSearchQuery}
-                onChangeText={(value) =>
-                  setSearchByTab((prev) => ({ ...prev, [activeTabKey]: value }))
-                }
-                autoFocus
-              />
-              <TouchableOpacity
-                onPress={() => {
-                  setSearchByTab((prev) => ({ ...prev, [activeTabKey]: '' }));
-                  setIsSearchOpen(false);
-                }}
-                hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
-              >
-                <X size={14} color="#A0A4B8" />
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <>
-              <View style={styles.headerLeft}>
-                <View style={styles.headerIconWrap}>
-                  <LinearGradient
-                    colors={['#FF6596', '#B66DFF']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.headerIconGradient}
-                  >
-                    <CommunityStrokeIcon width={20} height={20} color="#fff" />
-                  </LinearGradient>
-                </View>
-                <View>
-                  <Text style={styles.headerOverline}>NETWORK</Text>
-                  <Text style={styles.headerTitle}>Community</Text>
-                </View>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginRight: 4 }}>
+          <View style={{ width: '100%', maxWidth: maxContentWidth, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            {isSearchOpen ? (
+              <View style={styles.topSearchBoxExpanded}>
+                <Search size={14} color="#8A8C99" />
+                <TextInput
+                  style={styles.topSearchInput}
+                  placeholder={searchPlaceholderByTab[activeTabKey]}
+                  placeholderTextColor="#9CA0B0"
+                  value={activeSearchQuery}
+                  onChangeText={(value) =>
+                    setSearchByTab((prev) => ({ ...prev, [activeTabKey]: value }))
+                  }
+                  autoFocus
+                />
                 <TouchableOpacity
-                  style={styles.searchToggleButton}
-                  onPress={() => setIsSearchOpen(true)}
-                  activeOpacity={0.85}
+                  onPress={() => {
+                    setSearchByTab((prev) => ({ ...prev, [activeTabKey]: '' }));
+                    setIsSearchOpen(false);
+                  }}
+                  hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
                 >
-                  <Search size={17} color="#6E7388" />
+                  <X size={14} color="#A0A4B8" />
                 </TouchableOpacity>
               </View>
-            </>
-          )}
+            ) : (
+              <>
+                <View style={styles.headerLeft}>
+                  <View style={styles.headerIconWrap}>
+                    <LinearGradient
+                      colors={['#FF6596', '#B66DFF']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.headerIconGradient}
+                    >
+                      <CommunityStrokeIcon width={20} height={20} color="#fff" />
+                    </LinearGradient>
+                  </View>
+                  <View>
+                    <Text style={styles.headerOverline}>NETWORK</Text>
+                    <Text style={styles.headerTitle}>Community</Text>
+                  </View>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginRight: 4 }}>
+                  <TouchableOpacity
+                    style={styles.searchToggleButton}
+                    onPress={() => setIsSearchOpen(true)}
+                    activeOpacity={0.85}
+                  >
+                    <Search size={17} color="#6E7388" />
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
         </Animated.View>
 
         {/* Modern Pill Tab Bar */}
-        <View style={styles.tabBarWrapper}>
+        <View style={[styles.tabBarWrapper, { width: '100%', maxWidth: maxContentWidth, alignSelf: 'center' }]}>
           <ScrollView
             ref={scrollViewRef}
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tabBarContent}
+            contentContainerStyle={[
+              styles.tabBarContent,
+              isTabletOrDesktop && { flexGrow: 1, justifyContent: 'center' },
+            ]}
           >
             {/* Sliding pill indicator */}
             <Animated.View

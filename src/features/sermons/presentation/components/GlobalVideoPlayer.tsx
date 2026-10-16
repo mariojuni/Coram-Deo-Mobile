@@ -32,6 +32,7 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 
 import { useWindowDimensions } from 'react-native';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 
 const MINI_PLAYER_HEIGHT = 64;
 const NAVY = '#1A1A1A';
@@ -41,6 +42,7 @@ const BEIGE = '#FAFAFA';
 export function GlobalVideoPlayer({ blurTarget }: { blurTarget?: any }) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { isTablet, maxDashboardWidth } = useResponsiveLayout();
   const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = useWindowDimensions();
   const { playerMode, closeVideo, minimize, expand, activeSermonId, originRect } = useGlobalVideoStore();
   const [isDragging, setIsDragging] = useState(false);
@@ -214,12 +216,15 @@ export function GlobalVideoPlayer({ blurTarget }: { blurTarget?: any }) {
     }
 
     const isMin = translateY.value > MAX_TRANSLATE_Y / 2;
+    const targetMiniWidth = isTablet ? Math.min(420, SCREEN_WIDTH - 48) : SCREEN_WIDTH - 32;
+    const targetMiniLeft = isTablet ? SCREEN_WIDTH - targetMiniWidth - 24 : 16;
+
     // Morph from full width to card width
-    const width = interpolate(translateY.value, [0, MAX_TRANSLATE_Y], [SCREEN_WIDTH, SCREEN_WIDTH - 32], Extrapolation.CLAMP);
+    const width = interpolate(translateY.value, [0, MAX_TRANSLATE_Y], [SCREEN_WIDTH, targetMiniWidth], Extrapolation.CLAMP);
     // Morph from 16:9 to card height
     const height = interpolate(translateY.value, [0, MAX_TRANSLATE_Y], [SCREEN_WIDTH * (9 / 16), 72], Extrapolation.CLAMP);
     const top = interpolate(translateY.value, [0, MAX_TRANSLATE_Y], [insets.top, 0], Extrapolation.CLAMP);
-    const left = interpolate(translateY.value, [0, MAX_TRANSLATE_Y], [0, 16], Extrapolation.CLAMP);
+    const left = interpolate(translateY.value, [0, MAX_TRANSLATE_Y], [0, targetMiniLeft], Extrapolation.CLAMP);
     const borderRadius = interpolate(translateY.value, [0, MAX_TRANSLATE_Y], [0, 20], Extrapolation.CLAMP);
     
     // Background and shadow morphing
@@ -293,7 +298,14 @@ export function GlobalVideoPlayer({ blurTarget }: { blurTarget?: any }) {
             {currentSermon && (
               <ScrollView
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ paddingTop: SCREEN_WIDTH * (9 / 16) + insets.top + 24, paddingBottom: 100, paddingHorizontal: 20 }}
+                contentContainerStyle={{
+                  paddingTop: SCREEN_WIDTH * (9 / 16) + insets.top + 24,
+                  paddingBottom: 100,
+                  paddingHorizontal: 20,
+                  maxWidth: maxDashboardWidth,
+                  width: '100%',
+                  alignSelf: 'center',
+                }}
               >
                 {/* Copied from SermonWatchScreen */}
                 {currentSermon.seriesTitle && (

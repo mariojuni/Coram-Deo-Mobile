@@ -53,6 +53,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 16,
     letterSpacing: -0.5,
+    maxWidth: 520,
   },
   description: {
     fontSize: 16,
@@ -60,6 +61,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
     fontWeight: '400',
+    maxWidth: 520,
   },
   imageContainer: {
     marginBottom: 48,

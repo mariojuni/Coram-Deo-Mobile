@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { useColorScheme, View, Text, StyleSheet, Platform } from 'react-native';
+import { useColorScheme, View, Text, StyleSheet, Platform, Dimensions } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import * as ScreenOrientation from 'expo-screen-orientation';
@@ -58,10 +58,14 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
+    const { width, height } = Dimensions.get('screen');
+    const smallestDimension = Math.min(width, height);
+    const isTabletDevice = (Platform.OS === 'ios' && Platform.isPad) || smallestDimension >= 600;
+
     const allowedLandscapeRoutes = ['bible', 'version-manager', 'bible-notes', '[dayId]'];
     const isLandscapeAllowed = segments.some(segment => allowedLandscapeRoutes.includes(segment));
 
-    if (isLandscapeAllowed) {
+    if (isTabletDevice || isLandscapeAllowed) {
       ScreenOrientation.unlockAsync().catch(() => {});
     } else {
       ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});

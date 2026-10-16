@@ -676,7 +676,9 @@ export default function BibleReader({
               </View>
             </View>
           ) : (
-            renderColumn(primaryReader, false)
+            <View style={{ width: '100%', maxWidth: 680, alignSelf: 'center' }}>
+              {renderColumn(primaryReader, false)}
+            </View>
           )}
         </Animated.ScrollView>
       </Animated.View>

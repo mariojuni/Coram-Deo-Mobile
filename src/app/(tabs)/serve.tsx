@@ -25,12 +25,15 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
+
 const TABS = ['My Schedule', 'All Ministries', 'Calendar'] as const;
 type ServeTab = (typeof TABS)[number];
 
 export default function ServeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width: screenWidth, isTabletOrDesktop } = useResponsiveLayout();
   const currentUser = useAuthStore((s) => s.currentUser);
   const userProfile = useAuthStore((s) => s.userProfile);
   const [activeTab, setActiveTab] = useState<ServeTab>('My Schedule');
@@ -42,7 +45,6 @@ export default function ServeScreen() {
   const indicatorWidth = useMemo(() => new Animated.Value(0), []);
   const initialised = useRef(false);
   const scrollViewRef = useRef<ScrollView>(null);
-  const screenWidth = Dimensions.get('window').width;
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const headerTranslateY = scrollY.interpolate({
@@ -75,7 +77,7 @@ export default function ServeScreen() {
 
   const handleTabLayout = (index: number, x: number, width: number) => {
     tabLayouts.current[index] = { x, width };
-    if (index === activeTabIndex && !initialised.current) {
+    if (index === activeTabIndex) {
       indicatorX.setValue(x);
       indicatorWidth.setValue(width);
       initialised.current = true;
@@ -176,31 +178,33 @@ export default function ServeScreen() {
 
         {/* Title row */}
         <Animated.View style={[styles.headerContent, { opacity: titleOpacity }]}>
-          <View style={styles.headerLeft}>
-            <View style={styles.headerIconWrap}>
-              <LinearGradient
-                colors={['#FF6596', '#B66DFF']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.headerIconGradient}
-              >
-                <ServeStrokeIcon width={20} height={20} color="#fff" />
-              </LinearGradient>
-            </View>
-            <View>
-              <Text style={styles.headerOverline}>MINISTRY</Text>
-              <Text style={styles.headerTitle}>Serve</Text>
+          <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center', flexDirection: 'row', alignItems: 'center' }}>
+            <View style={styles.headerLeft}>
+              <View style={styles.headerIconWrap}>
+                <LinearGradient
+                  colors={['#FF6596', '#B66DFF']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.headerIconGradient}
+                >
+                  <ServeStrokeIcon width={20} height={20} color="#fff" />
+                </LinearGradient>
+              </View>
+              <View>
+                <Text style={styles.headerOverline}>MINISTRY</Text>
+                <Text style={styles.headerTitle}>Serve</Text>
+              </View>
             </View>
           </View>
         </Animated.View>
 
         {/* Modern Pill Tab Bar */}
-        <View style={styles.tabBarWrapper}>
+        <View style={[styles.tabBarWrapper, { maxWidth: 640, width: '100%', alignSelf: 'center' }]}>
           <ScrollView
             ref={scrollViewRef}
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tabBarContent}
+            contentContainerStyle={[styles.tabBarContent, isTabletOrDesktop && { flexGrow: 1, justifyContent: 'center' }]}
           >
             {/* Sliding pill indicator */}
             <Animated.View
@@ -361,16 +365,19 @@ function MyScheduleTab({
                 <Text style={[styles.groupCountText, { color: cfg.color }]}>{group.data.length}</Text>
               </View>
             </View>
-            {group.data.map((a) => (
-              <AssignmentCard
-                key={a.id}
-                assignment={a}
-                onPress={() => onPressAssignment(a.id)}
-                saving={savingAssignmentId === a.id}
-                onConfirm={() => handleConfirm(a.id)}
-                onDecline={(reason) => handleDecline(a.id, reason)}
-              />
-            ))}
+            <View>
+              {group.data.map((a) => (
+                <View key={a.id} style={{ marginBottom: 10 }}>
+                  <AssignmentCard
+                    assignment={a}
+                    onPress={() => onPressAssignment(a.id)}
+                    saving={savingAssignmentId === a.id}
+                    onConfirm={() => handleConfirm(a.id)}
+                    onDecline={(reason) => handleDecline(a.id, reason)}
+                  />
+                </View>
+              ))}
+            </View>
           </View>
         );
       })}
@@ -427,9 +434,13 @@ function AllMinistriesTab({
           <Text style={styles.ministriesCountText}>{ministries.length}</Text>
         </View>
       </View>
-      {ministries.map((m) => (
-        <MinistryCard key={m.id} ministry={m} onPress={() => onPressMinistry(m.id)} />
-      ))}
+      <View>
+        {ministries.map((m) => (
+          <View key={m.id} style={{ marginBottom: 10 }}>
+            <MinistryCard ministry={m} onPress={() => onPressMinistry(m.id)} />
+          </View>
+        ))}
+      </View>
     </Animated.ScrollView>
   );
 }
@@ -554,7 +565,13 @@ const styles = StyleSheet.create({
   },
 
   // Content
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 110 },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 110,
+    maxWidth: 640,
+    width: '100%',
+    alignSelf: 'center',
+  },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   // Group labels
@@ -604,7 +621,12 @@ const styles = StyleSheet.create({
   },
   ministriesCountText: { fontSize: 11, fontWeight: '700', color: '#FF6596' },
 
-  calendarContainer: { paddingHorizontal: 20 },
+  calendarContainer: {
+    paddingHorizontal: 20,
+    maxWidth: 640,
+    width: '100%',
+    alignSelf: 'center',
+  },
 
   // No church state
   pendingContainer: {

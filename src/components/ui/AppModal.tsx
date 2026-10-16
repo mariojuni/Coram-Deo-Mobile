@@ -6,6 +6,7 @@ import { Animated, Dimensions, Keyboard, KeyboardAvoidingView, Modal, Platform, 
 
 
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 
 
 export const ModalDragContext = React.createContext<Record<string, any>>({});
@@ -38,11 +39,12 @@ interface AppModalProps {
 export default function AppModal({ isOpen, onClose, title, children, containerStyle, headerLeft, headerRight, headerTitleAlign = 'center', hideHeader = false, hideDragHandle = false, heightRatio = 0.5, dynamicHeight = false, avoidKeyboard = true }: AppModalProps) {
   const slideAnim = useMemo(() => new Animated.Value(600), []);
   const insets = useSafeAreaInsets();
+  const { height: windowHeight, width: windowWidth, isTablet, modalPresentation, maxModalWidth } = useResponsiveLayout();
+  const isFormSheet = modalPresentation === 'formSheet';
 
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
-  const windowHeight = Dimensions.get('window').height;
-  const maxSheetHeight = windowHeight * heightRatio;
+  const maxSheetHeight = isFormSheet ? Math.min(windowHeight * 0.85, 720) : windowHeight * heightRatio;
 
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -119,17 +121,36 @@ export default function AppModal({ isOpen, onClose, title, children, containerSt
 
   return (
     <Modal visible={isOpen} animationType="none" transparent={true} onRequestClose={onClose} supportedOrientations={['portrait', 'landscape', 'landscape-left', 'landscape-right']}>
-      <View style={styles.overlay}>
+      <View style={[styles.overlay, isFormSheet && styles.overlayFormSheet]}>
         <TouchableWithoutFeedback onPress={onClose}>
           <View style={styles.backdrop} />
         </TouchableWithoutFeedback>
 
-        <Animated.View style={[styles.sheet, sheetBg ? { backgroundColor: sheetBg } : null, dynamicHeight ? { flex: undefined } : { height: maxSheetHeight }, { transform: [{ translateY: slideAnim }], maxHeight: maxSheetHeight, marginBottom: avoidKeyboard ? keyboardHeight : 0, marginLeft: insets.left, marginRight: insets.right }]}>
-          {!hideDragHandle && (<View {...panResponder.panHandlers} style={styles.dragHandleContainer}><View style={styles.dragHandle} /></View>)}
+        <Animated.View
+          style={[
+            styles.sheet,
+            isFormSheet && styles.sheetFormSheet,
+            isFormSheet && { maxWidth: maxModalWidth },
+            sheetBg ? { backgroundColor: sheetBg } : null,
+            dynamicHeight ? { flex: undefined } : { height: maxSheetHeight },
+            {
+              transform: [{ translateY: slideAnim }],
+              maxHeight: maxSheetHeight,
+              marginBottom: avoidKeyboard ? keyboardHeight : 0,
+              marginLeft: isFormSheet ? 0 : insets.left,
+              marginRight: isFormSheet ? 0 : insets.right,
+            },
+          ]}
+        >
+          {!hideDragHandle && !isFormSheet && (
+            <View {...panResponder.panHandlers} style={styles.dragHandleContainer}>
+              <View style={styles.dragHandle} />
+            </View>
+          )}
 
           {/* Header */}
           {!hideHeader && (
-            <View style={styles.header}>
+            <View style={[styles.header, isFormSheet && { borderTopLeftRadius: 24, borderTopRightRadius: 24 }]}>
               <View style={[styles.headerSide, { alignItems: 'flex-start' }]}>
                 {headerLeft ? headerLeft : (headerTitleAlign === 'center' ? <View style={styles.iconBtnPlaceholder} /> : null)}
               </View>
@@ -148,7 +169,7 @@ export default function AppModal({ isOpen, onClose, title, children, containerSt
           )}
 
           {/* Content */}
-          <SafeAreaView edges={keyboardHeight > 0 ? [] : ['bottom']} style={[styles.contentContainer, dynamicHeight && { flex: undefined }, containerStyle]}>
+          <SafeAreaView edges={keyboardHeight > 0 || isFormSheet ? [] : ['bottom']} style={[styles.contentContainer, dynamicHeight && { flex: undefined }, containerStyle]}>
             <ModalDragContext.Provider value={panResponder.panHandlers}>
               {children}
             </ModalDragContext.Provider>
@@ -164,6 +185,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
   },
+  overlayFormSheet: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
   backdrop: {
     position: 'absolute',
     top: 0,
@@ -178,6 +204,17 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     overflow: 'hidden',
+  },
+  sheetFormSheet: {
+    width: '100%',
+    borderRadius: 24,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 12,
   },
   dragHandleContainer: { paddingVertical: 12 },
   dragHandle: {

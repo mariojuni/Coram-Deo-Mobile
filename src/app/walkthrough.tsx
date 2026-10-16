@@ -42,7 +42,7 @@ const SLIDES = [
 export default function WalkthroughScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const { isSmallDevice, isLandscapeOrFlexFold } = useResponsiveLayout();
+  const { isSmallDevice, isLandscapeOrFlexFold, isTabletOrDesktop } = useResponsiveLayout();
   const flatListRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -209,13 +209,20 @@ const styles = StyleSheet.create({
   actionContainer: {
     minHeight: 140, // To keep consistent height when changing to 2 buttons
     justifyContent: 'flex-end',
+    width: '100%',
+    maxWidth: 480,
+    alignSelf: 'center',
   },
   authButtonsContainer: {
     width: '100%',
+    maxWidth: 480,
+    alignSelf: 'center',
   },
   outlineButton: {
     ...getSoftShadowStyle(20),
     width: '100%',
+    maxWidth: 480,
+    alignSelf: 'center',
     paddingVertical: 18,
     borderRadius: 20,
     justifyContent: 'center',

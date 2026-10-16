@@ -108,7 +108,7 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
   const navDebounceRef = useRef(false);
   const openPrayerModal = useUIStore((state) => state.openPrayerModal);
   const shareImageGeneratorRef = useRef<ShareImageGeneratorRef>(null);
-  const { horizontalPadding, birthdayCardWidth, verticalItemSpacing } = useResponsiveLayout();
+  const { horizontalPadding, birthdayCardWidth, verticalItemSpacing, isTabletOrDesktop } = useResponsiveLayout();
 
   const { filter } = useLocalSearchParams();
   const [activeTabFilter, setActiveTabFilter] = useState<CommunityMemberTabFilter>(
@@ -568,6 +568,7 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
       handleAnswered={handleAnswered}
       openPrayerModal={openPrayerModal}
       deletePrayer={deletePrayer}
+      style={{ marginBottom: verticalItemSpacing }}
       onShare={(p) => {
         if (shareImageGeneratorRef.current) {
           shareImageGeneratorRef.current.captureAndShare(p, 'prayer');
@@ -756,7 +757,7 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
   ];
 
   return (
-    <View style={[membersStyles.wrap, { paddingHorizontal: horizontalPadding }]}>
+    <View style={[membersStyles.wrap, { paddingHorizontal: horizontalPadding, maxWidth: 640, width: '100%', alignSelf: 'center' }]}>
       <ShareImageGenerator ref={shareImageGeneratorRef} />
       {(todayBirthdays.length > 0 || upcomingBirthdays.length > 0) && (
         <View style={[membersStyles.birthdaySnapshotOuter, { boxShadow: '0px 8px 24px rgba(182, 109, 255, 0.28)', marginBottom: 10, borderRadius: 24 }]}>
@@ -903,7 +904,11 @@ export function FeedsTab({ searchQuery }: SubScreenProps) {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={[membersStyles.frostTabFilterScroll, { paddingHorizontal: horizontalPadding }]}
+        contentContainerStyle={[
+          membersStyles.frostTabFilterScroll,
+          { paddingHorizontal: horizontalPadding },
+          isTabletOrDesktop && { flexGrow: 1, justifyContent: 'center' },
+        ]}
         style={[membersStyles.frostTabFilterContainer, { marginHorizontal: -horizontalPadding }]}
       >
         {filterTabs.map((tab) => {

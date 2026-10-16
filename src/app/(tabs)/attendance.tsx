@@ -17,9 +17,11 @@ import { canAccessFinanceTools } from '../../permissions/financePermissions';
 import FinanceTab from '../../components/Staff/FinanceTab';
 import { canAccessMobileMinistryApplications } from '../../permissions/mobileMinistryApplicationPermissions';
 import { ministryApplicationService } from '../../features/ministry/services/ministryApplicationService';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 
 export default function AttendanceScreen() {
   const router = useRouter();
+  const { isTabletOrDesktop } = useResponsiveLayout();
   const userProfile = useAuthStore((s) => s.userProfile);
   const currentUser = useAuthStore((s) => s.currentUser);
   const userMinistries = useMinistryStore((state) => state.ministries).filter(m => m.members?.some(mem => mem.memberId === userProfile?.memberId));
@@ -85,7 +87,7 @@ export default function AttendanceScreen() {
 
   const handleTabLayout = (index: number, x: number, width: number) => {
     tabLayouts.current[index] = { x, width };
-    if (activeTab === index && !initialised.current) {
+    if (activeTab === index) {
       indicatorX.setValue(x);
       indicatorWidth.setValue(width);
       initialised.current = true;
@@ -141,55 +143,57 @@ export default function AttendanceScreen() {
         </Animated.View>
 
         <Animated.View style={[styles.headerContent, { opacity: titleOpacity }]}>
-          <View style={styles.headerLeft}>
-            <View style={styles.headerIconWrap}>
-              <LinearGradient
-                colors={['#FF6596', '#B66DFF']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.headerIconGradient}
-              >
-                <Shield size={16} color="#fff" strokeWidth={2} />
-              </LinearGradient>
+          <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={styles.headerLeft}>
+              <View style={styles.headerIconWrap}>
+                <LinearGradient
+                  colors={['#FF6596', '#B66DFF']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.headerIconGradient}
+                >
+                  <Shield size={16} color="#fff" strokeWidth={2} />
+                </LinearGradient>
+              </View>
+              <View>
+                <Text style={styles.headerOverline}>MANAGEMENT</Text>
+                <Text style={styles.headerTitle}>Staff</Text>
+              </View>
             </View>
-            <View>
-              <Text style={styles.headerOverline}>MANAGEMENT</Text>
-              <Text style={styles.headerTitle}>Staff</Text>
-            </View>
-          </View>
 
-          <View style={styles.headerRight}>
-            {canApplications && (
+            <View style={styles.headerRight}>
+              {canApplications && (
+                <TouchableOpacity 
+                  style={styles.iconBtn} 
+                  onPress={() => router.push('/staff-ministry-applications' as any)}
+                >
+                  <Inbox size={20} color="#1a1a1a" />
+                  {pendingAppsCount > 0 && (
+                    <View style={styles.countBadge}>
+                      <Text style={styles.countBadgeText}>{pendingAppsCount}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              )}
               <TouchableOpacity 
                 style={styles.iconBtn} 
-                onPress={() => router.push('/staff-ministry-applications' as any)}
+                onPress={() => router.push('/staff-notifications')}
               >
-                <Inbox size={20} color="#1a1a1a" />
-                {pendingAppsCount > 0 && (
-                  <View style={styles.countBadge}>
-                    <Text style={styles.countBadgeText}>{pendingAppsCount}</Text>
-                  </View>
+                <Bell size={20} color="#1a1a1a" />
+                {unDismissedNotifications > 0 && (
+                  <View style={styles.badge} />
                 )}
               </TouchableOpacity>
-            )}
-            <TouchableOpacity 
-              style={styles.iconBtn} 
-              onPress={() => router.push('/staff-notifications')}
-            >
-              <Bell size={20} color="#1a1a1a" />
-              {unDismissedNotifications > 0 && (
-                <View style={styles.badge} />
-              )}
-            </TouchableOpacity>
+            </View>
           </View>
         </Animated.View>
 
-      <View style={styles.tabBarWrapper}>
+      <View style={[styles.tabBarWrapper, { maxWidth: 640, width: '100%', alignSelf: 'center' }]}>
         <ScrollView 
           ref={scrollViewRef}
           horizontal 
           showsHorizontalScrollIndicator={false} 
-          contentContainerStyle={styles.tabBarContent}
+          contentContainerStyle={[styles.tabBarContent, isTabletOrDesktop && { flexGrow: 1, justifyContent: 'center' }]}
         >
           <Animated.View
             style={[
@@ -217,7 +221,7 @@ export default function AttendanceScreen() {
       </Animated.View>
 
       {TABS.length > 0 && TABS[activeTab]?.key === 'events' ? (
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, maxWidth: 640, width: '100%', alignSelf: 'center' }}>
           <ScheduleTab 
             onScroll={handleScroll}
             headerHeight={Math.max(insets.top, 24) + 146}
@@ -228,7 +232,7 @@ export default function AttendanceScreen() {
           onScroll={handleScroll}
           scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 24) + 162 }]}
+          contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 24) + 162, maxWidth: 640, width: '100%', alignSelf: 'center' }]}
         >
 
           {TABS.length > 0 && TABS[activeTab]?.key === 'attendance' && (

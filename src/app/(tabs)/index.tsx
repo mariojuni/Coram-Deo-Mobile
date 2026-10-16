@@ -31,6 +31,7 @@ import { Bell, CalendarDays, CheckCircle2, ChevronRight, Clock, Heart, HeartHand
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActionSheetIOS, Alert, Animated, Dimensions, Platform, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 
 function isThisWeek(dateString: string) {
   let date = new Date(dateString);
@@ -123,8 +124,12 @@ export default function HomeScreen() {
 
   const [activeSlide, setActiveSlide] = useState(0);
   const [savingEventId, setSavingEventId] = useState<string | null>(null);
-  const screenWidth = Dimensions.get('window').width;
-  const cardWidth = screenWidth - 48;
+  const {
+    width: screenWidth,
+    scrollBottomInset,
+  } = useResponsiveLayout();
+
+  const cardWidth = Math.min(screenWidth - 48, 640);
   const scrollRef = useRef<ScrollView>(null);
   const currentUserId = currentUser?.uid ?? '';
 
@@ -283,7 +288,7 @@ export default function HomeScreen() {
           />
         </Animated.View>
 
-        <Animated.View style={[styles.headerInner, { height: innerHeight }]}>
+        <Animated.View style={[styles.headerInner, { height: innerHeight, maxWidth: 640, width: '100%', alignSelf: 'center' }]}>
           {/* Compact row (visible when scrolled) */}
           <Animated.View
             style={[styles.compactRow, { opacity: compactOpacity }]}
@@ -376,10 +381,11 @@ export default function HomeScreen() {
         )}
         scrollEventThrottle={16}
       >
-        {/* ─── Verse of the Day ───────────────────────────────────────── */}
-        <BounceCard>
-          <VerseOfTheDayCard />
-        </BounceCard>
+        <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center', paddingBottom: scrollBottomInset }}>
+          {/* ─── Verse of the Day ───────────────────────────────────────── */}
+          <BounceCard>
+            <VerseOfTheDayCard />
+          </BounceCard>
 
         {/* ─── Bible Activity (Phase 4) ────────────────────────────────────── */}
         <MyJourneyCard />
@@ -771,6 +777,7 @@ export default function HomeScreen() {
             </DebouncedTouchable>
           </View>
         )}
+        </View>
       </Animated.ScrollView>
 
       <EventDetailsModal

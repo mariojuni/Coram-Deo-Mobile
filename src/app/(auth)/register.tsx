@@ -12,6 +12,7 @@ import { authRepository } from '../../features/auth/data/auth.repository';
 import { AppAuthError } from '../../features/auth/domain/auth-error.types';
 import { mapAuthError } from '../../features/auth/utils/auth-error-mapper';
 import { PrimaryGradientButton } from '../../components/ui/PrimaryGradientButton';
+import { AdaptiveContainer } from '@/components/ui/AdaptiveContainer';
 
 function formatDateToMDYYYY(date: Date): string {
   const month = date.getMonth() + 1;
@@ -253,14 +254,14 @@ export default function RegisterScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-            
-            <View style={styles.topNav}>
-              <TouchableOpacity onPress={handleBack} style={styles.backBtn} activeOpacity={0.8}>
-                <ArrowLeft size={24} color="#1a1a1a" />
-              </TouchableOpacity>
-            </View>
+            <AdaptiveContainer type="form">
+              <View style={styles.topNav}>
+                <TouchableOpacity onPress={handleBack} style={styles.backBtn} activeOpacity={0.8}>
+                  <ArrowLeft size={24} color="#1a1a1a" />
+                </TouchableOpacity>
+              </View>
 
-            <View style={styles.spacer} />
+              <View style={styles.spacer} />
 
             <View style={styles.authHeader}>
               <Text style={styles.title}>Create Account</Text>
@@ -522,7 +523,7 @@ export default function RegisterScreen() {
                 </View>
               </>
             )}
-
+            </AdaptiveContainer>
           </ScrollView>
         </KeyboardAvoidingView>
 
