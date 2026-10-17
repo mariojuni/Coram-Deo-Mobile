@@ -7,7 +7,7 @@ import AppModal, { ModalDragArea } from '../ui/AppModal';
 import { useBooksModal } from '@/features/bible/presentation/hooks/useBooksModal';
 import { bibleDataService } from '@/features/bible/data/BibleDataService';
 import { getUserPreferences } from '@/features/bible/data/bible.repository';
-import { getHumanReadableBookName } from '@/utils/scriptureReferenceParser';
+import { getHumanReadableBookName, extractChapterNumber } from '@/utils/scriptureReferenceParser';
 import type { BibleNoteScripture } from '@/features/bibleNotes/domain/bibleNote.types';
 
 interface BooksModalProps {
@@ -119,13 +119,13 @@ export default function BooksModal({ isOpen, onClose, books, onSelectChapter, ac
     
     return (
       <View style={styles.chapterGridContainer}>
-        {chapters.map((chapter: any) => {
-          const chapNum = chapter.human_reference || String(chapter.id);
+        {chapters.map((chapter: any, index: number) => {
+          const chapNum = extractChapterNumber(chapter, index);
           return (
             <TouchableOpacity 
-              key={chapter.id}
+              key={`chap-${book.id || book.usfm}-${chapNum}-${index}`}
               style={styles.chapterGridItem}
-              onPress={() => handleChapterPress(book, String(chapter.id))}
+              onPress={() => handleChapterPress(book, chapNum)}
             >
               <Text style={styles.chapterGridText}>{chapNum}</Text>
             </TouchableOpacity>

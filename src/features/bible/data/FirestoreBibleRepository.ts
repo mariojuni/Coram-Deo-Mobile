@@ -8,6 +8,7 @@ import {
   BibleBook, 
   BibleChapter 
 } from '../domain/BibleRepository';
+import { extractChapterNumber } from '@/utils/scriptureReferenceParser';
 
 export class FirestoreBibleRepository implements BibleRepository {
   async getLanguages(): Promise<BibleLanguage[]> {
@@ -82,6 +83,16 @@ export class FirestoreBibleRepository implements BibleRepository {
       return snapshot.docs.map((doc, index) => {
         const data = doc.data();
         const bookId = data.id || data.usfm || doc.id;
+        const chapters = Array.isArray(data.chapters)
+          ? data.chapters.map((c: any, cIdx: number) => {
+              const chNum = extractChapterNumber(c, cIdx);
+              return {
+                id: chNum,
+                human_reference: chNum,
+                passage_id: c?.passage_id || `${bookId}.${chNum}`,
+              };
+            })
+          : undefined;
         return {
           id: String(bookId),
           usfm: String(data.usfm || bookId),
@@ -90,8 +101,8 @@ export class FirestoreBibleRepository implements BibleRepository {
           abbreviation: data.abbreviation || data.localAbbreviation || String(bookId),
           canon: (data.canon as any) || 'other',
           order: typeof data.order === 'number' ? data.order : index,
-          chapterCount: Number(data.chapterCount || data.chapters?.length || 0),
-          chapters: data.chapters,
+          chapterCount: Number(data.chapterCount || chapters?.length || 0),
+          chapters,
         } as BibleBook;
       });
     } catch (e) {

@@ -26,7 +26,7 @@ import {
   getOfflinePassageForTranslations
 } from './offlineDb.repository';
 
-import { getHumanReadableBookName } from '@/utils/scriptureReferenceParser';
+import { getHumanReadableBookName, extractChapterNumber } from '@/utils/scriptureReferenceParser';
 
 export class BibleDataService implements BibleRepository {
   private firestoreRepo: FirestoreBibleRepository;
@@ -127,17 +127,30 @@ export class BibleDataService implements BibleRepository {
     try {
       const legacyIndex = await fetchBibleIndex(versionId);
       if (legacyIndex && legacyIndex.books) {
-        const mappedBooks: BibleBook[] = legacyIndex.books.map((b: any, index: number) => ({
-          id: b.usfm,
-          usfm: b.usfm,
-          name: b.name || b.human,
-          longName: b.long_name,
-          abbreviation: b.abbreviation,
-          canon: 'other',
-          order: index,
-          chapterCount: b.chapters?.length || 0,
-          chapters: b.chapters,
-        }));
+        const mappedBooks: BibleBook[] = legacyIndex.books.map((b: any, index: number) => {
+          const bookId = b.usfm || b.id || String(index);
+          const chapters = Array.isArray(b.chapters)
+            ? b.chapters.map((c: any, cIdx: number) => {
+                const chNum = extractChapterNumber(c, cIdx);
+                return {
+                  id: chNum,
+                  human_reference: chNum,
+                  passage_id: c?.passage_id || `${bookId}.${chNum}`,
+                };
+              })
+            : undefined;
+          return {
+            id: bookId,
+            usfm: b.usfm || b.id || String(index),
+            name: b.name || b.human,
+            longName: b.long_name,
+            abbreviation: b.abbreviation,
+            canon: 'other',
+            order: index,
+            chapterCount: Number(b.chapterCount || chapters?.length || 0),
+            chapters,
+          };
+        });
         // Cache to local SQLite for offline access
         saveBibleBooks(versionId, mappedBooks).catch(console.warn);
         return mappedBooks;
@@ -292,17 +305,30 @@ export class BibleDataService implements BibleRepository {
 
               // Ensure books metadata is saved
               if (fullBibleJson.index && Array.isArray(fullBibleJson.index.books) && fullBibleJson.index.books.length > 0) {
-                books = fullBibleJson.index.books.map((b: any, idx: number) => ({
-                  id: String(b.id || b.usfm || idx),
-                  usfm: String(b.usfm || b.id || idx),
-                  name: b.name || b.human || b.abbreviation || getHumanReadableBookName(b.usfm || b.id),
-                  longName: b.long_name || b.longName,
-                  abbreviation: b.abbreviation || b.usfm,
-                  canon: b.canon || 'other',
-                  order: typeof b.order === 'number' ? b.order : idx,
-                  chapterCount: Number(b.chapterCount || b.chapters?.length || 0),
-                  chapters: b.chapters,
-                }));
+                books = fullBibleJson.index.books.map((b: any, idx: number) => {
+                  const bookId = String(b.id || b.usfm || idx);
+                  const chapters = Array.isArray(b.chapters)
+                    ? b.chapters.map((c: any, cIdx: number) => {
+                        const chNum = extractChapterNumber(c, cIdx);
+                        return {
+                          id: chNum,
+                          human_reference: chNum,
+                          passage_id: c?.passage_id || `${bookId}.${chNum}`,
+                        };
+                      })
+                    : undefined;
+                  return {
+                    id: bookId,
+                    usfm: String(b.usfm || b.id || idx),
+                    name: b.name || b.human || b.abbreviation || getHumanReadableBookName(b.usfm || b.id),
+                    longName: b.long_name || b.longName,
+                    abbreviation: b.abbreviation || b.usfm,
+                    canon: b.canon || 'other',
+                    order: typeof b.order === 'number' ? b.order : idx,
+                    chapterCount: Number(b.chapterCount || chapters?.length || 0),
+                    chapters,
+                  };
+                });
                 await saveBibleBooks(versionId, books);
               } else if (!books || books.length === 0) {
                 const derivedBooksMap = new Map<string, { bookId: string; maxChapter: number }>();

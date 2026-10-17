@@ -6,7 +6,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { bibleHighlightRepository } from '@/features/bibleHighlights/data/bibleHighlight.repository';
 import { bibleActivityRepository } from '@/features/myJourney/data/myJourney.repository';
 import type { BibleHighlight } from '@/features/bibleHighlights/domain/bibleHighlight.types';
-import { getHumanReadableBookName } from '@/utils/scriptureReferenceParser';
+import { getHumanReadableBookName, extractChapterNumber } from '@/utils/scriptureReferenceParser';
 
 const highlightColors = {
   yellow: 'rgba(254, 240, 138, 0.55)',
@@ -472,7 +472,7 @@ export function useBibleReader(
   const getEffectiveChapters = useCallback(
     (book: Book): { id: string }[] => {
       if (book.chapters && book.chapters.length > 0) {
-        return book.chapters.map((c) => ({ id: String(c.id) }));
+        return book.chapters.map((c, i) => ({ id: extractChapterNumber(c, i) }));
       }
       const count = Number(book.chapterCount);
       if (!isNaN(count) && count > 0) {

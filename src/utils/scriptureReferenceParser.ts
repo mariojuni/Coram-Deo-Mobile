@@ -161,3 +161,61 @@ export function parseScriptureReference(reference: string): ParsedScriptureRefer
     display,
   };
 }
+
+/**
+ * Safely extracts the chapter number string (e.g. "1", "2", ...) from any chapter entry representation.
+ * Handles objects with id, passage_id, number, chapter, title, human_reference, strings ("GEN.1", "1"),
+ * numbers, or falls back to index + 1. Never returns "undefined".
+ */
+export function extractChapterNumber(chapter: any, index?: number): string {
+  if (chapter === null || chapter === undefined) {
+    return typeof index === 'number' ? String(index + 1) : '1';
+  }
+  if (typeof chapter === 'number') {
+    return String(chapter);
+  }
+  if (typeof chapter === 'string') {
+    const trimmed = chapter.trim();
+    if (/^\d+$/.test(trimmed)) return trimmed;
+    const parts = trimmed.split('.');
+    const last = parts[parts.length - 1];
+    if (/^\d+$/.test(last)) return last;
+    return typeof index === 'number' ? String(index + 1) : '1';
+  }
+  if (typeof chapter === 'object') {
+    if (chapter.human_reference !== undefined && chapter.human_reference !== null) {
+      const s = String(chapter.human_reference).trim();
+      if (/^\d+$/.test(s)) return s;
+    }
+    if (chapter.number !== undefined && chapter.number !== null) {
+      const s = String(chapter.number).trim();
+      if (/^\d+$/.test(s)) return s;
+    }
+    if (chapter.chapter !== undefined && chapter.chapter !== null) {
+      const s = String(chapter.chapter).trim();
+      if (/^\d+$/.test(s)) return s;
+    }
+    if (chapter.title !== undefined && chapter.title !== null) {
+      const s = String(chapter.title).trim();
+      if (/^\d+$/.test(s)) return s;
+    }
+    if (chapter.id !== undefined && chapter.id !== null) {
+      const s = String(chapter.id).trim();
+      if (/^\d+$/.test(s)) return s;
+      const parts = s.split('.');
+      const last = parts[parts.length - 1];
+      if (/^\d+$/.test(last)) return last;
+    }
+    if (chapter.passage_id) {
+      const parts = String(chapter.passage_id).trim().split('.');
+      const last = parts[parts.length - 1];
+      if (/^\d+$/.test(last)) return last;
+    }
+    if (chapter.usfm) {
+      const parts = String(chapter.usfm).trim().split('.');
+      const last = parts[parts.length - 1];
+      if (/^\d+$/.test(last)) return last;
+    }
+  }
+  return typeof index === 'number' ? String(index + 1) : '1';
+}
