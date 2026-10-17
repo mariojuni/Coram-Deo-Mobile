@@ -69,7 +69,7 @@ export const styles = StyleSheet.create({
     marginLeft: 8,
     flex: 1,
   },
-  content: { flexShrink: 1, backgroundColor: '#fff' },
+  content: { flex: 1, backgroundColor: 'transparent' },
   emptyText: { textAlign: 'center', color: '#666', marginTop: 40 },
   discoverListContainer: {
     paddingBottom: 24,

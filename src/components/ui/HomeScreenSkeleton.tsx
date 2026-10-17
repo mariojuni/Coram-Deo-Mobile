@@ -3,14 +3,12 @@ import {
   View,
   ScrollView,
   StyleSheet,
-  Dimensions,
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
 import { getSoftShadowStyle } from '@/components/ui/SoftCard';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 /** Thin divider line used between skeleton groups */
 const Divider = () => <View style={styles.divider} />;
@@ -39,7 +37,10 @@ function SkeletonCard({ children, style }: { children?: React.ReactNode; style?:
  */
 const HomeScreenSkeleton = () => {
   const insets = useSafeAreaInsets();
-  const cardWidth = SCREEN_WIDTH - 48;
+  const {
+    horizontalPadding,
+    scrollBottomInset,
+  } = useResponsiveLayout();
 
   return (
     <View style={styles.root}>
@@ -55,7 +56,7 @@ const HomeScreenSkeleton = () => {
           <View style={styles.accentLineFill} />
         </View>
 
-        <View style={styles.headerInner}>
+        <View style={[styles.headerInner, { maxWidth: 640, width: '100%', alignSelf: 'center', paddingHorizontal: horizontalPadding }]}>
           {/* Left: date pill + greeting */}
           <View style={styles.headerLeft}>
             <ShimmerSkeleton height={20} width={120} borderRadius={20} style={{ marginBottom: 6 }} />
@@ -80,22 +81,54 @@ const HomeScreenSkeleton = () => {
           styles.scrollContent,
           {
             paddingTop: Math.max(insets.top, 24) + 128 + 8,
+            paddingHorizontal: horizontalPadding,
           },
         ]}
         showsVerticalScrollIndicator={false}
         scrollEnabled={false}
       >
-        {/* ── Verse of the Day ─────────────────────────────────── */}
-        <SkeletonCard style={{ marginBottom: 16 }}>
-          <View style={styles.votdRow}>
-            <ShimmerSkeleton width={36} height={36} borderRadius={10} style={{ marginRight: 12 }} />
-            <View style={{ flex: 1 }}>
-              <ShimmerSkeleton height={13} width="85%" style={{ marginBottom: 6 }} />
-              <ShimmerSkeleton height={13} width="70%" style={{ marginBottom: 6 }} />
-              <ShimmerSkeleton height={11} width={100} />
+        <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center', paddingBottom: scrollBottomInset }}>
+          {/* ── Verse of the Day ─────────────────────────────────── */}
+          <SkeletonCard style={{ marginBottom: 16 }}>
+            <View style={styles.votdRow}>
+              <ShimmerSkeleton width={36} height={36} borderRadius={10} style={{ marginRight: 12 }} />
+              <View style={{ flex: 1 }}>
+                <ShimmerSkeleton height={13} width="85%" style={{ marginBottom: 6 }} />
+                <ShimmerSkeleton height={13} width="70%" style={{ marginBottom: 6 }} />
+                <ShimmerSkeleton height={11} width={100} />
+              </View>
             </View>
-          </View>
-        </SkeletonCard>
+          </SkeletonCard>
+
+          {/* ── My Journey Placeholder ───────────────────────────── */}
+          <SkeletonCard style={{ marginBottom: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <ShimmerSkeleton width={32} height={32} borderRadius={8} />
+                <View>
+                  <ShimmerSkeleton width={80} height={14} borderRadius={4} style={{ marginBottom: 4 }} />
+                  <ShimmerSkeleton width={40} height={10} borderRadius={4} />
+                </View>
+              </View>
+              <View style={{ flexDirection: 'row', gap: 6 }}>
+                {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+                  <ShimmerSkeleton key={i} width={18} height={18} borderRadius={9} />
+                ))}
+              </View>
+            </View>
+          </SkeletonCard>
+
+          {/* ── Bible Plan Progress Placeholder ──────────────────── */}
+          <SkeletonCard style={{ marginBottom: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <ShimmerSkeleton width={40} height={40} borderRadius={10} />
+              <View style={{ flex: 1, gap: 6 }}>
+                <ShimmerSkeleton width="60%" height={14} borderRadius={4} />
+                <ShimmerSkeleton width="100%" height={6} borderRadius={3} />
+                <ShimmerSkeleton width="30%" height={10} borderRadius={4} />
+              </View>
+            </View>
+          </SkeletonCard>
 
         {/* ── TODAY event carousel ──────────────────────────────── */}
         <View style={{ marginBottom: 24 }}>
@@ -273,6 +306,7 @@ const HomeScreenSkeleton = () => {
             </SkeletonCard>
           ))}
         </View>
+        </View>
       </ScrollView>
     </View>
   );
@@ -317,7 +351,6 @@ const styles = StyleSheet.create({
   headerInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
     paddingVertical: 12,
     minHeight: 120,
   },
@@ -331,10 +364,7 @@ const styles = StyleSheet.create({
 
   // ── Scroll ─────────────────────────────────────────────────────────────
   scroll: { flex: 1 },
-  scrollContent: {
-    padding: 24,
-    paddingBottom: 100,
-  },
+  scrollContent: {},
 
   // ── Card ───────────────────────────────────────────────────────────────
   card: {

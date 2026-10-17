@@ -1,19 +1,30 @@
 
 
 import { Stack, useRouter } from 'expo-router';
-import { View, Animated, TouchableWithoutFeedback, StyleSheet, useWindowDimensions, PanResponder } from 'react-native';
+import {
+  View,
+  Animated,
+  TouchableWithoutFeedback,
+  StyleSheet,
+  PanResponder,
+  Platform,
+} from 'react-native';
 import { useEffect, useMemo, useRef } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 
 export default function VersionManagerLayout() {
   const router = useRouter();
-  const { height: windowHeight } = useWindowDimensions();
+  const { height: windowHeight, modalPresentation, maxModalWidth } = useResponsiveLayout();
   const insets = useSafeAreaInsets();
-  
-  // Use a ref to store the current window height so the animation doesn't jump on rotate
-  const startHeight = useRef(windowHeight).current;
-  
-  const slideAnim = useMemo(() => new Animated.Value(startHeight), [startHeight]);
+
+  const isFormSheet = modalPresentation === 'formSheet';
+  const maxSheetHeight = isFormSheet ? Math.min(windowHeight * 0.85, 740) : windowHeight * 0.9;
+
+  // Use a ref to store the initial offset so the animation doesn't jump on rotate
+  const startOffset = useRef(isFormSheet ? 40 : windowHeight).current;
+
+  const slideAnim = useMemo(() => new Animated.Value(startOffset), [startOffset]);
   const fadeAnim = useMemo(() => new Animated.Value(0), []);
 
   useEffect(() => {
@@ -34,7 +45,7 @@ export default function VersionManagerLayout() {
   const handleClose = () => {
     Animated.parallel([
       Animated.timing(slideAnim, {
-        toValue: windowHeight,
+        toValue: isFormSheet ? 40 : windowHeight,
         duration: 200,
         useNativeDriver: true,
       }),
@@ -71,16 +82,39 @@ export default function VersionManagerLayout() {
   ).current;
 
   return (
-    <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+    <View style={[styles.overlay, isFormSheet && styles.overlayFormSheet]}>
       <TouchableWithoutFeedback onPress={handleClose}>
-        <Animated.View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.5)', opacity: fadeAnim }} />
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: 'rgba(0,0,0,0.5)', opacity: fadeAnim },
+          ]}
+        />
       </TouchableWithoutFeedback>
 
-      <Animated.View style={{ backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, height: windowHeight * 0.9, overflow: 'hidden', marginLeft: insets.left, marginRight: insets.right, transform: [{ translateY: slideAnim }] }}>
+      <Animated.View
+        style={[
+          styles.sheet,
+          isFormSheet && styles.sheetFormSheet,
+          isFormSheet
+            ? {
+                maxWidth: maxModalWidth,
+                height: maxSheetHeight,
+                maxHeight: maxSheetHeight,
+              }
+            : {
+                height: maxSheetHeight,
+                maxHeight: maxSheetHeight,
+                marginLeft: insets.left,
+                marginRight: insets.right,
+              },
+          { transform: [{ translateY: slideAnim }] },
+        ]}
+      >
         <Stack
           screenOptions={{
             headerShown: false,
-            contentStyle: { backgroundColor: '#fff' }
+            contentStyle: { backgroundColor: '#FAFAFA' },
           }}
         >
           <Stack.Screen name="index" />
@@ -88,18 +122,49 @@ export default function VersionManagerLayout() {
           <Stack.Screen name="language" />
           <Stack.Screen name="detail" />
         </Stack>
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000 }} {...panResponder.panHandlers}>
-          <View style={styles.dragHandleContainer}>
-            <View style={styles.dragHandle} />
+
+        {!isFormSheet && (
+          <View
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000 }}
+            {...panResponder.panHandlers}
+          >
+            <View style={styles.dragHandleContainer}>
+              <View style={styles.dragHandle} />
+            </View>
           </View>
-        </View>
+        )}
       </Animated.View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  dragHandleContainer: { 
+  overlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  overlayFormSheet: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  sheet: {
+    backgroundColor: '#FAFAFA',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
+    width: '100%',
+  },
+  sheetFormSheet: {
+    borderRadius: 24,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    borderWidth: Platform.OS === 'ios' ? 1 : 0,
+    borderColor: 'rgba(0,0,0,0.08)',
+    boxShadow: '0px 16px 36px rgba(0, 0, 0, 0.18)',
+    elevation: 16,
+  },
+  dragHandleContainer: {
     paddingVertical: 12,
     alignItems: 'center',
     width: '100%',
