@@ -11,7 +11,7 @@ import {
   BibleChapter,
   VerseComparisonEntry
 } from '../domain/BibleRepository';
-import { fetchLanguages, fetchBiblesByLanguage, fetchBibleIndex, fetchChapterData, getChapterFromCache, getSavedVersions, saveVersion, removeVersion, downloadBibleOffline, getUserPreferences, saveUserPreferences, fetchOrganization } from './bible.repository';
+import { fetchLanguages, fetchBiblesByLanguage, fetchBibleIndex, fetchChapterData, getChapterFromCache, getSavedVersions, saveVersion, removeVersion, getUserPreferences, saveUserPreferences } from './bible.repository';
 import { 
   getChapter, 
   saveChapter, 

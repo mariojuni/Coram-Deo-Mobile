@@ -1,7 +1,5 @@
 import {
-    downloadBibleOffline,
     fetchBiblesByLanguage,
-    fetchOrganization,
     getSavedVersions,
     getUserPreferences,
     saveUserPreferences,
@@ -14,6 +12,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 type SavedVersion = {
   id: string | number;
   organization_id?: string;
+  publisher?: { name?: string; localName?: string } | string;
   [key: string]: unknown;
 };
 
@@ -96,39 +95,16 @@ export function VersionProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const fetchPublishers = async () => {
-      const missingOrgIds = [
-        ...new Set(
-          savedVersions
-            .map((version) => version.organization_id)
-            .filter((organizationId): organizationId is string => typeof organizationId === 'string' && organizationId.length > 0)
-        ),
-      ];
-
-      if (missingOrgIds.length === 0) return;
-
-      const organizations = await Promise.all(
-        missingOrgIds.map(async (organizationId) => {
-          const data = await fetchOrganization(organizationId);
-          return {
-            id: organizationId,
-            name: data?.name || 'Public Domain',
-          };
-        })
-      );
-
-      setPublishers((previous) => {
-        const next = { ...previous };
-        organizations.forEach((organization) => {
-          if (!next[organization.id]) {
-            next[organization.id] = organization.name;
-          }
-        });
-        return next;
-      });
-    };
-
-    fetchPublishers();
+    const next: Record<string, string> = {};
+    savedVersions.forEach((version) => {
+      const orgId = version.organization_id || String(version.id);
+      const pub = version.publisher;
+      const pubName = typeof pub === 'object' && pub !== null ? (pub.name || pub.localName) : (typeof pub === 'string' ? pub : 'Public Domain');
+      if (orgId && !next[orgId]) {
+        next[orgId] = pubName || 'Public Domain';
+      }
+    });
+    setPublishers((prev) => ({ ...prev, ...next }));
   }, [savedVersions]);
 
   const handleSelectVersion = async (id: string | number) => {

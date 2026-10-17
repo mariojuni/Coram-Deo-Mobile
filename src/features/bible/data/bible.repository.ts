@@ -3,6 +3,7 @@ import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { getActiveAuth, getActiveDb } from '../../../firebase';
 import { deleteOfflineBible, getBibleIndex, getChapter, saveBibleIndex, saveChapter } from './offlineDb.repository';
 
+// ─── YouVersion API Configuration (Strictly for Verse of the Day) ───────────────
 const API_BASE = 'https://api.youversion.com/v1';
 const API_KEY = 'RAhHurUzL1pk5kt9LwrGIaz0AdnX0obcIH6NNIayuvGogR7f';
 
@@ -148,33 +149,6 @@ const repairSingleVerseText = (rawContent: string, passageId: string) => {
   return null;
 };
 
-const parseHTMLToJSON = (html: string, passageId: string) => {
-  const verses = [];
-  const verseRegex = /<span[^>]*class="[^"]*yv-v[^"]*"[^>]*v="(\d+)"[^>]*>(.*?)<\/span>(.*?)(?=<span[^>]*class="[^"]*yv-v|$)/gs;
-  let match;
-
-  while ((match = verseRegex.exec(html)) !== null) {
-    const verseNumber = match[1];
-    const rawText = (match[2] + ' ' + match[3]).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-    if (rawText.length > 0) {
-      verses.push({ id: `${passageId}.${verseNumber}`, verseNumber, content: rawText });
-    }
-  }
-
-  if (verses.length === 0 && html.length > 0) {
-    const rawText = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-    const repaired = repairSingleVerseText(rawText, passageId);
-    if (repaired) {
-      return repaired;
-    }
-    verses.push({
-      id: passageId,
-      verseNumber: '1',
-      content: rawText,
-    });
-  }
-  return verses;
-};
 
 const sessionCache = new Map<string, any>();
 
@@ -264,15 +238,6 @@ export const fetchChapterData = async (translationId: string | number, passageId
   return null;
 };
 
-export const downloadBibleOffline = async (translationId: string | number) => {
-  // Legacy offline download is no longer supported directly via API.
-  // Use BibleDataService instead.
-  return false;
-};
-
-const startBackgroundDownload = async (translationId: string | number, passageIds: string[]) => {
-  // Deprecated
-};
 
 export const getSavedVersions = async () => {
   const saved = await AsyncStorage.getItem('my_bible_versions');
@@ -487,13 +452,3 @@ export const saveUserPreferences = async (prefs: any) => {
   }
 };
 
-export const fetchOrganization = async (orgId: string) => {
-  if (!orgId) return null;
-  try {
-    const response = await fetch(`${API_BASE}/organizations/${orgId}`, { headers: getHeaders() });
-    if (!response.ok) return null;
-    return await response.json();
-  } catch {
-    return null;
-  }
-};

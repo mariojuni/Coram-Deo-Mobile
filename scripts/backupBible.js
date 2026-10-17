@@ -1,3 +1,10 @@
+/**
+ * ⚠️ DEPRECATED
+ * Bible versions are now natively managed and imported via Cloud Storage and
+ * the `bibleImportProcessor` Cloud Function in `Coram-Deo-Backend`.
+ * Do not use this script to scrape YouVersion passages.
+ */
+
 const fetch = require('node-fetch'); // you may need to 'npm install node-fetch@2' if running this on older Node
 const { getFirestore } = require('firebase-admin/firestore');
 try {

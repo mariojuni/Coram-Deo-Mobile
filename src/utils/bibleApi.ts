@@ -1,7 +1,6 @@
 export {
-  downloadBibleOffline, fetchBibleIndex, fetchBiblesByLanguage, fetchChapterData,
+  fetchBibleIndex, fetchBiblesByLanguage, fetchChapterData,
   fetchLanguages,
-  fetchOrganization,
   fetchVerseOfTheDay,
   getSavedVersions,
   getUserPreferences, removeVersion,

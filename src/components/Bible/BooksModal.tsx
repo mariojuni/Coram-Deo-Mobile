@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { LayoutChangeEvent, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { X, Check, ChevronLeft } from 'lucide-react-native';
 import { BounceCard } from '@/components/ui/BounceCard';
@@ -9,6 +9,27 @@ import { bibleDataService } from '@/features/bible/data/BibleDataService';
 import { getUserPreferences } from '@/features/bible/data/bible.repository';
 import { getHumanReadableBookName, extractChapterNumber } from '@/utils/scriptureReferenceParser';
 import type { BibleNoteScripture } from '@/features/bibleNotes/domain/bibleNote.types';
+
+const BOOK_ROW_HEIGHT = 58;
+const HEADER_OFFSET = 70;
+
+const isBookMatch = (book: any, targetId?: string | number | null) => {
+  if (!targetId || !book) return false;
+  const target = String(targetId).trim().toUpperCase();
+  const id = String(book.id ?? '').trim().toUpperCase();
+  const usfm = String(book.usfm ?? '').trim().toUpperCase();
+  const name = String(book.name ?? '').trim().toUpperCase();
+  const title = String(book.title ?? '').trim().toUpperCase();
+  const abbr = String(book.abbreviation ?? '').trim().toUpperCase();
+
+  return (
+    id === target ||
+    usfm === target ||
+    name === target ||
+    title === target ||
+    abbr === target
+  );
+};
 
 interface BooksModalProps {
   isOpen: boolean;
@@ -22,8 +43,20 @@ interface BooksModalProps {
 export default function BooksModal({ isOpen, onClose, books, onSelectChapter, activeBookId, onSelectVerses }: BooksModalProps) {
   const { collapseBook, expandedBook, sortedBooks, toggleBook, setExpandedBook } = useBooksModal(books);
   const scrollViewRef = useRef<ScrollView>(null);
-  const itemLayouts = useRef<Record<string, number>>({});
-  const [scrollViewHeight, setScrollViewHeight] = useState<number>(0);
+  const hasScrolledRef = useRef(false);
+
+  // Pre-calculate active book index
+  const activeBookIndex = useMemo(() => {
+    if (!activeBookId || !sortedBooks || sortedBooks.length === 0) return -1;
+    return sortedBooks.findIndex((book) => isBookMatch(book, activeBookId));
+  }, [activeBookId, sortedBooks]);
+
+  // Target scroll offset for active book
+  const targetScrollOffset = useMemo(() => {
+    if (activeBookIndex <= 1) return 0;
+    const bookTop = HEADER_OFFSET + activeBookIndex * BOOK_ROW_HEIGHT;
+    return Math.max(0, bookTop - 150);
+  }, [activeBookIndex]);
 
   // New state for verse selection
   const [viewMode, setViewMode] = useState<'books' | 'verses'>('books');
@@ -36,65 +69,30 @@ export default function BooksModal({ isOpen, onClose, books, onSelectChapter, ac
 
   // Reset view state when modal closes
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen) {
+      hasScrolledRef.current = false;
+      if (targetScrollOffset > 0 && scrollViewRef.current) {
+        scrollViewRef.current.scrollTo({ y: targetScrollOffset, animated: false });
+      }
+    } else {
+      collapseBook();
       setViewMode('books');
       setSelectedBookId(null);
       setSelectedChapter(null);
       setSelectedVerses(new Set());
       setChapterData([]);
     }
-  }, [isOpen]);
+  }, [isOpen, targetScrollOffset]);
 
-  // When modal opens or activeBookId/sortMode changes, scroll to position active book above center without animation
-  useEffect(() => {
-    if (!isOpen || viewMode !== 'books') return;
-
-    collapseBook();
-
-    const scrollToActiveBook = () => {
-      if (!activeBookId || !scrollViewRef.current) return;
-      const key = String(activeBookId);
-      const y = itemLayouts.current[key];
-      if (y !== undefined) {
-        const targetOffset = Math.max(0, y - (scrollViewHeight > 0 ? scrollViewHeight * 0.3 : 150));
-        scrollViewRef.current.scrollTo({ y: targetOffset, animated: false });
-      }
-    };
-
-    scrollToActiveBook();
-    const timer = setTimeout(scrollToActiveBook, 50);
-
-    return () => clearTimeout(timer);
-  }, [isOpen, activeBookId, scrollViewHeight, viewMode]);
-
-  // Verse fetching effect
-  useEffect(() => {
-    if (viewMode === 'verses' && selectedBookId && selectedChapter) {
-      let isMounted = true;
-      const fetchChapter = async () => {
-        setLoadingVerses(true);
-        try {
-          const prefs = await getUserPreferences();
-          const activeTranslation = String(prefs?.activeTranslation || '1');
-          setVersionId(activeTranslation);
-
-          const data = await bibleDataService.getChapter(activeTranslation, selectedBookId, parseInt(selectedChapter, 10));
-          if (isMounted) {
-            setChapterData(data.verses || []);
-          }
-        } catch (e) {
-          console.warn('Failed to fetch chapter in BooksModal', e);
-        } finally {
-          if (isMounted) setLoadingVerses(false);
-        }
-      };
-      fetchChapter();
-      return () => { isMounted = false; };
+  const handleContentSizeChange = () => {
+    if (!hasScrolledRef.current && targetScrollOffset > 0 && scrollViewRef.current) {
+      hasScrolledRef.current = true;
+      scrollViewRef.current.scrollTo({ y: targetScrollOffset, animated: false });
     }
-  }, [viewMode, selectedBookId, selectedChapter]);
+  };
 
-  const handleItemLayout = (bookId: string | number, event: LayoutChangeEvent) => {
-    itemLayouts.current[String(bookId)] = event.nativeEvent.layout.y;
+  const handleBookPress = (book: any) => {
+    toggleBook(book.id);
   };
 
   const handleChapterPress = (book: any, chapterNum: string) => {
@@ -291,27 +289,34 @@ export default function BooksModal({ isOpen, onClose, books, onSelectChapter, ac
           </View>
         </ModalDragArea>
 
-        {viewMode === 'books' ? (
-          <>
+        {isOpen && (
+          viewMode === 'books' ? (
             <ScrollView 
               ref={scrollViewRef}
+              key="books-modal-scroll"
+              contentOffset={{ x: 0, y: targetScrollOffset }}
               style={styles.content} 
-              contentContainerStyle={{ paddingTop: 70 }}
-              onLayout={(e) => setScrollViewHeight(e.nativeEvent.layout.height)}
+              contentContainerStyle={{ paddingTop: 70, paddingBottom: 60 }}
+              onContentSizeChange={handleContentSizeChange}
+              showsVerticalScrollIndicator={false}
             >
               {sortedBooks.map((book) => {
                 const isExpanded = expandedBook === String(book.id);
+                const isActive = isBookMatch(book, activeBookId);
                 return (
-                  <View key={book.id} onLayout={(e) => handleItemLayout(book.id, e)}>
+                  <View key={book.id}>
                     <TouchableOpacity
                       style={[styles.bookItem, isExpanded && styles.bookItemExpanded]}
-                      onPress={() => toggleBook(book.id)}
+                      onPress={() => handleBookPress(book)}
                     >
-                      <Text style={[
-                        styles.bookName, 
-                        isExpanded && styles.bookNameExpanded, 
-                        (String(book.id) === String(activeBookId) || String(book.usfm) === String(activeBookId)) && styles.bookNameActive
-                      ]}>
+                      <Text 
+                        numberOfLines={1}
+                        style={[
+                          styles.bookName, 
+                          isExpanded && styles.bookNameExpanded, 
+                          isActive && styles.bookNameActive
+                        ]}
+                      >
                         {book.name || book.title || book.abbreviation || getHumanReadableBookName(String(book.usfm || book.id))}
                       </Text>
                     </TouchableOpacity>
@@ -320,12 +325,11 @@ export default function BooksModal({ isOpen, onClose, books, onSelectChapter, ac
                 );
               })}
             </ScrollView>
-
-          </>
-        ) : (
-          <View style={styles.content}>
-            {renderVersesView()}
-          </View>
+          ) : (
+            <View style={styles.content}>
+              {renderVersesView()}
+            </View>
+          )
         )}
       </View>
     </AppModal>
@@ -344,7 +348,14 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 18, fontWeight: '800', color: '#111827' },
   content: { flex: 1, backgroundColor: '#fff' },
-  bookItem: { paddingHorizontal: 24, paddingVertical: 18, borderBottomWidth: 1, borderBottomColor: '#f8f8f8', backgroundColor: '#fff' },
+  bookItem: { 
+    paddingHorizontal: 24, 
+    height: BOOK_ROW_HEIGHT, 
+    justifyContent: 'center', 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#f8f8f8', 
+    backgroundColor: '#fff' 
+  },
   bookItemExpanded: { backgroundColor: '#fff', borderBottomWidth: 0 },
   bookName: { fontSize: 16, color: '#1a1a1a', fontWeight: '600' },
   bookNameExpanded: { fontWeight: '700' },

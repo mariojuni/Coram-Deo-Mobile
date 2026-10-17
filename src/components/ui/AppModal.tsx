@@ -48,6 +48,8 @@ export default function AppModal({ isOpen, onClose, title, children, containerSt
 
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  const windowHeightRef = useRef(windowHeight);
+  windowHeightRef.current = windowHeight;
 
   const panResponder = useMemo(
     () =>
@@ -62,7 +64,7 @@ export default function AppModal({ isOpen, onClose, title, children, containerSt
         onPanResponderRelease: (_, g) => {
           if (g.dy > 100 || g.vy > 1.2) {
             Animated.timing(slideAnim, {
-              toValue: windowHeight,
+              toValue: windowHeightRef.current,
               duration: 200,
               useNativeDriver: true,
             }).start(() => {
@@ -84,7 +86,7 @@ export default function AppModal({ isOpen, onClose, title, children, containerSt
           }).start();
         },
       }),
-    [slideAnim, windowHeight]
+    [slideAnim]
   );
 
   useEffect(() => {
@@ -107,17 +109,23 @@ export default function AppModal({ isOpen, onClose, title, children, containerSt
 
   const sheetBg = StyleSheet.flatten(containerStyle)?.backgroundColor;
 
+  const prevIsOpen = useRef(false);
+
   useEffect(() => {
-    if (isOpen) {
-      slideAnim.setValue(windowHeight);
+    if (isOpen && !prevIsOpen.current) {
+      // Only animate slide up when transitioning from closed to open
+      slideAnim.setValue(windowHeightRef.current);
       Animated.spring(slideAnim, {
         toValue: 0,
         useNativeDriver: true,
         bounciness: 0,
         speed: 14,
       }).start();
+    } else if (!isOpen) {
+      slideAnim.setValue(windowHeightRef.current);
     }
-  }, [isOpen, slideAnim, windowHeight]);
+    prevIsOpen.current = isOpen;
+  }, [isOpen, slideAnim]);
 
   return (
     <Modal visible={isOpen} animationType="none" transparent={true} onRequestClose={onClose} supportedOrientations={['portrait', 'landscape', 'landscape-left', 'landscape-right']}>
