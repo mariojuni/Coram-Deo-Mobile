@@ -166,12 +166,15 @@ export default function BibleScreen() {
   const setTabBarVisible = useUIStore((state) => state.setTabBarVisible);
 
   useEffect(() => {
-    if (isLandscape) {
+    if (isLandscape && !isTablet) {
       setTabBarVisible(false);
     } else {
       setTabBarVisible(true);
     }
-  }, [isLandscape, setTabBarVisible]);
+    return () => {
+      setTabBarVisible(true);
+    };
+  }, [isLandscape, isTablet, setTabBarVisible]);
 
   // Sync highlights from Firebase is removed, now handled inside BibleReader using bibleVerseHighlights collection
 

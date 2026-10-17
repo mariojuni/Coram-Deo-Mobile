@@ -188,10 +188,10 @@ export default function BibleReader({
   }, [controlsTabBar, setTabBarVisible, setHideCompactPlayer]);
 
   // Keep context fresh for the stable scroll listener
-  const scrollContext = useRef({ controlsTabBar, selectedVersesLength: selectedVerses.length, isLandscape, isFontModalOpen });
+  const scrollContext = useRef({ controlsTabBar, selectedVersesLength: selectedVerses.length, isLandscape, isTablet, isFontModalOpen });
   useEffect(() => {
-    scrollContext.current = { controlsTabBar, selectedVersesLength: selectedVerses.length, isLandscape, isFontModalOpen };
-  }, [controlsTabBar, selectedVerses.length, isLandscape, isFontModalOpen]);
+    scrollContext.current = { controlsTabBar, selectedVersesLength: selectedVerses.length, isLandscape, isTablet, isFontModalOpen };
+  }, [controlsTabBar, selectedVerses.length, isLandscape, isTablet, isFontModalOpen]);
 
   // Ensure Animated.Value is created only once if scrollY is missing
   const internalScrollY = useRef(scrollY || new Animated.Value(0)).current;
@@ -203,13 +203,13 @@ export default function BibleReader({
         {
           useNativeDriver: false,
           listener: (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-            const { controlsTabBar: doControl, selectedVersesLength, isLandscape: isLand, isFontModalOpen: fontOpen } = scrollContext.current;
+            const { controlsTabBar: doControl, selectedVersesLength, isLandscape: isLand, isTablet: isTab, isFontModalOpen: fontOpen } = scrollContext.current;
             if (!doControl) return;
             if (selectedVersesLength > 0 || fontOpen) return; // Keep tab bar hidden if highlight or font modal is open
             const y = e.nativeEvent.contentOffset.y;
             const delta = y - lastScrollY.current;
             if (Math.abs(delta) > 6) {
-              if (!isLand) {
+              if (!isLand || isTab) {
                 setTabBarVisible(delta < 0 || y < 60);
               }
             }
@@ -375,19 +375,19 @@ export default function BibleReader({
           bounciness: 0,
         }).start();
       }
-      if (!isLandscape) {
+      if (!isLandscape || isTablet) {
         setTabBarVisible(false);
       }
       setHideCompactPlayer(true);
     } else {
       highlightTranslateY.setValue(200);
-      if (!isLandscape) {
+      if (!isLandscape || isTablet) {
         setTabBarVisible(true);
       }
       setHideCompactPlayer(false);
     }
     lastSelectedVersesCount.current = selectedVerses.length;
-  }, [selectedVerses.length, highlightTranslateY, setTabBarVisible, setHideCompactPlayer]);
+  }, [selectedVerses.length, highlightTranslateY, setTabBarVisible, setHideCompactPlayer, isLandscape, isTablet]);
 
   const highlightPanResponder = useRef(
     PanResponder.create({
@@ -435,7 +435,7 @@ export default function BibleReader({
         useNativeDriver: true,
         bounciness: 0,
       }).start();
-      if (!isLandscape) {
+      if (!isLandscape || isTablet) {
         setTabBarVisible(false);
       }
       setHideCompactPlayer(true);
@@ -447,13 +447,13 @@ export default function BibleReader({
       }).start();
       
       if (selectedVerses.length === 0) {
-        if (!isLandscape) {
+        if (!isLandscape || isTablet) {
           setTabBarVisible(true);
         }
         setHideCompactPlayer(false);
       }
     }
-  }, [isFontModalOpen, fontTranslateY, setTabBarVisible, setHideCompactPlayer, selectedVerses.length, isLandscape]);
+  }, [isFontModalOpen, fontTranslateY, setTabBarVisible, setHideCompactPlayer, selectedVerses.length, isLandscape, isTablet]);
 
   const fontPanResponder = useRef(
     PanResponder.create({
@@ -691,7 +691,7 @@ export default function BibleReader({
             style={[
               styles.navOverlay, 
               { 
-                bottom: playerMode === 'minimized' ? Math.max(insets.bottom, 16) + 156 : (isLandscape ? Math.max(insets.bottom, 20) + 10 : 110),
+                bottom: playerMode === 'minimized' ? Math.max(insets.bottom, 16) + 156 : ((isLandscape && !isTablet) ? Math.max(insets.bottom, 20) + 10 : 110),
                 left: Math.max(insets.left, 24),
                 right: Math.max(insets.right, 24),
               }, 
