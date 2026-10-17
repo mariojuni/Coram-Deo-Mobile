@@ -386,11 +386,12 @@ export default function BiblePlanDetailScreen() {
             <ScrollView
               ref={dayScrollRef}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: ctaBottomPad + 88, paddingTop: insets.top + 70 }}
+              contentContainerStyle={{ paddingBottom: ctaBottomPad + 88, paddingTop: insets.top + 70, alignItems: 'center' }}
             >
+              <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center' }}>
 
-              {/* ─── Hero card ─────────────────────────────────────────────── */}
-              <View style={styles.heroCard}>
+                {/* ─── Hero card ─────────────────────────────────────────────── */}
+                <View style={styles.heroCard}>
                 <LinearGradient
                   colors={['#FFE8F0', '#F5E8FF', '#E8EEFF']}
                   start={{ x: 0, y: 0 }}
@@ -544,6 +545,7 @@ export default function BiblePlanDetailScreen() {
                 </SoftCard>
               ) : null}
 
+              </View>
             </ScrollView>
 
             {/* ─── Fixed bottom CTA ──────────────────────────────────────── */}
@@ -551,7 +553,7 @@ export default function BiblePlanDetailScreen() {
               <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
               <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.65)', borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)' }]} pointerEvents="none" />
               
-              <View style={styles.ctaContent}>
+              <View style={[styles.ctaContent, { maxWidth: 640, width: '100%', alignSelf: 'center' }]}>
               {isCompleted ? (
                 <View style={styles.ctaDoneRow}>
                   <CheckCircle2 size={18} color="#22C55E" />

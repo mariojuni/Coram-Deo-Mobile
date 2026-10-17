@@ -226,9 +226,11 @@ export default function BiblePlansScreen() {
             <ChevronLeft size={22} color="#1F2937" strokeWidth={2.6} />
           </BounceCard>
 
-          <View style={styles.heroTextWrap}>
-            <Text style={styles.heroTitle}>Bible Plans</Text>
-            <Text style={styles.heroSubtitle}>Grow closer to God, one day at a time</Text>
+          <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center' }}>
+            <View style={styles.heroTextWrap}>
+              <Text style={styles.heroTitle}>Bible Plans</Text>
+              <Text style={styles.heroSubtitle}>Grow closer to God, one day at a time</Text>
+            </View>
           </View>
         </View>
 
@@ -239,24 +241,26 @@ export default function BiblePlansScreen() {
         <View style={styles.heroGlowSmall} />
 
         {/* Tab switcher inside hero */}
-        <View style={styles.tabBar}>
-          <Pressable
-            style={[styles.tab, activeTab === 'my' && styles.tabActive]}
-            onPress={() => setActiveTab('my')}
-          >
-            <Text style={[styles.tabText, activeTab === 'my' && styles.tabTextActive]}>
-              My Plans
-              {myPlans.length > 0 ? ` (${myPlans.length})` : ''}
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[styles.tab, activeTab === 'explore' && styles.tabActive]}
-            onPress={() => setActiveTab('explore')}
-          >
-            <Text style={[styles.tabText, activeTab === 'explore' && styles.tabTextActive]}>
-              Explore
-            </Text>
-          </Pressable>
+        <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center' }}>
+          <View style={styles.tabBar}>
+            <Pressable
+              style={[styles.tab, activeTab === 'my' && styles.tabActive]}
+              onPress={() => setActiveTab('my')}
+            >
+              <Text style={[styles.tabText, activeTab === 'my' && styles.tabTextActive]}>
+                My Plans
+                {myPlans.length > 0 ? ` (${myPlans.length})` : ''}
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.tab, activeTab === 'explore' && styles.tabActive]}
+              onPress={() => setActiveTab('explore')}
+            >
+              <Text style={[styles.tabText, activeTab === 'explore' && styles.tabTextActive]}>
+                Explore
+              </Text>
+            </Pressable>
+          </View>
         </View>
       </LinearGradient>
 
@@ -274,7 +278,7 @@ export default function BiblePlansScreen() {
             </View>
           ) : (
             <ScrollView
-              contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(insets.bottom, 24) + 20 }]}
+              contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(insets.bottom, 24) + 20, maxWidth: 640, width: '100%', alignSelf: 'center' }]}
               showsVerticalScrollIndicator={false}
             >
               {myPlans.map(({ plan, userPlan }) => (
@@ -295,7 +299,7 @@ export default function BiblePlansScreen() {
           </View>
         ) : (
           <ScrollView
-            contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(insets.bottom, 24) + 20 }]}
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(insets.bottom, 24) + 20, maxWidth: 640, width: '100%', alignSelf: 'center' }]}
             showsVerticalScrollIndicator={false}
           >
             {plans.map((plan) => {

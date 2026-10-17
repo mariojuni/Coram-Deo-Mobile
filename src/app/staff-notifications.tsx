@@ -44,7 +44,7 @@ export default function StaffNotificationsScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 24) + 104 }]}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 24) + 104, maxWidth: 640, width: '100%', alignSelf: 'center' }]}>
         {notifications.length === 0 ? (
           <View style={styles.emptyState}>
             <View style={styles.emptyIconBg}>

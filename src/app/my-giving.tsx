@@ -97,8 +97,9 @@ export default function MyGivingScreen() {
           <ActivityIndicator size="large" color="#FF6596" />
         </View>
       ) : (
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          <View style={{ height: 24 }} />
+        <ScrollView style={styles.content} contentContainerStyle={{ alignItems: 'center' }} showsVerticalScrollIndicator={false}>
+          <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center' }}>
+            <View style={{ height: 24 }} />
           {myRecords.length === 0 ? (
             <View style={styles.emptyContainer}>
               <View style={styles.emptyIconCircle}>
@@ -163,6 +164,7 @@ export default function MyGivingScreen() {
             ))
           )}
           <View style={{ height: 100 }} />
+          </View>
         </ScrollView>
       )}
     </View>

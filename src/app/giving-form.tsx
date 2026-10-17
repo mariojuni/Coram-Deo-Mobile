@@ -246,7 +246,7 @@ export default function GivingFormScreen() {
           colors={["#FDF2F8", "#FFF"]}
           style={StyleSheet.absoluteFill}
         />
-        <View style={{ alignItems: "center" }}>
+        <View style={{ alignItems: "center", width: '100%', maxWidth: 480, alignSelf: 'center' }}>
           <View style={styles.successIconWrap}>
             <CheckCircle2 size={64} color="#22C55E" />
           </View>
@@ -343,8 +343,10 @@ export default function GivingFormScreen() {
         contentContainerStyle={{
           paddingTop: Math.max(insets.top, 24) + 76,
           paddingBottom: insets.bottom + 140,
+          alignItems: 'center',
         }}
       >
+        <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center' }}>
         {selectedCampaign && (
           <View style={styles.campaignInfo}>
             <LinearGradient
@@ -700,6 +702,7 @@ export default function GivingFormScreen() {
             </View>
           </View>
         )}
+        </View>
       </Animated.ScrollView>
 
       {hasSentDonation && (
@@ -721,12 +724,14 @@ export default function GivingFormScreen() {
             pointerEvents="none"
           />
 
-          <PrimaryGradientButton
-            title={isCampaignInactive ? "Campaign Ended" : "Submit Giving"}
-            onPress={handleSubmit}
-            disabled={isCampaignInactive}
-            loading={isSubmitting}
-          />
+          <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center' }}>
+            <PrimaryGradientButton
+              title={isCampaignInactive ? "Campaign Ended" : "Submit Giving"}
+              onPress={handleSubmit}
+              disabled={isCampaignInactive}
+              loading={isSubmitting}
+            />
+          </View>
         </View>
       )}
 

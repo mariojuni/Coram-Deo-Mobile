@@ -146,37 +146,39 @@ export default function NotificationsScreen() {
       </View>
 
       <View style={[styles.chipContainer, { marginTop: Math.max(insets.top, 24) + 60 }]}>
-        <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          data={CATEGORIES}
-          keyExtractor={(item) => item.value}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12, gap: 8 }}
-          renderItem={({ item }) => {
-            const isActive = activeCategory === item.value;
-            return (
-              <DebouncedTouchable
-                onPress={() => setActiveCategory(item.value)}
-                style={[styles.chip, isActive && styles.chipActive]}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: isActive }}
-              >
-                <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
-                  {item.label}
-                </Text>
-              </DebouncedTouchable>
-            );
-          }}
-        />
+        <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center' }}>
+          <FlatList
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            data={CATEGORIES}
+            keyExtractor={(item) => item.value}
+            contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12, gap: 8 }}
+            renderItem={({ item }) => {
+              const isActive = activeCategory === item.value;
+              return (
+                <DebouncedTouchable
+                  onPress={() => setActiveCategory(item.value)}
+                  style={[styles.chip, isActive && styles.chipActive]}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: isActive }}
+                >
+                  <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
+                    {item.label}
+                  </Text>
+                </DebouncedTouchable>
+              );
+            }}
+          />
+        </View>
       </View>
 
       {loading ? (
-        <View style={styles.centerContainer}>
+        <View style={[styles.centerContainer, { maxWidth: 480, alignSelf: 'center' }]}>
           <ActivityIndicator size="large" color="#FF6596" />
           <Text style={styles.loadingText}>Loading notifications...</Text>
         </View>
       ) : filteredData.length === 0 ? (
-        <View style={styles.centerContainer}>
+        <View style={[styles.centerContainer, { maxWidth: 480, alignSelf: 'center' }]}>
           <Text style={styles.emptyText}>
             {activeCategory === 'all' ? "You're all caught up." : "No notifications here yet."}
           </Text>
@@ -185,7 +187,7 @@ export default function NotificationsScreen() {
         <FlatList
           data={groupedData}
           keyExtractor={(item) => item.title}
-          contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 24) }}
+          contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 24), maxWidth: 640, width: '100%', alignSelf: 'center' }}
           renderItem={({ item }) => (
             <View>
               <Text style={styles.sectionHeader}>{item.title}</Text>

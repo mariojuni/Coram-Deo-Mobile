@@ -217,12 +217,15 @@ export function SermonVideoPlayer({
   const bufferedProgress = durationMs > 0 ? bufferedPositionMs / durationMs : 0;
   const isIdle = playerState === 'idle' || playerState === 'paused';
 
+  const targetExpandedWidth = Math.min(SCREEN_WIDTH, 840);
+  const targetExpandedHeight = targetExpandedWidth * (9 / 16);
+
   const animatedVideoViewStyle = useAnimatedStyle(() => {
     if (!translateY || maxTranslateY === undefined) {
       return { width: '100%', height: '100%' };
     }
-    const width = interpolate(translateY.value, [0, maxTranslateY], [SCREEN_WIDTH, 56], Extrapolation.CLAMP);
-    const height = interpolate(translateY.value, [0, maxTranslateY], [SCREEN_WIDTH * (9 / 16), 56], Extrapolation.CLAMP);
+    const width = interpolate(translateY.value, [0, maxTranslateY], [targetExpandedWidth, 56], Extrapolation.CLAMP);
+    const height = interpolate(translateY.value, [0, maxTranslateY], [targetExpandedHeight, 56], Extrapolation.CLAMP);
     const top = interpolate(translateY.value, [0, maxTranslateY], [0, 8], Extrapolation.CLAMP);
     const left = interpolate(translateY.value, [0, maxTranslateY], [0, 8], Extrapolation.CLAMP);
     const borderRadius = interpolate(translateY.value, [0, maxTranslateY], [0, 16], Extrapolation.CLAMP);

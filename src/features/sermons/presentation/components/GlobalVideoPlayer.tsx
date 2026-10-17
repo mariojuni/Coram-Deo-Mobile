@@ -198,13 +198,20 @@ export function GlobalVideoPlayer({ blurTarget }: { blurTarget?: any }) {
     };
   });
 
+  const targetExpandedWidth = Math.min(SCREEN_WIDTH, 840);
+  const targetExpandedHeight = targetExpandedWidth * (9 / 16);
+  const targetExpandedLeft = (SCREEN_WIDTH - targetExpandedWidth) / 2;
+
+  const targetMiniWidth = isTablet ? Math.min(540, SCREEN_WIDTH - 48) : SCREEN_WIDTH - 32;
+  const targetMiniLeft = (SCREEN_WIDTH - targetMiniWidth) / 2;
+
   const animatedVideoStyle = useAnimatedStyle(() => {
     if (openingProgress.value < 1 && originRect) {
       const p = openingProgress.value;
-      const width = interpolate(p, [0, 1], [originRect.width, SCREEN_WIDTH]);
-      const height = interpolate(p, [0, 1], [originRect.height, SCREEN_WIDTH * (9 / 16)]);
+      const width = interpolate(p, [0, 1], [originRect.width, targetExpandedWidth]);
+      const height = interpolate(p, [0, 1], [originRect.height, targetExpandedHeight]);
       const top = interpolate(p, [0, 1], [originRect.y, insets.top]);
-      const left = interpolate(p, [0, 1], [originRect.x, 0]);
+      const left = interpolate(p, [0, 1], [originRect.x, targetExpandedLeft]);
       const borderRadius = interpolate(p, [0, 1], [16, 0]);
       
       return {
@@ -216,15 +223,13 @@ export function GlobalVideoPlayer({ blurTarget }: { blurTarget?: any }) {
     }
 
     const isMin = translateY.value > MAX_TRANSLATE_Y / 2;
-    const targetMiniWidth = isTablet ? Math.min(420, SCREEN_WIDTH - 48) : SCREEN_WIDTH - 32;
-    const targetMiniLeft = isTablet ? SCREEN_WIDTH - targetMiniWidth - 24 : 16;
 
-    // Morph from full width to card width
-    const width = interpolate(translateY.value, [0, MAX_TRANSLATE_Y], [SCREEN_WIDTH, targetMiniWidth], Extrapolation.CLAMP);
+    // Morph from expanded to card width
+    const width = interpolate(translateY.value, [0, MAX_TRANSLATE_Y], [targetExpandedWidth, targetMiniWidth], Extrapolation.CLAMP);
     // Morph from 16:9 to card height
-    const height = interpolate(translateY.value, [0, MAX_TRANSLATE_Y], [SCREEN_WIDTH * (9 / 16), 72], Extrapolation.CLAMP);
+    const height = interpolate(translateY.value, [0, MAX_TRANSLATE_Y], [targetExpandedHeight, 72], Extrapolation.CLAMP);
     const top = interpolate(translateY.value, [0, MAX_TRANSLATE_Y], [insets.top, 0], Extrapolation.CLAMP);
-    const left = interpolate(translateY.value, [0, MAX_TRANSLATE_Y], [0, targetMiniLeft], Extrapolation.CLAMP);
+    const left = interpolate(translateY.value, [0, MAX_TRANSLATE_Y], [targetExpandedLeft, targetMiniLeft], Extrapolation.CLAMP);
     const borderRadius = interpolate(translateY.value, [0, MAX_TRANSLATE_Y], [0, 20], Extrapolation.CLAMP);
     
     // Background and shadow morphing
@@ -299,10 +304,10 @@ export function GlobalVideoPlayer({ blurTarget }: { blurTarget?: any }) {
               <ScrollView
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{
-                  paddingTop: SCREEN_WIDTH * (9 / 16) + insets.top + 24,
+                  paddingTop: targetExpandedHeight + insets.top + 24,
                   paddingBottom: 100,
                   paddingHorizontal: 20,
-                  maxWidth: maxDashboardWidth,
+                  maxWidth: 640,
                   width: '100%',
                   alignSelf: 'center',
                 }}

@@ -33,7 +33,7 @@ export default function GivingScreen() {
             <View style={[styles.headerCircle, { backgroundColor: 'transparent', borderWidth: 0, elevation: 0 }]} />
           </View>
         </View>
-        <View style={styles.errorContainer}>
+        <View style={[styles.errorContainer, { maxWidth: 480, width: '100%', alignSelf: 'center' }]}>
           <View style={styles.errorIconWrap}>
             <Heart size={40} color="#FF6596" fill="#FF6596" />
           </View>
@@ -106,94 +106,94 @@ export default function GivingScreen() {
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
         scrollEventThrottle={16}
-        contentContainerStyle={{ paddingTop: insets.top + 70, paddingBottom: 40 }}
+        contentContainerStyle={{ paddingTop: insets.top + 70, paddingBottom: 40, alignItems: 'center' }}
       >
-        
-        <View style={styles.quickGiveSection}>
-          <Text style={styles.sectionTitle}>Support this Ministry</Text>
-          <View style={styles.quickGiveGrid}>
+        <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center' }}>
+          <View style={styles.quickGiveSection}>
+            <Text style={styles.sectionTitle}>Support this Ministry</Text>
+            <View style={styles.quickGiveGrid}>
+              {isLoading ? (
+                Array.from({ length: 4 }).map((_, index) => (
+                  <SoftCard key={`fund-skel-${index}`} style={{ width: '48%', marginBottom: 12, borderRadius: 16 }} innerStyle={{ borderRadius: 15 }}>
+                    <View style={[styles.quickGiveCard, { paddingVertical: 14, alignItems: 'center' }]}>
+                      <ShimmerSkeleton width={40} height={40} borderRadius={20} style={{ marginBottom: 8 }} />
+                      <ShimmerSkeleton width={60} height={16} borderRadius={4} />
+                    </View>
+                  </SoftCard>
+                ))
+              ) : activeFunds.length > 0 ? (
+                activeFunds.map((fund) => {
+                  const theme = getFundTheme(fund.type, fund.name);
+                  const IconComponent = theme.IconComponent;
+                  return (
+                    <SoftCard key={fund.id} style={{ width: '48%', marginBottom: 12, borderRadius: 16 }} innerStyle={{ borderRadius: 15 }}>
+                      <TouchableOpacity activeOpacity={0.8} style={styles.quickGiveCard} onPress={() => handleQuickGive(fund.type, fund.id)}>
+                        <LinearGradient colors={theme.colors as [string, string]} style={styles.quickGiveIconWrap}>
+                          <IconComponent size={20} color={theme.iconColor} />
+                        </LinearGradient>
+                        <Text style={styles.quickGiveText} numberOfLines={1}>{fund.name}</Text>
+                      </TouchableOpacity>
+                    </SoftCard>
+                  );
+                })
+              ) : (
+                // Fallback to standard 4 default options if no funds returned
+                [
+                  { type: 'tithe', label: 'Tithe', icon: Wallet, colors: ['#FFF0F5', '#FFE8F1'], iconColor: '#FF6596' },
+                  { type: 'offering', label: 'Offering', icon: Heart, colors: ['#F0F5FF', '#E5EDFF'], iconColor: '#4D7FFF' },
+                  { type: 'missions', label: 'Missions', icon: Globe, colors: ['#F5F0FF', '#EDE4FF'], iconColor: '#8B6FE8' },
+                  { type: 'building', label: 'Building', icon: Building2, colors: ['#F0FDF4', '#E1F9E8'], iconColor: '#22C55E' },
+                ].map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <SoftCard key={item.type} style={{ width: '48%', marginBottom: 12, borderRadius: 16 }} innerStyle={{ borderRadius: 15 }}>
+                      <TouchableOpacity activeOpacity={0.8} style={styles.quickGiveCard} onPress={() => handleQuickGive(item.type)}>
+                        <LinearGradient colors={item.colors as [string, string]} style={styles.quickGiveIconWrap}>
+                          <Icon size={20} color={item.iconColor} />
+                        </LinearGradient>
+                        <Text style={styles.quickGiveText}>{item.label}</Text>
+                      </TouchableOpacity>
+                    </SoftCard>
+                  );
+                })
+              )}
+            </View>
+          </View>
+
+          <View style={styles.campaignsSection}>
+            <Text style={styles.sectionTitle}>Active Campaigns</Text>
+            
             {isLoading ? (
-              Array.from({ length: 4 }).map((_, index) => (
-                <SoftCard key={`fund-skel-${index}`} style={{ width: '48%', marginBottom: 12, borderRadius: 16 }} innerStyle={{ borderRadius: 15 }}>
-                  <View style={[styles.quickGiveCard, { paddingVertical: 14, alignItems: 'center' }]}>
-                    <ShimmerSkeleton width={40} height={40} borderRadius={20} style={{ marginBottom: 8 }} />
-                    <ShimmerSkeleton width={60} height={16} borderRadius={4} />
-                  </View>
-                </SoftCard>
+              Array.from({ length: 2 }).map((_, index) => (
+                <View key={`camp-skel-${index}`} style={styles.campaignWrapper}>
+                  <SoftCard innerStyle={{ padding: 12, flexDirection: 'row', alignItems: 'center' }}>
+                    <ShimmerSkeleton width={60} height={60} borderRadius={12} style={{ marginRight: 14 }} />
+                    <View style={{ flex: 1 }}>
+                      <ShimmerSkeleton width="40%" height={12} borderRadius={4} style={{ marginBottom: 6 }} />
+                      <ShimmerSkeleton width="70%" height={16} borderRadius={4} style={{ marginBottom: 6 }} />
+                      <ShimmerSkeleton width="90%" height={12} borderRadius={4} style={{ marginBottom: 8 }} />
+                      <ShimmerSkeleton width="100%" height={6} borderRadius={3} />
+                    </View>
+                  </SoftCard>
+                </View>
               ))
-            ) : activeFunds.length > 0 ? (
-              activeFunds.map((fund) => {
-                const theme = getFundTheme(fund.type, fund.name);
-                const IconComponent = theme.IconComponent;
-                return (
-                  <SoftCard key={fund.id} style={{ width: '48%', marginBottom: 12, borderRadius: 16 }} innerStyle={{ borderRadius: 15 }}>
-                    <TouchableOpacity activeOpacity={0.8} style={styles.quickGiveCard} onPress={() => handleQuickGive(fund.type, fund.id)}>
-                      <LinearGradient colors={theme.colors as [string, string]} style={styles.quickGiveIconWrap}>
-                        <IconComponent size={20} color={theme.iconColor} />
-                      </LinearGradient>
-                      <Text style={styles.quickGiveText} numberOfLines={1}>{fund.name}</Text>
-                    </TouchableOpacity>
-                  </SoftCard>
-                );
-              })
+            ) : campaigns.length > 0 ? (
+              campaigns.map((campaign) => (
+                <View key={campaign.id} style={styles.campaignWrapper}>
+                  <CampaignCard 
+                    campaign={campaign} 
+                    onPress={() => router.push({ pathname: '/giving-campaign-detail', params: { id: campaign.id } })}
+                  />
+                </View>
+              ))
             ) : (
-              // Fallback to standard 4 default options if no funds returned
-              [
-                { type: 'tithe', label: 'Tithe', icon: Wallet, colors: ['#FFF0F5', '#FFE8F1'], iconColor: '#FF6596' },
-                { type: 'offering', label: 'Offering', icon: Heart, colors: ['#F0F5FF', '#E5EDFF'], iconColor: '#4D7FFF' },
-                { type: 'missions', label: 'Missions', icon: Globe, colors: ['#F5F0FF', '#EDE4FF'], iconColor: '#8B6FE8' },
-                { type: 'building', label: 'Building', icon: Building2, colors: ['#F0FDF4', '#E1F9E8'], iconColor: '#22C55E' },
-              ].map((item) => {
-                const Icon = item.icon;
-                return (
-                  <SoftCard key={item.type} style={{ width: '48%', marginBottom: 12, borderRadius: 16 }} innerStyle={{ borderRadius: 15 }}>
-                    <TouchableOpacity activeOpacity={0.8} style={styles.quickGiveCard} onPress={() => handleQuickGive(item.type)}>
-                      <LinearGradient colors={item.colors as [string, string]} style={styles.quickGiveIconWrap}>
-                        <Icon size={20} color={item.iconColor} />
-                      </LinearGradient>
-                      <Text style={styles.quickGiveText}>{item.label}</Text>
-                    </TouchableOpacity>
-                  </SoftCard>
-                );
-              })
+              <View style={styles.emptyCampaigns}>
+                <Heart size={32} color="#D1D5DB" style={{ marginBottom: 12 }} />
+                <Text style={styles.emptyCampaignsText}>No active campaigns right now</Text>
+              </View>
             )}
           </View>
         </View>
-
-        <View style={styles.campaignsSection}>
-          <Text style={styles.sectionTitle}>Active Campaigns</Text>
-          
-          {isLoading ? (
-            Array.from({ length: 2 }).map((_, index) => (
-              <View key={`camp-skel-${index}`} style={styles.campaignWrapper}>
-                <SoftCard innerStyle={{ padding: 12, flexDirection: 'row', alignItems: 'center' }}>
-                  <ShimmerSkeleton width={60} height={60} borderRadius={12} style={{ marginRight: 14 }} />
-                  <View style={{ flex: 1 }}>
-                    <ShimmerSkeleton width="40%" height={12} borderRadius={4} style={{ marginBottom: 6 }} />
-                    <ShimmerSkeleton width="70%" height={16} borderRadius={4} style={{ marginBottom: 6 }} />
-                    <ShimmerSkeleton width="90%" height={12} borderRadius={4} style={{ marginBottom: 8 }} />
-                    <ShimmerSkeleton width="100%" height={6} borderRadius={3} />
-                  </View>
-                </SoftCard>
-              </View>
-            ))
-          ) : campaigns.length > 0 ? (
-            campaigns.map((campaign) => (
-              <View key={campaign.id} style={styles.campaignWrapper}>
-                <CampaignCard 
-                  campaign={campaign} 
-                  onPress={() => router.push({ pathname: '/giving-campaign-detail', params: { id: campaign.id } })}
-                />
-              </View>
-            ))
-          ) : (
-            <View style={styles.emptyCampaigns}>
-              <Heart size={32} color="#D1D5DB" style={{ marginBottom: 12 }} />
-              <Text style={styles.emptyCampaignsText}>No active campaigns right now</Text>
-            </View>
-          )}
-        </View>
-        
       </Animated.ScrollView>
     </View>
   );

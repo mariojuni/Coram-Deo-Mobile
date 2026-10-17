@@ -378,74 +378,80 @@ export default function BiblePlanDayScreen() {
         styles.bottomBar, 
         { 
           paddingBottom: Math.max(insets.bottom, 16),
-          paddingLeft: Math.max(insets.left, 20),
-          paddingRight: Math.max(insets.right, 20),
         }
       ]}>
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.65)', borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)' }]} pointerEvents="none" />
         
-        {/* Prev passage */}
-        <TouchableOpacity
-          style={[styles.navArrow, isFirstPassage && styles.navArrowDisabled]}
-          onPress={() => !isFirstPassage && setPassageIndex((i) => i - 1)}
-          activeOpacity={isFirstPassage ? 1 : 0.7}
-        >
-          <ChevronLeft
-            size={22}
-            color={isFirstPassage ? '#D0D0D0' : '#1a1a1a'}
-            strokeWidth={2.5}
-          />
-        </TouchableOpacity>
-
-        {/* Center label */}
-        <View style={styles.bottomCenter}>
-          <Text style={styles.bottomPlanName} numberOfLines={1}>
-            {plan.title}
-          </Text>
-          <Text style={styles.bottomDayLabel} numberOfLines={1}>
-            Day {day.dayNumber}
-            {totalPassages > 1
-              ? ` • ${bottomPassageLabel} (${passageIndex + 1}/${totalPassages})`
-              : bottomPassageLabel
-                ? ` • ${bottomPassageLabel}`
-                : ''}
-            {rightText ? ` · ${rightText}` : ''}
-          </Text>
-        </View>
-
-        {/* Right button: next passage | gradient arrow (last passage) | end-of-plan */}
-        {!isLastPassage ? (
-          // Not last passage — plain gray next arrow
+        <View style={[
+          styles.bottomBarInner,
+          {
+            paddingLeft: Math.max(insets.left, 20),
+            paddingRight: Math.max(insets.right, 20),
+          }
+        ]}>
+          {/* Prev passage */}
           <TouchableOpacity
-            style={styles.navArrow}
-            onPress={() => setPassageIndex((i) => i + 1)}
-            activeOpacity={0.7}
+            style={[styles.navArrow, isFirstPassage && styles.navArrowDisabled]}
+            onPress={() => !isFirstPassage && setPassageIndex((i) => i - 1)}
+            activeOpacity={isFirstPassage ? 1 : 0.7}
           >
-            <ChevronRight size={22} color="#1a1a1a" strokeWidth={2.5} />
+            <ChevronLeft
+              size={22}
+              color={isFirstPassage ? '#D0D0D0' : '#1a1a1a'}
+              strokeWidth={2.5}
+            />
           </TouchableOpacity>
-        ) : isLastDay && isDayDone ? (
-          // Last passage of last day and already done — green end state
-          <View style={[styles.navArrow, styles.navArrowEnd]}>
-            <ChevronRight size={22} color="#86EFAC" strokeWidth={2.5} />
+
+          {/* Center label */}
+          <View style={styles.bottomCenter}>
+            <Text style={styles.bottomPlanName} numberOfLines={1}>
+              {plan.title}
+            </Text>
+            <Text style={styles.bottomDayLabel} numberOfLines={1}>
+              Day {day.dayNumber}
+              {totalPassages > 1
+                ? ` • ${bottomPassageLabel} (${passageIndex + 1}/${totalPassages})`
+                : bottomPassageLabel
+                  ? ` • ${bottomPassageLabel}`
+                  : ''}
+              {rightText ? ` · ${rightText}` : ''}
+            </Text>
           </View>
-        ) : (
-          // Last passage — gradient arrow: marks day done + goes to next day
-          <TouchableOpacity
-            style={styles.gradientArrowBtn}
-            onPress={handleCompleteAndAdvance}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={['#FF6596', '#C084FC']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.gradientArrowInner}
+
+          {/* Right button: next passage | gradient arrow (last passage) | end-of-plan */}
+          {!isLastPassage ? (
+            // Not last passage — plain gray next arrow
+            <TouchableOpacity
+              style={styles.navArrow}
+              onPress={() => setPassageIndex((i) => i + 1)}
+              activeOpacity={0.7}
             >
-              <ChevronRight size={22} color="#fff" strokeWidth={2.5} />
-            </LinearGradient>
-          </TouchableOpacity>
-        )}
+              <ChevronRight size={22} color="#1a1a1a" strokeWidth={2.5} />
+            </TouchableOpacity>
+          ) : isLastDay && isDayDone ? (
+            // Last passage of last day and already done — green end state
+            <View style={[styles.navArrow, styles.navArrowEnd]}>
+              <ChevronRight size={22} color="#86EFAC" strokeWidth={2.5} />
+            </View>
+          ) : (
+            // Last passage — gradient arrow: marks day done + goes to next day
+            <TouchableOpacity
+              style={styles.gradientArrowBtn}
+              onPress={handleCompleteAndAdvance}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={['#FF6596', '#C084FC']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.gradientArrowInner}
+              >
+                <ChevronRight size={22} color="#fff" strokeWidth={2.5} />
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* ─── Books Modal */}
@@ -484,10 +490,16 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 14,
+  },
+  bottomBarInner: {
+    width: '100%',
+    maxWidth: 640,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 14,
-    paddingHorizontal: 20,
+    justifyContent: 'space-between',
     gap: 12,
   },
   navArrow: {

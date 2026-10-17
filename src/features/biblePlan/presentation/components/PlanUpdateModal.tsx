@@ -150,7 +150,9 @@ const styles = StyleSheet.create({
   },
   card: {
     width: '100%',
-    borderRadius: 20,
+    maxWidth: 440,
+    alignSelf: 'center',
+    borderRadius: 24,
     overflow: 'hidden',
     backgroundColor: '#fff',
     shadowColor: '#000',

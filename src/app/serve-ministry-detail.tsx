@@ -147,13 +147,15 @@ export default function ServeMinistryDetailScreen() {
           styles.content,
           { 
             paddingTop: headerHeight + 10, 
-            paddingBottom: hasStickyFooter ? insets.bottom + 120 : insets.bottom + 40 
+            paddingBottom: hasStickyFooter ? insets.bottom + 120 : insets.bottom + 40,
+            alignItems: 'center'
           }
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* ─── Hero Section ─── */}
-        <View style={styles.heroCard}>
+        <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center' }}>
+          {/* ─── Hero Section ─── */}
+          <View style={styles.heroCard}>
           <LinearGradient
             colors={['#FFE8F1', '#F5F2FF']}
             start={{ x: 0, y: 0 }}
@@ -383,6 +385,7 @@ export default function ServeMinistryDetailScreen() {
             </View>
           </SoftCard>
         ) : null}
+        </View>
       </Animated.ScrollView>
 
       {/* ─── Sticky Footer Actions ─── */}
@@ -391,7 +394,7 @@ export default function ServeMinistryDetailScreen() {
           <BlurView intensity={90} tint="light" style={StyleSheet.absoluteFill} />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.85)' }]} pointerEvents="none" />
           
-          <View style={styles.actions}>
+          <View style={[styles.actions, { width: '100%', maxWidth: 640, alignSelf: 'center' }]}>
             {showWithdrawAction && (
               <TouchableOpacity
                 style={styles.withdrawBtn}

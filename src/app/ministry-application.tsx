@@ -146,16 +146,18 @@ export default function MinistryApplicationScreen() {
         <BounceCard bounceScale={0.85} style={styles.backBtn} onPress={() => router.back()}>
           <ArrowLeft size={22} color="#1a1a1a" />
         </BounceCard>
-        <View style={styles.headerText}>
-          <Text style={styles.headerTitle}>Apply to Join</Text>
-          {ministry ? (
-            <Text style={styles.headerSubtitle}>{ministry.name}</Text>
-          ) : null}
+        <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center', gap: 12 }}>
+          <View style={styles.headerText}>
+            <Text style={styles.headerTitle}>Apply to Join</Text>
+            {ministry ? (
+              <Text style={styles.headerSubtitle}>{ministry.name}</Text>
+            ) : null}
+          </View>
         </View>
       </LinearGradient>
 
       <ScrollView
-        contentContainerStyle={[styles.form, { paddingBottom: insets.bottom + 32 }]}
+        contentContainerStyle={[styles.form, { paddingBottom: insets.bottom + 32, maxWidth: 640, width: '100%', alignSelf: 'center' }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >

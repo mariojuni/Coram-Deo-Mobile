@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppModal, { ModalDragArea } from '@/components/ui/AppModal';
 import { BounceCard } from '@/components/ui/BounceCard';
 import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 
 interface BibleReaderProps {
   preferences: any;
@@ -110,6 +111,7 @@ export default function BibleReader({
   const tabBarVisible = useUIStore((s) => s.tabBarVisible);
   const setHideCompactPlayer = useUIStore((s) => s.setHideCompactPlayer);
   const insets = useSafeAreaInsets();
+  const { isTablet } = useResponsiveLayout();
   
   const [activeVerse, setActiveVerse] = useState<Verse | null>(null);
   const { activeBook, activeChapter } = preferences;
@@ -713,21 +715,44 @@ export default function BibleReader({
           style={[
             styles.highlightModal, 
             { 
-              bottom: 0, 
-              left: Math.max(insets.left, 0),
-              right: Math.max(insets.right, 0),
-              width: 'auto', // Override 100% width
+              bottom: isTablet ? Math.max(insets.bottom, 20) : 0, 
               transform: [{ translateY: highlightTranslateY }] 
-            }
+            },
+            isTablet && styles.highlightModalTablet,
           ]}
           {...highlightPanResponder.panHandlers}
         >
-          <BlurView intensity={80} tint="light" style={[StyleSheet.absoluteFill, { borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden' }]} />
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)', borderTopLeftRadius: 24, borderTopRightRadius: 24 }]} pointerEvents="none" />
+          <BlurView 
+            intensity={80} 
+            tint="light" 
+            style={[
+              StyleSheet.absoluteFill, 
+              { 
+                borderTopLeftRadius: 24, 
+                borderTopRightRadius: 24, 
+                borderBottomLeftRadius: isTablet ? 24 : 0,
+                borderBottomRightRadius: isTablet ? 24 : 0,
+                overflow: 'hidden' 
+              }
+            ]} 
+          />
+          <View 
+            style={[
+              StyleSheet.absoluteFill, 
+              { 
+                backgroundColor: 'rgba(255, 255, 255, 0.65)', 
+                borderTopLeftRadius: 24, 
+                borderTopRightRadius: 24,
+                borderBottomLeftRadius: isTablet ? 24 : 0,
+                borderBottomRightRadius: isTablet ? 24 : 0,
+              }
+            ]} 
+            pointerEvents="none" 
+          />
           
           <View style={styles.highlightDragHandle} />
           
-          <View style={[styles.highlightModalContent, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+          <View style={[styles.highlightModalContent, { paddingBottom: isTablet ? 16 : Math.max(insets.bottom, 16) }]}>
             <View style={styles.actionsContainer}>
               {/* Copy Card */}
               <TouchableOpacity style={styles.actionButton} onPress={handleCopy}>
@@ -795,21 +820,44 @@ export default function BibleReader({
         style={[
           styles.highlightModal, 
           { 
-            bottom: 0, 
-            left: Math.max(insets.left, 0),
-            right: Math.max(insets.right, 0),
-            width: 'auto',
+            bottom: isTablet ? Math.max(insets.bottom, 20) : 0, 
             transform: [{ translateY: fontTranslateY }] 
-          }
+          },
+          isTablet && styles.highlightModalTablet,
         ]}
         {...fontPanResponder.panHandlers}
       >
-        <BlurView intensity={80} tint="light" style={[StyleSheet.absoluteFill, { borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden' }]} />
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)', borderTopLeftRadius: 24, borderTopRightRadius: 24 }]} pointerEvents="none" />
+        <BlurView 
+          intensity={80} 
+          tint="light" 
+          style={[
+            StyleSheet.absoluteFill, 
+            { 
+              borderTopLeftRadius: 24, 
+              borderTopRightRadius: 24, 
+              borderBottomLeftRadius: isTablet ? 24 : 0,
+              borderBottomRightRadius: isTablet ? 24 : 0,
+              overflow: 'hidden' 
+            }
+          ]} 
+        />
+        <View 
+          style={[
+            StyleSheet.absoluteFill, 
+            { 
+              backgroundColor: 'rgba(255, 255, 255, 0.65)', 
+              borderTopLeftRadius: 24, 
+              borderTopRightRadius: 24,
+              borderBottomLeftRadius: isTablet ? 24 : 0,
+              borderBottomRightRadius: isTablet ? 24 : 0,
+            }
+          ]} 
+          pointerEvents="none" 
+        />
         
         <View style={styles.highlightDragHandle} />
         
-        <View style={[styles.highlightModalContent, { paddingBottom: Math.max(insets.bottom, 16), justifyContent: 'space-evenly', paddingTop: 16 }]}>
+        <View style={[styles.highlightModalContent, { paddingBottom: isTablet ? 16 : Math.max(insets.bottom, 16), justifyContent: 'space-evenly', paddingTop: 16 }]}>
           <TouchableOpacity 
             style={styles.actionButton} 
             onPress={() => updatePreferences({ fontSize: Math.max(12, fontSize - 2) })}
@@ -981,6 +1029,7 @@ const styles = StyleSheet.create({  container: { flex: 1, backgroundColor: '#faf
     alignSelf: 'center',
     zIndex: 10,
     width: '100%',
+    maxWidth: 640,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     borderBottomLeftRadius: 0,
@@ -990,6 +1039,19 @@ const styles = StyleSheet.create({  container: { flex: 1, backgroundColor: '#faf
     borderTopWidth: 1,
     borderLeftWidth: 1,
     borderRightWidth: 1,
+  },
+  highlightModalTablet: {
+    borderRadius: 24,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    borderBottomWidth: 1,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.08)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 8,
   },
   highlightDragHandle: {
     width: 40,

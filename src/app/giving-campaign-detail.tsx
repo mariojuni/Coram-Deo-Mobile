@@ -73,15 +73,17 @@ export default function GivingCampaignDetailScreen() {
           </View>
         </View>
         
-        <Animated.ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <Animated.ScrollView style={styles.content} contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
           <ShimmerSkeleton width="100%" height={280} borderRadius={0} />
           <View style={styles.detailsContainer}>
-            <ShimmerSkeleton width={120} height={24} borderRadius={12} style={{ marginBottom: 16 }} />
-            <ShimmerSkeleton width="80%" height={34} style={{ marginBottom: 16 }} />
-            <ShimmerSkeleton width="100%" height={140} borderRadius={24} style={{ marginBottom: 24 }} />
-            <ShimmerSkeleton width="100%" height={20} style={{ marginBottom: 8 }} />
-            <ShimmerSkeleton width="90%" height={20} style={{ marginBottom: 8 }} />
-            <ShimmerSkeleton width="80%" height={20} />
+            <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center' }}>
+              <ShimmerSkeleton width={120} height={24} borderRadius={12} style={{ marginBottom: 16 }} />
+              <ShimmerSkeleton width="80%" height={34} style={{ marginBottom: 16 }} />
+              <ShimmerSkeleton width="100%" height={140} borderRadius={24} style={{ marginBottom: 24 }} />
+              <ShimmerSkeleton width="100%" height={20} style={{ marginBottom: 8 }} />
+              <ShimmerSkeleton width="90%" height={20} style={{ marginBottom: 8 }} />
+              <ShimmerSkeleton width="80%" height={20} />
+            </View>
           </View>
         </Animated.ScrollView>
       </View>
@@ -162,6 +164,7 @@ export default function GivingCampaignDetailScreen() {
       
       <Animated.ScrollView 
         style={styles.content} 
+        contentContainerStyle={{ flexGrow: 1 }}
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
         scrollEventThrottle={16}
@@ -189,52 +192,54 @@ export default function GivingCampaignDetailScreen() {
         </Animated.View>
         
         <View style={styles.detailsContainer}>
-          {campaign.phaseLabel && (
-            <View style={styles.phaseLabelBadge}>
-              <Text style={styles.phaseLabel}>{campaign.phaseLabel.toUpperCase()}</Text>
-            </View>
-          )}
-          <Text style={styles.title}>{campaign.title}</Text>
-          
-          <View style={styles.progressSection}>
-            <View style={styles.progressRow}>
-              <Text style={styles.progressLabel}>Goal</Text>
-              <Text style={styles.progressValue}>₱{campaign.goalAmount.toLocaleString()}</Text>
+          <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center' }}>
+            {campaign.phaseLabel && (
+              <View style={styles.phaseLabelBadge}>
+                <Text style={styles.phaseLabel}>{campaign.phaseLabel.toUpperCase()}</Text>
+              </View>
+            )}
+            <Text style={styles.title}>{campaign.title}</Text>
+            
+            <View style={styles.progressSection}>
+              <View style={styles.progressRow}>
+                <Text style={styles.progressLabel}>Goal</Text>
+                <Text style={styles.progressValue}>₱{campaign.goalAmount.toLocaleString()}</Text>
+              </View>
+              
+              <View style={styles.progressBarBg}>
+                <LinearGradient 
+                  colors={['#FF6596', '#FF8AAB']} 
+                  start={{ x: 0, y: 0 }} 
+                  end={{ x: 1, y: 0 }} 
+                  style={[styles.progressBarFill, { width: `${progress}%` }]} 
+                />
+              </View>
+              
+              <View style={styles.progressStatsRow}>
+                <View>
+                  <Text style={styles.statLabel}>Raised</Text>
+                  <Text style={styles.statValueRaised}>₱{campaign.raisedAmount.toLocaleString()}</Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={styles.statLabel}>Remaining</Text>
+                  <Text style={styles.statValueRemaining}>₱{remaining.toLocaleString()}</Text>
+                </View>
+              </View>
             </View>
             
-            <View style={styles.progressBarBg}>
-              <LinearGradient 
-                colors={['#FF6596', '#FF8AAB']} 
-                start={{ x: 0, y: 0 }} 
-                end={{ x: 1, y: 0 }} 
-                style={[styles.progressBarFill, { width: `${progress}%` }]} 
-              />
-            </View>
+            <Text style={styles.description}>{campaign.description}</Text>
             
-            <View style={styles.progressStatsRow}>
-              <View>
-                <Text style={styles.statLabel}>Raised</Text>
-                <Text style={styles.statValueRaised}>₱{campaign.raisedAmount.toLocaleString()}</Text>
+            {campaign.allowPublicExpenses && campaign.expenseAmount > 0 && (
+              <View style={styles.expenseSection}>
+                <Text style={styles.expenseTitle}>Project Expenses</Text>
+                <Text style={styles.expenseText}>
+                  So far, ₱{campaign.expenseAmount.toLocaleString()} has been spent towards this project.
+                </Text>
               </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={styles.statLabel}>Remaining</Text>
-                <Text style={styles.statValueRemaining}>₱{remaining.toLocaleString()}</Text>
-              </View>
-            </View>
+            )}
+            
+            <View style={{ height: 120 + insets.bottom }} />
           </View>
-          
-          <Text style={styles.description}>{campaign.description}</Text>
-          
-          {campaign.allowPublicExpenses && campaign.expenseAmount > 0 && (
-            <View style={styles.expenseSection}>
-              <Text style={styles.expenseTitle}>Project Expenses</Text>
-              <Text style={styles.expenseText}>
-                So far, ₱{campaign.expenseAmount.toLocaleString()} has been spent towards this project.
-              </Text>
-            </View>
-          )}
-          
-          <View style={{ height: 120 + insets.bottom }} />
         </View>
       </Animated.ScrollView>
 
@@ -243,10 +248,12 @@ export default function GivingCampaignDetailScreen() {
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.65)', borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)' }]} pointerEvents="none" />
         
-        <PrimaryGradientButton
-          title="Give to this Project"
-          onPress={withDebounce(() => router.push({ pathname: '/giving-form', params: { campaignId: campaign.id, fundId: campaign.fundId } }))}
-        />
+        <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center', paddingHorizontal: 20 }}>
+          <PrimaryGradientButton
+            title="Give to this Project"
+            onPress={withDebounce(() => router.push({ pathname: '/giving-form', params: { campaignId: campaign.id, fundId: campaign.fundId } }))}
+          />
+        </View>
       </View>
     </View>
   );
@@ -305,6 +312,7 @@ const styles = StyleSheet.create({
     height: 280,
   },
   detailsContainer: {
+    flex: 1,
     padding: 24,
     backgroundColor: '#fff',
     borderTopLeftRadius: 32,
