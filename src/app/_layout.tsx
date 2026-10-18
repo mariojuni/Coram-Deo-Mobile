@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter, useSegments } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useColorScheme, View, Text, StyleSheet, Platform, Dimensions } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
@@ -50,6 +50,7 @@ export default function RootLayout() {
   const segments = useSegments();
   const router = useRouter();
   const [hasSeenWalkthrough, setHasSeenWalkthrough] = useState<boolean | null>(null);
+  const lastOrientationUnlockedRef = useRef<boolean | null>(null);
 
   useEffect(() => {
     AsyncStorage.getItem('hasSeenWalkthrough').then((value) => {
@@ -64,11 +65,15 @@ export default function RootLayout() {
 
     const allowedLandscapeRoutes = ['bible', 'version-manager', 'bible-notes', '[dayId]'];
     const isLandscapeAllowed = segments.some(segment => allowedLandscapeRoutes.includes(segment));
+    const shouldUnlock = isTabletDevice || isLandscapeAllowed;
 
-    if (isTabletDevice || isLandscapeAllowed) {
-      ScreenOrientation.unlockAsync().catch(() => {});
-    } else {
-      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+    if (lastOrientationUnlockedRef.current !== shouldUnlock) {
+      lastOrientationUnlockedRef.current = shouldUnlock;
+      if (shouldUnlock) {
+        ScreenOrientation.unlockAsync().catch(() => {});
+      } else {
+        ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+      }
     }
   }, [segments]);
 

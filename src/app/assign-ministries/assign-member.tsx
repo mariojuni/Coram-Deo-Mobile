@@ -174,7 +174,7 @@ export default function AssignMemberScreen() {
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
         <View style={ms.dragHandle} />
-        <View style={ms.headerContent}>
+        <View style={[ms.headerContent, { maxWidth: 640, width: '100%', alignSelf: 'center' }]}>
           <BounceCard bounceScale={0.85} style={ms.headerCircle} onPress={() => router.back()} hitSlop={8} activeOpacity={0.8}>
             <ArrowLeft size={24} color="#111827" strokeWidth={2} />
           </BounceCard>
@@ -186,7 +186,7 @@ export default function AssignMemberScreen() {
         </View>
       </View>
 
-      <View style={{ paddingTop: 90, flex: 1 }}>
+      <View style={{ paddingTop: 90, flex: 1, maxWidth: 640, width: '100%', alignSelf: 'center' }}>
         <View style={ps.searchRow}>
           <Search size={16} color="#aaa" />
           <TextInput

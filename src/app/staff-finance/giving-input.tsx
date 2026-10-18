@@ -15,11 +15,13 @@ import { createManualGivingRecord } from '../../features/giving/data/financeAdmi
 import { PaymentMethodType } from '../../features/giving/domain/giving.types';
 import { ModernDropdown, DropdownOption } from '../../components/ui/ModernDropdown';
 import { useEffect, useMemo } from 'react';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { formatMemberName } from '../../features/member/domain/member.utils';
 
 export default function GivingInputScreen() {
   const router = useRouter();
   const { userProfile } = useAuthStore();
+  const { horizontalPadding } = useResponsiveLayout();
   const { members, households, initializeMembersListener, initializeHouseholdsListener } = useMemberStore();
   const { funds, campaigns } = useGiving();
   const [loading, setLoading] = useState(false);
@@ -142,7 +144,7 @@ export default function GivingInputScreen() {
       <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 24) }]} pointerEvents="box-none">
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
-        <View style={styles.headerContent}>
+        <View style={[styles.headerContent, { maxWidth: 640, width: '100%', alignSelf: 'center', paddingHorizontal: horizontalPadding }]}>
           <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => router.back()} hitSlop={8}>
             <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
           </BounceCard>
@@ -155,8 +157,19 @@ export default function GivingInputScreen() {
         style={{ flex: 1 }} 
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 24) + 70 }]} keyboardShouldPersistTaps="handled">
-        <Text style={styles.label}>Giver Type</Text>
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            {
+              paddingTop: Math.max(insets.top, 24) + 70,
+              paddingHorizontal: horizontalPadding,
+              alignItems: 'center',
+            },
+          ]}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center' }}>
+            <Text style={styles.label}>Giver Type</Text>
         <View style={styles.chipRow}>
           {['loose_offering', 'member', 'household', 'non_member', 'anonymous'].map(type => (
             <TouchableOpacity 
@@ -327,6 +340,7 @@ export default function GivingInputScreen() {
         </TouchableOpacity>
         
         <View style={{ height: 40 }} />
+          </View>
         </ScrollView>
         <CustomDatePicker
           visible={isDatePickerVisible}
@@ -376,7 +390,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginHorizontal: 12,
   },
-  content: { padding: 24, paddingBottom: 100 },
+  content: { paddingVertical: 24, paddingBottom: 100 },
   label: { fontSize: 14, fontWeight: '600', color: '#1a1a1a', marginBottom: 8 },
   inputGroup: { marginBottom: 20 },
   input: {

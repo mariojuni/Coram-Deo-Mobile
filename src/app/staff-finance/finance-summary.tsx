@@ -10,12 +10,14 @@ import { getMonthlyFinanceSummary } from '../../features/giving/data/financeAdmi
 import { GivingRecord, GivingExpense } from '../../features/giving/domain/giving.types';
 import { getTopBarButtonShadowStyle, SoftCard } from '@/components/ui/SoftCard';
 import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 
 export default function FinanceSummaryScreen() {
   const router = useRouter();
   const { userProfile } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const insets = useSafeAreaInsets();
+  const { isTablet, horizontalPadding } = useResponsiveLayout();
   const [summary, setSummary] = useState<{
     totalGiving: number; 
     totalExpenses: number; 
@@ -70,7 +72,7 @@ export default function FinanceSummaryScreen() {
       <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 24) }]} pointerEvents="box-none">
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
-        <View style={styles.headerContent}>
+        <View style={[styles.headerContent, { maxWidth: 640, width: '100%', alignSelf: 'center', paddingHorizontal: horizontalPadding }]}>
           <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => router.back()} hitSlop={8}>
             <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
           </BounceCard>
@@ -93,125 +95,125 @@ export default function FinanceSummaryScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 24) + 70 }]}>
-        <View style={{ marginBottom: 16 }}>
-          <ScrollView 
-            ref={scrollViewRef}
-            horizontal 
-            showsHorizontalScrollIndicator={false} 
-            onContentSizeChange={handleContentSizeChange}
-            contentContainerStyle={{ gap: 8, paddingHorizontal: 2 }}
-          >
-            {months.map((month, index) => {
-              const isSelected = month.getMonth() === selectedMonth.getMonth() && month.getFullYear() === selectedMonth.getFullYear();
-              return (
-                <TouchableOpacity 
-                  key={index} 
-                  onPress={() => setSelectedMonth(month)}
-                  style={[styles.monthChip, isSelected && styles.monthChipActive]}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.monthChipText, isSelected && styles.monthChipTextActive]}>
-                    {month.toLocaleDateString('en-US', { month: 'short' })}
-                    {month.getFullYear() !== new Date().getFullYear() ? ` '${month.getFullYear().toString().slice(2)}` : ''}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-
-        {loading ? (
-          <View>
-            <ShimmerSkeleton width={100} height={20} borderRadius={6} style={{ marginBottom: 12 }} />
-            <ShimmerSkeleton width="100%" height={90} borderRadius={20} style={{ marginBottom: 16 }} />
-            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
-              <ShimmerSkeleton width="48%" height={90} borderRadius={20} />
-              <ShimmerSkeleton width="48%" height={90} borderRadius={20} />
-            </View>
-            <ShimmerSkeleton width="100%" height={70} borderRadius={20} style={{ marginBottom: 24 }} />
-            <ShimmerSkeleton width={120} height={18} borderRadius={6} style={{ marginBottom: 12 }} />
-            <ShimmerSkeleton width="100%" height={56} borderRadius={16} style={{ marginBottom: 8 }} />
-            <ShimmerSkeleton width="100%" height={56} borderRadius={16} style={{ marginBottom: 8 }} />
+      <ScrollView contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 24) + 70, paddingHorizontal: horizontalPadding }]}>
+        <View style={{ maxWidth: 640, width: '100%', alignSelf: 'center' }}>
+          <View style={{ marginBottom: 16 }}>
+            <ScrollView 
+              ref={scrollViewRef}
+              horizontal 
+              showsHorizontalScrollIndicator={false} 
+              onContentSizeChange={handleContentSizeChange}
+              contentContainerStyle={{ gap: 8, paddingHorizontal: 2 }}
+            >
+              {months.map((month, index) => {
+                const isSelected = month.getMonth() === selectedMonth.getMonth() && month.getFullYear() === selectedMonth.getFullYear();
+                return (
+                  <TouchableOpacity 
+                    key={index} 
+                    onPress={() => setSelectedMonth(month)}
+                    style={[styles.monthChip, isSelected && styles.monthChipActive]}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.monthChipText, isSelected && styles.monthChipTextActive]}>
+                      {month.toLocaleDateString('en-US', { month: 'short' })}
+                      {month.getFullYear() !== new Date().getFullYear() ? ` '${month.getFullYear().toString().slice(2)}` : ''}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           </View>
-        ) : (
-          <>
-            <View style={[styles.mainCard, { backgroundColor: balance >= 0 ? '#10B981' : '#EF4444' }]}>
-              <Text style={styles.mainCardLabel}>Net Balance</Text>
-              <Text style={styles.mainCardAmount}>PHP {balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+
+          {loading ? (
+            <View>
+              <ShimmerSkeleton width={100} height={20} borderRadius={6} style={{ marginBottom: 12 }} />
+              <ShimmerSkeleton width="100%" height={90} borderRadius={20} style={{ marginBottom: 16 }} />
+              <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+                <ShimmerSkeleton width="48%" height={90} borderRadius={20} />
+                <ShimmerSkeleton width="48%" height={90} borderRadius={20} />
+              </View>
+              <ShimmerSkeleton width="100%" height={70} borderRadius={20} style={{ marginBottom: 24 }} />
+              <ShimmerSkeleton width={120} height={18} borderRadius={6} style={{ marginBottom: 12 }} />
+              <ShimmerSkeleton width="100%" height={56} borderRadius={16} style={{ marginBottom: 8 }} />
+              <ShimmerSkeleton width="100%" height={56} borderRadius={16} style={{ marginBottom: 8 }} />
             </View>
+          ) : (
+            <>
+              <View style={[styles.mainCard, { backgroundColor: balance >= 0 ? '#10B981' : '#EF4444' }]}>
+                <Text style={styles.mainCardLabel}>Net Balance</Text>
+                <Text style={styles.mainCardAmount}>PHP {balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+              </View>
 
-            <View style={styles.row}>
-              <SoftCard style={{ flex: 1, borderRadius: 24 }} innerStyle={{ borderRadius: 23 }}>
-                <View style={styles.statCard}>
-                  <View style={[styles.iconWrap, { backgroundColor: '#E0F2FE' }]}>
-                    <TrendingUp size={24} color="#0284C7" />
-                  </View>
-                  <Text style={styles.statLabel}>Total Income</Text>
-                  <Text style={styles.statValue}>PHP {summary.totalGiving.toLocaleString(undefined, { minimumFractionDigits: 2 })}</Text>
-                </View>
-              </SoftCard>
-
-              <SoftCard style={{ flex: 1, borderRadius: 24 }} innerStyle={{ borderRadius: 23 }}>
-                <View style={styles.statCard}>
-                  <View style={[styles.iconWrap, { backgroundColor: '#FEE2E2' }]}>
-                    <TrendingDown size={24} color="#DC2626" />
-                  </View>
-                  <Text style={styles.statLabel}>Total Expenses</Text>
-                  <Text style={styles.statValue}>PHP {summary.totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 2 })}</Text>
-                </View>
-              </SoftCard>
-            </View>
-
-
-
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Recent Income</Text>
-            </View>
-            {summary.givingRecords.length === 0 ? (
-              <Text style={styles.emptyListText}>No income records this month.</Text>
-            ) : (
-              summary.givingRecords.slice(0, 5).map(record => (
-                <SoftCard key={record.id} style={{ marginBottom: 8, borderRadius: 16 }} innerStyle={{ borderRadius: 15 }}>
-                  <View style={styles.listItem}>
-                    <View style={styles.listItemLeft}>
-                      <Text style={[styles.listItemTitle, { textTransform: 'capitalize' }]} numberOfLines={1}>{record.donorName || 'Anonymous'}</Text>
-                      <Text style={[styles.listItemSub, { textTransform: 'capitalize' }]}>
-                        {new Date(record.date || record.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} • {record.fundType || 'Tithe'}
-                      </Text>
+              <View style={styles.row}>
+                <SoftCard style={{ flex: 1, borderRadius: 24 }} innerStyle={{ borderRadius: 23 }}>
+                  <View style={styles.statCard}>
+                    <View style={[styles.iconWrap, { backgroundColor: '#E0F2FE' }]}>
+                      <TrendingUp size={24} color="#0284C7" />
                     </View>
-                    <Text style={styles.listItemAmountIncome}>
-                      +₱{record.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </Text>
+                    <Text style={styles.statLabel}>Total Income</Text>
+                    <Text style={styles.statValue}>PHP {summary.totalGiving.toLocaleString(undefined, { minimumFractionDigits: 2 })}</Text>
                   </View>
                 </SoftCard>
-              ))
-            )}
 
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Recent Expenses</Text>
-            </View>
-            {summary.expenses.length === 0 ? (
-              <Text style={styles.emptyListText}>No expenses this month.</Text>
-            ) : (
-              summary.expenses.slice(0, 5).map(expense => (
-                <SoftCard key={expense.id} style={{ marginBottom: 8, borderRadius: 16 }} innerStyle={{ borderRadius: 15 }}>
-                  <View style={styles.listItem}>
-                    <View style={styles.listItemLeft}>
-                      <Text style={[styles.listItemTitle, { textTransform: 'capitalize' }]} numberOfLines={1}>{expense.payee || 'Unknown'}</Text>
-                      <Text style={[styles.listItemSub, { textTransform: 'capitalize' }]}>
-                        {new Date(expense.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} • {(expense.category || '').replace(/_/g, ' ')}
-                      </Text>
+                <SoftCard style={{ flex: 1, borderRadius: 24 }} innerStyle={{ borderRadius: 23 }}>
+                  <View style={styles.statCard}>
+                    <View style={[styles.iconWrap, { backgroundColor: '#FEE2E2' }]}>
+                      <TrendingDown size={24} color="#DC2626" />
                     </View>
-                    <Text style={styles.listItemAmountExpense}>
-                      -₱{expense.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </Text>
+                    <Text style={styles.statLabel}>Total Expenses</Text>
+                    <Text style={styles.statValue}>PHP {summary.totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 2 })}</Text>
                   </View>
                 </SoftCard>
-              ))
-            )}
-          </>
-        )}
+              </View>
+
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Recent Income</Text>
+              </View>
+              {summary.givingRecords.length === 0 ? (
+                <Text style={styles.emptyListText}>No income records this month.</Text>
+              ) : (
+                summary.givingRecords.slice(0, 5).map(record => (
+                  <SoftCard key={record.id} style={{ marginBottom: 8, borderRadius: 16 }} innerStyle={{ borderRadius: 15 }}>
+                    <View style={styles.listItem}>
+                      <View style={styles.listItemLeft}>
+                        <Text style={[styles.listItemTitle, { textTransform: 'capitalize' }]} numberOfLines={1}>{record.donorName || 'Anonymous'}</Text>
+                        <Text style={[styles.listItemSub, { textTransform: 'capitalize' }]}>
+                          {new Date(record.date || record.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} • {record.fundType || 'Tithe'}
+                        </Text>
+                      </View>
+                      <Text style={styles.listItemAmountIncome}>
+                        +₱{record.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </Text>
+                    </View>
+                  </SoftCard>
+                ))
+              )}
+
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Recent Expenses</Text>
+              </View>
+              {summary.expenses.length === 0 ? (
+                <Text style={styles.emptyListText}>No expenses this month.</Text>
+              ) : (
+                summary.expenses.slice(0, 5).map(expense => (
+                  <SoftCard key={expense.id} style={{ marginBottom: 8, borderRadius: 16 }} innerStyle={{ borderRadius: 15 }}>
+                    <View style={styles.listItem}>
+                      <View style={styles.listItemLeft}>
+                        <Text style={[styles.listItemTitle, { textTransform: 'capitalize' }]} numberOfLines={1}>{expense.payee || 'Unknown'}</Text>
+                        <Text style={[styles.listItemSub, { textTransform: 'capitalize' }]}>
+                          {new Date(expense.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} • {(expense.category || '').replace(/_/g, ' ')}
+                        </Text>
+                      </View>
+                      <Text style={styles.listItemAmountExpense}>
+                        -₱{expense.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </Text>
+                    </View>
+                  </SoftCard>
+                ))
+              )}
+            </>
+          )}
+        </View>
       </ScrollView>
     </View>
   );

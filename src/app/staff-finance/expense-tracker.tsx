@@ -30,12 +30,14 @@ const FALLBACK_CATEGORIES: DropdownOption<string>[] = [
 ];
 
 import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 
 export default function ExpenseTrackerScreen() {
   const router = useRouter();
   const { userProfile } = useAuthStore();
   const { funds } = useGiving();
   const insets = useSafeAreaInsets();
+  const { isTablet, horizontalPadding } = useResponsiveLayout();
   
   const fundOptions: DropdownOption[] = useMemo(() => {
     return funds.map(f => ({
@@ -200,7 +202,7 @@ export default function ExpenseTrackerScreen() {
       <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 24) }]} pointerEvents="box-none">
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
-        <View style={styles.headerContent}>
+        <View style={[styles.headerContent, { maxWidth: 640, width: '100%', alignSelf: 'center', paddingHorizontal: horizontalPadding }]}>
           <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => router.back()} hitSlop={8}>
             <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
           </BounceCard>
@@ -212,7 +214,7 @@ export default function ExpenseTrackerScreen() {
       </View>
 
       {loading ? (
-        <View style={[styles.list, { paddingTop: Math.max(insets.top, 24) + 70 }]}>
+        <View style={[styles.list, { paddingTop: Math.max(insets.top, 24) + 70, paddingHorizontal: horizontalPadding, maxWidth: 640, width: '100%', alignSelf: 'center' }]}>
           {Array.from({ length: 4 }).map((_, index) => (
             <SoftCard key={`skel-expense-${index}`} style={{ marginBottom: 16, borderRadius: 24 }} innerStyle={{ borderRadius: 23, padding: 20 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14 }}>
@@ -229,7 +231,7 @@ export default function ExpenseTrackerScreen() {
           ))}
         </View>
       ) : expenses.length === 0 ? (
-        <View style={styles.center}>
+        <View style={[styles.center, { maxWidth: 640, width: '100%', alignSelf: 'center', paddingHorizontal: horizontalPadding }]}>
           <Receipt size={48} color="#FF6596" style={{ marginBottom: 16, opacity: 0.8 }} />
           <Text style={styles.emptyText}>No expenses yet</Text>
           <Text style={styles.emptySubText}>Tap the + button to add a new expense.</Text>
@@ -239,7 +241,7 @@ export default function ExpenseTrackerScreen() {
           data={expenses}
           keyExtractor={(item, index) => item.id || `expense-${index}`}
           renderItem={renderItem}
-          contentContainerStyle={[styles.list, { paddingTop: Math.max(insets.top, 24) + 70 }]}
+          contentContainerStyle={[styles.list, { paddingTop: Math.max(insets.top, 24) + 70, paddingHorizontal: horizontalPadding, maxWidth: 640, width: '100%', alignSelf: 'center' }]}
         />
       )}
 
@@ -260,7 +262,7 @@ export default function ExpenseTrackerScreen() {
             <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
             <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
             <View style={styles.modalDragHandle} />
-            <View style={styles.modalHeaderContent}>
+            <View style={[styles.modalHeaderContent, { maxWidth: 640, width: '100%', alignSelf: 'center' }]}>
               <View style={styles.headerCirclePlaceholder} />
               <Text style={styles.modalHeaderTitle} numberOfLines={1}>Add Expense</Text>
               <BounceCard bounceScale={0.85} style={styles.modalCloseCircle} onPress={() => setAddModalVisible(false)} hitSlop={8} activeOpacity={0.8}>
@@ -270,7 +272,7 @@ export default function ExpenseTrackerScreen() {
           </ModalDragArea>
 
           <ScrollView ref={scrollRef} contentContainerStyle={styles.modalScrollContent} showsVerticalScrollIndicator={false}>
-            <View style={styles.contentWrap}>
+            <View style={[styles.contentWrap, { maxWidth: 640, width: '100%', alignSelf: 'center' }]}>
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Amount (₱) *</Text>
                 <TextInput 

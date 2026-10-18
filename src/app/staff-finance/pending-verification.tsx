@@ -14,11 +14,13 @@ import { GivingRecord } from '../../features/giving/domain/giving.types';
 import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 import { SoftCard } from '@/components/ui/SoftCard';
 import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 
 export default function PendingVerificationScreen() {
   const router = useRouter();
   const { userProfile } = useAuthStore();
   const insets = useSafeAreaInsets();
+  const { isTablet, horizontalPadding, maxModalWidth } = useResponsiveLayout();
   
   const [records, setRecords] = useState<GivingRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -169,16 +171,17 @@ export default function PendingVerificationScreen() {
       <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 24) }]} pointerEvents="box-none">
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
-        <View style={styles.headerContent}>
+        <View style={[styles.headerContent, { maxWidth: 640, width: '100%', alignSelf: 'center', paddingHorizontal: horizontalPadding }]}>
           <BounceCard bounceScale={0.85} style={styles.headerCircle} onPress={() => router.back()} hitSlop={8}>
             <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
           </BounceCard>
           <Text style={styles.headerTitle} numberOfLines={1}>Pending Verification</Text>
+          <View style={{ width: 40 }} />
         </View>
       </View>
 
       {loading ? (
-        <View style={[styles.list, { paddingTop: Math.max(insets.top, 24) + 70 }]}>
+        <View style={[styles.list, { paddingTop: Math.max(insets.top, 24) + 70, paddingHorizontal: horizontalPadding, maxWidth: 640, width: '100%', alignSelf: 'center' }]}>
           {Array.from({ length: 3 }).map((_, index) => (
             <SoftCard key={`skel-pending-${index}`} style={{ marginBottom: 16, borderRadius: 24 }} innerStyle={{ borderRadius: 23, padding: 20 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
@@ -201,7 +204,7 @@ export default function PendingVerificationScreen() {
           ))}
         </View>
       ) : records.length === 0 ? (
-        <View style={styles.center}>
+        <View style={[styles.center, { maxWidth: 640, width: '100%', alignSelf: 'center', paddingHorizontal: horizontalPadding }]}>
           <CheckCircle size={48} color="#10B981" style={{ marginBottom: 16, opacity: 0.8 }} />
           <Text style={styles.emptyText}>All caught up!</Text>
           <Text style={styles.emptySubText}>There are no pending records to verify.</Text>
@@ -211,14 +214,14 @@ export default function PendingVerificationScreen() {
           data={records}
           keyExtractor={item => item.id}
           renderItem={renderItem}
-          contentContainerStyle={[styles.list, { paddingTop: Math.max(insets.top, 24) + 70 }]}
+          contentContainerStyle={[styles.list, { paddingTop: Math.max(insets.top, 24) + 70, paddingHorizontal: horizontalPadding, maxWidth: 640, width: '100%', alignSelf: 'center' }]}
         />
       )}
 
       {/* Rejection Modal */}
       <Modal visible={rejectModalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { maxWidth: maxModalWidth || 480, alignSelf: 'center' }]}>
             <Text style={styles.modalTitle}>Reject Record</Text>
             <Text style={styles.modalDesc}>Please provide a reason for rejecting this record. This cannot be undone.</Text>
             <TextInput

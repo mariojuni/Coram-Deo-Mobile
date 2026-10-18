@@ -1,3 +1,4 @@
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useMemberStore } from '@/store/useMemberStore';
 import { BounceCard } from '@/components/ui/BounceCard';
@@ -37,6 +38,7 @@ export default function StaffMinistryApplicationDetailScreen() {
   const { applicationId } = useLocalSearchParams<{ applicationId: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { horizontalPadding } = useResponsiveLayout();
   const userProfile = useAuthStore((s) => s.userProfile);
   const members = useMemberStore((s) => s.members);
   const setSyncToastMessage = useUIStore((s) => s.setSyncToastMessage);
@@ -153,132 +155,143 @@ export default function StaffMinistryApplicationDetailScreen() {
         colors={['#FFE8F1', '#F5F2FF']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}
+        style={[styles.header, { paddingTop: Math.max(insets.top, 20), paddingHorizontal: horizontalPadding }]}
       >
-        <BounceCard bounceScale={0.85} style={styles.backBtn} onPress={() => router.back()}>
-          <ArrowLeft size={22} color="#1a1a1a" />
-        </BounceCard>
-        <View style={styles.headerText}>
-          <Text style={styles.headerTitle}>Application Details</Text>
-          <Text style={styles.headerSubtitle}>{application.ministryName}</Text>
+        <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <BounceCard bounceScale={0.85} style={styles.backBtn} onPress={() => router.back()}>
+            <ArrowLeft size={22} color="#1a1a1a" />
+          </BounceCard>
+          <View style={styles.headerText}>
+            <Text style={styles.headerTitle}>Application Details</Text>
+            <Text style={styles.headerSubtitle}>{application.ministryName}</Text>
+          </View>
         </View>
       </LinearGradient>
 
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingBottom: insets.bottom + 40,
+            paddingHorizontal: horizontalPadding,
+            alignItems: 'center',
+          },
+        ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Applicant Header Card */}
-        <SoftCard innerStyle={styles.profileCard}>
-          {application.applicantPhotoUrl ? (
-            <Image source={{ uri: application.applicantPhotoUrl }} style={styles.avatar} />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <User size={32} color="#6B7280" />
-            </View>
-          )}
-          <View style={styles.profileDetails}>
-            <Text style={styles.applicantName}>{getApplicantName(application)}</Text>
-            <Text style={styles.ministryText}>Applied for: {application.ministryName}</Text>
-            <View
-              style={[
-                styles.statusBadge,
-                application.status === 'pending' && styles.statusPending,
-                application.status === 'approved' && styles.statusApproved,
-                application.status === 'declined' && styles.statusDeclined,
-              ]}
-            >
-              <Text
+        <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center', gap: 16 }}>
+          {/* Applicant Header Card */}
+          <SoftCard innerStyle={styles.profileCard}>
+            {application.applicantPhotoUrl ? (
+              <Image source={{ uri: application.applicantPhotoUrl }} style={styles.avatar} />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <User size={32} color="#6B7280" />
+              </View>
+            )}
+            <View style={styles.profileDetails}>
+              <Text style={styles.applicantName}>{getApplicantName(application)}</Text>
+              <Text style={styles.ministryText}>Applied for: {application.ministryName}</Text>
+              <View
                 style={[
-                  styles.statusText,
-                  application.status === 'pending' && styles.statusTextPending,
-                  application.status === 'approved' && styles.statusTextApproved,
-                  application.status === 'declined' && styles.statusTextDeclined,
+                  styles.statusBadge,
+                  application.status === 'pending' && styles.statusPending,
+                  application.status === 'approved' && styles.statusApproved,
+                  application.status === 'declined' && styles.statusDeclined,
                 ]}
               >
-                {application.status.toUpperCase()}
-              </Text>
+                <Text
+                  style={[
+                    styles.statusText,
+                    application.status === 'pending' && styles.statusTextPending,
+                    application.status === 'approved' && styles.statusTextApproved,
+                    application.status === 'declined' && styles.statusTextDeclined,
+                  ]}
+                >
+                  {application.status.toUpperCase()}
+                </Text>
+              </View>
             </View>
-          </View>
-        </SoftCard>
-
-        {/* Application Details */}
-        <SoftCard innerStyle={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Preferred Roles</Text>
-          <Text style={styles.sectionValue}>
-            {application.preferredRoleNames?.length ? application.preferredRoleNames.join(', ') : 'None specified'}
-          </Text>
-
-          <Text style={styles.sectionTitle}>Reason for Joining</Text>
-          <Text style={styles.sectionValue}>{application.reasonForJoining || 'N/A'}</Text>
-
-          <Text style={styles.sectionTitle}>Experience</Text>
-          <Text style={styles.sectionValue}>{application.experience || 'N/A'}</Text>
-
-          <Text style={styles.sectionTitle}>Availability</Text>
-          <Text style={styles.sectionValue}>{application.availability || 'N/A'}</Text>
-
-          {application.note ? (
-            <>
-              <Text style={styles.sectionTitle}>Additional Note</Text>
-              <Text style={styles.sectionValue}>{application.note}</Text>
-            </>
-          ) : null}
-
-          <Text style={styles.sectionTitle}>Submitted Date</Text>
-          <Text style={styles.sectionValue}>
-            {application.submittedAt ? new Date(application.submittedAt).toLocaleString() : 'N/A'}
-          </Text>
-        </SoftCard>
-
-        {/* Review Notes or Decline Reason if existing */}
-        {application.status !== 'pending' && (
-          <SoftCard innerStyle={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Review Info</Text>
-            <Text style={styles.sectionValue}>Reviewed by: {application.reviewedBy || 'Staff'}</Text>
-            <Text style={styles.sectionValue}>
-              Reviewed at: {application.reviewedAt ? new Date(application.reviewedAt).toLocaleString() : 'N/A'}
-            </Text>
-            {application.status === 'declined' && application.declineReason ? (
-              <>
-                <Text style={styles.sectionTitle}>Decline Reason</Text>
-                <Text style={[styles.sectionValue, { color: '#DC2626' }]}>{application.declineReason}</Text>
-              </>
-            ) : null}
-            {application.reviewNote ? (
-              <>
-                <Text style={styles.sectionTitle}>Review Note</Text>
-                <Text style={styles.sectionValue}>{application.reviewNote}</Text>
-              </>
-            ) : null}
           </SoftCard>
-        )}
 
-        {/* Action Buttons */}
-        {application.status === 'pending' && canReview && (
-          <View style={styles.actionsRow}>
-            <TouchableOpacity
-              style={styles.declineBtn}
-              onPress={() => {
-                setDeclineReason('');
-                setDeclineModalVisible(true);
-              }}
-              disabled={actionLoading}
-            >
-              <XCircle size={18} color="#DC2626" style={{ marginRight: 6 }} />
-              <Text style={styles.declineBtnText}>Decline Application</Text>
-            </TouchableOpacity>
+          {/* Application Details */}
+          <SoftCard innerStyle={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Preferred Roles</Text>
+            <Text style={styles.sectionValue}>
+              {application.preferredRoleNames?.length ? application.preferredRoleNames.join(', ') : 'None specified'}
+            </Text>
 
-            <TouchableOpacity
-              style={styles.approveBtn}
-              onPress={handleApprove}
-              disabled={actionLoading}
-            >
-              <CheckCircle size={18} color="#fff" style={{ marginRight: 6 }} />
-              <Text style={styles.approveBtnText}>Approve Application</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+            <Text style={styles.sectionTitle}>Reason for Joining</Text>
+            <Text style={styles.sectionValue}>{application.reasonForJoining || 'N/A'}</Text>
+
+            <Text style={styles.sectionTitle}>Experience</Text>
+            <Text style={styles.sectionValue}>{application.experience || 'N/A'}</Text>
+
+            <Text style={styles.sectionTitle}>Availability</Text>
+            <Text style={styles.sectionValue}>{application.availability || 'N/A'}</Text>
+
+            {application.note ? (
+              <>
+                <Text style={styles.sectionTitle}>Additional Note</Text>
+                <Text style={styles.sectionValue}>{application.note}</Text>
+              </>
+            ) : null}
+
+            <Text style={styles.sectionTitle}>Submitted Date</Text>
+            <Text style={styles.sectionValue}>
+              {application.submittedAt ? new Date(application.submittedAt).toLocaleString() : 'N/A'}
+            </Text>
+          </SoftCard>
+
+          {/* Review Notes or Decline Reason if existing */}
+          {application.status !== 'pending' && (
+            <SoftCard innerStyle={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>Review Info</Text>
+              <Text style={styles.sectionValue}>Reviewed by: {application.reviewedBy || 'Staff'}</Text>
+              <Text style={styles.sectionValue}>
+                Reviewed at: {application.reviewedAt ? new Date(application.reviewedAt).toLocaleString() : 'N/A'}
+              </Text>
+              {application.status === 'declined' && application.declineReason ? (
+                <>
+                  <Text style={styles.sectionTitle}>Decline Reason</Text>
+                  <Text style={[styles.sectionValue, { color: '#DC2626' }]}>{application.declineReason}</Text>
+                </>
+              ) : null}
+              {application.reviewNote ? (
+                <>
+                  <Text style={styles.sectionTitle}>Review Note</Text>
+                  <Text style={styles.sectionValue}>{application.reviewNote}</Text>
+                </>
+              ) : null}
+            </SoftCard>
+          )}
+
+          {/* Action Buttons */}
+          {application.status === 'pending' && canReview && (
+            <View style={styles.actionsRow}>
+              <TouchableOpacity
+                style={styles.declineBtn}
+                onPress={() => {
+                  setDeclineReason('');
+                  setDeclineModalVisible(true);
+                }}
+                disabled={actionLoading}
+              >
+                <XCircle size={18} color="#DC2626" style={{ marginRight: 6 }} />
+                <Text style={styles.declineBtnText}>Decline Application</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.approveBtn}
+                onPress={handleApprove}
+                disabled={actionLoading}
+              >
+                <CheckCircle size={18} color="#fff" style={{ marginRight: 6 }} />
+                <Text style={styles.approveBtnText}>Approve Application</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
       </ScrollView>
 
       {/* Decline Reason Modal */}
@@ -345,7 +358,7 @@ const styles = StyleSheet.create({
   headerText: { flex: 1 },
   headerTitle: { fontSize: 20, fontWeight: '800', color: '#1A1A1A' },
   headerSubtitle: { fontSize: 13, color: '#6B7280', marginTop: 2 },
-  content: { padding: 16, gap: 16 },
+  content: { paddingVertical: 16 },
   errorText: { fontSize: 16, color: '#6B7280', textAlign: 'center' },
   backLink: { marginTop: 12, paddingVertical: 8, paddingHorizontal: 16, backgroundColor: '#FF6596', borderRadius: 8 },
   backLinkText: { color: '#fff', fontWeight: '700' },

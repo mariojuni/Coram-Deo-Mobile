@@ -1,3 +1,4 @@
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { useMinistryApplication } from '@/features/serve/presentation/hooks/useMinistryApplication';
 import { BounceCard } from '@/components/ui/BounceCard';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -17,6 +18,7 @@ export default function ServeMinistryDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { horizontalPadding } = useResponsiveLayout();
   const _userProfile = useAuthStore((s) => s.userProfile);
   const ministries = useMinistryStore((s) => s.ministries);
   const memberAssignments = useMinistryStore((s) => s.memberAssignments);
@@ -87,7 +89,7 @@ export default function ServeMinistryDetailScreen() {
   if (!ministry) {
     return (
       <View style={[styles.screen, { backgroundColor: '#FAFAFA' }]}>
-        <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
+        <View style={[styles.header, { paddingTop: Math.max(insets.top, 20), paddingHorizontal: 16 }]}>
           <BounceCard bounceScale={0.85} style={styles.backBtn} onPress={() => router.back()}>
             <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
           </BounceCard>
@@ -148,12 +150,13 @@ export default function ServeMinistryDetailScreen() {
           { 
             paddingTop: headerHeight + 10, 
             paddingBottom: hasStickyFooter ? insets.bottom + 120 : insets.bottom + 40,
-            alignItems: 'center'
+            paddingHorizontal: horizontalPadding,
+            alignItems: 'center',
           }
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center' }}>
+        <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center', gap: 16 }}>
           {/* ─── Hero Section ─── */}
           <View style={styles.heroCard}>
           <LinearGradient
@@ -236,30 +239,32 @@ export default function ServeMinistryDetailScreen() {
         ) : null}
 
         {/* ─── Stats row ─── */}
-        <View style={styles.statsRow}>
-          {memberCount > 0 ? (
-            <SoftCard style={{ flex: 1, marginBottom: 0, borderRadius: 24 }} innerStyle={{ borderRadius: 23 }}>
-              <View style={styles.statCard}>
-                <View style={[styles.iconWrapper, { backgroundColor: '#FFE8F0' }]}>
-                  <Users size={20} color="#FF6596" />
+        {(memberCount > 0 || (ministry.roles?.length ?? 0) > 0) ? (
+          <View style={styles.statsRow}>
+            {memberCount > 0 ? (
+              <SoftCard style={{ flex: 1, marginBottom: 0, borderRadius: 24 }} innerStyle={{ borderRadius: 23 }}>
+                <View style={styles.statCard}>
+                  <View style={[styles.iconWrapper, { backgroundColor: '#FFE8F0' }]}>
+                    <Users size={20} color="#FF6596" />
+                  </View>
+                  <Text style={styles.statValue}>{memberCount}</Text>
+                  <Text style={styles.statLabel}>Total Members</Text>
                 </View>
-                <Text style={styles.statValue}>{memberCount}</Text>
-                <Text style={styles.statLabel}>Total Members</Text>
-              </View>
-            </SoftCard>
-          ) : null}
-          {ministry.roles?.length > 0 ? (
-            <SoftCard style={{ flex: 1, marginBottom: 0, borderRadius: 24 }} innerStyle={{ borderRadius: 23 }}>
-              <View style={styles.statCard}>
-                <View style={[styles.iconWrapper, { backgroundColor: '#F3EEFF' }]}>
-                  <CalendarDays size={20} color="#8B6FE8" />
+              </SoftCard>
+            ) : null}
+            {ministry.roles?.length > 0 ? (
+              <SoftCard style={{ flex: 1, marginBottom: 0, borderRadius: 24 }} innerStyle={{ borderRadius: 23 }}>
+                <View style={styles.statCard}>
+                  <View style={[styles.iconWrapper, { backgroundColor: '#F3EEFF' }]}>
+                    <CalendarDays size={20} color="#8B6FE8" />
+                  </View>
+                  <Text style={styles.statValue}>{ministry.roles.length}</Text>
+                  <Text style={styles.statLabel}>Roles</Text>
                 </View>
-                <Text style={styles.statValue}>{ministry.roles.length}</Text>
-                <Text style={styles.statLabel}>Roles</Text>
-              </View>
-            </SoftCard>
-          ) : null}
-        </View>
+              </SoftCard>
+            ) : null}
+          </View>
+        ) : null}
 
         {/* ─── Members ─── */}
         {false && (ministry?.members?.length ?? 0) > 0 ? (
@@ -390,7 +395,7 @@ export default function ServeMinistryDetailScreen() {
 
       {/* ─── Sticky Footer Actions ─── */}
       {hasStickyFooter && (
-        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20) }]}>
+        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20), paddingHorizontal: horizontalPadding }]}>
           <BlurView intensity={90} tint="light" style={StyleSheet.absoluteFill} />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.85)' }]} pointerEvents="none" />
           
@@ -462,8 +467,7 @@ const styles = StyleSheet.create({
   },
 
   content: {
-    padding: 20,
-    gap: 16,
+    paddingBottom: 40,
   },
   
   heroCard: {

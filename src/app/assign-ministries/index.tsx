@@ -165,7 +165,7 @@ export default function AssignMinistriesScreen() {
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
         <View style={ms.dragHandle} />
-        <View style={ms.headerContent}>
+        <View style={[ms.headerContent, { maxWidth: 640, width: '100%', alignSelf: 'center' }]}>
           <View style={{ width: 40 }} />
           <Text style={ms.headerTitle}>Assign Ministries</Text>
           <BounceCard bounceScale={0.85} style={ms.headerCircle} onPress={() => {
@@ -177,7 +177,8 @@ export default function AssignMinistriesScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 120, paddingTop: 70 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 120, paddingTop: 70, alignItems: 'center' }} showsVerticalScrollIndicator={false}>
+        <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center' }}>
         <SoftCard style={{ margin: 20, marginBottom: 16, borderRadius: 16 }} innerStyle={{ borderRadius: 15 }}>
           <View style={[ms.eventCard, { margin: 0 }]}>
             <View style={ms.eventIconBox}>
@@ -334,6 +335,7 @@ export default function AssignMinistriesScreen() {
             </SoftCard>
           );
         })}
+        </View>
       </ScrollView>
     </View>
   );

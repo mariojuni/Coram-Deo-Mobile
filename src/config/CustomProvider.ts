@@ -19,8 +19,14 @@ export const createReactNativeCustomProvider = (rnfbAppCheckInstance: any): Cust
           expireTimeMillis: Date.now() + 3600000, // Roughly 1 hour, RNFB handles refresh automatically
         };
       } catch (error: any) {
-        if (__DEV__) {
-          console.warn('App Check failed in DEV (likely simulator). Returning dummy token.', error);
+        let isSimulator = false;
+        try {
+          const Device = require('expo-device');
+          isSimulator = !Device.isDevice;
+        } catch {}
+
+        if (__DEV__ || isSimulator) {
+          console.warn('App Check failed on Simulator/DEV. Returning dummy token.', error);
           return {
             token: 'dummy-token-for-simulator',
             expireTimeMillis: Date.now() + 3600000,
@@ -28,8 +34,8 @@ export const createReactNativeCustomProvider = (rnfbAppCheckInstance: any): Cust
         }
 
         console.error('Failed to get App Check token from React Native Firebase', error);
-        // Add an artificial delay to prevent immediate infinite loops if the JS SDK retries instantly
-        await new Promise(resolve => setTimeout(resolve, 10000));
+        // Add a brief delay to prevent immediate CPU spinning if the JS SDK retries instantly
+        await new Promise(resolve => setTimeout(resolve, 2000));
         throw error;
       }
     },

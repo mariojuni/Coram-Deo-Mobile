@@ -41,7 +41,7 @@ export default function CreateSetlistFormScreen() {
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
         <View style={styles.dragHandle} />
-        <View style={styles.headerContent}>
+        <View style={[styles.headerContent, { maxWidth: 640, width: '100%', alignSelf: 'center' }]}>
           <TouchableOpacity
             style={[styles.createBtnModalHeader, creating && { opacity: 0.6 }]}
             disabled={creating}
@@ -61,11 +61,11 @@ export default function CreateSetlistFormScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { alignItems: 'center' }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={{ paddingTop: 24 }}>
+        <View style={{ paddingTop: 24, width: '100%', maxWidth: 640, alignSelf: 'center' }}>
           <SetlistForm
             title={newTitle}
             onTitleChange={setNewTitle}

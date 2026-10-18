@@ -43,7 +43,7 @@ export default function SelectEventScreen() {
         <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]} pointerEvents="none" />
         <View style={styles.dragHandle} />
-        <View style={styles.headerContent}>
+        <View style={[styles.headerContent, { maxWidth: 640, width: '100%', alignSelf: 'center' }]}>
           <TouchableOpacity style={styles.headerCircle} onPress={handleClose} hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }} activeOpacity={0.7}>
             <ArrowLeft size={24} color="#111827" strokeWidth={2} />
           </TouchableOpacity>
@@ -52,7 +52,7 @@ export default function SelectEventScreen() {
         </View>
       </View>
 
-      <View style={{ flex: 1, paddingTop: 100 }}>
+      <View style={{ flex: 1, paddingTop: 100, maxWidth: 640, width: '100%', alignSelf: 'center' }}>
         {/* Search Input Bar */}
         <View style={{ paddingHorizontal: 20 }}>
           <View style={{
