@@ -21,6 +21,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getSoftShadowStyle, getTopBarButtonShadowStyle, SoftCard } from '@/components/ui/SoftCard';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -28,6 +29,7 @@ export default function ServeSongLyricsScreen() {
   const { songId, setlistItemId, hideChords } = useLocalSearchParams<{ songId: string; setlistItemId?: string; hideChords?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { horizontalPadding } = useResponsiveLayout();
   const userProfile = useAuthStore((s) => s.userProfile);
   const isStaff = ['super_admin', 'church_admin', 'pastor', 'ministry_leader'].includes(userProfile?.role?.toLowerCase() || '');
 
@@ -94,6 +96,14 @@ export default function ServeSongLyricsScreen() {
     return () => { isMounted = false; };
   }, [songId, setlistItemId, activeSetlistItems]);
 
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/serve');
+    }
+  };
+
   if (loading) {
     return (
       <View style={[styles.screen, { paddingTop: insets.top + 20, alignItems: 'center', justifyContent: 'center' }]}>
@@ -105,12 +115,14 @@ export default function ServeSongLyricsScreen() {
 
   if (!song) {
     return (
-      <View style={[styles.screen, { paddingTop: insets.top + 20 }]}>
+      <View style={[styles.screen, { paddingTop: insets.top + 20, alignItems: 'center' }]}>
         <Stack.Screen options={{ headerShown: false }} />
-        <TouchableOpacity activeOpacity={0.8} style={[styles.fixedBackBtn, { top: Math.max(insets.top, 24) }]} onPress={() => router.back()}>
-          <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
-        </TouchableOpacity>
-        <View style={styles.notFound}>
+        <View style={[styles.fixedBackBtnWrapper, { top: Math.max(insets.top, 24) }]}>
+          <BounceCard bounceScale={0.85} style={styles.fixedBackBtn} onPress={handleBack} hitSlop={8}>
+            <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
+          </BounceCard>
+        </View>
+        <View style={[styles.notFound, { width: '100%', maxWidth: 640, alignSelf: 'center', paddingHorizontal: horizontalPadding }]}>
           <Text style={styles.notFoundTitle}>Song not found</Text>
         </View>
       </View>
@@ -216,33 +228,8 @@ export default function ServeSongLyricsScreen() {
         />
       </Animated.View>
 
-      {/* Sticky Mini Header (Fades in on scroll) */}
-      <Animated.View 
-        style={[
-          styles.stickyMiniHeader,
-          { 
-            height: topInset + 60, 
-            opacity: miniHeaderOpacity 
-          }
-        ]}
-      >
-        <View style={[styles.miniHeaderContent, { paddingTop: topInset, paddingLeft: 80, paddingRight: 24 }]}>
-          <Text style={styles.miniHeaderTitle} numberOfLines={1}>{song.title}</Text>
-          {song.artist && <Text style={styles.miniHeaderArtist} numberOfLines={1}>{song.artist}</Text>}
-        </View>
-      </Animated.View>
-
-      {/* Fixed Back Button */}
-      <TouchableOpacity
-        style={[styles.fixedBackBtn, { top: Math.max(insets.top, 24) }]} 
-        onPress={() => router.back()}
-        activeOpacity={0.8}
-      >
-        <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
-      </TouchableOpacity>
-
       <Animated.ScrollView
-        contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 40, alignItems: 'center' }}
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -251,122 +238,157 @@ export default function ServeSongLyricsScreen() {
         scrollEventThrottle={16}
       >
         {/* Transparent Header Content */}
-        <View style={[styles.headerContent, { paddingTop: topInset + 70 }]}>
-          <Animated.View style={{ opacity: titleOpacity }}>
-            <Text style={styles.screenTitle}>{song.title}</Text>
-            <View style={styles.metaRow}>
-              {song.defaultKey && <Text style={styles.metaText}>Key: {currentTransposedKey}</Text>}
-              {song.tempoBpm && <Text style={styles.metaText}>{song.tempoBpm} BPM</Text>}
-              {song.artist && <Text style={styles.metaText}>{song.artist}</Text>}
-              {youtubeUrl && (
-                <TouchableOpacity 
-                  style={{ backgroundColor: '#FEE2E2', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, gap: 4 }}
-                  onPress={() => Linking.openURL(youtubeUrl)}
-                  activeOpacity={0.8}
+        <View style={[styles.headerContent, { paddingTop: topInset + 70, paddingHorizontal: horizontalPadding, width: '100%', alignItems: 'center' }]}>
+          <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center' }}>
+            <Animated.View style={{ opacity: titleOpacity }}>
+              <Text style={styles.screenTitle}>{song.title}</Text>
+              <View style={styles.metaRow}>
+                {song.defaultKey && <Text style={styles.metaText}>Key: {currentTransposedKey}</Text>}
+                {song.tempoBpm && <Text style={styles.metaText}>{song.tempoBpm} BPM</Text>}
+                {song.artist && <Text style={styles.metaText}>{song.artist}</Text>}
+                {youtubeUrl && (
+                  <TouchableOpacity 
+                    style={{ backgroundColor: '#FEE2E2', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, gap: 4 }}
+                    onPress={() => Linking.openURL(youtubeUrl)}
+                    activeOpacity={0.8}
+                  >
+                    <PlayCircle size={14} color="#DC2626" />
+                    <Text style={{ color: '#DC2626', fontSize: 13, fontWeight: '700' }}>Listen</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </Animated.View>
+            
+            {showTabs && (
+              <View style={styles.tabContainer}>
+                <TouchableOpacity
+                  style={[styles.tabButton, activeTab === 'lyrics' && styles.activeTabButton]}
+                  onPress={() => setActiveTab('lyrics')}
                 >
-                  <PlayCircle size={14} color="#DC2626" />
-                  <Text style={{ color: '#DC2626', fontSize: 13, fontWeight: '700' }}>Listen</Text>
+                  <Text style={[styles.tabText, activeTab === 'lyrics' && styles.activeTabText]}>Lyrics</Text>
                 </TouchableOpacity>
-              )}
-            </View>
-          </Animated.View>
-          
-          {showTabs && (
-            <View style={styles.tabContainer}>
-              <TouchableOpacity
-                style={[styles.tabButton, activeTab === 'lyrics' && styles.activeTabButton]}
-                onPress={() => setActiveTab('lyrics')}
-              >
-                <Text style={[styles.tabText, activeTab === 'lyrics' && styles.activeTabText]}>Lyrics</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.tabButton, activeTab === 'chords' && styles.activeTabButton]}
-                onPress={() => setActiveTab('chords')}
-              >
-                <Text style={[styles.tabText, activeTab === 'chords' && styles.activeTabText]}>Chords</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+                <TouchableOpacity
+                  style={[styles.tabButton, activeTab === 'chords' && styles.activeTabButton]}
+                  onPress={() => setActiveTab('chords')}
+                >
+                  <Text style={[styles.tabText, activeTab === 'chords' && styles.activeTabText]}>Chords</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
         </View>
 
         {/* Solid Body Content */}
-        <View style={styles.bodyContainer}>
-          {(!showTabs || activeTab === 'lyrics') && (
-            <SoftCard style={{ marginBottom: 24, borderRadius: 24 }} innerStyle={{ borderRadius: 23 }}>
-              <View style={styles.lyricsCard}>
-                {lyricsContent ? (
-                  <Text style={styles.lyricsText}>{lyricsContent}</Text>
-                ) : (
-                  <View style={styles.emptyState}>
-                    <Music size={32} color="#CBD5E1" />
-                    <Text style={styles.emptyStateText}>No lyrics available for this song.</Text>
-                  </View>
-                )}
-              </View>
-            </SoftCard>
-          )}
-
-          {(showTabs && activeTab === 'chords') && (
-            <SoftCard style={{ marginBottom: 24, borderRadius: 24 }} innerStyle={{ borderRadius: 23 }}>
-              <View style={styles.chordCard}>
-                <View style={styles.transposeControls}>
-                  <View style={styles.controlGroup}>
-                    <Text style={styles.transposeLabel}>Key: <Text style={styles.transposeKey}>{currentTransposedKey}</Text></Text>
-                    <View style={styles.transposeButtons}>
-                      <TouchableOpacity style={styles.tBtn} onPress={() => setTransposeSteps(s => s - 1)}>
-                        <Minus size={16} color="#4B5563" />
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.tBtnReset} onPress={() => setTransposeSteps(0)}>
-                        <Text style={styles.tBtnResetText}>Orig</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.tBtn} onPress={() => setTransposeSteps(s => s + 1)}>
-                        <Plus size={16} color="#4B5563" />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-
-                  <View style={[styles.controlGroup, { marginTop: 12 }]}>
-                    <Text style={styles.transposeLabel}>Capo: <Text style={styles.transposeKey}>{capo ? `Capo ${capo}` : 'None'}</Text></Text>
-                    <View style={styles.transposeButtons}>
-                      <TouchableOpacity style={styles.tBtn} onPress={() => setCapo(c => Math.max(0, c - 1))}>
-                        <Minus size={16} color="#4B5563" />
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.tBtnReset} onPress={() => setCapo(0)}>
-                        <Text style={styles.tBtnResetText}>0</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.tBtn} onPress={() => setCapo(c => Math.min(11, c + 1))}>
-                        <Plus size={16} color="#4B5563" />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-
-                  <View style={[styles.controlGroup, { marginTop: 12 }]}>
-                    <Text style={styles.transposeLabel}>Accidentals: <Text style={styles.transposeKey}>{preferFlats ? 'Flats' : 'Sharps'}</Text></Text>
-                    <View style={styles.transposeButtons}>
-                      <TouchableOpacity style={styles.tBtnReset} onPress={() => setPreferFlats(!preferFlats)}>
-                        <Text style={styles.tBtnResetText}>{preferFlats ? 'Show Sharps' : 'Show Flats'}</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-
-                  {isStaff && setlistItemId && (
-                    <View style={[styles.controlGroup, { marginTop: 12 }]}>
-                      <TouchableOpacity 
-                        style={[styles.saveBtn, saving && { opacity: 0.7 }]} 
-                        onPress={handleSaveArrangement}
-                        disabled={saving}
-                      >
-                        <Text style={styles.saveBtnText}>{saving ? 'Saving...' : 'Save Arrangement to Setlist'}</Text>
-                      </TouchableOpacity>
+        <View style={[styles.bodyContainer, { paddingHorizontal: horizontalPadding, width: '100%', alignItems: 'center' }]}>
+          <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center' }}>
+            {(!showTabs || activeTab === 'lyrics') && (
+              <SoftCard style={{ marginBottom: 24, borderRadius: 24 }} innerStyle={{ borderRadius: 23 }}>
+                <View style={styles.lyricsCard}>
+                  {lyricsContent ? (
+                    <Text style={styles.lyricsText}>{lyricsContent}</Text>
+                  ) : (
+                    <View style={styles.emptyState}>
+                      <Music size={32} color="#CBD5E1" />
+                      <Text style={styles.emptyStateText}>No lyrics available for this song.</Text>
                     </View>
                   )}
                 </View>
-                <Text style={styles.chordText}>{transposedChordChart}</Text>
-              </View>
-            </SoftCard>
-          )}
+              </SoftCard>
+            )}
+
+            {(showTabs && activeTab === 'chords') && (
+              <SoftCard style={{ marginBottom: 24, borderRadius: 24 }} innerStyle={{ borderRadius: 23 }}>
+                <View style={styles.chordCard}>
+                  <View style={styles.transposeControls}>
+                    <View style={styles.controlGroup}>
+                      <Text style={styles.transposeLabel}>Key: <Text style={styles.transposeKey}>{currentTransposedKey}</Text></Text>
+                      <View style={styles.transposeButtons}>
+                        <TouchableOpacity style={styles.tBtn} onPress={() => setTransposeSteps(s => s - 1)}>
+                          <Minus size={16} color="#4B5563" />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.tBtnReset} onPress={() => setTransposeSteps(0)}>
+                          <Text style={styles.tBtnResetText}>Orig</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.tBtn} onPress={() => setTransposeSteps(s => s + 1)}>
+                          <Plus size={16} color="#4B5563" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
+                    <View style={[styles.controlGroup, { marginTop: 12 }]}>
+                      <Text style={styles.transposeLabel}>Capo: <Text style={styles.transposeKey}>{capo ? `Capo ${capo}` : 'None'}</Text></Text>
+                      <View style={styles.transposeButtons}>
+                        <TouchableOpacity style={styles.tBtn} onPress={() => setCapo(c => Math.max(0, c - 1))}>
+                          <Minus size={16} color="#4B5563" />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.tBtnReset} onPress={() => setCapo(0)}>
+                          <Text style={styles.tBtnResetText}>0</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.tBtn} onPress={() => setCapo(c => Math.min(11, c + 1))}>
+                          <Plus size={16} color="#4B5563" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
+                    <View style={[styles.controlGroup, { marginTop: 12 }]}>
+                      <Text style={styles.transposeLabel}>Accidentals: <Text style={styles.transposeKey}>{preferFlats ? 'Flats' : 'Sharps'}</Text></Text>
+                      <View style={styles.transposeButtons}>
+                        <TouchableOpacity style={styles.tBtnReset} onPress={() => setPreferFlats(!preferFlats)}>
+                          <Text style={styles.tBtnResetText}>{preferFlats ? 'Show Sharps' : 'Show Flats'}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
+                    {isStaff && setlistItemId && (
+                      <View style={[styles.controlGroup, { marginTop: 12 }]}>
+                        <TouchableOpacity 
+                          style={[styles.saveBtn, saving && { opacity: 0.7 }]} 
+                          onPress={handleSaveArrangement}
+                          disabled={saving}
+                        >
+                          <Text style={styles.saveBtnText}>{saving ? 'Saving...' : 'Save Arrangement to Setlist'}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={styles.chordText}>{transposedChordChart}</Text>
+                </View>
+              </SoftCard>
+            )}
+          </View>
         </View>
       </Animated.ScrollView>
+
+      {/* Sticky Mini Header (Fades in on scroll) */}
+      <Animated.View 
+        style={[
+          styles.stickyMiniHeader,
+          { 
+            height: topInset + 60, 
+            opacity: miniHeaderOpacity,
+            alignItems: 'center',
+          }
+        ]}
+        pointerEvents="box-none"
+      >
+        <View style={[styles.miniHeaderContent, { paddingTop: topInset, paddingLeft: 80, paddingRight: horizontalPadding, width: '100%', maxWidth: 640, alignSelf: 'center' }]}>
+          <Text style={styles.miniHeaderTitle} numberOfLines={1}>{song.title}</Text>
+          {song.artist && <Text style={styles.miniHeaderArtist} numberOfLines={1}>{song.artist}</Text>}
+        </View>
+      </Animated.View>
+
+      {/* Fixed Back Button */}
+      <View style={[styles.fixedBackBtnWrapper, { top: Math.max(insets.top, 24) }]} pointerEvents="box-none">
+        <BounceCard
+          bounceScale={0.85}
+          style={styles.fixedBackBtn} 
+          onPress={handleBack}
+          activeOpacity={0.8}
+          hitSlop={8}
+        >
+          <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
+        </BounceCard>
+      </View>
     </View>
   );
 }
@@ -408,18 +430,19 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginTop: 2,
   },
-  fixedBackBtn: {
-    ...getTopBarButtonShadowStyle(20),
+  fixedBackBtnWrapper: {
     position: 'absolute',
     left: 20,
+    zIndex: 100,
+  },
+  fixedBackBtn: {
+    ...getTopBarButtonShadowStyle(20),
     width: 40,
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 100,
   },
   headerContent: {
-    paddingHorizontal: 24,
     paddingBottom: 32,
   },
   screenTitle: {
@@ -477,8 +500,8 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 36,
     borderTopRightRadius: 36,
     minHeight: SCREEN_HEIGHT,
-    padding: 24,
     paddingTop: 32,
+    paddingBottom: 24,
   },
   lyricsCard: {
     paddingHorizontal: 24,

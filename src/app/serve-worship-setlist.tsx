@@ -14,11 +14,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getTopBarButtonShadowStyle, SoftCard } from '@/components/ui/SoftCard';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 
 export default function ServeWorshipSetlistScreen() {
   const { eventId, hideChords } = useLocalSearchParams<{ eventId: string; hideChords?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { horizontalPadding } = useResponsiveLayout();
   const userProfile = useAuthStore((s) => s.userProfile);
 
   const { setlist, items, loading, error } = useWorshipSetlist(
@@ -37,14 +39,14 @@ export default function ServeWorshipSetlistScreen() {
 
   if (error || !setlist) {
     return (
-      <View style={[styles.screen, { paddingTop: insets.top + 20 }]}>
+      <View style={[styles.screen, { paddingTop: insets.top + 20, alignItems: 'center' }]}>
         <Stack.Screen options={{ headerShown: false }} />
         <View style={[styles.fixedBackBtnWrapper, { top: Math.max(insets.top, 24) }]}>
           <BounceCard bounceScale={0.85} style={styles.fixedBackBtn} onPress={() => router.back()}>
             <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
           </BounceCard>
         </View>
-        <View style={styles.notFound}>
+        <View style={[styles.notFound, { width: '100%', maxWidth: 640, alignSelf: 'center', paddingHorizontal: horizontalPadding }]}>
           <View style={styles.notFoundIconContainer}>
             <AlertCircle size={40} color="#EF4444" strokeWidth={2.5} />
           </View>
@@ -65,23 +67,33 @@ export default function ServeWorshipSetlistScreen() {
         colors={['#FFE8F1', '#F5F2FF']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={[styles.headerGradient, { paddingTop: Math.max(insets.top, 20) + 52 }]}
+        style={[styles.headerGradient, { paddingTop: Math.max(insets.top, 20) + 52, paddingHorizontal: horizontalPadding, alignItems: 'center' }]}
       >
-        <View style={styles.headerTitleContainer}>
-          <Text style={styles.screenTitle} numberOfLines={2}>{setlist.title}</Text>
-          <View style={styles.subtitleBadge}>
-            <Music size={14} color="#6B7280" />
-            <Text style={styles.screenSubtitle}>
-              {items.length} {items.length === 1 ? 'Song' : 'Songs'}
-            </Text>
+        <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center' }}>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.screenTitle} numberOfLines={2}>{setlist.title}</Text>
+            <View style={styles.subtitleBadge}>
+              <Music size={14} color="#6B7280" />
+              <Text style={styles.screenSubtitle}>
+                {items.length} {items.length === 1 ? 'Song' : 'Songs'}
+              </Text>
+            </View>
           </View>
         </View>
       </LinearGradient>
 
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}
+        contentContainerStyle={[
+          styles.content, 
+          { 
+            paddingBottom: insets.bottom + 40,
+            paddingHorizontal: horizontalPadding,
+            alignItems: 'center',
+          }
+        ]}
         showsVerticalScrollIndicator={false}
       >
+        <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center', gap: 16 }}>
         {items.length === 0 ? (
           <View style={styles.emptyState}>
             <View style={styles.emptyStateIconContainer}>
@@ -140,14 +152,22 @@ export default function ServeWorshipSetlistScreen() {
             </SoftCard>
           ))
         )}
+        </View>
       </ScrollView>
 
       {/* Fixed Back Button */}
-      <View style={[styles.fixedBackBtnWrapper, { top: Math.max(insets.top, 24) }]}>
+      <View style={[styles.fixedBackBtnWrapper, { top: Math.max(insets.top, 24) }]} pointerEvents="box-none">
         <BounceCard bounceScale={0.85} 
           style={styles.fixedBackBtn} 
-          onPress={() => router.back()}
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/(tabs)/serve');
+            }
+          }}
           activeOpacity={0.8}
+          hitSlop={8}
         >
           <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
         </BounceCard>
@@ -159,7 +179,6 @@ export default function ServeWorshipSetlistScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   headerGradient: {
-    paddingHorizontal: 24,
     paddingBottom: 24,
     gap: 12,
   },
@@ -200,7 +219,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   content: {
-    padding: 24,
+    paddingTop: 20,
     gap: 16,
   },
   card: {

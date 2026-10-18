@@ -51,12 +51,14 @@ import { useMinistryStore } from '@/store/useMinistryStore';
 import { useWorshipStore } from '@/store/useWorshipStore';
 import { useScheduleStore } from '@/store/useScheduleStore';
 import { useModalKeyboard } from '@/hooks/useModalKeyboard';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 
 export default function WorshipSetlistDetailScreen() {
   const { setlistId: rawSetlistId, viewOnly } = useLocalSearchParams<{ setlistId: string, viewOnly?: string }>();
   const setlistId = Array.isArray(rawSetlistId) ? rawSetlistId[0] : rawSetlistId;
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { horizontalPadding } = useResponsiveLayout();
   const userProfile = useAuthStore((s) => s.userProfile);
   const ministries = useMinistryStore((s) => s.ministries);
   const setActiveSetlistItems = useWorshipStore((s) => s.setActiveSetlistItems);
@@ -187,32 +189,39 @@ export default function WorshipSetlistDetailScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.screen, { backgroundColor: '#F7F8FC' }]}>
+      <View style={[styles.screen, { backgroundColor: '#F7F8FC', alignItems: 'center' }]}>
         <Stack.Screen options={{ headerShown: false }} />
-        <View style={{ paddingHorizontal: 20, paddingTop: Math.max(insets.top, 20) + 60, paddingBottom: 24, gap: 12 }}>
-          <ShimmerSkeleton width={140} height={20} borderRadius={10} />
-          <ShimmerSkeleton width="75%" height={32} borderRadius={10} />
-          <ShimmerSkeleton width={180} height={18} borderRadius={6} />
+        <View style={[styles.fixedBackBtnWrapper, { top: Math.max(insets.top, 24) }]}>
+          <BounceCard bounceScale={0.85} style={styles.fixedBackBtn} onPress={() => router.back()}>
+            <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
+          </BounceCard>
         </View>
-        <View style={{ paddingHorizontal: 20, gap: 16 }}>
-          {[1, 2, 3].map((key) => (
-            <SoftCard key={key} style={{ borderRadius: 24 }} innerStyle={{ borderRadius: 23 }}>
-              <View style={{ padding: 20, gap: 14 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <ShimmerSkeleton width={32} height={32} borderRadius={16} />
-                  <View style={{ flex: 1, gap: 6 }}>
-                    <ShimmerSkeleton width="70%" height={20} borderRadius={6} />
-                    <ShimmerSkeleton width="45%" height={14} borderRadius={6} />
+        <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center', paddingHorizontal: horizontalPadding }}>
+          <View style={{ paddingTop: Math.max(insets.top, 20) + 60, paddingBottom: 24, gap: 12 }}>
+            <ShimmerSkeleton width={140} height={20} borderRadius={10} />
+            <ShimmerSkeleton width="75%" height={32} borderRadius={10} />
+            <ShimmerSkeleton width={180} height={18} borderRadius={6} />
+          </View>
+          <View style={{ gap: 16 }}>
+            {[1, 2, 3].map((key) => (
+              <SoftCard key={key} style={{ borderRadius: 24 }} innerStyle={{ borderRadius: 23 }}>
+                <View style={{ padding: 20, gap: 14 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <ShimmerSkeleton width={32} height={32} borderRadius={16} />
+                    <View style={{ flex: 1, gap: 6 }}>
+                      <ShimmerSkeleton width="70%" height={20} borderRadius={6} />
+                      <ShimmerSkeleton width="45%" height={14} borderRadius={6} />
+                    </View>
+                  </View>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <ShimmerSkeleton width={70} height={22} borderRadius={11} />
+                    <ShimmerSkeleton width={65} height={22} borderRadius={11} />
+                    <ShimmerSkeleton width={80} height={22} borderRadius={11} />
                   </View>
                 </View>
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  <ShimmerSkeleton width={70} height={22} borderRadius={11} />
-                  <ShimmerSkeleton width={65} height={22} borderRadius={11} />
-                  <ShimmerSkeleton width={80} height={22} borderRadius={11} />
-                </View>
-              </View>
-            </SoftCard>
-          ))}
+              </SoftCard>
+            ))}
+          </View>
         </View>
       </View>
     );
@@ -220,14 +229,14 @@ export default function WorshipSetlistDetailScreen() {
 
   if (error || !setlist) {
     return (
-      <View style={[styles.screen, { paddingTop: insets.top + 20 }]}>
+      <View style={[styles.screen, { paddingTop: insets.top + 20, alignItems: 'center' }]}>
         <Stack.Screen options={{ headerShown: false }} />
         <View style={[styles.fixedBackBtnWrapper, { top: Math.max(insets.top, 24) }]}>
           <BounceCard bounceScale={0.85} style={styles.fixedBackBtn} onPress={() => router.back()}>
             <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
           </BounceCard>
         </View>
-        <View style={styles.notFound}>
+        <View style={[styles.notFound, { width: '100%', maxWidth: 640, alignSelf: 'center', paddingHorizontal: horizontalPadding }]}>
           <AlertCircle size={40} color="#EF4444" strokeWidth={2.5} />
           <Text style={styles.notFoundTitle}>Unavailable</Text>
           <Text style={styles.notFoundText}>{error || 'Setlist not found.'}</Text>
@@ -261,73 +270,83 @@ export default function WorshipSetlistDetailScreen() {
         colors={['#FFE8F1', '#F5F2FF']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={[styles.headerGradient, { paddingTop: Math.max(insets.top, 20) + 52 }]}
+        style={[styles.headerGradient, { paddingTop: Math.max(insets.top, 20) + 52, paddingHorizontal: horizontalPadding, alignItems: 'center' }]}
       >
-        <View style={styles.headerTitleContainer}>
-          <View style={styles.statusRow}>
-            <Text style={styles.ministryBadge}>{getMinistryName(setlist.ministryId)}</Text>
-            <View
-              style={[
-                styles.statusBadge,
-                setlist.status === 'published' ? styles.statusPublished : styles.statusDraft,
-              ]}
-            >
-              <Text
+        <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center' }}>
+          <View style={styles.headerTitleContainer}>
+            <View style={styles.statusRow}>
+              <Text style={styles.ministryBadge}>{getMinistryName(setlist.ministryId)}</Text>
+              <View
                 style={[
-                  styles.statusText,
-                  setlist.status === 'published'
-                    ? styles.statusTextPublished
-                    : styles.statusTextDraft,
+                  styles.statusBadge,
+                  setlist.status === 'published' ? styles.statusPublished : styles.statusDraft,
                 ]}
               >
-                {setlist.status?.toUpperCase()}
-              </Text>
+                <Text
+                  style={[
+                    styles.statusText,
+                    setlist.status === 'published'
+                      ? styles.statusTextPublished
+                      : styles.statusTextDraft,
+                  ]}
+                >
+                  {setlist.status?.toUpperCase()}
+                </Text>
+              </View>
             </View>
-          </View>
-          <Text style={styles.screenTitle}>{setlist.title}</Text>
-          <View style={styles.dateMeta}>
-            <Calendar size={14} color="#6B7280" />
-            <Text style={styles.dateMetaText}>{dateStr}</Text>
-          </View>
+            <Text style={styles.screenTitle}>{setlist.title}</Text>
+            <View style={styles.dateMeta}>
+              <Calendar size={14} color="#6B7280" />
+              <Text style={styles.dateMetaText}>{dateStr}</Text>
+            </View>
 
-          {/* Leader Action Buttons */}
-          {canManage && (
-            <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
-              <TouchableOpacity
-                style={styles.leaderEditBtn}
-                onPress={() => {
-                  router.push({
-                    pathname: '/create-setlist',
-                    params: {
-                      setlistId: setlist.id,
-                      initialTitle: setlist.title,
-                      initialEventId: setlist.eventId,
-                      initialDate: setlist.serviceDate,
-                      initialStatus: setlist.status,
-                    }
-                  } as any);
-                }}
-              >
-                <Edit2 size={14} color="#FF6596" />
-                <Text style={styles.leaderEditBtnText}>Edit Setlist</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.leaderAddSongBtn}
-                onPress={() => setAddSongModalVisible(true)}
-              >
-                <Plus size={14} color="#FFF" />
-                <Text style={styles.leaderAddSongBtnText}>Add Song</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+            {/* Leader Action Buttons */}
+            {canManage && (
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                <TouchableOpacity
+                  style={styles.leaderEditBtn}
+                  onPress={() => {
+                    router.push({
+                      pathname: '/create-setlist',
+                      params: {
+                        setlistId: setlist.id,
+                        initialTitle: setlist.title,
+                        initialEventId: setlist.eventId,
+                        initialDate: setlist.serviceDate,
+                        initialStatus: setlist.status,
+                      }
+                    } as any);
+                  }}
+                >
+                  <Edit2 size={14} color="#FF6596" />
+                  <Text style={styles.leaderEditBtnText}>Edit Setlist</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.leaderAddSongBtn}
+                  onPress={() => setAddSongModalVisible(true)}
+                >
+                  <Plus size={14} color="#FFF" />
+                  <Text style={styles.leaderAddSongBtnText}>Add Song</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
         </View>
       </LinearGradient>
 
       {/* Content */}
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}
+        contentContainerStyle={[
+          styles.content, 
+          { 
+            paddingBottom: insets.bottom + 40,
+            paddingHorizontal: horizontalPadding,
+            alignItems: 'center',
+          }
+        ]}
         showsVerticalScrollIndicator={false}
       >
+        <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center', gap: 16 }}>
         {items.length === 0 ? (
           <View style={styles.emptyState}>
             <Music size={40} color="#9CA3AF" />
@@ -461,15 +480,23 @@ export default function WorshipSetlistDetailScreen() {
             );
           })
         )}
+        </View>
       </ScrollView>
 
       {/* Fixed Back Button */}
-      <View style={[styles.fixedBackBtnWrapper, { top: Math.max(insets.top, 24) }]}>
+      <View style={[styles.fixedBackBtnWrapper, { top: Math.max(insets.top, 24) }]} pointerEvents="box-none">
         <BounceCard
           bounceScale={0.85}
           style={styles.fixedBackBtn}
-          onPress={() => router.back()}
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/(tabs)/serve');
+            }
+          }}
           activeOpacity={0.8}
+          hitSlop={8}
         >
           <ChevronLeft size={24} color="#1a1a1a" strokeWidth={2} />
         </BounceCard>
@@ -553,7 +580,6 @@ export default function WorshipSetlistDetailScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   headerGradient: {
-    paddingHorizontal: 24,
     paddingBottom: 24,
     gap: 12,
   },
@@ -649,7 +675,6 @@ const styles = StyleSheet.create({
     color: '#FFF',
   },
   content: {
-    paddingHorizontal: 20,
     paddingTop: 16,
     gap: 16,
   },
