@@ -1,11 +1,8 @@
 import React from 'react';
-import { Stack, useRouter } from 'expo-router';
-import { TouchableOpacity, Platform } from 'react-native';
-import { ChevronLeft } from 'lucide-react-native';
+import { Stack } from 'expo-router';
 import MyJourneyScreen from '@/features/myJourney/presentation/screens/MyJourneyScreen';
 
 export default function MyJourneyRoute() {
-  const router = useRouter();
 
   return (
     <>

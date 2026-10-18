@@ -10,6 +10,7 @@ import { BounceCard } from '@/components/ui/BounceCard';
 import { BookOpen, Edit3, Highlighter, Map, ChevronRight, Play, ChevronLeft, Activity, Calendar, Award, Bookmark, TrendingUp } from 'lucide-react-native';
 import ShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { MonthView } from '../components/MonthView';
 import { MilestonesView } from '../components/MilestonesView';
 
@@ -28,6 +29,7 @@ export default function MyJourneyScreen() {
   } = useMyJourney();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { horizontalPadding } = useResponsiveLayout();
   const [activeTab, setActiveTab] = React.useState<'week' | 'month' | 'milestones'>('week');
   const [tabWidth, setTabWidth] = React.useState(0);
   const tabSlideAnim = useRef(new Animated.Value(0)).current;
@@ -81,30 +83,46 @@ export default function MyJourneyScreen() {
       </View>
 
       {loading ? (
-        <View style={{ padding: 16, paddingTop: Math.max(insets.top, 24) + 60, flex: 1 }}>
-          {/* Hero Card Shimmer */}
-          <View style={styles.cardSpacing}>
-            <ShimmerSkeleton width="100%" height={175} borderRadius={24} />
-          </View>
-          {/* Tabs Shimmer */}
-          <View style={{ marginBottom: 24 }}>
-            <ShimmerSkeleton width="100%" height={48} borderRadius={16} />
-          </View>
-          {/* Continue Card Shimmer */}
-          <View style={styles.cardSpacing}>
-            <ShimmerSkeleton width="100%" height={92} borderRadius={24} />
-          </View>
-          {/* Content Shimmer */}
-          <View style={styles.cardSpacing}>
-            <ShimmerSkeleton width="100%" height={200} borderRadius={24} />
+        <View style={{ 
+          paddingHorizontal: horizontalPadding, 
+          paddingTop: Math.max(insets.top, 24) + 60, 
+          flex: 1,
+          alignItems: 'center',
+        }}>
+          <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center' }}>
+            {/* Hero Card Shimmer */}
+            <View style={styles.cardSpacing}>
+              <ShimmerSkeleton width="100%" height={175} borderRadius={24} />
+            </View>
+            {/* Tabs Shimmer */}
+            <View style={{ marginBottom: 24 }}>
+              <ShimmerSkeleton width="100%" height={48} borderRadius={16} />
+            </View>
+            {/* Continue Card Shimmer */}
+            <View style={styles.cardSpacing}>
+              <ShimmerSkeleton width="100%" height={92} borderRadius={24} />
+            </View>
+            {/* Content Shimmer */}
+            <View style={styles.cardSpacing}>
+              <ShimmerSkeleton width="100%" height={200} borderRadius={24} />
+            </View>
           </View>
         </View>
       ) : (
         <ScrollView 
           style={styles.container} 
-          contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 24) + 60, paddingBottom: 40 }]}
+          contentContainerStyle={[
+            styles.content, 
+            { 
+              paddingTop: Math.max(insets.top, 24) + 60, 
+              paddingBottom: 40,
+              paddingHorizontal: horizontalPadding,
+              alignItems: 'center',
+            }
+          ]}
           showsVerticalScrollIndicator={false}
         >
+          <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center' }}>
         
         {/* ─── Hero card ─────────────────────────────────────────────── */}
         <View style={styles.heroCard}>
@@ -317,8 +335,8 @@ export default function MyJourneyScreen() {
       {activeTab === 'milestones' && (
         <MilestonesView />
       )}
-      
-      </ScrollView>
+          </View>
+        </ScrollView>
       )}
     </View>
   );
@@ -367,8 +385,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   content: {
-    padding: 16,
-    paddingTop: 8,
+    paddingBottom: 40,
   },
   heroCard: {
     marginBottom: 24,

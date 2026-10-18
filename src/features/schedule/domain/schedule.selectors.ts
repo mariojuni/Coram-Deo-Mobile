@@ -35,7 +35,8 @@ export function normalizeDateToYmd(value: string): string | null {
  * Returns true if:
  * 1. The schedule status is explicitly 'completed' (case-insensitive).
  * 2. The event date is in the past (before today).
- * 3. The event date is today and its endTime has passed.
+ * 
+ * Note: Today's events are retained throughout the entire day regardless of their endTime.
  */
 export function isScheduleCompleted(schedule: Schedule, now = new Date()): boolean {
   if (schedule.status?.toLowerCase() === 'completed') {
@@ -54,12 +55,7 @@ export function isScheduleCompleted(schedule: Schedule, now = new Date()): boole
     return true;
   }
 
-  if (normDate === todayStr && schedule.endTime) {
-    const endTime24 = parseTimeTo24h(schedule.endTime);
-    const currentTime24 = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    return currentTime24 > endTime24;
-  }
-
+  // Retain events scheduled for today regardless of endTime
   return false;
 }
 
