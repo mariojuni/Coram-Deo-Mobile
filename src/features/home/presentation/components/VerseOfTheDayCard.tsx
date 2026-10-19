@@ -5,7 +5,7 @@ import { fetchVerseOfTheDay, getUserPreferences, saveUserPreferences } from '@/u
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { BookOpen, ChevronRight, Sparkles, Star } from 'lucide-react-native';
+import { BookOpen, ChevronRight, Star } from 'lucide-react-native';
 import { useEffect } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -200,7 +200,6 @@ export function VerseOfTheDayCard() {
               {/* Top row: badge + day-streak dots */}
               <View style={styles.topRow}>
                 <View style={styles.badge}>
-                  <Sparkles size={9} color="rgba(255,255,255,0.95)" strokeWidth={2.5} />
                   <Text style={styles.badgeText}>VERSE OF THE DAY</Text>
                 </View>
               </View>

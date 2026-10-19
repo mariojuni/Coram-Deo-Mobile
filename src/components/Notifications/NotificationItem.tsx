@@ -7,7 +7,7 @@ import { SoftCard } from '../ui/SoftCard';
 import { Colors } from '../../constants/theme';
 import { Image as ExpoImage } from 'expo-image';
 import { 
-  User, Trash2, Users, BookOpen, Drum, GraduationCap, 
+  User, Trash2, Users, BookOpen, Drum, GraduationCap, Megaphone, 
   Guitar, HandCoins, Mic, Monitor, Piano, Shield, Music, Heart, Star, Settings
 } from 'lucide-react-native';
 import { PrayingHands } from '../ui/icons/PrayingHands';
@@ -95,11 +95,15 @@ export function NotificationItem({ notification, onPress, onDelete }: Props) {
   const a11yLabel = `${isUnread ? 'Unread.' : ''} ${notification.title}. ${timeAgo}.`;
   
   const isAssignment = notification.type === 'ministry_assignment' || notification.type === 'schedule_assignment';
+  const isAnnouncement = notification.category === 'announcement';
 
   let displayTitle = notification.title;
   let displayBodyText = notification.body || '';
 
-  if (!isAssignment) {
+  if (isAnnouncement) {
+    displayTitle = notification.title;
+    displayBodyText = notification.body || "";
+  } else if (!isAssignment) {
     // Try to extract actorName if it's not provided explicitly
     let displayActorName = notification.actorName || '';
     let fallbackText = notification.title;
@@ -141,6 +145,13 @@ export function NotificationItem({ notification, onPress, onDelete }: Props) {
   };
 
   const renderAvatar = () => {
+    if (isAnnouncement) {
+      return (
+        <View style={[styles.avatarCircle, { backgroundColor: '#FFE8F0' }]}>
+          <Megaphone size={20} color="#FF6596" strokeWidth={2} />
+        </View>
+      );
+    }
     if (isAssignment) {
       let icon: React.ReactNode = <Users size={24} color="#047857" strokeWidth={2} />;
       let bg = '#d1fae5';

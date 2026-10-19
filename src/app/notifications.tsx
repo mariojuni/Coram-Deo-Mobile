@@ -15,6 +15,7 @@ import { getTopBarButtonShadowStyle } from '../components/ui/SoftCard';
 
 const CATEGORIES: { label: string; value: NotificationCategory | 'all' }[] = [
   { label: 'All', value: 'all' },
+  { label: 'Announcements', value: 'announcement' },
   { label: 'Prayer', value: 'prayer' },
   { label: 'Serve', value: 'serve' },
   { label: 'Events', value: 'event' },

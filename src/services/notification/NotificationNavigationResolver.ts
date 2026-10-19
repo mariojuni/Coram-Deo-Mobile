@@ -59,6 +59,9 @@ export class NotificationNavigationResolver {
         return { pathname: '/my-giving' };
 
       case 'announcement':
+        if (sourceId) {
+          return { pathname: '/announcement-detail', params: { id: sourceId } };
+        }
         return { pathname: '/(tabs)/community', params: { tab: 'announcements' } };
 
       case 'sermon':

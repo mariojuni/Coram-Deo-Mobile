@@ -1,6 +1,7 @@
 import * as admin from 'firebase-admin';
 import { getFirestore } from 'firebase-admin/firestore';
 import { onDocumentCreated, onDocumentDeleted, onDocumentUpdated, onDocumentWritten } from 'firebase-functions/v2/firestore';
+import * as functions from 'firebase-functions';
 import { NotificationService } from './services/NotificationService';
 
 admin.initializeApp();
@@ -540,6 +541,206 @@ export const onGivingRecordUpdated = onDocumentUpdated(
   }
 );
 
+export const onAnnouncementWritten = onDocumentWritten(
+  {
+    document: 'announcements/{announcementId}',
+    database: databaseName,
+    region: 'asia-southeast1',
+  },
+  async (event) => {
+    const change = event.data;
+    if (!change) return null;
+
+    const announcementId = event.params.announcementId;
+    const db = getFirestore(admin.app(), databaseName);
+
+    // 1. If announcement is deleted, clean up in-app notifications
+    if (!change.after.exists) {
+      console.log(`[Announcement] ${announcementId} deleted. Cleaning up notifications...`);
+      await NotificationService.deleteNotificationsBySource(announcementId);
+      return null;
+    }
+
+    const afterData = change.after.data();
+    if (!afterData) return null;
+
+    // 2. Only proceed if announcement is Published and pushNotification is enabled
+    if (afterData.status !== 'Published' || !afterData.pushNotification) {
+      return null;
+    }
+
+    // 3. Prevent duplicate sends unless explicitly reset (notificationSent: false)
+    if (afterData.notificationSent === true) {
+      return null;
+    }
+
+    // 4. Check publish date (if scheduled in future, scheduler will process it later)
+    const now = new Date();
+    if (afterData.publishDate) {
+      const pubDate = new Date(afterData.publishDate);
+      if (pubDate > now) {
+        console.log(`[Announcement] ${announcementId} is scheduled for future (${afterData.publishDate}). Skipping immediate push.`);
+        return null;
+      }
+    }
+
+    const churchId = afterData.churchId;
+    if (!churchId) {
+      console.warn(`[Announcement] ${announcementId} has no churchId. Cannot determine recipient audience.`);
+      return null;
+    }
+
+    const targetAudience: string[] = Array.isArray(afterData.targetAudience) && afterData.targetAudience.length > 0
+      ? afterData.targetAudience
+      : ['All Members'];
+
+    console.log(`[Announcement] Dispatching notifications for ${announcementId} to audience: ${targetAudience.join(', ')}`);
+
+    try {
+      const recipientUserIds = new Set<string>();
+      const isAllMembers = targetAudience.includes('All Members');
+
+      const usersSnap = await db.collection('users').where('churchId', '==', churchId).get();
+
+      if (isAllMembers) {
+        usersSnap.forEach((userDoc) => {
+          const u = userDoc.data();
+          if (u.status !== 'deceased' && u.status !== 'transferred' && u.status !== 'archived') {
+            recipientUserIds.add(userDoc.id);
+          }
+        });
+      } else {
+        const wantsFullMembers = targetAudience.includes('All Full Members');
+        const wantsFellowship = targetAudience.includes('Fellowship Members');
+        const wantsMinistryLeaders = targetAudience.includes('Ministry Leaders');
+
+        const generalTags = new Set(['All Members', 'All Full Members', 'Fellowship Members', 'Ministry Leaders']);
+        const targetedMinistryNames = targetAudience.filter((tag) => !generalTags.has(tag));
+
+        const ministryMemberIds = new Set<string>();
+        if (targetedMinistryNames.length > 0) {
+          const ministriesSnap = await db.collection('ministries').where('churchId', '==', churchId).get();
+          ministriesSnap.forEach((mDoc) => {
+            const mData = mDoc.data();
+            if (targetedMinistryNames.includes(mData.name)) {
+              if (Array.isArray(mData.members)) {
+                mData.members.forEach((m: any) => {
+                  if (m?.memberId) ministryMemberIds.add(m.memberId);
+                });
+              }
+              if (mData.leaderId) ministryMemberIds.add(mData.leaderId);
+              if (Array.isArray(mData.leaders)) {
+                mData.leaders.forEach((l: any) => {
+                  if (typeof l === 'string') ministryMemberIds.add(l);
+                  else if (l?.id) ministryMemberIds.add(l.id);
+                  else if (l?.memberId) ministryMemberIds.add(l.memberId);
+                });
+              }
+            }
+          });
+
+          for (const mDoc of ministriesSnap.docs) {
+            const mData = mDoc.data();
+            if (targetedMinistryNames.includes(mData.name)) {
+              const activeMembersSnap = await db.collection('ministryMembers')
+                .where('ministryId', '==', mDoc.id)
+                .where('status', '==', 'active')
+                .get();
+              activeMembersSnap.forEach((docSnap) => {
+                const memberId = docSnap.data().memberId;
+                if (memberId) ministryMemberIds.add(memberId);
+              });
+            }
+          }
+        }
+
+        usersSnap.forEach((userDoc) => {
+          const u = userDoc.data();
+          if (u.status === 'deceased' || u.status === 'transferred' || u.status === 'archived') {
+            return;
+          }
+
+          const uid = userDoc.id;
+          let match = false;
+
+          if (wantsFullMembers) {
+            const cat = u.membershipCategory || u.membershipStatus;
+            if (cat === 'Full Member' || u.membershipStatus === 'Active') {
+              match = true;
+            }
+          }
+
+          if (wantsFellowship) {
+            const cat = u.membershipCategory || u.membershipStatus;
+            if (cat === 'Fellowship') {
+              match = true;
+            }
+          }
+
+          if (wantsMinistryLeaders) {
+            if (
+              u.role === 'ministry_leader' ||
+              (Array.isArray(u.roles) && u.roles.includes('ministry_leader')) ||
+              u.isMinistryLeader === true ||
+              (Array.isArray(u.managedMinistryIds) && u.managedMinistryIds.length > 0)
+            ) {
+              match = true;
+            }
+          }
+
+          if (ministryMemberIds.has(uid) || (u.memberId && ministryMemberIds.has(u.memberId))) {
+            match = true;
+          }
+
+          if (match) {
+            recipientUserIds.add(uid);
+          }
+        });
+      }
+
+      console.log(`[Announcement] Found ${recipientUserIds.size} recipient users for announcement ${announcementId}`);
+
+      if (recipientUserIds.size > 0) {
+        const notifications: Promise<void>[] = [];
+        recipientUserIds.forEach((userId) => {
+          notifications.push(
+            NotificationService.createUserNotification({
+              userId,
+              churchId,
+              category: 'announcement',
+              type: 'church_announcement',
+              title: afterData.title || 'Church Announcement',
+              body: afterData.message || '',
+              sourceType: 'announcement',
+              sourceId: announcementId,
+              navigation: {
+                destination: '/announcement-detail',
+                params: { id: announcementId },
+              },
+            })
+          );
+        });
+
+        const chunkSize = 20;
+        for (let i = 0; i < notifications.length; i += chunkSize) {
+          const chunk = notifications.slice(i, i + chunkSize);
+          await Promise.all(chunk);
+        }
+      }
+
+      await db.collection('announcements').doc(announcementId).update({
+        notificationSent: true,
+        notificationSentAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      console.log(`[Announcement] Successfully dispatched push notifications to ${recipientUserIds.size} users.`);
+    } catch (error) {
+      console.error(`[Announcement] Error sending notifications for ${announcementId}:`, error);
+    }
+
+    return null;
+  }
+);
 import { onObjectFinalized } from 'firebase-functions/v2/storage';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -722,8 +923,236 @@ export const notifyUpcomingEvents = onSchedule(
 
         console.log(`Sent ${notifications.length} reminders for event ${upcoming.id}`);
       }
+
+      // Check for scheduled announcements whose publishDate has now arrived
+      try {
+        const pendingAnnouncementsSnap = await db.collection("announcements")
+          .where("status", "==", "Published")
+          .where("pushNotification", "==", true)
+          .where("notificationSent", "==", false)
+          .get();
+
+        for (const annDoc of pendingAnnouncementsSnap.docs) {
+          const annData = annDoc.data();
+          if (annData.publishDate) {
+            const pubDate = new Date(annData.publishDate);
+            if (pubDate <= now) {
+              await annDoc.ref.update({
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+              });
+            }
+          }
+        }
+      } catch (annError) {
+        console.error("Error processing scheduled announcements:", annError);
+      }
     } catch (error) {
       console.error('Error notifying upcoming events:', error);
     }
   }
 );
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Ultimate Guitar Import — Callable Function
+// Proxies calls to the UG Mobile API to bypass browser CORS restrictions.
+// Used by the CoramDeo Admin "Import from Ultimate Guitar" feature.
+//
+// Auth key algorithm (reverse-engineered from community research):
+//   X-UG-API-KEY = MD5( deviceId + "YYYY-MM-DD:H" + "createLog()" )
+//   X-UG-CLIENT-ID = deviceId (random 16-char hex)
+//   User-Agent = "UGT_ANDROID/4.11.1 (Pixel; 8.1.0)"
+// ─────────────────────────────────────────────────────────────────────────────
+
+import * as nodeCrypto from 'crypto';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
+
+const UG_API_BASE = 'https://api.ultimate-guitar.com/api/v1';
+const UG_USER_AGENT = 'UGT_ANDROID/4.11.1 (Pixel; 8.1.0)';
+
+function generateUGDeviceId(): string {
+  return nodeCrypto.randomBytes(8).toString('hex');
+}
+
+function generateUGApiKey(deviceId: string): string {
+  const now = new Date();
+  const year  = now.getUTCFullYear();
+  const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+  const day   = String(now.getUTCDate()).padStart(2, '0');
+  const hour  = now.getUTCHours();
+  const dateStr = `${year}-${month}-${day}:${hour}`;
+  const payload = `${deviceId}${dateStr}createLog()`;
+  return nodeCrypto.createHash('md5').update(payload).digest('hex');
+}
+
+function buildUGHeaders(deviceId: string): Record<string, string> {
+  return {
+    'Accept':         'application/json',
+    'Accept-Charset': 'utf-8',
+    'User-Agent':     UG_USER_AGENT,
+    'Connection':     'close',
+    'X-UG-CLIENT-ID': deviceId,
+    'X-UG-API-KEY':   generateUGApiKey(deviceId),
+  };
+}
+
+export const fetchUltimateGuitarTab = onCall(
+  {
+    region: 'asia-southeast1',
+    timeoutSeconds: 30,
+    memory: '256MiB',
+  },
+  async (request) => {
+    const { url } = request.data as { url?: string };
+
+    if (!url || typeof url !== 'string') {
+      throw new HttpsError('invalid-argument', 'A valid UG tab URL is required.');
+    }
+
+    if (!url.includes('ultimate-guitar.com')) {
+      throw new HttpsError('invalid-argument', 'URL must be from ultimate-guitar.com');
+    }
+
+
+    const deviceId = generateUGDeviceId();
+    const headers  = buildUGHeaders(deviceId);
+
+    let tabId: number | undefined;
+
+    // Fast path: Extract tab ID directly from the URL (e.g., ...-chords-123456)
+    const match = url.match(/-(\d+)(?:[/?#]|$)/);
+    if (match && match[1]) {
+      tabId = parseInt(match[1], 10);
+      console.info(`[UG] Extracted tab ID ${tabId} directly from URL`);
+    }
+
+    if (!tabId) {
+      // Fallback: Resolve URL → tab_id
+      const urlLookupEndpoint = `${UG_API_BASE}/tab/url?url=${encodeURIComponent(url)}`;
+      console.info('[UG] Resolving tab URL', url);
+
+      try {
+        const urlRes = await fetch(urlLookupEndpoint, { headers });
+        if (!urlRes.ok) {
+          throw new HttpsError('not-found', `Ultimate Guitar API returned status ${urlRes.status}.`);
+        }
+        const urlData = await urlRes.json() as any;
+        tabId = urlData?.id;
+      } catch (err: any) {
+        console.error('[UG] URL Lookup Error:', err);
+        throw new HttpsError('internal', `Failed to lookup tab URL: ${err.message}`);
+      }
+    }
+
+    if (!tabId) {
+      throw new HttpsError('not-found', 'Could not resolve tab ID from URL.');
+    }
+
+    // Step 2: Fetch full tab data by ID
+    const tabInfoEndpoint = `${UG_API_BASE}/tab/info?tab_id=${tabId}&tab_access_type=public`;
+    console.info('[UG] Fetching tab info', tabId);
+
+    const tabRes = await fetch(tabInfoEndpoint, { headers });
+    if (!tabRes.ok) {
+      throw new HttpsError('not-found', `Failed to fetch tab details (status ${tabRes.status}).`);
+    }
+
+    const tabData = await tabRes.json() as any;
+    const capo: number = tabData?.capo ?? 0;
+
+    return {
+      ok: true,
+      tab: {
+        title:       tabData?.song_name     ?? '',
+        artist:      tabData?.artist_name   ?? '',
+        originalKey: tabData?.tonality_name ?? '',
+        defaultKey:  tabData?.tonality_name ?? '',
+        capo,
+        capoLabel:   capo > 0 ? `Capo ${capo}` : '',
+        difficulty:  tabData?.difficulty    ?? '',
+        tuning:      tabData?.tuning        ?? 'Standard',
+        tabType:     tabData?.type          ?? '',
+        content:     tabData?.content       ?? '',
+        sourceUrl:   tabData?.url_web ?? tabData?.urlWeb ?? url,
+        tabId,
+        votes:       tabData?.votes  ?? 0,
+        rating:      tabData?.rating ?? 0,
+      },
+    };
+  }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SMS Password Reset — Callable Function
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const resetPasswordWithPhone = onCall(
+  {
+    region: 'asia-southeast1',
+  },
+  async (request) => {
+    // 1. Verify that the user is authenticated (they must be, via Firebase Phone Auth)
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'You must be authenticated to perform this action.');
+    }
+
+    const { newPassword } = request.data;
+
+    if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 6) {
+      throw new HttpsError('invalid-argument', 'A valid new password (at least 6 characters) is required.');
+    }
+
+    const token = request.auth.token;
+    // The phone number of the authenticated user
+    const phoneNumber = token.phone_number;
+
+    if (!phoneNumber) {
+      throw new HttpsError('failed-precondition', 'The authenticated user does not have a verified phone number.');
+    }
+
+    const db = getFirestore(admin.app(), databaseName);
+
+    try {
+      // 2. Query Firestore 'users' collection for the verified phone number
+      const usersSnap = await db.collection('users').where('phoneNumber', '==', phoneNumber).limit(1).get();
+
+      if (usersSnap.empty) {
+        throw new HttpsError('not-found', 'No account found linked to this phone number.');
+      }
+
+      // 3. Get the UID of the user to reset
+      const userDoc = usersSnap.docs[0];
+      const uidToReset = userDoc.id;
+
+      // 4. Update the password via Admin SDK
+      await admin.auth().updateUser(uidToReset, {
+        password: newPassword,
+      });
+
+      return {
+        ok: true,
+        message: 'Password reset successfully.',
+      };
+    } catch (error) {
+      console.error('[resetPasswordWithPhone] Error:', error);
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+      throw new HttpsError('internal', 'An error occurred while resetting the password.');
+    }
+  }
+);
+
+
+// Triggered when a user deletes their Firebase Auth account
+export const onUserDeleted = functions.auth.user().onDelete(async (user) => {
+  const db = getFirestore(admin.app(), databaseName);
+  const userId = user.uid;
+
+  try {
+    await db.collection('users').doc(userId).delete();
+    console.log(`Successfully deleted user document for UID: ${userId}`);
+  } catch (error) {
+    console.error(`Failed to delete user document for UID: ${userId}`, error);
+  }
+});
+export * from './completeOAuthProfile';
