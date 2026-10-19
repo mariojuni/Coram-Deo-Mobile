@@ -14,6 +14,7 @@ import { useDiscipleshipGroupStore } from './useDiscipleshipGroupStore';
 import { useMinistryStore } from './useMinistryStore';
 import { useFeedStore } from './useFeedStore';
 import { useNotificationStore } from './useNotificationStore';
+import { useChurchStore } from './useChurchStore';
 
 interface AuthState {
   currentUser: User | null;
@@ -47,6 +48,7 @@ export const clearAllStoreListeners = () => {
   useSermonStore.setState({ sermons: [], loading: false, currentSermon: null });
   useFeedStore.getState().clearFeedsListener();
   useNotificationStore.getState().clearListener();
+  useChurchStore.getState().clearChurchListener();
 };
 
 export const clearAllCachesAndReset = async () => {
@@ -215,6 +217,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       ({ user, profile }) => {
         if (!user) {
           clearAllStoreListeners();
+        } else {
+          useChurchStore.getState().initializeChurchListener(profile?.churchId || null);
         }
         set({
           currentUser: user,

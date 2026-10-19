@@ -9,6 +9,7 @@ import { Check, ChevronLeft, Calendar } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import CustomDatePicker from '../../components/CustomDatePicker';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useChurchStore } from '../../store/useChurchStore';
 import { useMemberStore } from '../../store/useMemberStore';
 import { useGiving } from '../../features/giving/presentation/hooks/useGiving';
 import { createManualGivingRecord } from '../../features/giving/data/financeAdmin.service';
@@ -122,7 +123,7 @@ export default function GivingInputScreen() {
         fundType: selectedFund?.name || 'Others',
         campaignId: form.campaignId || undefined,
         amount: Number(form.amount),
-        currency: 'PHP',
+        currency: useChurchStore.getState().currency.code,
         method: form.method,
         date: form.date.toISOString().split('T')[0],
         referenceNumber: form.referenceNumber,

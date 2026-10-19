@@ -13,6 +13,7 @@ import { BounceCard } from '../../components/ui/BounceCard';
 import ShimmerSkeleton from '../../components/ui/ShimmerSkeleton';
 
 import { useAuthStore } from '../../store/useAuthStore';
+import { useChurchStore } from '../../store/useChurchStore';
 import { createFundTransfer, getRecentFundTransfers } from '../../features/giving/data/financeAdmin.service';
 import { useGiving } from '../../features/giving/presentation/hooks/useGiving';
 import { FundTransfer } from '../../features/giving/domain/giving.types';
@@ -236,7 +237,7 @@ export default function FundTransferScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Amount (₱) *</Text>
+                <Text style={styles.label}>Amount ({useChurchStore.getState().currency.symbol}) *</Text>
                 <TextInput 
                   style={styles.input}
                   placeholder="0.00"

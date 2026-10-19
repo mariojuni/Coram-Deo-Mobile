@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { GivingCampaign } from '../../domain/giving.types';
+import { formatCurrency } from '@/utils/currency';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronRight } from 'lucide-react-native';
 import { useCachedImage } from '../../../files/presentation/hooks/useCachedImage';
@@ -67,10 +68,10 @@ export function CampaignCard({ campaign, onPress }: CampaignCardProps) {
         <View style={styles.progressContainer}>
           <View style={styles.progressTextRow}>
             <Text style={styles.raisedText}>
-              ₱{campaign.raisedAmount.toLocaleString()}
+              {formatCurrency(campaign.raisedAmount)}
             </Text>
             <Text style={styles.goalText}>
-              of ₱{campaign.goalAmount.toLocaleString()}
+              of {formatCurrency(campaign.goalAmount)}
             </Text>
           </View>
           <View style={styles.progressBarBg}>

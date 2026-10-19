@@ -11,6 +11,7 @@ import { useCachedImage } from '@/features/files/presentation/hooks/useCachedIma
 import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 import { BounceCard } from '@/components/ui/BounceCard';
 import GlobalShimmerSkeleton from '@/components/ui/ShimmerSkeleton';
+import { formatCurrency } from '@/utils/currency';
 
 const ShimmerSkeleton = ({ width, height, style, borderRadius = 8 }: any) => {
   const animValue = useRef(new Animated.Value(0)).current;
@@ -203,7 +204,7 @@ export default function GivingCampaignDetailScreen() {
             <View style={styles.progressSection}>
               <View style={styles.progressRow}>
                 <Text style={styles.progressLabel}>Goal</Text>
-                <Text style={styles.progressValue}>₱{campaign.goalAmount.toLocaleString()}</Text>
+                <Text style={styles.progressValue}>{formatCurrency(campaign.goalAmount)}</Text>
               </View>
               
               <View style={styles.progressBarBg}>
@@ -218,11 +219,11 @@ export default function GivingCampaignDetailScreen() {
               <View style={styles.progressStatsRow}>
                 <View>
                   <Text style={styles.statLabel}>Raised</Text>
-                  <Text style={styles.statValueRaised}>₱{campaign.raisedAmount.toLocaleString()}</Text>
+                  <Text style={styles.statValueRaised}>{formatCurrency(campaign.raisedAmount)}</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={styles.statLabel}>Remaining</Text>
-                  <Text style={styles.statValueRemaining}>₱{remaining.toLocaleString()}</Text>
+                  <Text style={styles.statValueRemaining}>{formatCurrency(remaining)}</Text>
                 </View>
               </View>
             </View>
@@ -233,7 +234,7 @@ export default function GivingCampaignDetailScreen() {
               <View style={styles.expenseSection}>
                 <Text style={styles.expenseTitle}>Project Expenses</Text>
                 <Text style={styles.expenseText}>
-                  So far, ₱{campaign.expenseAmount.toLocaleString()} has been spent towards this project.
+                  So far, {formatCurrency(campaign.expenseAmount)} has been spent towards this project.
                 </Text>
               </View>
             )}

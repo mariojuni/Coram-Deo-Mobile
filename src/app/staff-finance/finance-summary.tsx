@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { ArrowDownRight, ArrowUpRight, Clock, PieChart, Wallet, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Bell } from 'lucide-react-native';
 import { useAuthStore } from '../../store/useAuthStore';
+import { formatCurrency } from '../../utils/currency';
 import { getMonthlyFinanceSummary } from '../../features/giving/data/financeAdmin.service';
 import { GivingRecord, GivingExpense } from '../../features/giving/domain/giving.types';
 import { getTopBarButtonShadowStyle, SoftCard } from '@/components/ui/SoftCard';
@@ -182,7 +183,7 @@ export default function FinanceSummaryScreen() {
                         </Text>
                       </View>
                       <Text style={styles.listItemAmountIncome}>
-                        +₱{record.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        +{formatCurrency(record.amount)}
                       </Text>
                     </View>
                   </SoftCard>
@@ -205,7 +206,7 @@ export default function FinanceSummaryScreen() {
                         </Text>
                       </View>
                       <Text style={styles.listItemAmountExpense}>
-                        -₱{expense.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        -{formatCurrency(expense.amount)}
                       </Text>
                     </View>
                   </SoftCard>

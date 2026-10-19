@@ -9,6 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
+import { formatCurrency } from '@/utils/currency';
 
 export default function MyGivingScreen() {
   const router = useRouter();
@@ -140,7 +141,7 @@ export default function MyGivingScreen() {
                 </View>
                 
                 <View style={styles.amountRow}>
-                  <Text style={styles.amountText}>₱{record.amount.toLocaleString()}</Text>
+                  <Text style={styles.amountText}>{formatCurrency(record.amount)}</Text>
                   <Text style={styles.fundText}>{getFundName(record.fundId, record.campaignId)}</Text>
                 </View>
 

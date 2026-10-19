@@ -12,6 +12,7 @@ import { ModernDropdown, DropdownOption } from '../../components/ui/ModernDropdo
 import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 import { SoftCard } from '@/components/ui/SoftCard';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useChurchStore } from '../../store/useChurchStore';
 import { getRecentExpenses, createExpense, getActiveExpenseCategories } from '../../features/giving/data/financeAdmin.service';
 import { uploadProofOfPayment, generateGivingRecordId } from '../../features/giving/data/giving.repository';
 import { GivingExpense, ExpenseCategory } from '../../features/giving/domain/giving.types';
@@ -140,7 +141,7 @@ export default function ExpenseTrackerScreen() {
         description: form.description,
         payee: form.vendorName, // web compatibility
         amount: Number(form.amount),
-        currency: 'PHP',
+        currency: useChurchStore.getState().currency.code,
         category: form.category,
         visibility: 'admin_only',
         date: form.date.toISOString().split('T')[0], // web compatibility
@@ -274,7 +275,7 @@ export default function ExpenseTrackerScreen() {
           <ScrollView ref={scrollRef} contentContainerStyle={styles.modalScrollContent} showsVerticalScrollIndicator={false}>
             <View style={[styles.contentWrap, { maxWidth: 640, width: '100%', alignSelf: 'center' }]}>
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Amount (₱) *</Text>
+                <Text style={styles.label}>Amount ({useChurchStore.getState().currency.symbol}) *</Text>
                 <TextInput 
                   style={styles.input}
                   placeholder="0.00"

@@ -28,6 +28,7 @@ import {
 } from "lucide-react-native";
 import { useAuthStore } from "../store/useAuthStore";
 import { useMemberStore } from "../store/useMemberStore";
+import { useChurchStore } from "../store/useChurchStore";
 import { useGiving } from "../features/giving/presentation/hooks/useGiving";
 import {
   submitGivingRecord,
@@ -125,6 +126,7 @@ export default function GivingFormScreen() {
 
   const churchId = userProfile?.churchId;
   const userId = currentUser?.uid;
+  const churchCurrency = useChurchStore((s) => s.currency);
 
   const hasVerificationEvidence =
     referenceNumber.trim().length > 0 || proofUri != null;
@@ -214,7 +216,7 @@ export default function GivingFormScreen() {
           fundId: selectedFundId,
           campaignId: (campaignId as string) || undefined,
           amount: Number(amount),
-          currency: "PHP",
+          currency: churchCurrency.code,
           method: "bank_transfer",
           paymentAccountId: selectedAccountId,
           paymentAccountSnapshot: account
@@ -383,7 +385,7 @@ export default function GivingFormScreen() {
         <View style={styles.formGroup}>
           <Text style={styles.label}>Amount</Text>
           <View style={styles.amountInputWrap}>
-            <Text style={styles.currencySymbol}>₱</Text>
+            <Text style={styles.currencySymbol}>{churchCurrency.symbol}</Text>
             <TextInput
               style={styles.amountInput}
               keyboardType="number-pad"
@@ -394,7 +396,7 @@ export default function GivingFormScreen() {
               autoCorrect={false}
               spellCheck={false}
               autoCapitalize="none"
-              accessibilityLabel="Donation Amount in PHP"
+              accessibilityLabel={`Donation Amount in ${churchCurrency.code}`}
             />
           </View>
         </View>

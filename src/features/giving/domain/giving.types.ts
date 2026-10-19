@@ -61,7 +61,7 @@ export interface GivingRecord {
   fundType?: string; // human-readable fund name, written on approval (matches web)
   campaignId?: string;
   amount: number;
-  currency: 'PHP';
+  currency: string;
   method: string | PaymentMethodType;
   paymentAccountId?: string;
   paymentAccountSnapshot?: {
@@ -100,7 +100,7 @@ export interface GivingExpense {
   payee: string;
   description?: string;
   amount: number;
-  currency: 'PHP';
+  currency: string;
   category: string; // string to match web app categories (e.g. 'Utilities')
   receiptUrl?: string;
   recordedBy: string;
