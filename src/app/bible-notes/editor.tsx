@@ -35,6 +35,7 @@ export default function BibleNoteEditorScreen() {
   const insets = useSafeAreaInsets();
 
   const [books, setBooks] = useState<any[]>([]);
+  const [activeTranslation, setActiveTranslation] = useState<string>('2692');
 
   React.useEffect(() => {
     const fetchBooks = async () => {
@@ -42,8 +43,9 @@ export default function BibleNoteEditorScreen() {
         const { getUserPreferences } = await import('@/features/bible/data/bible.repository');
         const { bibleDataService } = await import('@/features/bible/data/BibleDataService');
         const prefs = (await getUserPreferences()) as any;
-        const activeTranslation = prefs?.activeTranslation || '2692';
-        const b = await bibleDataService.getBooks(String(activeTranslation));
+        const translation = prefs?.activeTranslation || '2692';
+        setActiveTranslation(String(translation));
+        const b = await bibleDataService.getBooks(String(translation));
         setBooks(b || []);
       } catch (e) {
         console.warn('Failed to load books for note editor:', e);
@@ -211,6 +213,7 @@ export default function BibleNoteEditorScreen() {
         isOpen={booksModalOpen}
         onClose={() => setBooksModalOpen(false)}
         books={books}
+        versionId={activeTranslation}
         onSelectChapter={() => {}} // Not used in this mode
         onSelectVerses={(scripture) => {
           addScripture(scripture);

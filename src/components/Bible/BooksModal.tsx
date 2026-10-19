@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, DeviceEventEmitter } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { X, Check, ChevronLeft } from 'lucide-react-native';
 import { BounceCard } from '@/components/ui/BounceCard';
 import AppModal, { ModalDragArea } from '../ui/AppModal';
 import { useBooksModal } from '@/features/bible/presentation/hooks/useBooksModal';
-import { bibleDataService } from '@/features/bible/data/BibleDataService';
+import { bibleDataService, BIBLE_DOWNLOAD_COMPLETED_EVENT } from '@/features/bible/data/BibleDataService';
 import { getUserPreferences } from '@/features/bible/data/bible.repository';
+import { useBibleVersionStore } from '@/store/useBibleVersionStore';
 import { getHumanReadableBookName, extractChapterNumber } from '@/utils/scriptureReferenceParser';
 import type { BibleNoteScripture } from '@/features/bibleNotes/domain/bibleNote.types';
 
@@ -38,9 +39,10 @@ interface BooksModalProps {
   onSelectChapter: (bookId: string, chapterNum: string) => void;
   activeBookId?: string;
   onSelectVerses?: (scripture: BibleNoteScripture) => void;
+  versionId?: string | number;
 }
 
-export default function BooksModal({ isOpen, onClose, books, onSelectChapter, activeBookId, onSelectVerses }: BooksModalProps) {
+export default function BooksModal({ isOpen, onClose, books, onSelectChapter, activeBookId, onSelectVerses, versionId: propVersionId }: BooksModalProps) {
   const { collapseBook, expandedBook, sortedBooks, toggleBook, setExpandedBook } = useBooksModal(books);
   const scrollViewRef = useRef<ScrollView>(null);
   const hasScrolledRef = useRef(false);
@@ -58,14 +60,107 @@ export default function BooksModal({ isOpen, onClose, books, onSelectChapter, ac
     return Math.max(0, bookTop - 150);
   }, [activeBookIndex]);
 
-  // New state for verse selection
+  // Verses state
   const [viewMode, setViewMode] = useState<'books' | 'verses'>('books');
   const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<string | null>(null);
   const [loadingVerses, setLoadingVerses] = useState(false);
   const [chapterData, setChapterData] = useState<any[]>([]);
   const [selectedVerses, setSelectedVerses] = useState<Set<number>>(new Set());
-  const [versionId, setVersionId] = useState<string>('1');
+  const [effectiveVersionId, setEffectiveVersionId] = useState<string>(
+    propVersionId ? String(propVersionId) : '2692'
+  );
+
+  // Sync versionId from props or stores
+  useEffect(() => {
+    if (propVersionId) {
+      setEffectiveVersionId(String(propVersionId));
+    } else {
+      const storeTrans = useBibleVersionStore.getState().activeTranslation;
+      if (storeTrans) {
+        setEffectiveVersionId(String(storeTrans));
+      } else {
+        getUserPreferences()
+          .then((prefs: any) => {
+            if (prefs?.activeTranslation) {
+              setEffectiveVersionId(String(prefs.activeTranslation));
+            }
+          })
+          .catch(() => {});
+      }
+    }
+  }, [propVersionId, isOpen]);
+
+  // Fetch chapter verses when entering verses mode
+  useEffect(() => {
+    if (!isOpen || viewMode !== 'verses' || !selectedBookId || !selectedChapter) return;
+
+    let isMounted = true;
+    const fetchVerses = async () => {
+      setLoadingVerses(true);
+      try {
+        let vId = effectiveVersionId;
+        if (!vId || vId === '1') {
+          const storeTrans = useBibleVersionStore.getState().activeTranslation;
+          if (storeTrans) {
+            vId = String(storeTrans);
+          } else {
+            const prefs = (await getUserPreferences()) as any;
+            vId = String(prefs?.activeTranslation || '2692');
+          }
+          if (isMounted) setEffectiveVersionId(vId);
+        }
+
+        const activeBookObj = books.find((b) => isBookMatch(b, selectedBookId));
+        const bookIdForFetch = String(activeBookObj?.id || activeBookObj?.usfm || selectedBookId);
+
+        let chapter: any = null;
+        try {
+          chapter = await bibleDataService.getChapter(
+            vId,
+            bookIdForFetch,
+            parseInt(selectedChapter, 10)
+          );
+        } catch (firstErr) {
+          if (activeBookObj?.usfm && String(activeBookObj.usfm) !== bookIdForFetch) {
+            chapter = await bibleDataService.getChapter(
+              vId,
+              String(activeBookObj.usfm),
+              parseInt(selectedChapter, 10)
+            );
+          } else {
+            throw firstErr;
+          }
+        }
+
+        if (isMounted) {
+          setChapterData(chapter?.verses || []);
+        }
+      } catch (err) {
+        console.warn('Failed to load verses in BooksModal:', err);
+        if (isMounted) {
+          setChapterData([]);
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingVerses(false);
+        }
+      }
+    };
+
+    fetchVerses();
+
+    const sub = DeviceEventEmitter.addListener(BIBLE_DOWNLOAD_COMPLETED_EVENT, (completedVersionId) => {
+      if (String(completedVersionId) === String(effectiveVersionId)) {
+        fetchVerses();
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      sub.remove();
+    };
+  }, [isOpen, viewMode, selectedBookId, selectedChapter, effectiveVersionId, books]);
 
   // Reset view state when modal closes
   useEffect(() => {
@@ -98,9 +193,10 @@ export default function BooksModal({ isOpen, onClose, books, onSelectChapter, ac
   const handleChapterPress = (book: any, chapterNum: string) => {
     if (onSelectVerses) {
       // Go to verse selection
-      setSelectedBookId(String(book.id));
+      setSelectedBookId(String(book.id || book.usfm));
       setSelectedChapter(chapterNum);
       setSelectedVerses(new Set());
+      setChapterData([]);
       setViewMode('verses');
     } else {
       // Quick jump
@@ -133,6 +229,24 @@ export default function BooksModal({ isOpen, onClose, books, onSelectChapter, ac
     );
   };
 
+  // Helper to clean verse text
+  const cleanVerseText = (text: any): string => {
+    if (!text || typeof text !== 'string') return '';
+    return text
+      .replace(/\{\{note:\d+\}\}/g, '')
+      .replace(/<[^>]*>/g, '')
+      .replace(/#/g, '')
+      .replace(/[\u200B-\u200D\uFEFF]/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
   // === VERSE SELECTION LOGIC ===
   const toggleVerse = (verseNum: number) => {
     setSelectedVerses((prev) => {
@@ -146,13 +260,16 @@ export default function BooksModal({ isOpen, onClose, books, onSelectChapter, ac
   const sortedSelected = useMemo(() => Array.from(selectedVerses).sort((a, b) => a - b), [selectedVerses]);
 
   const previewLines = useMemo(() => {
-    return sortedSelected.map(vNum => {
-      const vData = chapterData.find(v => parseInt(v.verseNumber, 10) === vNum);
+    return sortedSelected.map((vNum) => {
+      const vData = chapterData.find((v, idx) => {
+        const num = parseInt(String(v.verseNumber || v.verse || (idx + 1)), 10);
+        return num === vNum;
+      });
       if (!vData) return null;
       
-      const clean = (vData.content || '').replace(/\{\{note:\d+\}\}/g, '').replace(/<[^>]*>/g, '').replace(/#/g, '').trim();
+      const clean = cleanVerseText(vData.content || vData.text || '');
       const SUPERSCRIPT_MAP: Record<string, string> = { '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹' };
-      const sup = String(vNum).split('').map(d => SUPERSCRIPT_MAP[d] ?? d).join('');
+      const sup = String(vNum).split('').map((d) => SUPERSCRIPT_MAP[d] ?? d).join('');
       return `${sup} ${clean}`;
     }).filter(Boolean) as string[];
   }, [sortedSelected, chapterData]);
@@ -160,8 +277,8 @@ export default function BooksModal({ isOpen, onClose, books, onSelectChapter, ac
   const handleConfirmVerses = () => {
     if (sortedSelected.length === 0 || !selectedBookId || !selectedChapter || !onSelectVerses) return;
 
-    const activeBookObj = books.find(b => String(b.id) === selectedBookId);
-    const bookTitle = selectedBookId ? getHumanReadableBookName(selectedBookId) : (activeBookObj?.title || selectedBookId);
+    const activeBookObj = books.find((b) => isBookMatch(b, selectedBookId));
+    const bookTitle = activeBookObj?.title || activeBookObj?.name || (selectedBookId ? getHumanReadableBookName(selectedBookId) : '');
 
     let rangeStr = '';
     if (sortedSelected.length === 1) {
@@ -174,15 +291,18 @@ export default function BooksModal({ isOpen, onClose, books, onSelectChapter, ac
       rangeStr = isConsecutive ? `${sortedSelected[0]}–${sortedSelected[sortedSelected.length - 1]}` : sortedSelected.join(', ');
     }
 
-    const cleanLines = sortedSelected.map(vNum => {
-      const vData = chapterData.find(v => parseInt(v.verseNumber, 10) === vNum);
+    const cleanLines = sortedSelected.map((vNum) => {
+      const vData = chapterData.find((v, idx) => {
+        const num = parseInt(String(v.verseNumber || v.verse || (idx + 1)), 10);
+        return num === vNum;
+      });
       if (!vData) return '';
-      const clean = (vData.content || '').replace(/\{\{note:\d+\}\}/g, '').replace(/<[^>]*>/g, '').replace(/#/g, '').trim();
+      const clean = cleanVerseText(vData.content || vData.text || '');
       return `${vNum} ${clean}`;
-    }).filter(s => s.trim().length > 0);
+    }).filter((s) => s.trim().length > 0);
 
     const scripture: BibleNoteScripture = {
-      versionId,
+      versionId: effectiveVersionId,
       bookId: selectedBookId,
       bookName: bookTitle,
       chapter: parseInt(selectedChapter, 10),
@@ -197,13 +317,31 @@ export default function BooksModal({ isOpen, onClose, books, onSelectChapter, ac
   };
 
   const renderVersesView = () => {
-    const activeBookObj = books.find(b => String(b.id) === selectedBookId);
-    const bookTitle = selectedBookId ? getHumanReadableBookName(selectedBookId) : (activeBookObj?.title || selectedBookId);
+    const activeBookObj = books.find((b) => isBookMatch(b, selectedBookId));
+    const bookTitle = activeBookObj?.title || activeBookObj?.name || (selectedBookId ? getHumanReadableBookName(selectedBookId) : '');
+
+    let rangeStr = '';
+    if (sortedSelected.length === 1) {
+      rangeStr = `${sortedSelected[0]}`;
+    } else if (sortedSelected.length > 1) {
+      let isConsecutive = true;
+      for (let i = 1; i < sortedSelected.length; i++) {
+        if (sortedSelected[i] !== sortedSelected[i - 1] + 1) {
+          isConsecutive = false;
+          break;
+        }
+      }
+      rangeStr = isConsecutive
+        ? `${sortedSelected[0]}–${sortedSelected[sortedSelected.length - 1]}`
+        : sortedSelected.join(', ');
+    }
 
     return (
       <View style={styles.versesViewContainer}>
         <View style={styles.referenceBar}>
-          <Text style={styles.referenceText}>{bookTitle} {selectedChapter}</Text>
+          <Text style={styles.referenceText}>
+            {bookTitle} {selectedChapter}{rangeStr ? `:${rangeStr}` : ''}
+          </Text>
         </View>
 
         {loadingVerses ? (
@@ -211,26 +349,32 @@ export default function BooksModal({ isOpen, onClose, books, onSelectChapter, ac
             <ActivityIndicator size="small" color="#FF6596" />
           </View>
         ) : (
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
-            <View style={styles.verseGridContainer}>
-              {chapterData.map((verse) => {
-                const vNum = parseInt(verse.verseNumber, 10);
-                if (isNaN(vNum)) return null;
-                const isSelected = selectedVerses.has(vNum);
-                return (
-                  <TouchableOpacity
-                    key={verse.id || verse.verseNumber}
-                    style={[styles.verseGridItem, isSelected && styles.verseGridItemActive]}
-                    onPress={() => toggleVerse(vNum)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.verseGridText, isSelected && styles.verseGridTextActive]}>
-                      {vNum}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
+            {chapterData.length === 0 ? (
+              <View style={[styles.center, { paddingVertical: 48 }]}>
+                <Text style={styles.emptyText}>No verses available for this chapter.</Text>
+              </View>
+            ) : (
+              <View style={styles.verseGridContainer}>
+                {chapterData.map((verse, index) => {
+                  const vNum = parseInt(String(verse.verseNumber || verse.verse || (index + 1)), 10);
+                  if (isNaN(vNum)) return null;
+                  const isSelected = selectedVerses.has(vNum);
+                  return (
+                    <TouchableOpacity
+                      key={verse.id || `verse-${vNum}-${index}`}
+                      style={[styles.verseGridItem, isSelected && styles.verseGridItemActive]}
+                      onPress={() => toggleVerse(vNum)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.verseGridText, isSelected && styles.verseGridTextActive]}>
+                        {vNum}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
 
             {previewLines.length > 0 && (
               <View style={styles.previewContainer}>
@@ -376,5 +520,6 @@ const styles = StyleSheet.create({
   verseGridTextActive: { color: '#FFFFFF' },
   previewContainer: { padding: 24 },
   previewTitle: { fontSize: 13, fontWeight: '700', color: '#9CA3AF', textTransform: 'uppercase', marginBottom: 12 },
-  previewContent: { fontSize: 16, lineHeight: 28, color: '#111827', fontFamily: 'Inter' }
+  previewContent: { fontSize: 16, lineHeight: 28, color: '#111827', fontFamily: 'Inter' },
+  emptyText: { fontSize: 15, color: '#9CA3AF', fontWeight: '500' }
 });
