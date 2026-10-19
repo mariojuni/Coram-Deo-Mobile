@@ -124,14 +124,23 @@ export function findCurrencyByCode(code?: string | null): ChurchCurrencyConfig |
   return POPULAR_CURRENCIES.find((c) => c.code.toUpperCase() === String(code).toUpperCase()) || null;
 }
 
-export function normalizeCurrencyConfig(config?: Partial<ChurchCurrencyConfig> | null): ChurchCurrencyConfig {
-  if (!config || typeof config !== 'object') {
+export function normalizeCurrencyConfig(config?: Partial<ChurchCurrencyConfig> | string | null): ChurchCurrencyConfig {
+  if (!config) {
     return { ...DEFAULT_CURRENCY_CONFIG };
   }
-  const matched = findCurrencyByCode(config.code);
+  if (typeof config === 'string') {
+    const matched = findCurrencyByCode(config);
+    return matched ? { ...matched } : { ...DEFAULT_CURRENCY_CONFIG, code: config, symbol: config };
+  }
+  if (typeof config !== 'object') {
+    return { ...DEFAULT_CURRENCY_CONFIG };
+  }
+  const code = config.code || (config as any).currencyCode;
+  const symbol = config.symbol || (config as any).currencySymbol;
+  const matched = findCurrencyByCode(code);
   return {
-    code: config.code || matched?.code || DEFAULT_CURRENCY_CONFIG.code,
-    symbol: config.symbol || matched?.symbol || DEFAULT_CURRENCY_CONFIG.symbol,
+    code: code || matched?.code || DEFAULT_CURRENCY_CONFIG.code,
+    symbol: symbol || matched?.symbol || DEFAULT_CURRENCY_CONFIG.symbol,
     name: config.name || matched?.name || DEFAULT_CURRENCY_CONFIG.name,
     position: config.position || matched?.position || DEFAULT_CURRENCY_CONFIG.position,
     decimalPlaces: typeof config.decimalPlaces === 'number' ? config.decimalPlaces : (matched?.decimalPlaces ?? DEFAULT_CURRENCY_CONFIG.decimalPlaces),

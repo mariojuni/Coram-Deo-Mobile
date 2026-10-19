@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc } from 'firebase/firestore';
 import { getActiveDb } from '../firebase';
 import { 
   ChurchCurrencyConfig, 
@@ -82,16 +82,32 @@ export const useChurchStore = create<ChurchState>((set) => ({
       const docRef = doc(getActiveDb(), 'churches', churchId);
       unsubscribeChurch = onSnapshot(
         docRef,
-        (snap) => {
-          if (snap.exists()) {
-            const data = snap.data();
-            const normalizedCurrency = normalizeCurrencyConfig(data.currency || {
+        async (snap) => {
+          let data = snap.exists() ? (snap.data() || {}) : {};
+
+          // If top-level document has no currency config or does not exist, check settings/profile subcollection
+          if (!snap.exists() || (!data.currency && !data.currencyCode)) {
+            try {
+              const subDocRef = doc(getActiveDb(), 'churches', churchId, 'settings', 'profile');
+              const subSnap = await getDoc(subDocRef);
+              if (subSnap.exists()) {
+                const subData = subSnap.data() || {};
+                data = { ...subData, ...data };
+              }
+            } catch (subErr) {
+              console.warn('[ChurchStore] Failed to read settings/profile fallback:', subErr);
+            }
+          }
+
+          if (snap.exists() || Object.keys(data).length > 0) {
+            const rawCurrency = data.currency || {
               code: data.currencyCode,
               symbol: data.currencySymbol,
-            });
+            };
+            const normalizedCurrency = normalizeCurrencyConfig(rawCurrency);
 
             const profile: ChurchProfileData = {
-              id: snap.id,
+              id: snap.id || churchId,
               name: data.name || data.churchName || '',
               churchName: data.churchName || data.name || '',
               shortName: data.shortName || '',

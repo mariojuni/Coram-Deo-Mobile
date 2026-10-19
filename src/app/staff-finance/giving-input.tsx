@@ -22,6 +22,7 @@ import { formatMemberName } from '../../features/member/domain/member.utils';
 export default function GivingInputScreen() {
   const router = useRouter();
   const { userProfile } = useAuthStore();
+  const churchCurrency = useChurchStore((s) => s.currency);
   const { horizontalPadding } = useResponsiveLayout();
   const { members, households, initializeMembersListener, initializeHouseholdsListener } = useMemberStore();
   const { funds, campaigns } = useGiving();
@@ -47,6 +48,7 @@ export default function GivingInputScreen() {
     if (userProfile?.churchId) {
       initializeMembersListener(userProfile.churchId);
       initializeHouseholdsListener(userProfile.churchId);
+      useChurchStore.getState().initializeChurchListener(userProfile.churchId);
     }
   }, [userProfile?.churchId, initializeMembersListener, initializeHouseholdsListener]);
 
@@ -123,7 +125,7 @@ export default function GivingInputScreen() {
         fundType: selectedFund?.name || 'Others',
         campaignId: form.campaignId || undefined,
         amount: Number(form.amount),
-        currency: useChurchStore.getState().currency.code,
+        currency: churchCurrency.code,
         method: form.method,
         date: form.date.toISOString().split('T')[0],
         referenceNumber: form.referenceNumber,
@@ -227,7 +229,7 @@ export default function GivingInputScreen() {
         )}
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Amount (PHP)</Text>
+          <Text style={styles.label}>Amount ({churchCurrency.symbol}) *</Text>
           <TextInput 
             style={styles.input}
             placeholder="0.00"

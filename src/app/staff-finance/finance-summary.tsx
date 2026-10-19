@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { ArrowDownRight, ArrowUpRight, Clock, PieChart, Wallet, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Bell } from 'lucide-react-native';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useChurchStore } from '../../store/useChurchStore';
 import { formatCurrency } from '../../utils/currency';
 import { getMonthlyFinanceSummary } from '../../features/giving/data/financeAdmin.service';
 import { GivingRecord, GivingExpense } from '../../features/giving/domain/giving.types';
@@ -16,6 +17,7 @@ import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 export default function FinanceSummaryScreen() {
   const router = useRouter();
   const { userProfile } = useAuthStore();
+  const churchCurrency = useChurchStore((s) => s.currency);
   const [loading, setLoading] = useState(true);
   const insets = useSafeAreaInsets();
   const { isTablet, horizontalPadding } = useResponsiveLayout();
@@ -51,6 +53,9 @@ export default function FinanceSummaryScreen() {
 
   useEffect(() => {
     fetchSummary();
+    if (userProfile?.churchId) {
+      useChurchStore.getState().initializeChurchListener(userProfile.churchId);
+    }
   }, [userProfile?.churchId, selectedMonth]);
 
   const fetchSummary = async () => {
@@ -142,7 +147,7 @@ export default function FinanceSummaryScreen() {
             <>
               <View style={[styles.mainCard, { backgroundColor: balance >= 0 ? '#10B981' : '#EF4444' }]}>
                 <Text style={styles.mainCardLabel}>Net Balance</Text>
-                <Text style={styles.mainCardAmount}>PHP {balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+                <Text style={styles.mainCardAmount}>{formatCurrency(balance, churchCurrency)}</Text>
               </View>
 
               <View style={styles.row}>
@@ -152,7 +157,7 @@ export default function FinanceSummaryScreen() {
                       <TrendingUp size={24} color="#0284C7" />
                     </View>
                     <Text style={styles.statLabel}>Total Income</Text>
-                    <Text style={styles.statValue}>PHP {summary.totalGiving.toLocaleString(undefined, { minimumFractionDigits: 2 })}</Text>
+                    <Text style={styles.statValue}>{formatCurrency(summary.totalGiving, churchCurrency)}</Text>
                   </View>
                 </SoftCard>
 
@@ -162,7 +167,7 @@ export default function FinanceSummaryScreen() {
                       <TrendingDown size={24} color="#DC2626" />
                     </View>
                     <Text style={styles.statLabel}>Total Expenses</Text>
-                    <Text style={styles.statValue}>PHP {summary.totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 2 })}</Text>
+                    <Text style={styles.statValue}>{formatCurrency(summary.totalExpenses, churchCurrency)}</Text>
                   </View>
                 </SoftCard>
               </View>
@@ -183,7 +188,7 @@ export default function FinanceSummaryScreen() {
                         </Text>
                       </View>
                       <Text style={styles.listItemAmountIncome}>
-                        +{formatCurrency(record.amount)}
+                        +{formatCurrency(record.amount, churchCurrency)}
                       </Text>
                     </View>
                   </SoftCard>
@@ -206,7 +211,7 @@ export default function FinanceSummaryScreen() {
                         </Text>
                       </View>
                       <Text style={styles.listItemAmountExpense}>
-                        -{formatCurrency(expense.amount)}
+                        -{formatCurrency(expense.amount, churchCurrency)}
                       </Text>
                     </View>
                   </SoftCard>

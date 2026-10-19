@@ -8,6 +8,8 @@ import { ArrowLeft, Check, CheckCircle2, ChevronRight, X, ChevronLeft, CheckCirc
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useMemberStore } from '../../store/useMemberStore';
+import { useChurchStore } from '../../store/useChurchStore';
+import { formatCurrency } from '../../utils/currency';
 import { useGiving } from '../../features/giving/presentation/hooks/useGiving';
 import { getPendingGivingRecords, approveGivingRecord, rejectGivingRecord } from '../../features/giving/data/financeAdmin.service';
 import { GivingRecord } from '../../features/giving/domain/giving.types';
@@ -19,6 +21,7 @@ import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 export default function PendingVerificationScreen() {
   const router = useRouter();
   const { userProfile } = useAuthStore();
+  const churchCurrency = useChurchStore((s) => s.currency);
   const insets = useSafeAreaInsets();
   const { isTablet, horizontalPadding, maxModalWidth } = useResponsiveLayout();
   
@@ -37,6 +40,7 @@ export default function PendingVerificationScreen() {
     fetchRecords();
     if (userProfile?.churchId) {
       initializeMembersListener(userProfile.churchId);
+      useChurchStore.getState().initializeChurchListener(userProfile.churchId);
     }
   }, [userProfile?.churchId]);
 
@@ -111,7 +115,7 @@ export default function PendingVerificationScreen() {
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <View>
-            <Text style={styles.amount}>PHP {item.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+            <Text style={styles.amount}>{formatCurrency(item.amount, churchCurrency)}</Text>
             <Text style={styles.subText}>
               {submittedDate.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
             </Text>

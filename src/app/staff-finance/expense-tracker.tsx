@@ -13,6 +13,7 @@ import { getTopBarButtonShadowStyle } from '@/components/ui/SoftCard';
 import { SoftCard } from '@/components/ui/SoftCard';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useChurchStore } from '../../store/useChurchStore';
+import { formatCurrency } from '../../utils/currency';
 import { getRecentExpenses, createExpense, getActiveExpenseCategories } from '../../features/giving/data/financeAdmin.service';
 import { uploadProofOfPayment, generateGivingRecordId } from '../../features/giving/data/giving.repository';
 import { GivingExpense, ExpenseCategory } from '../../features/giving/domain/giving.types';
@@ -36,6 +37,7 @@ import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 export default function ExpenseTrackerScreen() {
   const router = useRouter();
   const { userProfile } = useAuthStore();
+  const churchCurrency = useChurchStore((s) => s.currency);
   const { funds } = useGiving();
   const insets = useSafeAreaInsets();
   const { isTablet, horizontalPadding } = useResponsiveLayout();
@@ -68,6 +70,9 @@ export default function ExpenseTrackerScreen() {
 
   useEffect(() => {
     fetchExpenses();
+    if (userProfile?.churchId) {
+      useChurchStore.getState().initializeChurchListener(userProfile.churchId);
+    }
   }, [userProfile?.churchId]);
 
   const fetchExpenses = async () => {
@@ -141,7 +146,7 @@ export default function ExpenseTrackerScreen() {
         description: form.description,
         payee: form.vendorName, // web compatibility
         amount: Number(form.amount),
-        currency: useChurchStore.getState().currency.code,
+        currency: churchCurrency.code,
         category: form.category,
         visibility: 'admin_only',
         date: form.date.toISOString().split('T')[0], // web compatibility
@@ -181,7 +186,7 @@ export default function ExpenseTrackerScreen() {
               {new Date(expenseDate).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
             </Text>
           </View>
-          <Text style={styles.amount}>PHP {item.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+          <Text style={styles.amount}>{formatCurrency(item.amount, churchCurrency)}</Text>
         </View>
         <View style={styles.badgeRow}>
           <View style={styles.badge}>
@@ -275,7 +280,7 @@ export default function ExpenseTrackerScreen() {
           <ScrollView ref={scrollRef} contentContainerStyle={styles.modalScrollContent} showsVerticalScrollIndicator={false}>
             <View style={[styles.contentWrap, { maxWidth: 640, width: '100%', alignSelf: 'center' }]}>
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Amount ({useChurchStore.getState().currency.symbol}) *</Text>
+                <Text style={styles.label}>Amount ({churchCurrency.symbol}) *</Text>
                 <TextInput 
                   style={styles.input}
                   placeholder="0.00"

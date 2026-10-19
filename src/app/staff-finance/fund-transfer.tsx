@@ -14,6 +14,7 @@ import ShimmerSkeleton from '../../components/ui/ShimmerSkeleton';
 
 import { useAuthStore } from '../../store/useAuthStore';
 import { useChurchStore } from '../../store/useChurchStore';
+import { formatCurrency } from '../../utils/currency';
 import { createFundTransfer, getRecentFundTransfers } from '../../features/giving/data/financeAdmin.service';
 import { useGiving } from '../../features/giving/presentation/hooks/useGiving';
 import { FundTransfer } from '../../features/giving/domain/giving.types';
@@ -22,6 +23,7 @@ import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 export default function FundTransferScreen() {
   const router = useRouter();
   const { userProfile } = useAuthStore();
+  const churchCurrency = useChurchStore((s) => s.currency);
   const { funds } = useGiving();
   const insets = useSafeAreaInsets();
   const { isTablet, horizontalPadding } = useResponsiveLayout();
@@ -51,6 +53,9 @@ export default function FundTransferScreen() {
 
   useEffect(() => {
     fetchTransfers();
+    if (userProfile?.churchId) {
+      useChurchStore.getState().initializeChurchListener(userProfile.churchId);
+    }
   }, [userProfile?.churchId]);
 
   const fetchTransfers = async () => {
@@ -130,7 +135,7 @@ export default function FundTransferScreen() {
                 {new Date(transferDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
               </Text>
             </View>
-            <Text style={styles.amount}>PHP {item.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+            <Text style={styles.amount}>{formatCurrency(item.amount, churchCurrency)}</Text>
           </View>
           {item.notes ? (
             <Text style={styles.notesText} numberOfLines={2}>Notes: {item.notes}</Text>
@@ -237,7 +242,7 @@ export default function FundTransferScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Amount ({useChurchStore.getState().currency.symbol}) *</Text>
+                <Text style={styles.label}>Amount ({churchCurrency.symbol}) *</Text>
                 <TextInput 
                   style={styles.input}
                   placeholder="0.00"

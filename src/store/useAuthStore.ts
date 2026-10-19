@@ -115,6 +115,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         );
 
         set({ currentUser: result.user, userProfile: updatedProfile, isOAuthProcessing: false });
+        if (updatedProfile?.churchId) {
+          useChurchStore.getState().initializeChurchListener(updatedProfile.churchId);
+        }
         authRepository.setOAuthProcessing(false);
       } else {
         set({ isOAuthProcessing: false });
@@ -144,6 +147,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         );
 
         set({ currentUser: result.user, userProfile: updatedProfile, isOAuthProcessing: false });
+        if (updatedProfile?.churchId) {
+          useChurchStore.getState().initializeChurchListener(updatedProfile.churchId);
+        }
         authRepository.setOAuthProcessing(false);
       } else {
         set({ isOAuthProcessing: false });
@@ -249,6 +255,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const profile = await fetchUserAccount(currentUser);
         if (profile) {
           set({ userProfile: profile });
+          if (profile.churchId) {
+            useChurchStore.getState().initializeChurchListener(profile.churchId);
+          }
         }
       } catch (err) {
         console.warn('Failed to refresh user profile:', err);
