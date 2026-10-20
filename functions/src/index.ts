@@ -831,19 +831,27 @@ import { onSchedule } from 'firebase-functions/v2/scheduler';
 
 export const notifyUpcomingEvents = onSchedule(
   {
-    schedule: '*/15 * * * 0,3,5', // Every 15 mins on Sunday, Wednesday, Friday
+    schedule: '*/10 * * * *', // Run every 10 mins daily
     region: 'asia-southeast1',
     timeZone: 'Asia/Manila',
   },
   async (event) => {
     const db = getFirestore(admin.app(), databaseName);
     const now = new Date();
-    // Look ahead 65 minutes to safely catch events in the next hour without missing due to cron delays
-    const lookAheadTime = new Date(now.getTime() + 65 * 60000);
+
+    const formatReminderTiming = (minutes: number): string => {
+      if (minutes <= 15) return 'in about 15 minutes';
+      if (minutes <= 30) return 'in about 30 minutes';
+      if (minutes === 60) return 'in about an hour';
+      if (minutes === 120) return 'in about 2 hours';
+      if (minutes === 1440) return 'tomorrow';
+      if (minutes < 60) return `in ${minutes} minutes`;
+      return `in ${Math.round(minutes / 60)} hours`;
+    };
 
     try {
       const eventsSnap = await db.collection('events')
-        .where('status', '==', 'Published')
+        .where('status', 'in', ['published', 'Published'])
         .get();
 
       const eventsToNotify: any[] = [];
@@ -851,13 +859,17 @@ export const notifyUpcomingEvents = onSchedule(
         const data = doc.data();
         if (data.notificationSent) return; // Already notified
 
-        let eventTime = null;
+        // Offset defaults to 30 minutes if not set. If 0 or null, reminder is disabled.
+        const offset = data.reminderMinutesBefore !== undefined ? data.reminderMinutesBefore : 30;
+        if (offset === null || offset === 0) return;
+
+        let eventTime: Date | null = null;
         if (data.startTimestamp) {
           eventTime = data.startTimestamp.toDate();
-        } else if (data.date && data.startTime) {
-          // Fallback parsing for existing string dates
+        } else if (data.date && (data.startTime || data.time)) {
+          // Fallback parsing for existing string dates and times
           const d = new Date(data.date);
-          const timeStr = String(data.startTime).trim();
+          const timeStr = String(data.startTime || data.time).trim();
           const timeMatch12 = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
           const timeMatch24 = timeStr.match(/^(\d{1,2}):(\d{2})$/);
 
@@ -877,8 +889,13 @@ export const notifyUpcomingEvents = onSchedule(
           }
         }
 
-        if (eventTime && eventTime > now && eventTime <= lookAheadTime) {
-          eventsToNotify.push({ id: doc.id, data, eventTime });
+        if (eventTime && eventTime > now) {
+          const reminderTime = new Date(eventTime.getTime() - offset * 60000);
+          // Trigger when reminderTime has arrived, within a 20-minute validity window
+          const elapsedSinceReminder = now.getTime() - reminderTime.getTime();
+          if (now >= reminderTime && elapsedSinceReminder <= 20 * 60000) {
+            eventsToNotify.push({ id: doc.id, data, eventTime, offset });
+          }
         }
       });
 
@@ -893,6 +910,7 @@ export const notifyUpcomingEvents = onSchedule(
 
         const usersSnap = await db.collection('users').where('churchId', '==', churchId).get();
         const notifications: Promise<void>[] = [];
+        const timePhrase = formatReminderTiming(upcoming.offset);
 
         usersSnap.forEach((userDoc) => {
           notifications.push(
@@ -902,7 +920,7 @@ export const notifyUpcomingEvents = onSchedule(
               category: 'event',
               type: 'event_reminder',
               title: 'Upcoming Event Reminder',
-              body: `Reminder: ${upcoming.data.title || 'An event'} starts in about an hour at ${upcoming.data.location || 'church'}! We encourage you to attend.`,
+              body: `Reminder: ${upcoming.data.title || 'An event'} starts ${timePhrase} at ${upcoming.data.location || 'church'}! We encourage you to attend.`,
               sourceType: 'event',
               sourceId: upcoming.id,
             })
@@ -916,12 +934,13 @@ export const notifyUpcomingEvents = onSchedule(
           await Promise.all(chunk);
         }
 
-        // Mark event as notified
+        // Mark event as notified with timestamp
         await db.collection('events').doc(upcoming.id).update({
-          notificationSent: true
+          notificationSent: true,
+          notificationSentAt: admin.firestore.FieldValue.serverTimestamp()
         });
 
-        console.log(`Sent ${notifications.length} reminders for event ${upcoming.id}`);
+        console.log(`Sent ${notifications.length} reminders for event ${upcoming.id} (${upcoming.offset}m before)`);
       }
 
       // Check for scheduled announcements whose publishDate has now arrived

@@ -50,6 +50,7 @@ function toSchedule(docId: string, data: Record<string, unknown>): Schedule {
   return {
     id: docId,
     title: typeof data.title === 'string' ? data.title : '',
+    description: typeof data.description === 'string' ? data.description : undefined,
     date: typeof data.date === 'string' ? data.date : docId,
     time: typeof data.time === 'string' ? data.time : (typeof data.startTime === 'string' ? data.startTime : ''),
     endTime: typeof data.endTime === 'string' ? data.endTime : '',
@@ -59,6 +60,14 @@ function toSchedule(docId: string, data: Record<string, unknown>): Schedule {
     songList: Array.isArray(data.songList) ? data.songList : undefined,
     enableRSVP: typeof data.enableRSVP === 'boolean' ? data.enableRSVP : false,
     status: typeof data.status === 'string' ? data.status : 'Published',
+    reminderMinutesBefore:
+      typeof data.reminderMinutesBefore === 'number'
+        ? data.reminderMinutesBefore
+        : data.reminderMinutesBefore === null
+        ? null
+        : 30,
+    notificationSent: typeof data.notificationSent === 'boolean' ? data.notificationSent : false,
+    notificationSentAt: data.notificationSentAt,
     completedAt: data.completedAt,
     createdAt: data.createdAt,
   };
@@ -226,7 +235,7 @@ export const scheduleRepository = {
 
 
 
-  async createSchedule(data: Pick<Schedule, 'title' | 'date' | 'time' | 'endTime' | 'location'> & { churchId: string }): Promise<string> {
+  async createSchedule(data: Pick<Schedule, 'title' | 'date' | 'time' | 'endTime' | 'location'> & { churchId: string; reminderMinutesBefore?: number | null }): Promise<string> {
     let startTimestamp = null;
     if (data.date && data.time) {
       const d = new Date(data.date);
@@ -252,6 +261,8 @@ export const scheduleRepository = {
 
     const ref = await addDoc(collection(getActiveDb(), 'events'), {
       ...data,
+      reminderMinutesBefore: data.reminderMinutesBefore !== undefined ? data.reminderMinutesBefore : 30,
+      notificationSent: false,
       duties: [],
       rsvps: [],
       ...(startTimestamp && { startTimestamp }),
@@ -260,7 +271,7 @@ export const scheduleRepository = {
     return ref.id;
   },
 
-  async updateSchedule(id: string, data: Partial<Pick<Schedule, 'title' | 'date' | 'time' | 'endTime' | 'location'>>): Promise<void> {
+  async updateSchedule(id: string, data: Partial<Pick<Schedule, 'title' | 'date' | 'time' | 'endTime' | 'location' | 'reminderMinutesBefore'>>): Promise<void> {
     let startTimestamp = undefined;
     if (data.date && data.time) {
       const d = new Date(data.date);

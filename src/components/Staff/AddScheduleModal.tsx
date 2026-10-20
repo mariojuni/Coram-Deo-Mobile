@@ -1,5 +1,5 @@
 import { addDoc, collection, doc, getDocs, query, serverTimestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
-import { Calendar as CalendarIcon, Clock, X } from 'lucide-react-native';
+import { Calendar as CalendarIcon, Clock, X, Bell } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { getActiveDb } from '../../firebase';
@@ -70,6 +70,9 @@ export default function AddScheduleModal({ isOpen, onClose, eventToEdit }: AddSc
     eventToEdit?.endTime ? parseTime(eventToEdit.endTime) : new Date(new Date().setHours(11, 0, 0, 0))
   );
   const [location, setLocation] = useState(eventToEdit?.location ?? 'Main Sanctuary');
+  const [reminderMinutesBefore, setReminderMinutesBefore] = useState<number>(
+    eventToEdit?.reminderMinutesBefore !== undefined ? (eventToEdit.reminderMinutesBefore ?? 30) : 30
+  );
   const [status, setStatus] = useState<'draft' | 'published' | 'completed' | 'cancelled'>(
     (eventToEdit?.status?.toLowerCase() as 'draft' | 'published' | 'completed' | 'cancelled') ?? 'published'
   );
@@ -92,6 +95,7 @@ export default function AddScheduleModal({ isOpen, onClose, eventToEdit }: AddSc
         setEndTime(eventToEdit.endTime ? parseTime(eventToEdit.endTime) : new Date(new Date().setHours(11, 0, 0, 0)));
         setLocation(eventToEdit.location ?? 'Main Sanctuary');
         setStatus((eventToEdit.status?.toLowerCase() as 'draft' | 'published' | 'completed' | 'cancelled') ?? 'published');
+        setReminderMinutesBefore(eventToEdit.reminderMinutesBefore !== undefined ? (eventToEdit.reminderMinutesBefore ?? 30) : 30);
       } else {
         setTitle('Sunday Worship Service');
         setDate(new Date());
@@ -99,6 +103,7 @@ export default function AddScheduleModal({ isOpen, onClose, eventToEdit }: AddSc
         setEndTime(new Date(new Date().setHours(11, 0, 0, 0)));
         setLocation('Main Sanctuary');
         setStatus('published');
+        setReminderMinutesBefore(30);
       }
     }
   }, [isOpen, eventToEdit]);
@@ -114,13 +119,28 @@ export default function AddScheduleModal({ isOpen, onClose, eventToEdit }: AddSc
     }
     setSaving(true);
     try {
+      let startTimestamp: Date | null = null;
+      if (date && startTime) {
+        const d = new Date(date);
+        d.setHours(startTime.getHours(), startTime.getMinutes(), 0, 0);
+        startTimestamp = d;
+      }
+      const isScheduleChanged = eventToEdit
+        ? eventToEdit.date !== fmtDateDB(date) ||
+          eventToEdit.time !== fmtTime(startTime) ||
+          eventToEdit.reminderMinutesBefore !== reminderMinutesBefore
+        : false;
       const payload: Record<string, any> = {
         title: title.trim(),
         date: fmtDateDB(date),
         time: fmtTime(startTime),
+        startTime: fmtTime(startTime),
         endTime: fmtTime(endTime),
         location: location.trim(),
         status,
+        reminderMinutesBefore,
+        ...(startTimestamp && { startTimestamp }),
+        ...(isScheduleChanged ? { notificationSent: false } : {}),
       };
 
       if (status === 'completed') {
@@ -151,7 +171,7 @@ export default function AddScheduleModal({ isOpen, onClose, eventToEdit }: AddSc
           setSaving(false);
           return;
         }
-        await addDoc(collection(getActiveDb(), 'events'), { ...payload, duties: [], createdAt: serverTimestamp(), churchId: userProfile.churchId });
+        await addDoc(collection(getActiveDb(), 'events'), { ...payload, duties: [], notificationSent: false, createdAt: serverTimestamp(), churchId: userProfile.churchId });
       }
       onClose();
     } catch (e) {
@@ -236,6 +256,39 @@ export default function AddScheduleModal({ isOpen, onClose, eventToEdit }: AddSc
             placeholder="e.g. Main Sanctuary"
             placeholderTextColor="#aaa"
           />
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14, marginBottom: 8 }}>
+            <Bell size={14} color="#FF6596" />
+            <Text style={[s.label, { marginTop: 0, marginBottom: 0 }]}>Push Reminder</Text>
+          </View>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {[
+              { label: '15m', val: 15 },
+              { label: '30m', val: 30 },
+              { label: '1 hour', val: 60 },
+              { label: '2 hours', val: 120 },
+              { label: '1 day', val: 1440 },
+              { label: 'None', val: 0 },
+            ].map((opt) => (
+              <TouchableOpacity
+                key={opt.val}
+                style={[
+                  s.reminderOption,
+                  reminderMinutesBefore === opt.val && s.statusOptionSelected,
+                ]}
+                onPress={() => setReminderMinutesBefore(opt.val)}
+              >
+                <Text
+                  style={[
+                    s.statusOptionText,
+                    reminderMinutesBefore === opt.val && s.statusOptionTextSelected,
+                  ]}
+                >
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
           <Text style={s.label}>Status</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -385,6 +438,16 @@ const s = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#6B7280',
+  },
+  reminderOption: {
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    flexBasis: '31%',
   },
   statusOptionTextSelected: {
     color: '#FF6596',

@@ -27,6 +27,9 @@ export interface Schedule {
   songList?: any[];
   setlistStatus?: string;
   status?: string;
+  reminderMinutesBefore?: number | null;
+  notificationSent?: boolean;
+  notificationSentAt?: unknown;
   completedAt?: unknown;
   createdAt?: unknown;
 }
