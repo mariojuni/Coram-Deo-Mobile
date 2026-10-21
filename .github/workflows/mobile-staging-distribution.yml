@@ -63,6 +63,16 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
+      - name: Setup Android NDK and Accept Licenses
+        run: |
+          yes | sdkmanager --licenses || true
+          if [ ! -d "${ANDROID_HOME:-$ANDROID_SDK_ROOT}/ndk/27.1.12297006" ]; then
+            echo "Installing NDK 27.1.12297006..."
+            sdkmanager --install "ndk;27.1.12297006"
+          else
+            echo "NDK 27.1.12297006 is already installed."
+          fi
+
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
@@ -114,6 +124,7 @@ jobs:
           NODE_OPTIONS: "--max-old-space-size=4096"
         run: |
           EXPO_PUBLIC_APP_ENV=development npx expo prebuild --platform android --clean
+          echo "sdk.dir=${ANDROID_HOME:-$ANDROID_SDK_ROOT}" > android/local.properties
           echo "org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dkotlin.daemon.jvm.options=-Xmx1024m" >> android/gradle.properties
           echo "org.gradle.daemon=false" >> android/gradle.properties
           echo "org.gradle.workers.max=2" >> android/gradle.properties
