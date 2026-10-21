@@ -22,17 +22,24 @@ on:
           - minor
           - major
           - none
+      run_tests:
+        description: "Run Unit and UI Tests before release"
+        required: true
+        default: true
+        type: boolean
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: write
+
 jobs:
-  android-production:
-    if: github.event.inputs.platform == 'both' || github.event.inputs.platform == 'android'
-    name: Build and Upload Android Production
+  test:
+    if: github.event.inputs.run_tests != false && github.event.inputs.run_tests != 'false'
+    name: Run Unit & UI Tests
     runs-on: ubuntu-latest
-    environment: production
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -46,6 +53,37 @@ jobs:
       - name: Install Node dependencies
         run: npm ci --legacy-peer-deps
 
+      - name: Run Test Suite with Coverage
+        run: npm run test:ci -- --coverage
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-coverage-report
+          path: coverage/
+          retention-days: 7
+
+  prepare-release:
+    needs: [test]
+    if: |
+      always() &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled')
+    name: Prepare Release Version & Tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
       - name: Bump Version & Create Tag
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.version_bump != 'none'
         run: |
@@ -58,6 +96,31 @@ jobs:
           git tag -a "$TAG_NAME" -m "Production Release $TAG_NAME (Build #${{ github.run_number }})" || true
           git push origin HEAD:${{ github.ref_name }} --tags || true
 
+  android-production:
+    needs: [prepare-release]
+    if: |
+      always() &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled') &&
+      (github.event.inputs.platform == 'both' || github.event.inputs.platform == 'android')
+    name: Build and Upload Android Production
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install Node dependencies
+        run: npm ci --legacy-peer-deps
+
       - name: Setup Java
         uses: actions/setup-java@v3
         with:
@@ -66,8 +129,12 @@ jobs:
 
       - name: Setup Android NDK and Accept Licenses
         run: |
+          ANDROID_ROOT="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          echo "$ANDROID_ROOT/cmdline-tools/latest/bin" >> $GITHUB_PATH
+          echo "$ANDROID_ROOT/platform-tools" >> $GITHUB_PATH
+          export PATH="$ANDROID_ROOT/cmdline-tools/latest/bin:$PATH"
           yes | sdkmanager --licenses || true
-          if [ ! -d "${ANDROID_HOME:-$ANDROID_SDK_ROOT}/ndk/27.1.12297006" ]; then
+          if [ ! -d "$ANDROID_ROOT/ndk/27.1.12297006" ]; then
             echo "Installing NDK 27.1.12297006..."
             sdkmanager --install "ndk;27.1.12297006"
           else
@@ -158,13 +225,20 @@ jobs:
           rm -f fastlane/play-service-account.json
 
   ios-production:
-    if: github.event.inputs.platform == 'both' || github.event.inputs.platform == 'ios'
+    needs: [prepare-release]
+    if: |
+      always() &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled') &&
+      (github.event.inputs.platform == 'both' || github.event.inputs.platform == 'ios')
     name: Build and Upload iOS Production
     runs-on: macos-latest
     environment: production
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

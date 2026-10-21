@@ -1,4 +1,4 @@
-import { arrayUnion, collection, doc, getDocs, query, serverTimestamp, setDoc, where, documentId } from 'firebase/firestore';
+import { arrayUnion, collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where, documentId } from 'firebase/firestore';
 import { getActiveDb } from '../../../firebase';
 import type { BibleDailySummary } from '../domain/myJourney.types';
 
@@ -41,7 +41,7 @@ export class BibleActivityRepository {
 
       const [snapshot, legacyDatesDoc] = await Promise.all([
         getDocs(activityRef),
-        import('firebase/firestore').then(({ getDoc }) => getDoc(doc(db, 'users', userId, 'bibleActivity', 'dates')))
+        getDoc(doc(db, 'users', userId, 'bibleActivity', 'dates'))
       ]);
       
       const summariesMap = new Map<string, BibleDailySummary>();

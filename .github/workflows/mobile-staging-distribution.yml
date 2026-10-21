@@ -65,8 +65,12 @@ jobs:
 
       - name: Setup Android NDK and Accept Licenses
         run: |
+          ANDROID_ROOT="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          echo "$ANDROID_ROOT/cmdline-tools/latest/bin" >> $GITHUB_PATH
+          echo "$ANDROID_ROOT/platform-tools" >> $GITHUB_PATH
+          export PATH="$ANDROID_ROOT/cmdline-tools/latest/bin:$PATH"
           yes | sdkmanager --licenses || true
-          if [ ! -d "${ANDROID_HOME:-$ANDROID_SDK_ROOT}/ndk/27.1.12297006" ]; then
+          if [ ! -d "$ANDROID_ROOT/ndk/27.1.12297006" ]; then
             echo "Installing NDK 27.1.12297006..."
             sdkmanager --install "ndk;27.1.12297006"
           else

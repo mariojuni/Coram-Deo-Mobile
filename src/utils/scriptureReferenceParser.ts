@@ -86,7 +86,7 @@ export interface ParsedScriptureReference {
  * Resolves a human-readable book name or abbreviation to a YouVersion book code.
  * Returns null if unrecognised.
  */
-function resolveBookId(rawBook: string): string | null {
+export function resolveBookId(rawBook: string): string | null {
   const normalized = rawBook.trim().toLowerCase().replace(/\s+/g, ' ');
   return BOOK_NAME_MAP[normalized] ?? null;
 }
