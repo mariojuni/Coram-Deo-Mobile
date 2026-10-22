@@ -168,6 +168,29 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           "remote-notification",
           "fetch"
         ],
+        UIAppFonts: [
+          "Montserrat-Regular.ttf",
+          "Montserrat-Medium.ttf",
+          "Montserrat-SemiBold.ttf",
+          "Montserrat-Bold.ttf",
+          "Montserrat-ExtraBold.ttf",
+          "Montserrat-Italic.ttf",
+          "Montserrat-MediumItalic.ttf",
+          "Montserrat-SemiBoldItalic.ttf",
+          "Montserrat-BoldItalic.ttf",
+          "Roboto-Regular.ttf",
+          "Roboto-Medium.ttf",
+          "Roboto-SemiBold.ttf",
+          "Roboto-Bold.ttf",
+          "Roboto-Italic.ttf",
+          "Roboto-BoldItalic.ttf",
+          "Lora-Regular.ttf",
+          "Lora-Medium.ttf",
+          "Lora-SemiBold.ttf",
+          "Lora-Bold.ttf",
+          "Lora-Italic.ttf",
+          "Lora-BoldItalic.ttf"
+        ],
         CFBundleDisplayName: appName,
         ITSAppUsesNonExemptEncryption: false,
         UISupportedInterfaceOrientations: [
@@ -262,6 +285,45 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         "expo-image-picker",
         {
           "photosPermission": "Allow CoramDeo to access your photos to let you update your profile picture and share images in the community."
+        }
+      ],
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/Inter-Regular.ttf",
+            "./assets/fonts/Inter-Medium.ttf",
+            "./assets/fonts/Inter-SemiBold.ttf",
+            "./assets/fonts/Inter-Bold.ttf",
+            "./assets/fonts/Inter-ExtraBold.ttf",
+            "./assets/fonts/Inter-Italic.ttf",
+            "./assets/fonts/Inter-MediumItalic.ttf",
+            "./assets/fonts/Inter-SemiBoldItalic.ttf",
+            "./assets/fonts/Inter-BoldItalic.ttf",
+            "./assets/fonts/Inter-VariableFont_opsz,wght.ttf",
+            "./assets/fonts/Inter-Italic-VariableFont_opsz,wght.ttf",
+            "./assets/fonts/Montserrat-Regular.ttf",
+            "./assets/fonts/Montserrat-Medium.ttf",
+            "./assets/fonts/Montserrat-SemiBold.ttf",
+            "./assets/fonts/Montserrat-Bold.ttf",
+            "./assets/fonts/Montserrat-ExtraBold.ttf",
+            "./assets/fonts/Montserrat-Italic.ttf",
+            "./assets/fonts/Montserrat-MediumItalic.ttf",
+            "./assets/fonts/Montserrat-SemiBoldItalic.ttf",
+            "./assets/fonts/Montserrat-BoldItalic.ttf",
+            "./assets/fonts/Roboto-Regular.ttf",
+            "./assets/fonts/Roboto-Medium.ttf",
+            "./assets/fonts/Roboto-SemiBold.ttf",
+            "./assets/fonts/Roboto-Bold.ttf",
+            "./assets/fonts/Roboto-Italic.ttf",
+            "./assets/fonts/Roboto-BoldItalic.ttf",
+            "./assets/fonts/Lora-Regular.ttf",
+            "./assets/fonts/Lora-Medium.ttf",
+            "./assets/fonts/Lora-SemiBold.ttf",
+            "./assets/fonts/Lora-Bold.ttf",
+            "./assets/fonts/Lora-Italic.ttf",
+            "./assets/fonts/Lora-BoldItalic.ttf"
+          ]
         }
       ],
 

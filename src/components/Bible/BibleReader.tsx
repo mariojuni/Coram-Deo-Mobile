@@ -977,13 +977,13 @@ const styles = StyleSheet.create({  container: { flex: 1, backgroundColor: '#faf
     fontSize: 18,
     fontWeight: '700',
     color: '#1a1a1a',
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
   },
   verseSubheading: {
     fontSize: 15,
     fontWeight: '500',
     color: '#555555',
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Medium',
     marginTop: 4,
   },
   verseSelected: {
@@ -996,14 +996,14 @@ const styles = StyleSheet.create({  container: { flex: 1, backgroundColor: '#faf
     fontSize: 14,
     fontWeight: '700',
     color: '#FF6596',
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
   },
   noteSuperscript: {
     fontSize: 11,
     lineHeight: 18,
     color: '#FF6596',
     fontWeight: '600',
-    fontStyle: 'italic',
+    fontStyle: 'normal',
     textAlignVertical: 'top',
   },
   navOverlay: {
@@ -1176,7 +1176,7 @@ const styles = StyleSheet.create({  container: { flex: 1, backgroundColor: '#faf
     lineHeight: 32,
     color: '#374151',
     fontFamily: 'Inter',
-    fontStyle: 'italic',
+    fontStyle: 'normal',
   },
   inlineLetterDark: {
     fontSize: 10,

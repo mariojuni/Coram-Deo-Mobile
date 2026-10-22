@@ -45,25 +45,27 @@ export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
+    sans: 'Inter',
+    serif: 'Lora',
+    rounded: 'Inter',
     mono: 'ui-monospace',
   },
+  android: {
+    sans: 'Inter',
+    serif: 'Lora',
+    rounded: 'Inter',
+    mono: 'monospace',
+  },
   default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
+    sans: 'Inter',
+    serif: 'Lora',
+    rounded: 'Inter',
     mono: 'monospace',
   },
   web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
+    sans: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    serif: 'Lora, serif',
+    rounded: 'Inter, sans-serif',
     mono: 'var(--font-mono)',
   },
 });

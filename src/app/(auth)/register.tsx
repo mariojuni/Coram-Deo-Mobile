@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { AlertCircle, Calendar, Heart, Lock, Mail, MapPin, Phone, User, ArrowLeft, ArrowRight, Eye, EyeOff, ChevronDown, Check } from 'lucide-react-native';
+import { AlertCircle, Calendar, Heart, Lock, Mail, MapPin, User, ArrowLeft, ArrowRight, Eye, EyeOff, ChevronDown, Check } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,27 +13,14 @@ import { AppAuthError } from '../../features/auth/domain/auth-error.types';
 import { mapAuthError } from '../../features/auth/utils/auth-error-mapper';
 import { PrimaryGradientButton } from '../../components/ui/PrimaryGradientButton';
 import { AdaptiveContainer } from '@/components/ui/AdaptiveContainer';
+import { PhoneNumberInput } from '@/components/ui/PhoneNumberInput';
+import { isValidNationalNumber, parsePhoneNumber } from '@/utils/phone';
 
 function formatDateToMDYYYY(date: Date): string {
   const month = date.getMonth() + 1;
   const day = date.getDate();
   const year = date.getFullYear();
   return `${month}/${day}/${year}`;
-}
-
-function formatPHPhoneNumber(input: string): string {
-  let digits = input.replace(/\D/g, '');
-  if (digits.startsWith('63')) {
-    digits = digits.slice(2);
-  } else if (digits.startsWith('0')) {
-    digits = digits.slice(1);
-  }
-  digits = digits.slice(0, 10);
-
-  if (digits.length === 0) return '+63 ';
-  if (digits.length <= 3) return `+63 ${digits}`;
-  if (digits.length <= 6) return `+63 ${digits.slice(0, 3)} ${digits.slice(3)}`;
-  return `+63 ${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
 }
 
 function validatePasswordRequirements(pwd: string): string | null {
@@ -79,7 +66,8 @@ export default function RegisterScreen() {
   
   // Contact Info
   const [email, setEmail] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('+63 ');
+  // Stored as compact international format, e.g. +639171234567 ('' when empty)
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [address, setAddress] = useState('');
   const [emergencyContact, setEmergencyContact] = useState('');
   
@@ -152,6 +140,12 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     setErrorMsg('');
+
+    if (!isValidNationalNumber(parsePhoneNumber(phoneNumber).national)) {
+      setErrorMsg('Please enter a valid phone number.');
+      return;
+    }
+
     setIsLoading(true);
 
     if (email.trim()) {
@@ -167,8 +161,7 @@ export default function RegisterScreen() {
       }
     }
 
-    const cleanPhone = phoneNumber.replace(/\D/g, '');
-    const finalPhone = cleanPhone === '63' || cleanPhone === '' ? '' : phoneNumber.replace(/\s+/g, '').trim();
+    const finalPhone = phoneNumber;
 
     try {
       await signup({
@@ -445,17 +438,7 @@ export default function RegisterScreen() {
 
                 <View style={styles.formGroup}>
                   <Text style={styles.inputLabel}>Phone Number</Text>
-                  <View style={styles.inputWrapper}>
-                    <Phone size={18} color="#888" style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.input}
-                      placeholder="+63 9XX XXX XXXX"
-                      placeholderTextColor="#888"
-                      value={phoneNumber}
-                      onChangeText={(text) => setPhoneNumber(formatPHPhoneNumber(text))}
-                      keyboardType="phone-pad"
-                    />
-                  </View>
+                  <PhoneNumberInput value={phoneNumber} onChangeValue={setPhoneNumber} />
                 </View>
 
                 <View style={styles.formGroup}>

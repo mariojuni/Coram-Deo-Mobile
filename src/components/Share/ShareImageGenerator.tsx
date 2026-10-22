@@ -204,6 +204,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#4B5563',
     lineHeight: 24,
+    fontFamily: 'Inter-Italic',
     fontStyle: 'italic',
   },
   scriptureReference: {

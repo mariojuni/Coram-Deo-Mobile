@@ -24,12 +24,21 @@ const decodeHtmlEntities = (text: string) => {
 
 const stripHtml = (html: string) => {
   if (!html) return '';
-  return decodeHtmlEntities(
-    html
+  // Remove verse labels/number spans, sups, and notes
+  const cleanedHtml = html
+    .replace(/<span class="[^"]*(?:vlbl|label|verse-num|v)[^"]*">.*?<\/span>/gi, '')
+    .replace(/<sup[^>]*>.*?<\/sup>/gi, '')
+    .replace(/<\/?(?:div|p|br)[^>]*>/gi, ' ');
+
+  const text = decodeHtmlEntities(
+    cleanedHtml
       .replace(/<[^>]+>/g, '')
       .replace(/\s+/g, ' ')
       .trim()
   );
+
+  // Strip leading verse number (e.g. "3 ", "3. ", "16-17 ", "[16] ") if present
+  return text.replace(/^\s*\[?\d+(?:[-–]\d+)?\]?[\s.:)]*\s*/, '');
 };
 
 // Scattered sparkle positions (static, purely decorative)

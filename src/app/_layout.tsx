@@ -1,3 +1,4 @@
+import '../utils/initDefaultFont';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter, useSegments } from 'expo-router';
@@ -33,8 +34,50 @@ try {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
-  const [loaded] = useFonts({});
+  const [loaded, fontError] = useFonts({
+    Inter: require('../../assets/fonts/Inter-VariableFont_opsz,wght.ttf'),
+    'Inter-Regular': require('../../assets/fonts/Inter-Regular.ttf'),
+    'Inter-Medium': require('../../assets/fonts/Inter-Medium.ttf'),
+    'Inter-SemiBold': require('../../assets/fonts/Inter-SemiBold.ttf'),
+    'Inter-Bold': require('../../assets/fonts/Inter-Bold.ttf'),
+    'Inter-ExtraBold': require('../../assets/fonts/Inter-ExtraBold.ttf'),
+    'Inter-Italic': require('../../assets/fonts/Inter-Italic.ttf'),
+    'Inter-MediumItalic': require('../../assets/fonts/Inter-MediumItalic.ttf'),
+    'Inter-SemiBoldItalic': require('../../assets/fonts/Inter-SemiBoldItalic.ttf'),
+    'Inter-BoldItalic': require('../../assets/fonts/Inter-BoldItalic.ttf'),
+    Montserrat: require('../../assets/fonts/Montserrat-Regular.ttf'),
+    'Montserrat-Regular': require('../../assets/fonts/Montserrat-Regular.ttf'),
+    'Montserrat-Medium': require('../../assets/fonts/Montserrat-Medium.ttf'),
+    'Montserrat-SemiBold': require('../../assets/fonts/Montserrat-SemiBold.ttf'),
+    'Montserrat-Bold': require('../../assets/fonts/Montserrat-Bold.ttf'),
+    'Montserrat-ExtraBold': require('../../assets/fonts/Montserrat-ExtraBold.ttf'),
+    'Montserrat-Italic': require('../../assets/fonts/Montserrat-Italic.ttf'),
+    'Montserrat-MediumItalic': require('../../assets/fonts/Montserrat-MediumItalic.ttf'),
+    'Montserrat-SemiBoldItalic': require('../../assets/fonts/Montserrat-SemiBoldItalic.ttf'),
+    'Montserrat-BoldItalic': require('../../assets/fonts/Montserrat-BoldItalic.ttf'),
+    Lora: require('../../assets/fonts/Lora-Regular.ttf'),
+    'Lora-Regular': require('../../assets/fonts/Lora-Regular.ttf'),
+    'Lora-Medium': require('../../assets/fonts/Lora-Medium.ttf'),
+    'Lora-SemiBold': require('../../assets/fonts/Lora-SemiBold.ttf'),
+    'Lora-Bold': require('../../assets/fonts/Lora-Bold.ttf'),
+    'Lora-Italic': require('../../assets/fonts/Lora-Italic.ttf'),
+    'Lora-BoldItalic': require('../../assets/fonts/Lora-BoldItalic.ttf'),
+    Roboto: require('../../assets/fonts/Roboto-Regular.ttf'),
+    'Roboto-Regular': require('../../assets/fonts/Roboto-Regular.ttf'),
+    'Roboto-Medium': require('../../assets/fonts/Roboto-Medium.ttf'),
+    'Roboto-SemiBold': require('../../assets/fonts/Roboto-SemiBold.ttf'),
+    'Roboto-Bold': require('../../assets/fonts/Roboto-Bold.ttf'),
+    'Roboto-Italic': require('../../assets/fonts/Roboto-Italic.ttf'),
+    'Roboto-BoldItalic': require('../../assets/fonts/Roboto-BoldItalic.ttf'),
+  });
   const [showAnimatedSplash, setShowAnimatedSplash] = useState(true);
+  const [splashAnimationFinished, setSplashAnimationFinished] = useState(false);
+
+  useEffect(() => {
+    if (splashAnimationFinished && (loaded || fontError)) {
+      setShowAnimatedSplash(false);
+    }
+  }, [splashAnimationFinished, loaded, fontError]);
 
   const { prayerModalOpen, editingPrayer, closePrayerModal } = useUIStore();
 
@@ -288,7 +331,14 @@ export default function RootLayout() {
       </ThemeProvider>
       {showAnimatedSplash && (
         <View pointerEvents="none" style={[StyleSheet.absoluteFill, { flex: 1, alignItems: 'center', justifyContent: 'center', zIndex: 99999, elevation: 99999, backgroundColor: '#FAFAFA' }]}>
-          <AnimatedSplashScreen onAnimationFinish={() => setShowAnimatedSplash(false)} />
+          <AnimatedSplashScreen
+            onAnimationFinish={() => {
+              setSplashAnimationFinished(true);
+              if (loaded || fontError) {
+                setShowAnimatedSplash(false);
+              }
+            }}
+          />
         </View>
       )}
     </GestureHandlerRootView>

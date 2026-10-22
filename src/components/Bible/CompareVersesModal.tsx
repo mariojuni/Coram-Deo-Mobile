@@ -518,6 +518,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 25,
     letterSpacing: -0.1,
+    fontFamily: 'Inter',
   },
   cardDivider: {
     height: StyleSheet.hairlineWidth,

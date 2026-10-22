@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { AlertCircle, Calendar, Heart, Mail, MapPin, Phone, User, ArrowLeft, ArrowRight, ChevronDown, Check, LogOut } from 'lucide-react-native';
+import { AlertCircle, Calendar, Heart, Mail, MapPin, User, ArrowLeft, ArrowRight, ChevronDown, Check, LogOut } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,6 +10,8 @@ import { PrimaryGradientButton } from '../../components/ui/PrimaryGradientButton
 import { getActiveDb, getActiveFunctions } from '../../firebase';
 import { httpsCallable } from 'firebase/functions';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { PhoneNumberInput } from '@/components/ui/PhoneNumberInput';
+import { buildPhoneNumber, isValidNationalNumber, parsePhoneNumber } from '@/utils/phone';
 
 function formatDateToMDYYYY(date: Date): string {
   const month = date.getMonth() + 1;
@@ -18,19 +20,10 @@ function formatDateToMDYYYY(date: Date): string {
   return `${month}/${day}/${year}`;
 }
 
-function formatPHPhoneNumber(input: string): string {
-  let digits = input.replace(/\D/g, '');
-  if (digits.startsWith('63')) {
-    digits = digits.slice(2);
-  } else if (digits.startsWith('0')) {
-    digits = digits.slice(1);
-  }
-  digits = digits.slice(0, 10);
-
-  if (digits.length === 0) return '+63 ';
-  if (digits.length <= 3) return `+63 ${digits}`;
-  if (digits.length <= 6) return `+63 ${digits.slice(0, 3)} ${digits.slice(3)}`;
-  return `+63 ${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
+/** Normalizes any previously saved number (e.g. `09XX...`, `+63...`, `+1...`) into the stored format. */
+function normalizeStoredPhone(raw?: string | null): string {
+  const { country, national } = parsePhoneNumber(raw);
+  return buildPhoneNumber(country, national);
 }
 
 const GENDER_OPTIONS = ['Male', 'Female'];
@@ -54,7 +47,8 @@ export default function CompleteProfileScreen() {
   const [showGenderModal, setShowGenderModal] = useState(false);
   
   // Contact Info
-  const [phoneNumber, setPhoneNumber] = useState(userProfile?.phoneNumber ? `+63 ${userProfile.phoneNumber}` : '+63 ');
+  // Stored as compact international format, e.g. +639171234567 ('' when empty)
+  const [phoneNumber, setPhoneNumber] = useState(() => normalizeStoredPhone(userProfile?.phoneNumber));
   const [address, setAddress] = useState(userProfile?.address || '');
   const [emergencyContact, setEmergencyContact] = useState(userProfile?.emergencyContact || '');
   
@@ -98,10 +92,15 @@ export default function CompleteProfileScreen() {
 
   const handleCompleteProfile = async () => {
     setErrorMsg('');
+
+    if (!isValidNationalNumber(parsePhoneNumber(phoneNumber).national)) {
+      setErrorMsg('Please enter a valid phone number.');
+      return;
+    }
+
     setIsLoading(true);
 
-    const cleanPhone = phoneNumber.replace(/\D/g, '');
-    const finalPhone = cleanPhone === '63' || cleanPhone === '' ? '' : phoneNumber.replace(/\s+/g, '').trim();
+    const finalPhone = phoneNumber;
 
     const payload = {
       firstName: firstName.trim(),
@@ -281,17 +280,7 @@ export default function CompleteProfileScreen() {
               <View style={styles.section}>
                 <View style={styles.formGroup}>
                   <Text style={styles.inputLabel}>Phone Number</Text>
-                  <View style={styles.inputWrapper}>
-                    <Phone size={18} color="#888" style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.input}
-                      placeholder="+63 9XX XXX XXXX"
-                      placeholderTextColor="#888"
-                      value={phoneNumber}
-                      onChangeText={(text) => setPhoneNumber(formatPHPhoneNumber(text))}
-                      keyboardType="phone-pad"
-                    />
-                  </View>
+                  <PhoneNumberInput value={phoneNumber} onChangeValue={setPhoneNumber} />
                 </View>
 
                 <View style={styles.formGroup}>
